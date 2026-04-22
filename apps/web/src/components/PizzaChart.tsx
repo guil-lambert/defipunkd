@@ -52,7 +52,7 @@ export function PizzaChart({
     const slice = PIZZA_SLICES[i]!;
     const grade: GradeColor = grades?.[slice.id] ?? "gray";
     paths.push(
-      <a key={slice.id} href={`#${slice.id}`}>
+      <a key={slice.id} href="/methodology#what-is-graded-today">
         <path
           d={`M${cx},${cy} L${x0},${y0} A${radius},${radius} 0 0,1 ${x1},${y1} Z`}
           fill={GRADE_FILL[grade]}

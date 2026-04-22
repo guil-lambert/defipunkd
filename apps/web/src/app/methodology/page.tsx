@@ -102,7 +102,10 @@ export default function MethodologyPage() {
         </ul>
       </div>
 
-      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
+      <h2
+        id="what-is-graded-today"
+        style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem", scrollMarginTop: "1rem" }}
+      >
         What is graded today
       </h2>
       <p>
