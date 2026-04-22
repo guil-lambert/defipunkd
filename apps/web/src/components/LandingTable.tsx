@@ -10,7 +10,9 @@ import {
 } from "../lib/landing";
 import { DEFAULT_TAB, TABS, type Tab } from "../lib/category-map";
 import { PIZZA_SLICES, PizzaChart } from "./PizzaChart";
+import { ProtocolLogo } from "./ProtocolLogo";
 import { EM_DASH, formatTvl } from "../lib/format";
+import { pizzaGradesFor } from "../lib/pizza";
 
 const DEFAULT_PAGE = 200;
 
@@ -310,6 +312,7 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
             aria-expanded={isExpanded}
             aria-label={isExpanded ? "Collapse family" : "Expand family"}
             style={{
+              boxSizing: "border-box",
               background: "transparent",
               border: "none",
               color: "var(--text-muted)",
@@ -325,8 +328,14 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
           >
             {isExpanded ? "\u25BE" : "\u25B8"}
           </button>
+        ) : !isChild ? (
+          <span
+            aria-hidden
+            style={{ display: "inline-block", width: 44, marginRight: 6, verticalAlign: "middle" }}
+          />
         ) : null}
-        <a href={`/protocol/${row.slug}`} style={{ textDecoration: "none" }}>
+        <ProtocolLogo slug={row.slug} name={row.name} size={20} />
+        <a href={`/protocol/${row.slug}`} style={{ textDecoration: "none", marginLeft: 8 }}>
           {row.name}
         </a>
         {isFamilyHead ? (
@@ -358,10 +367,7 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
       <td style={{ padding: "0.2rem 0.6rem" }}>
         <PizzaChart
           size="sm"
-          grades={{
-            verifiability: row.verifiability_grade,
-            dependencies: row.dependencies_grade,
-          }}
+          grades={pizzaGradesFor(row.category, row.verifiability_grade, row.dependencies_grade)}
         />
       </td>
       <td style={{ padding: "0.45rem 0.6rem", color: "var(--text-muted)" }}>{EM_DASH}</td>

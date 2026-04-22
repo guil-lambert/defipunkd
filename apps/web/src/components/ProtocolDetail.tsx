@@ -4,6 +4,8 @@ import { auditorDomain, EM_DASH, formatTvl, formatUtc, parseHallmarks } from "..
 import { verifiabilityGrade } from "../lib/verifiability";
 import { dependenciesGrade } from "../lib/dependencies";
 import { PizzaChart } from "./PizzaChart";
+import { ProtocolLogo } from "./ProtocolLogo";
+import { pizzaGradesFor } from "../lib/pizza";
 
 type RowProps = {
   label: string;
@@ -193,13 +195,11 @@ function ChildrenTable({
               <td style={{ padding: "0.4rem 0.6rem" }}>
                 <PizzaChart
                   size="sm"
-                  grades={{
-                    verifiability: verifiabilityGrade(
-                      !!(c.github && c.github.length > 0),
-                      c.audit_count ?? 0,
-                    ),
-                    dependencies: dependenciesGrade(c.category, c.forked_from),
-                  }}
+                  grades={pizzaGradesFor(
+                    c.category,
+                    verifiabilityGrade(!!(c.github && c.github.length > 0), c.audit_count ?? 0),
+                    dependenciesGrade(c.category, c.forked_from),
+                  )}
                 />
               </td>
               <td style={{ padding: "0.4rem 0.6rem", color: "var(--text-muted)" }}>{EM_DASH}</td>
@@ -252,7 +252,9 @@ export function ProtocolDetail({
         </a>
       </div>
       <header style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
-        <div>
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          <ProtocolLogo slug={protocol.slug} name={protocol.name} size={40} />
+          <div>
           <h1 style={{ margin: 0, color: "var(--text)", fontSize: "1.75rem" }}>{protocol.name}</h1>
           <p style={{ color: "var(--text-muted)", margin: "0.25rem 0 0 0" }}>
             {protocol.category || EM_DASH}
@@ -265,17 +267,19 @@ export function ProtocolDetail({
               </>
             ) : null}
           </p>
+          </div>
         </div>
         <div style={{ marginLeft: "auto" }}>
           <PizzaChart
             size="lg"
-            grades={{
-              verifiability: verifiabilityGrade(
+            grades={pizzaGradesFor(
+              protocol.category,
+              verifiabilityGrade(
                 !!(protocol.github && protocol.github.length > 0),
                 protocol.audit_count ?? 0,
               ),
-              dependencies: dependenciesGrade(protocol.category, protocol.forked_from),
-            }}
+              dependenciesGrade(protocol.category, protocol.forked_from),
+            )}
           />
         </div>
       </header>

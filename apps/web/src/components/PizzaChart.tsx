@@ -35,7 +35,7 @@ export function PizzaChart({
   size?: PizzaSize;
   grades?: PizzaGrades;
 }): JSX.Element {
-  const radius = size === "sm" ? 12 : 72;
+  const radius = size === "sm" ? 18 : 72;
   const stroke = size === "sm" ? 1 : 2;
   const cx = radius;
   const cy = radius;
