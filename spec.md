@@ -496,3 +496,89 @@ Current Phase 0 inputs:
 - **pnpm**: 9 (latest), pinned via `packageManager` for Corepack.
 
 **No database, no `DATABASE_URL`, no `SYNC_SECRET`, no Neon branch, no `/api/sync` route at Phase 0.**
+
+---
+
+## Interview decisions (2026-04-22, round 2)
+
+Addendum resolving further Phase 0 ambiguities. Where this section conflicts with earlier prose, **this section wins**.
+
+### Overlays
+
+- **Format**: **JSON**, not TypeScript. Files at `data/overlays/<slug>.json` (flat layout, no sharding). Overlay authors can edit via GitHub web UI without fearing TS syntax; overlays are data, not code.
+- **Validation**: **Zod schema** in `packages/registry` (schema is source of truth; TS `Overlay` type derived via `z.infer`). Any overlay that fails parse or validation **fails the build**. No silent skip on malformed overlays.
+- **Empty vs unset semantics**: **explicit `null` sentinel**. Three states per field:
+  - key **absent** → defer to snapshot
+  - key = `null` → curated "known to have no value" (overrides snapshot with null)
+  - key = value → override
+  Empty string / empty array is not a magic sentinel; it means literally "" / [].
+- **Identity-with-snapshot**: when an overlay value is byte-equal to the snapshot value, the field still renders `[curated]`. The sync script emits a **build-time warning** listing overlay fields that exactly duplicate the snapshot, so the reviewer can trim noise.
+- **Orphan overlays**: if an overlay's slug is not present in the current snapshot, **warn at build and skip**. Do not fail the build; do not resurrect the protocol from the overlay.
+- **Takedown requests**: **no takedown mechanism at Phase 0.** Policy is: delisting happens upstream at DeFiLlama. Revisit at Phase 3 when reviewer workflow formalizes. No `hidden` field in the overlay schema.
+
+### Slug identity
+
+- **Slug is identity forever.** If DeFiLlama renames a slug, old becomes delisted under the 14-day rule and new appears as first-seen. No DeFiLlama numeric `id` tracking, no alias map at Phase 0.
+
+### Parent protocol resolution
+
+- **Strict slug-only linkage.** DeFiLlama's `parentProtocol` is only treated as a link when it matches an existing slug in the snapshot. String-label parents are ignored at Phase 0 (no slugification, no alias file). Breadcrumb collapses as usual.
+
+### Categories
+
+- **Null / empty category** → bucket to **`Others`** tab (same bucket as unmapped categories). Logged at build.
+
+### Sync behavior
+
+- **Trust DeFiLlama**: no sanity check on protocol-count drops. If upstream returns 500 protocols where it used to return 6000, we write the snapshot. The 14-day grace window on `delisted_at` absorbs transient outages.
+- **Determinism controls** (Phase 0): **pinned Node 22 LTS + pnpm 9** via `.nvmrc`, `engines`, and `packageManager`. Sorted-key JSON output and fixed `generated_at` sourcing are nice-to-have but not required for correctness at Phase 0.
+- **Sync PR body**: the sync script writes a markdown summary into the PR body (also emitted to stdout). Summary contains:
+  - counts: new protocols, newly `delisted_at`, `is_dead` toggles
+  - **TVL movers**: every protocol whose TVL changed **≥±50% day-over-day** (one list). No separate "top-N absolute" list.
+- **Raw JSON diff** remains viewable on the PR for reviewers who want it; the summary is the primary review surface.
+
+### Null TVL
+
+- **Landing sort**: null-TVL protocols sort **after** all ranked entries in every tab. In practice they never appear in the top-200 default view.
+- **Rendering**: `unknown` with em-dash (unchanged from round 1). `$0` renders literally.
+
+### Pizza chart at Phase 0
+
+- **Primary-chain flip policy**: N/A at Phase 0 (all pizzas gray). Decide at Phase 3 alongside stage attachment.
+
+### Detail page rendering
+
+- **Show every row, all unknown.** No hiding of Phase-2 or Phase-3-dependent rows at Phase 0. The wall of em-dashes is intentional — it signals the roadmap and enforces transparency about missingness.
+- **Timestamp scope**: single "Updated" row driven by snapshot `generated_at`. Curated-field edit times are implicit in `git blame` on the overlay file; no per-field UI timestamp.
+
+### Dev ergonomics
+
+- **Full snapshot in dev**, same file as prod. No subset dev snapshot, no env-flag filter. Prevents dev/prod divergence bugs; slower HMR accepted.
+
+### Search
+
+- **Case-insensitive substring match on name / slug / category**, with prefix-boost ranking. No punctuation normalization, no diacritic folding, no fuzzy/Levenshtein at Phase 0. Power-user audience assumed.
+
+### Bot / crawler policy
+
+- **`noindex` meta tag only** on `/protocol/*` pages at Phase 0. No `robots.txt` Disallow, no Vercel bot mitigation. `noindex` flip to indexable happens per-protocol at `machine_summarized` (Phase 3), unchanged from round 1.
+
+### Build scaling
+
+- **Accept any build time** at Phase 0. Full SSG over all live slugs via `generateStaticParams` regardless of Vercel build cost. Revisit only if the 45-minute platform limit is approached.
+
+### Family / children table
+
+- **Columns match the landing Summary table**: `# | Name | Chain | Risks | Stage | Type | TVL`, sorted TVL desc. Consistent UX with the browse-all table.
+
+### `/methodology` MDX
+
+- **Minimal content + pizza legend** at Phase 0:
+  - "Registry only, no ratings" framing
+  - DeFiLlama seed + curated overlays explanation
+  - **7-slice pizza legend** (all gray at Phase 0) explaining each slice
+  - Note that Defiscan stages arrive in Phase 3 with links out to Defiscan's framework
+
+### Repo pruning from l2beat fork
+
+- **Single Day-1 nuke commit** deleting all rollup-specific packages. One big diff, legible `git log`, no per-package archaeology. `@l2beat/discovery` and the UI package retained, as per spec.
