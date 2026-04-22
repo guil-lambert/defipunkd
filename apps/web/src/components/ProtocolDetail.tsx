@@ -240,6 +240,11 @@ export function ProtocolDetail({
         color: "#e2e8f0",
       }}
     >
+      <div style={{ marginBottom: "1rem" }}>
+        <a href="/" style={{ color: "#22d3ee", fontSize: "0.85rem", textDecoration: "none" }}>
+          ← back to index
+        </a>
+      </div>
       <header style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
         <div>
           <h1 style={{ margin: 0, color: "#e2e8f0", fontSize: "1.75rem" }}>{protocol.name}</h1>
@@ -376,12 +381,6 @@ export function ProtocolDetail({
       </table>
 
       <ChildrenTable children={children} />
-
-      <footer style={{ marginTop: "3rem", color: "#475569", fontSize: "0.85rem" }}>
-        <a href="/" style={{ color: "#22d3ee" }}>
-          ← back to index
-        </a>
-      </footer>
     </main>
   );
 }
@@ -400,6 +399,11 @@ export function DelistedDetail({
         color: "#e2e8f0",
       }}
     >
+      <div style={{ marginBottom: "1rem" }}>
+        <a href="/" style={{ color: "#22d3ee", fontSize: "0.85rem", textDecoration: "none" }}>
+          ← back to index
+        </a>
+      </div>
       <h1 style={{ color: "#e2e8f0" }}>{protocol.name}</h1>
       <p style={{ color: "#f87171" }}>
         This protocol has been delisted from DeFiLlama as of {formatUtc(protocol.delisted_at)}.
@@ -415,11 +419,6 @@ export function DelistedDetail({
           DeFiLlama page
         </a>{" "}
         for the last known data.
-      </p>
-      <p>
-        <a href="/" style={{ color: "#22d3ee" }}>
-          ← back to index
-        </a>
       </p>
     </main>
   );
