@@ -6,6 +6,7 @@ describe("bucketCategory seed mappings", () => {
     ["Lending", "Lending"],
     ["Liquid Lending", "Lending"],
     ["CDP", "CDP"],
+    ["Dexs", "DEX"],
     ["Dexes", "DEX"],
     ["DEX Aggregator", "DEX"],
     ["Yield", "Yield"],
@@ -50,6 +51,6 @@ describe("bucketCategory fallback", () => {
   });
   it("case-insensitive match", () => {
     expect(bucketCategory("LENDING")).toBe("Lending");
-    expect(bucketCategory("dexes")).toBe("DEX");
+    expect(bucketCategory("dexs")).toBe("DEX");
   });
 });

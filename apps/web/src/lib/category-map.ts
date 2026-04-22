@@ -26,6 +26,7 @@ const RAW_TO_TAB: Record<string, BucketTab> = {
   lending: "Lending",
   "liquid lending": "Lending",
   cdp: "CDP",
+  dexs: "DEX",
   dexes: "DEX",
   "dex aggregator": "DEX",
   yield: "Yield",

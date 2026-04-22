@@ -27,9 +27,27 @@ describe("sumTvl", () => {
 });
 
 describe("dominantCategory", () => {
-  it("returns the most common category among children", () => {
-    const kids = [row({ category: "Dexes" }), row({ category: "Dexes" }), row({ category: "Lending" })];
-    expect(dominantCategory(kids)).toBe("Dexes");
+  it("returns the category of the highest-TVL child", () => {
+    const kids = [
+      row({ slug: "a", category: "Lending", tvl: 100 }),
+      row({ slug: "b", category: "Dexs", tvl: 900 }),
+      row({ slug: "c", category: "CDP", tvl: 50 }),
+    ];
+    expect(dominantCategory(kids)).toBe("Dexs");
+  });
+  it("null-tvl children lose to any non-null child", () => {
+    const kids = [
+      row({ slug: "a", category: "Lending", tvl: null }),
+      row({ slug: "b", category: "Dexs", tvl: 1 }),
+    ];
+    expect(dominantCategory(kids)).toBe("Dexs");
+  });
+  it("ties break alphabetically by slug", () => {
+    const kids = [
+      row({ slug: "zeta", category: "Lending", tvl: 100 }),
+      row({ slug: "alpha", category: "Dexs", tvl: 100 }),
+    ];
+    expect(dominantCategory(kids)).toBe("Dexs");
   });
 });
 

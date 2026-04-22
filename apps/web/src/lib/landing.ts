@@ -29,20 +29,18 @@ export function sumTvl(children: LandingRow[]): number | null {
 }
 
 export function dominantCategory(children: LandingRow[]): string {
-  const counts = new Map<string, number>();
+  let bestCategory = "";
+  let bestTvl = -Infinity;
+  let bestSlug = "";
   for (const c of children) {
-    const k = c.category || "";
-    counts.set(k, (counts.get(k) ?? 0) + 1);
-  }
-  let best = "";
-  let bestCount = -1;
-  for (const [k, n] of counts) {
-    if (n > bestCount) {
-      best = k;
-      bestCount = n;
+    const tvl = typeof c.tvl === "number" ? c.tvl : -1;
+    if (tvl > bestTvl || (tvl === bestTvl && c.slug < bestSlug)) {
+      bestTvl = tvl;
+      bestSlug = c.slug;
+      bestCategory = c.category || "";
     }
   }
-  return best;
+  return bestCategory;
 }
 
 export function buildNodes(rows: LandingRow[]): LandingNode[] {
