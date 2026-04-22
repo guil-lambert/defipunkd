@@ -1,6 +1,6 @@
 import { bucketCategory, isCexCategory, type Tab } from "./category-map";
 import { rankMatch } from "./search";
-import { worstGrade, type GradeColor } from "./verifiability";
+import { dominantChildGrade, type GradeColor } from "./verifiability";
 
 export type LandingRow = {
   slug: string;
@@ -71,7 +71,7 @@ export function buildNodes(rows: LandingRow[]): LandingNode[] {
         ...r,
         category: derivedCategory,
         tvl: sumTvl(kids),
-        verifiability_grade: worstGrade(kids.map((k) => k.verifiability_grade)),
+        verifiability_grade: dominantChildGrade(kids),
         children: [...kids].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1)),
       });
     }

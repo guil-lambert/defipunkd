@@ -21,3 +21,20 @@ export function worstGrade(grades: GradeColor[]): GradeColor {
   }
   return worst;
 }
+
+export function dominantChildGrade<T extends { tvl: number | null; slug: string }>(
+  children: Array<T & { verifiability_grade: GradeColor }>,
+): GradeColor {
+  let bestGrade: GradeColor = "gray";
+  let bestTvl = -Infinity;
+  let bestSlug = "";
+  for (const c of children) {
+    const tvl = typeof c.tvl === "number" ? c.tvl : -1;
+    if (tvl > bestTvl || (tvl === bestTvl && c.slug < bestSlug)) {
+      bestTvl = tvl;
+      bestSlug = c.slug;
+      bestGrade = c.verifiability_grade;
+    }
+  }
+  return bestGrade;
+}
