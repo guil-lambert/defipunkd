@@ -26,43 +26,43 @@ export default function MethodologyPage() {
         maxWidth: 800,
         margin: "0 auto",
         padding: "2rem 1.5rem",
-        color: "#e2e8f0",
+        color: "var(--text)",
         lineHeight: 1.6,
       }}
     >
       <div style={{ marginBottom: "1rem" }}>
-        <a href="/" style={{ color: "#22d3ee", fontSize: "0.85rem", textDecoration: "none" }}>
+        <a href="/" style={{ color: "var(--accent-link)", fontSize: "0.85rem", textDecoration: "none" }}>
           ← back to index
         </a>
       </div>
-      <h1 style={{ color: "#22d3ee", marginBottom: "0.5rem" }}>Methodology</h1>
-      <p style={{ color: "#94a3b8", marginTop: 0 }}>
+      <h1 style={{ color: "var(--accent-link)", marginBottom: "0.5rem" }}>Methodology</h1>
+      <p style={{ color: "var(--text-muted)", marginTop: 0 }}>
         DefiBeat is a registry, not a rating. No protocol on this site has been reviewed.
       </p>
 
-      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem" }}>
+      <h2 style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem" }}>
         Where the data comes from
       </h2>
       <p>
         Every protocol is seeded from{" "}
         <a
           href="https://defillama.com/"
-          style={{ color: "#22d3ee" }}
+          style={{ color: "var(--accent-link)" }}
           rel="noreferrer"
           target="_blank"
         >
           DeFiLlama
         </a>{" "}
         via{" "}
-        <code style={{ color: "#cbd5e1" }}>pnpm sync</code>, which writes the full list into a
+        <code style={{ color: "var(--text)" }}>pnpm sync</code>, which writes the full list into a
         committed JSON snapshot. Human curators can override individual fields by dropping a JSON
-        file into <code style={{ color: "#cbd5e1" }}>data/overlays/</code> and opening a PR.
+        file into <code style={{ color: "var(--text)" }}>data/overlays/</code> and opening a PR.
       </p>
       <p>
         Every field displays a provenance tag so you always know where the value came from:
-        <code style={{ color: "#cbd5e1", marginLeft: 6 }}>[defillama]</code> for the raw DeFiLlama
-        value, <code style={{ color: "#cbd5e1" }}>[curated]</code> for a human-authored overlay,
-        and <code style={{ color: "#cbd5e1" }}>[defillama-parent]</code> when a child protocol
+        <code style={{ color: "var(--text)", marginLeft: 6 }}>[defillama]</code> for the raw DeFiLlama
+        value, <code style={{ color: "var(--text)" }}>[curated]</code> for a human-authored overlay,
+        and <code style={{ color: "var(--text)" }}>[defillama-parent]</code> when a child protocol
         inherits a field (github, twitter, website) from its parent protocol because DeFiLlama
         only records the value at the family level.
       </p>
@@ -71,24 +71,24 @@ export default function MethodologyPage() {
         14-day grace window.
       </p>
 
-      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
+      <h2 style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem", marginTop: "2rem" }}>
         The 5-slice risk pizza
       </h2>
       <p>
         DefiBeat uses the five assessment dimensions from{" "}
         <a
           href="https://github.com/deficollective/defiscan-v2"
-          style={{ color: "#22d3ee" }}
+          style={{ color: "var(--accent-link)" }}
           rel="noreferrer"
           target="_blank"
         >
           DeFiScan v2
         </a>
-        : <strong style={{ color: "#cbd5e1" }}>Control</strong>,{" "}
-        <strong style={{ color: "#cbd5e1" }}>Ability to exit</strong>,{" "}
-        <strong style={{ color: "#cbd5e1" }}>Dependencies</strong>,{" "}
-        <strong style={{ color: "#cbd5e1" }}>Access</strong>, and{" "}
-        <strong style={{ color: "#cbd5e1" }}>Verifiability</strong>. At Phase 0 every slice is
+        : <strong style={{ color: "var(--text)" }}>Control</strong>,{" "}
+        <strong style={{ color: "var(--text)" }}>Ability to exit</strong>,{" "}
+        <strong style={{ color: "var(--text)" }}>Dependencies</strong>,{" "}
+        <strong style={{ color: "var(--text)" }}>Access</strong>, and{" "}
+        <strong style={{ color: "var(--text)" }}>Verifiability</strong>. At Phase 0 every slice is
         gray — nothing has been reviewed. The slices exist now so the shape of future assessments
         is already visible.
       </p>
@@ -96,10 +96,10 @@ export default function MethodologyPage() {
         <PizzaChart size="lg" />
         <ul style={{ listStyle: "none", padding: 0, margin: 0, flex: 1, minWidth: 300 }}>
           {PIZZA_SLICES.map((s) => (
-            <li key={s.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid #1e293b" }}>
-              <strong style={{ color: "#cbd5e1" }}>{s.label}</strong>
+            <li key={s.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid var(--surface-raised)" }}>
+              <strong style={{ color: "var(--text)" }}>{s.label}</strong>
               <br />
-              <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
                 {SLICE_DESCRIPTIONS[s.id]}
               </span>
             </li>
@@ -109,26 +109,26 @@ export default function MethodologyPage() {
 
       <h2
         id="what-is-graded-today"
-        style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem", scrollMarginTop: "1rem" }}
+        style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem", marginTop: "2rem", scrollMarginTop: "1rem" }}
       >
         What is graded today
       </h2>
       <p>
         Only{" "}
-        <strong style={{ color: "#cbd5e1" }}>Verifiability</strong> currently carries a real color
+        <strong style={{ color: "var(--text)" }}>Verifiability</strong> currently carries a real color
         on the pizza. The rule is a deliberately coarse first-pass heuristic from raw DeFiLlama
         signals:
       </p>
-      <ul style={{ color: "#cbd5e1" }}>
+      <ul style={{ color: "var(--text)" }}>
         <li>
-          <strong style={{ color: "#16a34a" }}>green</strong> — protocol has a GitHub repo{" "}
+          <strong style={{ color: "var(--grade-green)" }}>green</strong> — protocol has a GitHub repo{" "}
           <em>and</em> at least one audit
         </li>
         <li>
-          <strong style={{ color: "#f59e0b" }}>orange</strong> — it has one but not the other
+          <strong style={{ color: "var(--grade-orange)" }}>orange</strong> — it has one but not the other
         </li>
         <li>
-          <strong style={{ color: "#dc2626" }}>red</strong> — neither
+          <strong style={{ color: "var(--grade-red)" }}>red</strong> — neither
         </li>
       </ul>
       <p>
@@ -138,43 +138,43 @@ export default function MethodologyPage() {
         auditor-reputation weighting, scope review, and source-to-bytecode correspondence.
       </p>
       <p>
-        <strong style={{ color: "#cbd5e1" }}>Dependencies</strong> is graded with a simple
-        category-based first pass plus an opportunistic <code style={{ color: "#cbd5e1" }}>forkedFrom</code>{" "}
+        <strong style={{ color: "var(--text)" }}>Dependencies</strong> is graded with a simple
+        category-based first pass plus an opportunistic <code style={{ color: "var(--text)" }}>forkedFrom</code>{" "}
         check:
       </p>
-      <ul style={{ color: "#cbd5e1" }}>
+      <ul style={{ color: "var(--text)" }}>
         <li>
-          <strong style={{ color: "#dc2626" }}>red</strong> — protocol category is{" "}
+          <strong style={{ color: "var(--grade-red)" }}>red</strong> — protocol category is{" "}
           <em>Liquid Staking</em>, <em>RWA Lending</em>, or one of the bridge categories
           (<em>Bridge</em>, <em>Canonical Bridge</em>, <em>Cross Chain Bridge</em>,{" "}
           <em>Bridge Aggregator</em>). These categories carry unavoidable external-protocol,
           validator, or counterparty risk by construction.
         </li>
         <li>
-          <strong style={{ color: "#f59e0b" }}>orange</strong> — DeFiLlama records a non-empty{" "}
-          <code style={{ color: "#cbd5e1" }}>forkedFrom</code> lineage, i.e. the contracts
+          <strong style={{ color: "var(--grade-orange)" }}>orange</strong> — DeFiLlama records a non-empty{" "}
+          <code style={{ color: "var(--text)" }}>forkedFrom</code> lineage, i.e. the contracts
           inherit their base logic from another protocol&rsquo;s codebase. DeFiLlama&rsquo;s
           fork-lineage data is largely paywalled, so this signal currently covers only a handful
           of protocols &mdash; real fork detection is Phase-2 work.
         </li>
         <li>
-          <strong style={{ color: "#334155" }}>gray</strong> — neither signal fires. Most
+          <strong style={{ color: "var(--grade-gray)" }}>gray</strong> — neither signal fires. Most
           protocols sit here until deeper dependency analysis lands.
         </li>
       </ul>
       <p>
-        <strong style={{ color: "#cbd5e1" }}>Control</strong>,{" "}
-        <strong style={{ color: "#cbd5e1" }}>Ability to exit</strong>, and{" "}
-        <strong style={{ color: "#cbd5e1" }}>Access</strong> all render gray — no automated
+        <strong style={{ color: "var(--text)" }}>Control</strong>,{" "}
+        <strong style={{ color: "var(--text)" }}>Ability to exit</strong>, and{" "}
+        <strong style={{ color: "var(--text)" }}>Access</strong> all render gray — no automated
         heuristic grades them yet. In particular,{" "}
-        <strong style={{ color: "#cbd5e1" }}>Access</strong> (whether the protocol is permissioned,
+        <strong style={{ color: "var(--text)" }}>Access</strong> (whether the protocol is permissioned,
         uses whitelists, geo-restricts users, or depends on off-chain operators to function) is
         not a signal DeFiLlama carries in a usable form, so at Phase 0 we simply surface it as
         unknown and will populate it when crawler workers read the project&rsquo;s own docs and
         frontend (Phase 1) and when onchain discovery flags whitelist-gated entry points (Phase 2).
       </p>
 
-      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
+      <h2 style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem", marginTop: "2rem" }}>
         Audits and source code feed Verifiability
       </h2>
       <p>
@@ -188,14 +188,14 @@ export default function MethodologyPage() {
         Verifiability assessment.
       </p>
 
-      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
+      <h2 style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem", marginTop: "2rem" }}>
         Stages
       </h2>
       <p>
         Stage badges arrive with Phase 3 of the project, at which point DefiBeat adopts{" "}
         <a
           href="https://docs.defiscan.info/"
-          style={{ color: "#22d3ee" }}
+          style={{ color: "var(--accent-link)" }}
           rel="noreferrer"
           target="_blank"
         >
@@ -204,14 +204,14 @@ export default function MethodologyPage() {
         verbatim. Until then, every protocol shows an em-dash in the Stage column.
       </p>
 
-      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
+      <h2 style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem", marginTop: "2rem" }}>
         Corrections
       </h2>
       <p>
         Spotted a wrong field? Open an issue or a PR on{" "}
         <a
           href="https://github.com/guil-lambert/defibeat"
-          style={{ color: "#22d3ee" }}
+          style={{ color: "var(--accent-link)" }}
           rel="noreferrer"
           target="_blank"
         >

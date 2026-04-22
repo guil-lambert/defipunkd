@@ -13,8 +13,8 @@ type RowProps = {
 };
 
 function ProvenanceTagEl({ tag }: { tag: ProvenanceTag | null }): JSX.Element {
-  if (!tag) return <span style={{ color: "#475569" }}>{EM_DASH}</span>;
-  return <span style={{ color: "#64748b", fontSize: "0.8em" }}>[{tag}]</span>;
+  if (!tag) return <span style={{ color: "var(--text-muted)" }}>{EM_DASH}</span>;
+  return <span style={{ color: "var(--text-muted)", fontSize: "0.8em" }}>[{tag}]</span>;
 }
 
 function Row({ label, anchor, value, provenance }: RowProps): JSX.Element {
@@ -25,8 +25,8 @@ function Row({ label, anchor, value, provenance }: RowProps): JSX.Element {
         style={{
           textAlign: "left",
           padding: "0.6rem 1rem",
-          borderBottom: "1px solid #1e293b",
-          color: "#94a3b8",
+          borderBottom: "1px solid var(--surface-raised)",
+          color: "var(--text-muted)",
           fontWeight: 500,
           width: "18rem",
           verticalAlign: "top",
@@ -34,13 +34,13 @@ function Row({ label, anchor, value, provenance }: RowProps): JSX.Element {
       >
         {label}
       </th>
-      <td style={{ padding: "0.6rem 1rem", borderBottom: "1px solid #1e293b", color: "#e2e8f0" }}>
+      <td style={{ padding: "0.6rem 1rem", borderBottom: "1px solid var(--surface-raised)", color: "var(--text)" }}>
         {value}
       </td>
       <td
         style={{
           padding: "0.6rem 1rem",
-          borderBottom: "1px solid #1e293b",
+          borderBottom: "1px solid var(--surface-raised)",
           width: "8rem",
           textAlign: "right",
         }}
@@ -52,7 +52,7 @@ function Row({ label, anchor, value, provenance }: RowProps): JSX.Element {
 }
 
 function unknownCell(): JSX.Element {
-  return <span style={{ color: "#475569" }}>unknown</span>;
+  return <span style={{ color: "var(--text-muted)" }}>unknown</span>;
 }
 
 type ChainTabsProps = {
@@ -76,8 +76,8 @@ function ChainTabs({ chains, tvlByChain, activeChain }: ChainTabsProps): JSX.Ele
             style={{
               padding: "0.35rem 0.75rem",
               borderRadius: 4,
-              background: active ? "#22d3ee" : "#1e293b",
-              color: active ? "#0f172a" : "#cbd5e1",
+              background: active ? "var(--accent-link)" : "var(--surface-raised)",
+              color: active ? "var(--bg)" : "var(--text)",
               textDecoration: "none",
               fontSize: "0.85rem",
             }}
@@ -91,7 +91,7 @@ function ChainTabs({ chains, tvlByChain, activeChain }: ChainTabsProps): JSX.Ele
       })}
       {overflow.length > 0 ? (
         <details>
-          <summary style={{ padding: "0.35rem 0.75rem", background: "#1e293b", borderRadius: 4, cursor: "pointer", color: "#cbd5e1", fontSize: "0.85rem" }}>
+          <summary style={{ padding: "0.35rem 0.75rem", background: "var(--surface-raised)", borderRadius: 4, cursor: "pointer", color: "var(--text)", fontSize: "0.85rem" }}>
             +{overflow.length} more
           </summary>
           <div style={{ display: "flex", flexDirection: "column", marginTop: "0.25rem", gap: "0.15rem" }}>
@@ -99,7 +99,7 @@ function ChainTabs({ chains, tvlByChain, activeChain }: ChainTabsProps): JSX.Ele
               <a
                 key={c}
                 href={`?chain=${encodeURIComponent(c)}`}
-                style={{ color: "#cbd5e1", fontSize: "0.85rem", textDecoration: "none" }}
+                style={{ color: "var(--text)", fontSize: "0.85rem", textDecoration: "none" }}
               >
                 {c}
               </a>
@@ -117,8 +117,8 @@ function HallmarksTimeline({ raw }: { raw: unknown }): JSX.Element {
   return (
     <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
       {marks.map((h) => (
-        <li key={`${h.unixTs}-${h.description}`} style={{ padding: "0.2rem 0", color: "#cbd5e1" }}>
-          <span style={{ color: "#64748b", marginRight: 8 }}>
+        <li key={`${h.unixTs}-${h.description}`} style={{ padding: "0.2rem 0", color: "var(--text)" }}>
+          <span style={{ color: "var(--text-muted)", marginRight: 8 }}>
             {formatUtc(new Date(h.unixTs * 1000).toISOString())}
           </span>
           {h.description}
@@ -140,7 +140,7 @@ function AuditsRow({ count, links }: { count: number; links: string[] }): JSX.El
           const d = auditorDomain(l);
           return (
             <li key={l} style={{ padding: "0.15rem 0" }}>
-              <a href={l} style={{ color: "#22d3ee" }} rel="noreferrer" target="_blank">
+              <a href={l} style={{ color: "var(--accent-link)" }} rel="noreferrer" target="_blank">
                 {d ?? l}
               </a>
             </li>
@@ -160,12 +160,12 @@ function ChildrenTable({
   const rows = [...children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1));
   return (
     <section style={{ marginTop: "2rem" }}>
-      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem" }}>
+      <h2 style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem" }}>
         Family members
       </h2>
-      <table style={{ width: "100%", borderCollapse: "collapse", color: "#cbd5e1" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", color: "var(--text)" }}>
         <thead>
-          <tr style={{ textAlign: "left", color: "#64748b", fontSize: "0.85rem" }}>
+          <tr style={{ textAlign: "left", color: "var(--text-muted)", fontSize: "0.85rem" }}>
             <th style={{ padding: "0.4rem 0.6rem" }}>#</th>
             <th style={{ padding: "0.4rem 0.6rem" }}>Name</th>
             <th style={{ padding: "0.4rem 0.6rem" }}>Chain</th>
@@ -177,10 +177,10 @@ function ChildrenTable({
         </thead>
         <tbody>
           {rows.map((c, i) => (
-            <tr key={c.slug} style={{ borderTop: "1px solid #1e293b" }}>
-              <td style={{ padding: "0.4rem 0.6rem", color: "#64748b" }}>{i + 1}</td>
+            <tr key={c.slug} style={{ borderTop: "1px solid var(--surface-raised)" }}>
+              <td style={{ padding: "0.4rem 0.6rem", color: "var(--text-muted)" }}>{i + 1}</td>
               <td style={{ padding: "0.4rem 0.6rem" }}>
-                <a href={`/protocol/${c.slug}`} style={{ color: "#22d3ee" }}>
+                <a href={`/protocol/${c.slug}`} style={{ color: "var(--accent-link)" }}>
                   {c.name}
                 </a>
               </td>
@@ -197,7 +197,7 @@ function ChildrenTable({
                   }}
                 />
               </td>
-              <td style={{ padding: "0.4rem 0.6rem", color: "#475569" }}>{EM_DASH}</td>
+              <td style={{ padding: "0.4rem 0.6rem", color: "var(--text-muted)" }}>{EM_DASH}</td>
               <td style={{ padding: "0.4rem 0.6rem" }}>{c.category || EM_DASH}</td>
               <td style={{ padding: "0.4rem 0.6rem", textAlign: "right" }}>{formatTvl(c.tvl)}</td>
             </tr>
@@ -211,7 +211,7 @@ function ChildrenTable({
 function Link({ href }: { href: string | null }): JSX.Element {
   if (!href) return unknownCell();
   return (
-    <a href={href} style={{ color: "#22d3ee" }} rel="noreferrer" target="_blank">
+    <a href={href} style={{ color: "var(--accent-link)" }} rel="noreferrer" target="_blank">
       {href}
     </a>
   );
@@ -237,23 +237,23 @@ export function ProtocolDetail({
         maxWidth: 1100,
         margin: "0 auto",
         padding: "2rem 1.5rem",
-        color: "#e2e8f0",
+        color: "var(--text)",
       }}
     >
       <div style={{ marginBottom: "1rem" }}>
-        <a href="/" style={{ color: "#22d3ee", fontSize: "0.85rem", textDecoration: "none" }}>
+        <a href="/" style={{ color: "var(--accent-link)", fontSize: "0.85rem", textDecoration: "none" }}>
           ← back to index
         </a>
       </div>
       <header style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
         <div>
-          <h1 style={{ margin: 0, color: "#e2e8f0", fontSize: "1.75rem" }}>{protocol.name}</h1>
-          <p style={{ color: "#64748b", margin: "0.25rem 0 0 0" }}>
+          <h1 style={{ margin: 0, color: "var(--text)", fontSize: "1.75rem" }}>{protocol.name}</h1>
+          <p style={{ color: "var(--text-muted)", margin: "0.25rem 0 0 0" }}>
             {protocol.category || EM_DASH}
             {protocol.parent_slug ? (
               <>
                 {" · child of "}
-                <a href={`/protocol/${protocol.parent_slug}`} style={{ color: "#22d3ee" }}>
+                <a href={`/protocol/${protocol.parent_slug}`} style={{ color: "var(--accent-link)" }}>
                   {protocol.parent_slug}
                 </a>
               </>
@@ -314,7 +314,7 @@ export function ProtocolDetail({
               protocol.twitter ? (
                 <a
                   href={`https://twitter.com/${protocol.twitter}`}
-                  style={{ color: "#22d3ee" }}
+                  style={{ color: "var(--accent-link)" }}
                   rel="noreferrer"
                   target="_blank"
                 >
@@ -336,7 +336,7 @@ export function ProtocolDetail({
                     <li key={g}>
                       <a
                         href={g}
-                        style={{ color: "#22d3ee" }}
+                        style={{ color: "var(--accent-link)" }}
                         rel="noreferrer"
                         target="_blank"
                       >
@@ -364,7 +364,7 @@ export function ProtocolDetail({
           <Row label="Verifiability" anchor="verifiability" value={unknownCell()} provenance={null} />
           <Row
             label="Review status"
-            value={<span style={{ color: "#94a3b8" }}>listed</span>}
+            value={<span style={{ color: "var(--text-muted)" }}>listed</span>}
             provenance={"defillama"}
           />
           <Row
@@ -396,23 +396,23 @@ export function DelistedDetail({
         maxWidth: 720,
         margin: "0 auto",
         padding: "4rem 1.5rem",
-        color: "#e2e8f0",
+        color: "var(--text)",
       }}
     >
       <div style={{ marginBottom: "1rem" }}>
-        <a href="/" style={{ color: "#22d3ee", fontSize: "0.85rem", textDecoration: "none" }}>
+        <a href="/" style={{ color: "var(--accent-link)", fontSize: "0.85rem", textDecoration: "none" }}>
           ← back to index
         </a>
       </div>
-      <h1 style={{ color: "#e2e8f0" }}>{protocol.name}</h1>
-      <p style={{ color: "#f87171" }}>
+      <h1 style={{ color: "var(--text)" }}>{protocol.name}</h1>
+      <p style={{ color: "var(--grade-red)" }}>
         This protocol has been delisted from DeFiLlama as of {formatUtc(protocol.delisted_at)}.
       </p>
-      <p style={{ color: "#94a3b8" }}>
+      <p style={{ color: "var(--text-muted)" }}>
         DefiBeat mirrors DeFiLlama. See the{" "}
         <a
           href={`https://defillama.com/protocol/${protocol.slug}`}
-          style={{ color: "#22d3ee" }}
+          style={{ color: "var(--accent-link)" }}
           rel="noreferrer"
           target="_blank"
         >

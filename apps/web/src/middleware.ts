@@ -23,12 +23,12 @@ function renderGone(slug: string, name: string, delistedAt: string): string {
   <meta name="robots" content="noindex">
   <title>${escapeHtml(name)} (delisted) · DefiBeat</title>
 </head>
-<body style="background:#0f172a;color:#e2e8f0;margin:0;font-family:system-ui,sans-serif;">
+<body style="background:#08090c;color:#d8e4ec;margin:0;font-family:system-ui,sans-serif;">
   <main style="max-width:720px;margin:0 auto;padding:4rem 1.5rem;">
-    <h1 style="color:#e2e8f0;">${escapeHtml(name)}</h1>
-    <p style="color:#f87171;">This protocol has been delisted from DeFiLlama as of ${escapeHtml(delistedAt)}.</p>
-    <p style="color:#94a3b8;">DefiBeat mirrors DeFiLlama. See the <a style="color:#22d3ee;" rel="noreferrer" target="_blank" href="https://defillama.com/protocol/${encodeURIComponent(slug)}">DeFiLlama page</a> for the last known data.</p>
-    <p><a style="color:#22d3ee;" href="/">\u2190 back to index</a></p>
+    <h1 style="color:#d8e4ec;">${escapeHtml(name)}</h1>
+    <p style="color:#d13b3b;">This protocol has been delisted from DeFiLlama as of ${escapeHtml(delistedAt)}.</p>
+    <p style="color:#6b7785;">DefiBeat mirrors DeFiLlama. See the <a style="color:#7bb4cc;" rel="noreferrer" target="_blank" href="https://defillama.com/protocol/${encodeURIComponent(slug)}">DeFiLlama page</a> for the last known data.</p>
+    <p><a style="color:#7bb4cc;" href="/">\u2190 back to index</a></p>
   </main>
 </body>
 </html>`;

@@ -72,8 +72,8 @@ export function LandingTable({ nodes, tabCounts }: Props) {
                 padding: "0.4rem 0.85rem",
                 border: "none",
                 borderRadius: 4,
-                background: active ? "#22d3ee" : "#1e293b",
-                color: active ? "#0f172a" : "#cbd5e1",
+                background: active ? "var(--accent-link)" : "var(--surface-raised)",
+                color: active ? "var(--bg)" : "var(--text)",
                 cursor: "pointer",
                 fontSize: "0.85rem",
               }}
@@ -93,15 +93,15 @@ export function LandingTable({ nodes, tabCounts }: Props) {
           style={{
             flex: "1 1 18rem",
             padding: "0.5rem 0.75rem",
-            background: "#0f172a",
-            color: "#e2e8f0",
-            border: "1px solid #1e293b",
+            background: "var(--bg)",
+            color: "var(--text)",
+            border: "1px solid var(--surface-raised)",
             borderRadius: 4,
             outline: "none",
             fontSize: "0.9rem",
           }}
         />
-        <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", color: "#94a3b8", fontSize: "0.85rem" }}>
+        <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
           <input
             type="checkbox"
             checked={showInactive}
@@ -122,10 +122,10 @@ export function LandingTable({ nodes, tabCounts }: Props) {
               title={`${s.label} ${EM_DASH} all unknown at Phase 0`}
               style={{
                 padding: "0.25rem 0.6rem",
-                border: "1px solid #1e293b",
+                border: "1px solid var(--surface-raised)",
                 borderRadius: 999,
-                background: on ? "#22d3ee" : "transparent",
-                color: on ? "#0f172a" : "#64748b",
+                background: on ? "var(--accent-link)" : "transparent",
+                color: on ? "var(--bg)" : "var(--text-muted)",
                 fontSize: "0.75rem",
                 cursor: "pointer",
               }}
@@ -135,15 +135,15 @@ export function LandingTable({ nodes, tabCounts }: Props) {
           );
         })}
         {activePizzas.length > 0 ? (
-          <span style={{ color: "#64748b", fontSize: "0.75rem", alignSelf: "center", marginLeft: "0.5rem" }}>
+          <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", alignSelf: "center", marginLeft: "0.5rem" }}>
             (filters are no-ops at Phase 0)
           </span>
         ) : null}
       </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", color: "#cbd5e1", fontSize: "0.9rem" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", color: "var(--text)", fontSize: "0.9rem" }}>
         <thead>
-          <tr style={{ textAlign: "left", color: "#64748b", fontSize: "0.8rem" }}>
+          <tr style={{ textAlign: "left", color: "var(--text-muted)", fontSize: "0.8rem" }}>
             <th style={{ padding: "0.45rem 0.6rem", width: "3rem" }}>#</th>
             <SortableHeader
               label="Name"
@@ -209,7 +209,7 @@ export function LandingTable({ nodes, tabCounts }: Props) {
       </table>
 
       <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "#64748b", fontSize: "0.85rem" }}>
+        <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
           Showing {visible.length.toLocaleString()} of {filtered.length.toLocaleString()}
         </span>
         {filtered.length > DEFAULT_PAGE ? (
@@ -218,8 +218,8 @@ export function LandingTable({ nodes, tabCounts }: Props) {
             onClick={() => setShowAll((v) => !v)}
             style={{
               background: "transparent",
-              border: "1px solid #1e293b",
-              color: "#22d3ee",
+              border: "1px solid var(--surface-raised)",
+              color: "var(--accent-link)",
               padding: "0.4rem 0.85rem",
               borderRadius: 4,
               cursor: "pointer",
@@ -257,7 +257,7 @@ function SortableHeader({ label, field, sortField, sortDir, onClick, active, ali
           background: "transparent",
           border: "none",
           padding: 0,
-          color: isActive ? "#cbd5e1" : "#64748b",
+          color: isActive ? "var(--text)" : "var(--text-muted)",
           cursor: active ? "pointer" : "default",
           fontSize: "0.8rem",
           fontWeight: 500,
@@ -285,11 +285,11 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
   return (
     <tr
       style={{
-        borderTop: "1px solid #1e293b",
-        background: isChild ? "rgba(34,211,238,0.04)" : undefined,
+        borderTop: "1px solid var(--surface-raised)",
+        background: isChild ? "var(--surface)" : undefined,
       }}
     >
-      <td style={{ padding: "0.45rem 0.6rem", color: "#64748b" }}>{rank ?? ""}</td>
+      <td style={{ padding: "0.45rem 0.6rem", color: "var(--text-muted)" }}>{rank ?? ""}</td>
       <td style={{ padding: "0.45rem 0.6rem", paddingLeft: isChild ? "2rem" : "0.6rem" }}>
         {isFamilyHead ? (
           <button
@@ -299,7 +299,7 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
             style={{
               background: "transparent",
               border: "none",
-              color: "#64748b",
+              color: "var(--text-muted)",
               cursor: "pointer",
               marginRight: 6,
               padding: 0,
@@ -311,16 +311,16 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
             {isExpanded ? "\u25BE" : "\u25B8"}
           </button>
         ) : null}
-        <a href={`/protocol/${row.slug}`} style={{ color: "#22d3ee", textDecoration: "none" }}>
+        <a href={`/protocol/${row.slug}`} style={{ textDecoration: "none" }}>
           {row.name}
         </a>
         {isFamilyHead ? (
-          <span style={{ color: "#64748b", marginLeft: 6, fontSize: "0.75rem" }}>
+          <span style={{ color: "var(--text-muted)", marginLeft: 6, fontSize: "0.75rem" }}>
             ({row.children?.length ?? 0})
           </span>
         ) : null}
         {row.is_dead ? (
-          <span style={{ color: "#f87171", marginLeft: 6, fontSize: "0.75rem" }}>(inactive)</span>
+          <span style={{ color: "var(--text-muted)", marginLeft: 6, fontSize: "0.75rem" }}>(inactive)</span>
         ) : null}
       </td>
       <td style={{ padding: "0.45rem 0.6rem" }}>
@@ -330,9 +330,9 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
             style={{
               marginLeft: 6,
               padding: "0 0.4rem",
-              background: "#1e293b",
+              background: "var(--surface-raised)",
               borderRadius: 999,
-              color: "#64748b",
+              color: "var(--text-muted)",
               fontSize: "0.7rem",
             }}
           >
@@ -349,7 +349,7 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
           }}
         />
       </td>
-      <td style={{ padding: "0.45rem 0.6rem", color: "#475569" }}>{EM_DASH}</td>
+      <td style={{ padding: "0.45rem 0.6rem", color: "var(--text-muted)" }}>{EM_DASH}</td>
       <td style={{ padding: "0.45rem 0.6rem" }}>{row.category || EM_DASH}</td>
       <td style={{ padding: "0.45rem 0.6rem", textAlign: "right" }}>{formatTvl(row.tvl)}</td>
     </tr>

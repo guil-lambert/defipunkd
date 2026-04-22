@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Footer } from "../components/Footer";
+import "./globals.css";
 
 export const metadata = {
   title: "DefiBeat",
@@ -11,8 +12,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body
         style={{
-          background: "#0f172a",
-          color: "#e2e8f0",
           margin: 0,
           fontFamily: "system-ui, sans-serif",
           minHeight: "100vh",

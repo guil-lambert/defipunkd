@@ -44,14 +44,12 @@ export default function HomePage() {
   const live = counts.All ?? 0;
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.5rem", color: "#e2e8f0" }}>
+    <main style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.5rem" }}>
       <header style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ color: "#22d3ee", margin: 0 }}>DefiBeat</h1>
-        <p style={{ color: "#94a3b8", marginTop: "0.25rem" }}>
+        <h1 style={{ margin: 0 }}>DefiBeat</h1>
+        <p style={{ color: "var(--text-muted)", marginTop: "0.25rem" }}>
           {live.toLocaleString()} live protocols · {protocols.length.toLocaleString()} total ·{" "}
-          <a href="/methodology" style={{ color: "#22d3ee" }}>
-            methodology
-          </a>
+          <a href="/methodology">methodology</a>
         </p>
       </header>
       <LandingTable nodes={nodes} tabCounts={counts} />

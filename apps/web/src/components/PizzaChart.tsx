@@ -12,10 +12,10 @@ export const PIZZA_SLICES = [
 export type PizzaSliceId = (typeof PIZZA_SLICES)[number]["id"];
 
 export const GRADE_FILL: Record<GradeColor, string> = {
-  gray: "#334155",
-  green: "#16a34a",
-  orange: "#f59e0b",
-  red: "#dc2626",
+  gray: "#6b7785",
+  green: "#6fb893",
+  orange: "#c08a4a",
+  red: "#d13b3b",
 };
 
 const GRADE_TOOLTIP: Record<GradeColor, string> = {
@@ -56,7 +56,7 @@ export function PizzaChart({
         <path
           d={`M${cx},${cy} L${x0},${y0} A${radius},${radius} 0 0,1 ${x1},${y1} Z`}
           fill={GRADE_FILL[grade]}
-          stroke="#0f172a"
+          stroke="#08090c"
           strokeWidth={stroke}
         >
           <title>{`${slice.label} ${"\u2014"} ${GRADE_TOOLTIP[grade]}`}</title>
