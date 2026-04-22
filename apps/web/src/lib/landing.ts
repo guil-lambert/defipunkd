@@ -14,6 +14,7 @@ export type LandingRow = {
   is_parent: boolean;
   parent_slug: string | null;
   delisted_at: string | null;
+  logo: string | null;
   verifiability_grade: GradeColor;
   dependencies_grade: GradeColor;
 };

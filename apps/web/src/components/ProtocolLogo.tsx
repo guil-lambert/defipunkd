@@ -1,22 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
-  slug: string;
+  src: string | null;
   name: string;
   size?: number;
 };
 
-export function ProtocolLogo({ slug, name, size = 20 }: Props) {
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+export function ProtocolLogo({ src, name, size = 20 }: Props) {
+  const [failed, setFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const initial = name.charAt(0).toUpperCase();
-  const src =
-    step === 0
-      ? `https://icons.llama.fi/${slug}.png`
-      : step === 1
-        ? `https://icons.llama.fi/${slug}.jpg`
-        : null;
+
+  useEffect(() => {
+    setFailed(false);
+    const img = imgRef.current;
+    if (!img) return;
+    if (img.complete && img.naturalWidth === 0) {
+      setFailed(true);
+    }
+  }, [src]);
+
   return (
     <span
       aria-hidden
@@ -38,15 +43,16 @@ export function ProtocolLogo({ slug, name, size = 20 }: Props) {
       }}
     >
       {initial}
-      {src ? (
+      {src && !failed ? (
         <img
+          ref={imgRef}
           src={src}
           alt=""
           loading="lazy"
           decoding="async"
           width={size}
           height={size}
-          onError={() => setStep((s) => (s === 0 ? 1 : 2))}
+          onError={() => setFailed(true)}
           style={{
             position: "absolute",
             inset: 0,

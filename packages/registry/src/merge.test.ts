@@ -17,6 +17,7 @@ const base: ProtocolSnapshot = {
   hallmarks: [],
   parent_slug: null,
   forked_from: null,
+  logo: null,
   is_dead: false,
   is_parent: false,
   first_seen_at: "2026-01-01T00:00:00.000Z",

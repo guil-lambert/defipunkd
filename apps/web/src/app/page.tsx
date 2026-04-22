@@ -25,6 +25,7 @@ export default function HomePage() {
       is_parent: p.is_parent,
       parent_slug: p.parent_slug,
       delisted_at: p.delisted_at,
+      logo: p.logo,
       verifiability_grade: verifiabilityGrade(
         !!(p.github && p.github.length > 0),
         p.audit_count ?? 0,

@@ -253,7 +253,7 @@ export function ProtocolDetail({
       </div>
       <header style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-          <ProtocolLogo slug={protocol.slug} name={protocol.name} size={40} />
+          <ProtocolLogo src={protocol.logo} name={protocol.name} size={40} />
           <div>
           <h1 style={{ margin: 0, color: "var(--text)", fontSize: "1.75rem" }}>{protocol.name}</h1>
           <p style={{ color: "var(--text-muted)", margin: "0.25rem 0 0 0" }}>

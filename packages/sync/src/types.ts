@@ -9,6 +9,7 @@ export type LlamaProtocol = {
   github?: string[] | null;
   audits?: string | number | null;
   audit_links?: string[] | null;
+  logo?: string | null;
   hallmarks?: Array<[number, string]> | null;
   parentProtocol?: string | null;
   forkedFrom?: Array<string | number> | null;

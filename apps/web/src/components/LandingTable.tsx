@@ -160,6 +160,7 @@ export function LandingTable({ nodes, tabCounts }: Props) {
               sortDir={sortDir}
               onClick={onSortClick}
               active={showSort}
+              paddingLeft="calc(0.6rem + 44px + 6px)"
             />
             <SortableHeader
               label="Chain"
@@ -252,9 +253,10 @@ type SortableHeaderProps = {
   onClick: (field: SortField) => void;
   active: boolean;
   align?: "left" | "right";
+  paddingLeft?: string;
 };
 
-function SortableHeader({ label, field, sortField, sortDir, onClick, active, align = "left" }: SortableHeaderProps) {
+function SortableHeader({ label, field, sortField, sortDir, onClick, active, align = "left", paddingLeft }: SortableHeaderProps) {
   const isActive = active && sortField === field;
   const arrow = isActive ? (sortDir === "asc" ? "\u2191" : "\u2193") : "\u2195";
   return (
@@ -268,6 +270,7 @@ function SortableHeader({ label, field, sortField, sortDir, onClick, active, ali
           background: "transparent",
           border: "none",
           padding: "0.45rem 0.6rem",
+          paddingLeft: paddingLeft ?? "0.6rem",
           minHeight: 44,
           width: "100%",
           textAlign: align,
@@ -334,7 +337,7 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
             style={{ display: "inline-block", width: 44, marginRight: 6, verticalAlign: "middle" }}
           />
         ) : null}
-        <ProtocolLogo slug={row.slug} name={row.name} size={20} />
+        <ProtocolLogo src={row.logo} name={row.name} size={20} />
         <a href={`/protocol/${row.slug}`} style={{ textDecoration: "none", marginLeft: 8 }}>
           {row.name}
         </a>
