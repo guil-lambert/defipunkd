@@ -89,11 +89,44 @@ export function tvlSortDesc(a: LandingRow, b: LandingRow): number {
   return b.tvl - a.tvl;
 }
 
+export type SortField = "tvl" | "name" | "chain" | "type";
+export type SortDir = "asc" | "desc";
+
 export type FilterOptions = {
   tab: Tab;
   query: string;
   showInactive: boolean;
+  sort?: { field: SortField; dir: SortDir };
 };
+
+const STRING_NULL_LAST = (a: string, b: string, dir: SortDir) => {
+  const aEmpty = !a;
+  const bEmpty = !b;
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return 1;
+  if (bEmpty) return -1;
+  return dir === "asc" ? a.localeCompare(b) : b.localeCompare(a);
+};
+
+function compareNodes(a: LandingNode, b: LandingNode, field: SortField, dir: SortDir): number {
+  switch (field) {
+    case "name":
+      return STRING_NULL_LAST(a.name || "", b.name || "", dir) || a.slug.localeCompare(b.slug);
+    case "chain":
+      return (
+        STRING_NULL_LAST(a.primary_chain ?? "", b.primary_chain ?? "", dir) ||
+        a.slug.localeCompare(b.slug)
+      );
+    case "type":
+      return STRING_NULL_LAST(a.category || "", b.category || "", dir) || a.slug.localeCompare(b.slug);
+    case "tvl": {
+      if (a.tvl === null && b.tvl === null) return a.slug.localeCompare(b.slug);
+      if (a.tvl === null) return 1;
+      if (b.tvl === null) return -1;
+      return dir === "asc" ? a.tvl - b.tvl : b.tvl - a.tvl;
+    }
+  }
+}
 
 function includeInBrowse(r: LandingRow, opts: FilterOptions): boolean {
   if (r.delisted_at) return false;
@@ -128,7 +161,8 @@ export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): L
     if (opts.tab === "DeFi") return !isCexCategory(n.category);
     return bucketCategory(n.category) === opts.tab;
   });
-  return [...visible].sort(tvlSortDesc);
+  const sort = opts.sort ?? { field: "tvl" as const, dir: "desc" as const };
+  return [...visible].sort((a, b) => compareNodes(a, b, sort.field, sort.dir));
 }
 
 export function filterAndSort(rows: LandingRow[], opts: FilterOptions): LandingNode[] {

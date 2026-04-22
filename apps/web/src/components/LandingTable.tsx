@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState, Fragment } from "react";
-import { filterAndSortNodes, type LandingNode, type LandingRow } from "../lib/landing";
+import {
+  filterAndSortNodes,
+  type LandingNode,
+  type LandingRow,
+  type SortDir,
+  type SortField,
+} from "../lib/landing";
 import { DEFAULT_TAB, TABS, type Tab } from "../lib/category-map";
 import { PIZZA_SLICES, PizzaChart } from "./PizzaChart";
 import { EM_DASH, formatTvl } from "../lib/format";
@@ -20,14 +26,33 @@ export function LandingTable({ nodes, tabCounts }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [pizzaFilters, setPizzaFilters] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [sortField, setSortField] = useState<SortField>("tvl");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  const searching = query.trim().length > 0;
   const filtered = useMemo(
-    () => filterAndSortNodes(nodes, { tab, query, showInactive }),
-    [nodes, tab, query, showInactive],
+    () =>
+      filterAndSortNodes(nodes, {
+        tab,
+        query,
+        showInactive,
+        sort: { field: sortField, dir: sortDir },
+      }),
+    [nodes, tab, query, showInactive, sortField, sortDir],
   );
+
+  function onSortClick(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir(field === "tvl" ? "desc" : "asc");
+    }
+  }
 
   const visible = showAll ? filtered : filtered.slice(0, DEFAULT_PAGE);
   const activePizzas = Object.keys(pizzaFilters).filter((k) => pizzaFilters[k]);
+  const showSort = !searching;
 
   return (
     <section>
@@ -120,12 +145,41 @@ export function LandingTable({ nodes, tabCounts }: Props) {
         <thead>
           <tr style={{ textAlign: "left", color: "#64748b", fontSize: "0.8rem" }}>
             <th style={{ padding: "0.45rem 0.6rem", width: "3rem" }}>#</th>
-            <th style={{ padding: "0.45rem 0.6rem" }}>Name</th>
-            <th style={{ padding: "0.45rem 0.6rem" }}>Chain</th>
+            <SortableHeader
+              label="Name"
+              field="name"
+              sortField={sortField}
+              sortDir={sortDir}
+              onClick={onSortClick}
+              active={showSort}
+            />
+            <SortableHeader
+              label="Chain"
+              field="chain"
+              sortField={sortField}
+              sortDir={sortDir}
+              onClick={onSortClick}
+              active={showSort}
+            />
             <th style={{ padding: "0.45rem 0.6rem" }}>Risks</th>
             <th style={{ padding: "0.45rem 0.6rem" }}>Stage</th>
-            <th style={{ padding: "0.45rem 0.6rem" }}>Type</th>
-            <th style={{ padding: "0.45rem 0.6rem", textAlign: "right" }}>TVL</th>
+            <SortableHeader
+              label="Type"
+              field="type"
+              sortField={sortField}
+              sortDir={sortDir}
+              onClick={onSortClick}
+              active={showSort}
+            />
+            <SortableHeader
+              label="TVL"
+              field="tvl"
+              sortField={sortField}
+              sortDir={sortDir}
+              onClick={onSortClick}
+              active={showSort}
+              align="right"
+            />
           </tr>
         </thead>
         <tbody>
@@ -177,6 +231,43 @@ export function LandingTable({ nodes, tabCounts }: Props) {
         ) : null}
       </div>
     </section>
+  );
+}
+
+type SortableHeaderProps = {
+  label: string;
+  field: SortField;
+  sortField: SortField;
+  sortDir: SortDir;
+  onClick: (field: SortField) => void;
+  active: boolean;
+  align?: "left" | "right";
+};
+
+function SortableHeader({ label, field, sortField, sortDir, onClick, active, align = "left" }: SortableHeaderProps) {
+  const isActive = active && sortField === field;
+  const arrow = isActive ? (sortDir === "asc" ? "\u2191" : "\u2193") : "\u2195";
+  return (
+    <th style={{ padding: "0.45rem 0.6rem", textAlign: align }}>
+      <button
+        type="button"
+        onClick={() => active && onClick(field)}
+        disabled={!active}
+        style={{
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          color: isActive ? "#cbd5e1" : "#64748b",
+          cursor: active ? "pointer" : "default",
+          fontSize: "0.8rem",
+          fontWeight: 500,
+          opacity: active ? 1 : 0.5,
+        }}
+      >
+        {label}
+        <span style={{ marginLeft: 4, opacity: isActive ? 1 : 0.4 }}>{arrow}</span>
+      </button>
+    </th>
   );
 }
 
