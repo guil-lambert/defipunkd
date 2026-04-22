@@ -8,7 +8,6 @@ export const TABS = [
   "Bridges",
   "Liquid Staking",
   "CDP",
-  "Stablecoins",
   "RWA",
   "Others",
 ] as const;
@@ -38,10 +37,6 @@ const RAW_TO_TAB: Record<string, BucketTab> = {
   bridge: "Bridges",
   "liquid staking": "Liquid Staking",
   "liquid restaking": "Liquid Staking",
-  stablecoins: "Stablecoins",
-  "algo-stables": "Stablecoins",
-  "algorithmic stablecoins": "Stablecoins",
-  "gov-backed stablecoins": "Stablecoins",
   rwa: "RWA",
   "rwa lending": "RWA",
 };

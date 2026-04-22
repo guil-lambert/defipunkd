@@ -17,7 +17,6 @@ describe("bucketCategory seed mappings", () => {
     ["Bridge", "Bridges"],
     ["Liquid Staking", "Liquid Staking"],
     ["Liquid Restaking", "Liquid Staking"],
-    ["Stablecoins", "Stablecoins"],
     ["RWA", "RWA"],
     ["RWA Lending", "RWA"],
   ];
