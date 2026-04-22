@@ -64,12 +64,14 @@ export function LandingTable({ nodes, tabCounts }: Props) {
             <button
               key={t}
               type="button"
+              aria-pressed={active}
               onClick={() => {
                 setTab(t);
                 setShowAll(false);
               }}
               style={{
-                padding: "0.4rem 0.85rem",
+                minHeight: 44,
+                padding: "0 0.9rem",
                 border: "none",
                 borderRadius: 4,
                 background: active ? "var(--accent-link)" : "var(--surface-raised)",
@@ -87,17 +89,18 @@ export function LandingTable({ nodes, tabCounts }: Props) {
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.75rem", alignItems: "center" }}>
         <input
           type="search"
+          aria-label="Search protocols by name, slug, or category"
           placeholder="Search name, slug, category"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{
             flex: "1 1 18rem",
-            padding: "0.5rem 0.75rem",
+            minHeight: 44,
+            padding: "0 0.75rem",
             background: "var(--bg)",
             color: "var(--text)",
             border: "1px solid var(--surface-raised)",
             borderRadius: 4,
-            outline: "none",
             fontSize: "0.9rem",
           }}
         />
@@ -118,10 +121,12 @@ export function LandingTable({ nodes, tabCounts }: Props) {
             <button
               key={s.id}
               type="button"
+              aria-pressed={on}
               onClick={() => setPizzaFilters((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
               title={`${s.label} ${EM_DASH} all unknown at Phase 0`}
               style={{
-                padding: "0.25rem 0.6rem",
+                minHeight: 44,
+                padding: "0 0.9rem",
                 border: "1px solid var(--surface-raised)",
                 borderRadius: 999,
                 background: on ? "var(--accent-link)" : "transparent",
@@ -141,6 +146,7 @@ export function LandingTable({ nodes, tabCounts }: Props) {
         ) : null}
       </div>
 
+      <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", color: "var(--text)", fontSize: "0.9rem" }}>
         <thead>
           <tr style={{ textAlign: "left", color: "var(--text-muted)", fontSize: "0.8rem" }}>
@@ -207,6 +213,7 @@ export function LandingTable({ nodes, tabCounts }: Props) {
           })}
         </tbody>
       </table>
+      </div>
 
       <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
@@ -220,7 +227,8 @@ export function LandingTable({ nodes, tabCounts }: Props) {
               background: "transparent",
               border: "1px solid var(--surface-raised)",
               color: "var(--accent-link)",
-              padding: "0.4rem 0.85rem",
+              minHeight: 44,
+              padding: "0 0.9rem",
               borderRadius: 4,
               cursor: "pointer",
               fontSize: "0.85rem",
@@ -248,15 +256,19 @@ function SortableHeader({ label, field, sortField, sortDir, onClick, active, ali
   const isActive = active && sortField === field;
   const arrow = isActive ? (sortDir === "asc" ? "\u2191" : "\u2193") : "\u2195";
   return (
-    <th style={{ padding: "0.45rem 0.6rem", textAlign: align }}>
+    <th style={{ padding: 0, textAlign: align }}>
       <button
         type="button"
         onClick={() => active && onClick(field)}
         disabled={!active}
+        aria-sort={isActive ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
         style={{
           background: "transparent",
           border: "none",
-          padding: 0,
+          padding: "0.45rem 0.6rem",
+          minHeight: 44,
+          width: "100%",
+          textAlign: align,
           color: isActive ? "var(--text)" : "var(--text-muted)",
           cursor: active ? "pointer" : "default",
           fontSize: "0.8rem",
@@ -296,16 +308,19 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
             type="button"
             onClick={onToggle}
             aria-expanded={isExpanded}
+            aria-label={isExpanded ? "Collapse family" : "Expand family"}
             style={{
               background: "transparent",
               border: "none",
               color: "var(--text-muted)",
               cursor: "pointer",
               marginRight: 6,
-              padding: 0,
+              padding: "0.6rem",
+              minWidth: 44,
+              minHeight: 44,
               fontSize: "0.85rem",
-              width: "1rem",
               textAlign: "center",
+              verticalAlign: "middle",
             }}
           >
             {isExpanded ? "\u25BE" : "\u25B8"}
@@ -351,7 +366,7 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
       </td>
       <td style={{ padding: "0.45rem 0.6rem", color: "var(--text-muted)" }}>{EM_DASH}</td>
       <td style={{ padding: "0.45rem 0.6rem" }}>{row.category || EM_DASH}</td>
-      <td style={{ padding: "0.45rem 0.6rem", textAlign: "right" }}>{formatTvl(row.tvl)}</td>
+      <td style={{ padding: "0.45rem 0.6rem", textAlign: "right", fontFamily: "var(--font-mono), ui-monospace, monospace", fontVariantNumeric: "tabular-nums" }}>{formatTvl(row.tvl)}</td>
     </tr>
   );
 }

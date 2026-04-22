@@ -35,7 +35,7 @@ export default function MethodologyPage() {
           ← back to index
         </a>
       </div>
-      <h1 style={{ color: "var(--accent-link)", marginBottom: "0.5rem" }}>Methodology</h1>
+      <h1 style={{ marginBottom: "0.5rem" }}>Methodology</h1>
       <p style={{ color: "var(--text-muted)", marginTop: 0 }}>
         DefiBeat is a registry, not a rating. No protocol on this site has been reviewed.
       </p>

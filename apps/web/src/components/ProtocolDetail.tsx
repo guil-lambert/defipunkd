@@ -73,8 +73,12 @@ function ChainTabs({ chains, tvlByChain, activeChain }: ChainTabsProps): JSX.Ele
           <a
             key={c}
             href={`?chain=${encodeURIComponent(c)}`}
+            aria-current={active ? "page" : undefined}
             style={{
-              padding: "0.35rem 0.75rem",
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: 44,
+              padding: "0 0.85rem",
               borderRadius: 4,
               background: active ? "var(--accent-link)" : "var(--surface-raised)",
               color: active ? "var(--bg)" : "var(--text)",
@@ -84,14 +88,14 @@ function ChainTabs({ chains, tvlByChain, activeChain }: ChainTabsProps): JSX.Ele
           >
             {c}
             {typeof tvlByChain[c] === "number" ? (
-              <span style={{ marginLeft: 6, opacity: 0.7 }}>{formatTvl(tvlByChain[c]!)}</span>
+              <span className="mono tabular" style={{ marginLeft: 6, opacity: 0.7 }}>{formatTvl(tvlByChain[c]!)}</span>
             ) : null}
           </a>
         );
       })}
       {overflow.length > 0 ? (
         <details>
-          <summary style={{ padding: "0.35rem 0.75rem", background: "var(--surface-raised)", borderRadius: 4, cursor: "pointer", color: "var(--text)", fontSize: "0.85rem" }}>
+          <summary style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 0.85rem", background: "var(--surface-raised)", borderRadius: 4, cursor: "pointer", color: "var(--text)", fontSize: "0.85rem" }}>
             +{overflow.length} more
           </summary>
           <div style={{ display: "flex", flexDirection: "column", marginTop: "0.25rem", gap: "0.15rem" }}>
@@ -163,6 +167,7 @@ function ChildrenTable({
       <h2 style={{ color: "var(--text)", borderBottom: "1px solid var(--surface-raised)", paddingBottom: "0.5rem" }}>
         Family members
       </h2>
+      <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", color: "var(--text)" }}>
         <thead>
           <tr style={{ textAlign: "left", color: "var(--text-muted)", fontSize: "0.85rem" }}>
@@ -199,11 +204,12 @@ function ChildrenTable({
               </td>
               <td style={{ padding: "0.4rem 0.6rem", color: "var(--text-muted)" }}>{EM_DASH}</td>
               <td style={{ padding: "0.4rem 0.6rem" }}>{c.category || EM_DASH}</td>
-              <td style={{ padding: "0.4rem 0.6rem", textAlign: "right" }}>{formatTvl(c.tvl)}</td>
+              <td style={{ padding: "0.4rem 0.6rem", textAlign: "right", fontFamily: "var(--font-mono), ui-monospace, monospace", fontVariantNumeric: "tabular-nums" }}>{formatTvl(c.tvl)}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }
@@ -284,6 +290,7 @@ export function ProtocolDetail({
         ) : null}
       </section>
 
+      <div style={{ overflowX: "auto" }}>
       <table
         style={{
           width: "100%",
@@ -295,7 +302,7 @@ export function ProtocolDetail({
         <tbody>
           <Row
             label="TVL"
-            value={formatTvl(protocol.tvl)}
+            value={<span className="mono tabular">{formatTvl(protocol.tvl)}</span>}
             provenance={prov.tvl ?? null}
           />
           <Row
@@ -379,6 +386,7 @@ export function ProtocolDetail({
           />
         </tbody>
       </table>
+      </div>
 
       <ChildrenTable children={children} />
     </main>

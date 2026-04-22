@@ -13,7 +13,7 @@ export type PizzaSliceId = (typeof PIZZA_SLICES)[number]["id"];
 
 export const GRADE_FILL: Record<GradeColor, string> = {
   gray: "#6b7785",
-  green: "#6fb893",
+  green: "#34ad70",
   orange: "#c08a4a",
   red: "#d13b3b",
 };
