@@ -106,19 +106,22 @@ function includeInBrowse(r: LandingRow, opts: FilterOptions): boolean {
 export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): LandingNode[] {
   const query = opts.query.trim();
   if (query) {
-    const flat: LandingRow[] = [];
+    const pool: LandingNode[] = [];
     for (const n of nodes) {
       if (!includeInBrowse(n, opts)) continue;
+      const parentMatches = rankMatch([n], query).length > 0;
+      if (parentMatches) {
+        pool.push(n);
+        continue;
+      }
       if (n.children && n.children.length > 0) {
         for (const c of n.children) {
-          if (includeInBrowse(c, opts)) flat.push(c);
+          if (!includeInBrowse(c, opts)) continue;
+          if (rankMatch([c], query).length > 0) pool.push(c);
         }
-      } else {
-        flat.push(n);
       }
     }
-    const ranked = rankMatch(flat, query);
-    return ranked.map((r) => ({ ...r }));
+    return rankMatch(pool, query);
   }
 
   const visible = nodes.filter((n) => {

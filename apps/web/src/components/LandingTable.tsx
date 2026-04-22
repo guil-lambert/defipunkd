@@ -28,7 +28,6 @@ export function LandingTable({ nodes, tabCounts }: Props) {
 
   const visible = showAll ? filtered : filtered.slice(0, DEFAULT_PAGE);
   const activePizzas = Object.keys(pizzaFilters).filter((k) => pizzaFilters[k]);
-  const searching = query.trim().length > 0;
 
   return (
     <section>
@@ -131,7 +130,7 @@ export function LandingTable({ nodes, tabCounts }: Props) {
         </thead>
         <tbody>
           {visible.map((node, i) => {
-            const isFamily = !!(node.children && node.children.length > 0) && !searching;
+            const isFamily = !!(node.children && node.children.length > 0);
             const isExpanded = !!expanded[node.slug];
             return (
               <Fragment key={node.slug}>

@@ -86,10 +86,27 @@ describe("filterAndSortNodes search flattens families", () => {
     expect(out[0]?.children?.length).toBe(2);
   });
 
-  it("search: children surface as individual rows, parent disappears", () => {
+  it("search: parent match keeps the family row (children stay nested and clickable)", () => {
+    const nodes = buildNodes(rows);
+    const out = filterAndSortNodes(nodes, { tab: "All", query: "uniswa", showInactive: false });
+    expect(out.map((n) => n.slug)).toContain("uniswap");
+    const uni = out.find((n) => n.slug === "uniswap")!;
+    expect(uni.children?.length).toBe(2);
+  });
+
+  it("search: child-only match surfaces children individually (no parent dup)", () => {
     const nodes = buildNodes(rows);
     const out = filterAndSortNodes(nodes, { tab: "All", query: "v3", showInactive: false });
     expect(out.map((n) => n.slug)).toContain("uniswap-v3");
     expect(out.map((n) => n.slug)).not.toContain("uniswap");
+  });
+
+  it("search: parent-name query does not emit duplicate child rows", () => {
+    const nodes = buildNodes(rows);
+    const out = filterAndSortNodes(nodes, { tab: "All", query: "uniswap", showInactive: false });
+    const slugs = out.map((n) => n.slug);
+    expect(slugs).toEqual(expect.arrayContaining(["uniswap"]));
+    expect(slugs).not.toContain("uniswap-v2");
+    expect(slugs).not.toContain("uniswap-v3");
   });
 });
