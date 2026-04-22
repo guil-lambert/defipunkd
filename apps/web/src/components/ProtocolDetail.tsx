@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import type { Protocol, ProvenanceTag } from "@defibeat/registry";
 import { auditorDomain, EM_DASH, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
-import { PizzaChart, PIZZA_SLICES } from "./PizzaChart";
+import { PizzaChart } from "./PizzaChart";
 
 type RowProps = {
   label: string;
@@ -270,13 +270,11 @@ export function ProtocolDetail({
         <tbody>
           <Row
             label="TVL"
-            anchor={PIZZA_SLICES[6]!.id}
             value={formatTvl(protocol.tvl)}
             provenance={prov.tvl ?? null}
           />
           <Row
             label="Chains"
-            anchor={PIZZA_SLICES[0]!.id}
             value={protocol.chains.length > 0 ? protocol.chains.join(", ") : unknownCell()}
             provenance={prov.chains ?? null}
           />
@@ -305,6 +303,7 @@ export function ProtocolDetail({
           />
           <Row
             label="GitHub"
+            anchor="verifiability"
             value={
               protocol.github && protocol.github.length > 0 ? (
                 <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
@@ -329,40 +328,15 @@ export function ProtocolDetail({
           />
           <Row
             label="Audits"
-            anchor={PIZZA_SLICES[5]!.id}
+            anchor="verifiability"
             value={<AuditsRow count={protocol.audit_count} links={protocol.audit_links} />}
             provenance={prov.audit_links ?? prov.audit_count ?? null}
           />
-          <Row
-            label="Admin / control surface"
-            anchor={PIZZA_SLICES[1]!.id}
-            value={unknownCell()}
-            provenance={null}
-          />
-          <Row
-            label="Upgradeability"
-            anchor={PIZZA_SLICES[1]!.id}
-            value={unknownCell()}
-            provenance={null}
-          />
-          <Row
-            label="Exit window"
-            anchor={PIZZA_SLICES[2]!.id}
-            value={unknownCell()}
-            provenance={null}
-          />
-          <Row
-            label="Autonomy / accessibility"
-            anchor={PIZZA_SLICES[3]!.id}
-            value={unknownCell()}
-            provenance={null}
-          />
-          <Row
-            label="Oracle dependency"
-            anchor={PIZZA_SLICES[4]!.id}
-            value={unknownCell()}
-            provenance={null}
-          />
+          <Row label="Control" anchor="control" value={unknownCell()} provenance={null} />
+          <Row label="Ability to exit" anchor="ability-to-exit" value={unknownCell()} provenance={null} />
+          <Row label="Dependencies" anchor="dependencies" value={unknownCell()} provenance={null} />
+          <Row label="Access" anchor="access" value={unknownCell()} provenance={null} />
+          <Row label="Verifiability" anchor="verifiability" value={unknownCell()} provenance={null} />
           <Row
             label="Review status"
             value={<span style={{ color: "#94a3b8" }}>listed</span>}

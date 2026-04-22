@@ -7,19 +7,16 @@ export const metadata = {
 };
 
 const SLICE_DESCRIPTIONS: Record<string, string> = {
-  "chain-ownership":
-    "Who owns the contracts that custody user funds, and how that ownership is structured across chains.",
-  upgradeability:
-    "Whether contracts can be upgraded, how quickly, and by whom.",
-  "exit-window":
+  control:
+    "Who holds admin privileges, how contracts can be upgraded, and how quickly. Combines the old chain-ownership and upgradeability questions — a single assessment per protocol rather than per chain, since a one-chain-red / mainnet-green split is more misleading than useful.",
+  "ability-to-exit":
     "Whether users can exit on their own terms if the protocol team disappears or acts adversarially.",
-  autonomy:
-    "Whether the protocol depends on privileged operators, off-chain infrastructure, or whitelists to function.",
-  oracle: "How the protocol sources price / state data and the blast radius of oracle failure.",
-  "external-deps":
-    "Third-party protocols (bridges, yield wrappers, stable issuers) that the protocol inherits risk from.",
-  collateral:
-    "Quality and concentration of collateral backing user balances — applies to every category, not just lending.",
+  dependencies:
+    "Third-party protocols the contracts rely on: oracles, bridges, yield wrappers, stable issuers, and collateral counterparties. The Kelp\u2009\u2194\u2009Aave unwind is a recent reminder that collateral exposure is just another dependency, so it lives in this slice rather than alone.",
+  access:
+    "Whether the protocol depends on privileged operators, off-chain infrastructure, whitelists, or regional restrictions to function.",
+  verifiability:
+    "Whether anyone outside the team can independently verify what the code does: open-source status, audit quality and scope, bytecode-to-source correspondence at the deployed address, and whether post-audit changes were themselves reviewed.",
 };
 
 export default function MethodologyPage() {
@@ -70,12 +67,25 @@ export default function MethodologyPage() {
       </p>
 
       <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
-        The 7-slice risk pizza
+        The 5-slice risk pizza
       </h2>
       <p>
-        Every protocol carries a pizza chart with seven slices. At Phase 0 every slice is gray —
-        nothing has been reviewed. The slices exist now so the shape of future assessments is
-        already visible.
+        DefiBeat uses the five assessment dimensions from{" "}
+        <a
+          href="https://github.com/deficollective/defiscan-v2"
+          style={{ color: "#22d3ee" }}
+          rel="noreferrer"
+          target="_blank"
+        >
+          DeFiScan v2
+        </a>
+        : <strong style={{ color: "#cbd5e1" }}>Control</strong>,{" "}
+        <strong style={{ color: "#cbd5e1" }}>Ability to exit</strong>,{" "}
+        <strong style={{ color: "#cbd5e1" }}>Dependencies</strong>,{" "}
+        <strong style={{ color: "#cbd5e1" }}>Access</strong>, and{" "}
+        <strong style={{ color: "#cbd5e1" }}>Verifiability</strong>. At Phase 0 every slice is
+        gray — nothing has been reviewed. The slices exist now so the shape of future assessments
+        is already visible.
       </p>
       <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start", flexWrap: "wrap" }}>
         <PizzaChart size="lg" />
@@ -93,20 +103,17 @@ export default function MethodologyPage() {
       </div>
 
       <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
-        Audits and source code
+        Audits and source code feed Verifiability
       </h2>
       <p>
-        Each protocol detail page shows the raw audit count and expandable list of audit links
-        alongside the project&rsquo;s GitHub repositories. These are intentionally{" "}
-        <strong style={{ color: "#cbd5e1" }}>not reduced to a pizza slice</strong>: an audit count
-        is a famously weak risk signal on its own — auditor quality, report scope, and
-        post-audit code changes matter far more than the integer. GitHub links are surfaced so
-        you can check whether the contracts are verifiable, whether there is active development,
-        and whether the deployed addresses match the published source.
-      </p>
-      <p>
-        A future phase will evaluate auditor reputations and open-source-completeness as part of
-        the rubric; for now the data is shown raw and you draw your own conclusions.
+        Each protocol detail page shows the raw audit count, expandable list of audit links, and
+        the project&rsquo;s GitHub repositories. These feed the Verifiability slice, not a slice
+        of their own: an audit count is a famously weak signal in isolation — auditor quality,
+        report scope, and whether post-audit changes were reviewed matter far more than the
+        integer. GitHub is surfaced so you can check whether the deployed addresses match the
+        published source. At Phase 0 the data is raw and the slice stays gray; a future phase
+        will grade auditor reputation and source-to-bytecode correspondence as part of the
+        Verifiability assessment.
       </p>
 
       <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
@@ -115,12 +122,12 @@ export default function MethodologyPage() {
       <p>
         Stage badges arrive with Phase 3 of the project, at which point DefiBeat adopts{" "}
         <a
-          href="https://www.defiscan.info/framework"
+          href="https://docs.defiscan.info/"
           style={{ color: "#22d3ee" }}
           rel="noreferrer"
           target="_blank"
         >
-          Defiscan&rsquo;s stage framework
+          DeFiScan v2&rsquo;s stage framework
         </a>{" "}
         verbatim. Until then, every protocol shows an em-dash in the Stage column.
       </p>

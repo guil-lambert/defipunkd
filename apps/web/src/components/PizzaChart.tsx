@@ -1,14 +1,14 @@
 import type { JSX } from "react";
 
 export const PIZZA_SLICES = [
-  { id: "chain-ownership", label: "Chain / ownership" },
-  { id: "upgradeability", label: "Upgradeability" },
-  { id: "exit-window", label: "Exit window" },
-  { id: "autonomy", label: "Autonomy / accessibility" },
-  { id: "oracle", label: "Oracle dependency" },
-  { id: "external-deps", label: "External dependencies" },
-  { id: "collateral", label: "Collateral risk" },
+  { id: "control", label: "Control" },
+  { id: "ability-to-exit", label: "Ability to exit" },
+  { id: "dependencies", label: "Dependencies" },
+  { id: "access", label: "Access" },
+  { id: "verifiability", label: "Verifiability" },
 ] as const;
+
+export type PizzaSliceId = (typeof PIZZA_SLICES)[number]["id"];
 
 export type PizzaSize = "sm" | "lg";
 
