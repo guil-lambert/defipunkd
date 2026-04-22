@@ -30,6 +30,11 @@ export default function MethodologyPage() {
         lineHeight: 1.6,
       }}
     >
+      <div style={{ marginBottom: "1rem" }}>
+        <a href="/" style={{ color: "#22d3ee", fontSize: "0.85rem", textDecoration: "none" }}>
+          ← back to index
+        </a>
+      </div>
       <h1 style={{ color: "#22d3ee", marginBottom: "0.5rem" }}>Methodology</h1>
       <p style={{ color: "#94a3b8", marginTop: 0 }}>
         DefiBeat is a registry, not a rating. No protocol on this site has been reviewed.
