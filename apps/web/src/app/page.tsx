@@ -2,7 +2,7 @@ import { listProtocols } from "@defibeat/registry";
 import { LandingTable } from "../components/LandingTable";
 import { bucketCategory } from "../lib/category-map";
 import { primaryChain } from "../lib/format";
-import { tabCounts, type LandingRow } from "../lib/landing";
+import { buildNodes, tabCountsFromNodes, type LandingRow } from "../lib/landing";
 
 export const dynamic = "force-static";
 
@@ -21,6 +21,7 @@ export default function HomePage() {
       tvl: p.tvl,
       is_dead: p.is_dead,
       is_parent: p.is_parent,
+      parent_slug: p.parent_slug,
       delisted_at: p.delisted_at,
     };
   });
@@ -31,7 +32,8 @@ export default function HomePage() {
     );
   }
 
-  const counts = tabCounts(rows);
+  const nodes = buildNodes(rows);
+  const counts = tabCountsFromNodes(nodes);
   const live = counts.All ?? 0;
 
   return (
@@ -45,7 +47,7 @@ export default function HomePage() {
           </a>
         </p>
       </header>
-      <LandingTable rows={rows} tabCounts={counts} />
+      <LandingTable nodes={nodes} tabCounts={counts} />
     </main>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { filterAndSort, type LandingRow } from "../lib/landing";
+import { useMemo, useState, Fragment } from "react";
+import { filterAndSortNodes, type LandingNode, type LandingRow } from "../lib/landing";
 import { TABS, type Tab } from "../lib/category-map";
 import { PIZZA_SLICES, PizzaChart } from "./PizzaChart";
 import { EM_DASH, formatTvl } from "../lib/format";
@@ -9,24 +9,26 @@ import { EM_DASH, formatTvl } from "../lib/format";
 const DEFAULT_PAGE = 200;
 
 type Props = {
-  rows: LandingRow[];
+  nodes: LandingNode[];
   tabCounts: Record<Tab, number>;
 };
 
-export function LandingTable({ rows, tabCounts }: Props) {
+export function LandingTable({ nodes, tabCounts }: Props) {
   const [tab, setTab] = useState<Tab>("All");
   const [query, setQuery] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [pizzaFilters, setPizzaFilters] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(
-    () => filterAndSort(rows, { tab, query, showInactive }),
-    [rows, tab, query, showInactive],
+    () => filterAndSortNodes(nodes, { tab, query, showInactive }),
+    [nodes, tab, query, showInactive],
   );
 
   const visible = showAll ? filtered : filtered.slice(0, DEFAULT_PAGE);
   const activePizzas = Object.keys(pizzaFilters).filter((k) => pizzaFilters[k]);
+  const searching = query.trim().length > 0;
 
   return (
     <section>
@@ -52,8 +54,7 @@ export function LandingTable({ rows, tabCounts }: Props) {
                 fontSize: "0.85rem",
               }}
             >
-              {t}{" "}
-              <span style={{ opacity: 0.6, marginLeft: 4 }}>{count.toLocaleString()}</span>
+              {t} <span style={{ opacity: 0.6, marginLeft: 4 }}>{count.toLocaleString()}</span>
             </button>
           );
         })}
@@ -93,9 +94,7 @@ export function LandingTable({ rows, tabCounts }: Props) {
             <button
               key={s.id}
               type="button"
-              onClick={() =>
-                setPizzaFilters((prev) => ({ ...prev, [s.id]: !prev[s.id] }))
-              }
+              onClick={() => setPizzaFilters((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
               title={`${s.label} ${EM_DASH} all unknown at Phase 0`}
               style={{
                 padding: "0.25rem 0.6rem",
@@ -131,43 +130,26 @@ export function LandingTable({ rows, tabCounts }: Props) {
           </tr>
         </thead>
         <tbody>
-          {visible.map((r, i) => {
-            const extraChains = Math.max(0, r.chains.length - 1);
+          {visible.map((node, i) => {
+            const isFamily = !!(node.children && node.children.length > 0) && !searching;
+            const isExpanded = !!expanded[node.slug];
             return (
-              <tr key={r.slug} style={{ borderTop: "1px solid #1e293b" }}>
-                <td style={{ padding: "0.45rem 0.6rem", color: "#64748b" }}>{i + 1}</td>
-                <td style={{ padding: "0.45rem 0.6rem" }}>
-                  <a href={`/protocol/${r.slug}`} style={{ color: "#22d3ee", textDecoration: "none" }}>
-                    {r.name}
-                  </a>
-                  {r.is_dead ? (
-                    <span style={{ color: "#f87171", marginLeft: 6, fontSize: "0.75rem" }}>(inactive)</span>
-                  ) : null}
-                </td>
-                <td style={{ padding: "0.45rem 0.6rem" }}>
-                  {r.primary_chain ?? EM_DASH}
-                  {extraChains > 0 ? (
-                    <span
-                      style={{
-                        marginLeft: 6,
-                        padding: "0 0.4rem",
-                        background: "#1e293b",
-                        borderRadius: 999,
-                        color: "#64748b",
-                        fontSize: "0.7rem",
-                      }}
-                    >
-                      +{extraChains}
-                    </span>
-                  ) : null}
-                </td>
-                <td style={{ padding: "0.2rem 0.6rem" }}>
-                  <PizzaChart size="sm" />
-                </td>
-                <td style={{ padding: "0.45rem 0.6rem", color: "#475569" }}>{EM_DASH}</td>
-                <td style={{ padding: "0.45rem 0.6rem" }}>{r.category || EM_DASH}</td>
-                <td style={{ padding: "0.45rem 0.6rem", textAlign: "right" }}>{formatTvl(r.tvl)}</td>
-              </tr>
+              <Fragment key={node.slug}>
+                <Row
+                  rank={i + 1}
+                  row={node}
+                  isFamilyHead={isFamily}
+                  isExpanded={isExpanded}
+                  onToggle={() =>
+                    setExpanded((prev) => ({ ...prev, [node.slug]: !prev[node.slug] }))
+                  }
+                />
+                {isFamily && isExpanded
+                  ? (node.children ?? []).map((child) => (
+                      <Row key={child.slug} rank={null} row={child} isChild />
+                    ))
+                  : null}
+              </Fragment>
             );
           })}
         </tbody>
@@ -195,12 +177,85 @@ export function LandingTable({ rows, tabCounts }: Props) {
           </button>
         ) : null}
       </div>
-
-      <ReviewedGrid />
     </section>
   );
 }
 
-function ReviewedGrid() {
-  return null;
+type RowProps = {
+  rank: number | null;
+  row: LandingNode;
+  isFamilyHead?: boolean;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+  isChild?: boolean;
+};
+
+function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProps) {
+  const extraChains = Math.max(0, row.chains.length - 1);
+  return (
+    <tr
+      style={{
+        borderTop: "1px solid #1e293b",
+        background: isChild ? "rgba(34,211,238,0.04)" : undefined,
+      }}
+    >
+      <td style={{ padding: "0.45rem 0.6rem", color: "#64748b" }}>{rank ?? ""}</td>
+      <td style={{ padding: "0.45rem 0.6rem", paddingLeft: isChild ? "2rem" : "0.6rem" }}>
+        {isFamilyHead ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={isExpanded}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#64748b",
+              cursor: "pointer",
+              marginRight: 6,
+              padding: 0,
+              fontSize: "0.85rem",
+              width: "1rem",
+              textAlign: "center",
+            }}
+          >
+            {isExpanded ? "\u25BE" : "\u25B8"}
+          </button>
+        ) : null}
+        <a href={`/protocol/${row.slug}`} style={{ color: "#22d3ee", textDecoration: "none" }}>
+          {row.name}
+        </a>
+        {isFamilyHead ? (
+          <span style={{ color: "#64748b", marginLeft: 6, fontSize: "0.75rem" }}>
+            ({row.children?.length ?? 0})
+          </span>
+        ) : null}
+        {row.is_dead ? (
+          <span style={{ color: "#f87171", marginLeft: 6, fontSize: "0.75rem" }}>(inactive)</span>
+        ) : null}
+      </td>
+      <td style={{ padding: "0.45rem 0.6rem" }}>
+        {row.primary_chain ?? EM_DASH}
+        {extraChains > 0 ? (
+          <span
+            style={{
+              marginLeft: 6,
+              padding: "0 0.4rem",
+              background: "#1e293b",
+              borderRadius: 999,
+              color: "#64748b",
+              fontSize: "0.7rem",
+            }}
+          >
+            +{extraChains}
+          </span>
+        ) : null}
+      </td>
+      <td style={{ padding: "0.2rem 0.6rem" }}>
+        <PizzaChart size="sm" />
+      </td>
+      <td style={{ padding: "0.45rem 0.6rem", color: "#475569" }}>{EM_DASH}</td>
+      <td style={{ padding: "0.45rem 0.6rem" }}>{row.category || EM_DASH}</td>
+      <td style={{ padding: "0.45rem 0.6rem", textAlign: "right" }}>{formatTvl(row.tvl)}</td>
+    </tr>
+  );
 }
