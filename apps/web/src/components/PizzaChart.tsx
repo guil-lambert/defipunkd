@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import type { GradeColor } from "../lib/verifiability";
 
 export const PIZZA_SLICES = [
   { id: "control", label: "Control" },
@@ -10,9 +11,30 @@ export const PIZZA_SLICES = [
 
 export type PizzaSliceId = (typeof PIZZA_SLICES)[number]["id"];
 
-export type PizzaSize = "sm" | "lg";
+export const GRADE_FILL: Record<GradeColor, string> = {
+  gray: "#334155",
+  green: "#16a34a",
+  orange: "#f59e0b",
+  red: "#dc2626",
+};
 
-export function PizzaChart({ size = "lg" }: { size?: PizzaSize }): JSX.Element {
+const GRADE_TOOLTIP: Record<GradeColor, string> = {
+  gray: "unknown",
+  green: "green",
+  orange: "orange",
+  red: "red",
+};
+
+export type PizzaSize = "sm" | "lg";
+export type PizzaGrades = Partial<Record<PizzaSliceId, GradeColor>>;
+
+export function PizzaChart({
+  size = "lg",
+  grades,
+}: {
+  size?: PizzaSize;
+  grades?: PizzaGrades;
+}): JSX.Element {
   const radius = size === "sm" ? 12 : 72;
   const stroke = size === "sm" ? 1 : 2;
   const cx = radius;
@@ -28,15 +50,16 @@ export function PizzaChart({ size = "lg" }: { size?: PizzaSize }): JSX.Element {
     const x1 = cx + radius * Math.cos(a1);
     const y1 = cy + radius * Math.sin(a1);
     const slice = PIZZA_SLICES[i]!;
+    const grade: GradeColor = grades?.[slice.id] ?? "gray";
     paths.push(
       <a key={slice.id} href={`#${slice.id}`}>
         <path
           d={`M${cx},${cy} L${x0},${y0} A${radius},${radius} 0 0,1 ${x1},${y1} Z`}
-          fill="#334155"
+          fill={GRADE_FILL[grade]}
           stroke="#0f172a"
           strokeWidth={stroke}
         >
-          <title>{`${slice.label} ${"\u2014"} unknown`}</title>
+          <title>{`${slice.label} ${"\u2014"} ${GRADE_TOOLTIP[grade]}`}</title>
         </path>
       </a>,
     );

@@ -13,6 +13,7 @@ function row(overrides: Partial<LandingRow>): LandingRow {
     is_parent: false,
     parent_slug: null,
     delisted_at: null,
+    verifiability_grade: "gray",
     ...overrides,
   };
 }

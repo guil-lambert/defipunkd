@@ -3,6 +3,7 @@ import { LandingTable } from "../components/LandingTable";
 import { bucketCategory } from "../lib/category-map";
 import { primaryChain } from "../lib/format";
 import { buildNodes, tabCountsFromNodes, type LandingRow } from "../lib/landing";
+import { verifiabilityGrade } from "../lib/verifiability";
 
 export const dynamic = "force-static";
 
@@ -23,6 +24,10 @@ export default function HomePage() {
       is_parent: p.is_parent,
       parent_slug: p.parent_slug,
       delisted_at: p.delisted_at,
+      verifiability_grade: verifiabilityGrade(
+        !!(p.github && p.github.length > 0),
+        p.audit_count ?? 0,
+      ),
     };
   });
 

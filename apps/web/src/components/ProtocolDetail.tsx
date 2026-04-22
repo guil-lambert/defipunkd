@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import type { Protocol, ProvenanceTag } from "@defibeat/registry";
 import { auditorDomain, EM_DASH, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
+import { verifiabilityGrade } from "../lib/verifiability";
 import { PizzaChart } from "./PizzaChart";
 
 type RowProps = {
@@ -184,7 +185,15 @@ function ChildrenTable({
               </td>
               <td style={{ padding: "0.4rem 0.6rem" }}>{(c.chains[0] ?? EM_DASH)}</td>
               <td style={{ padding: "0.4rem 0.6rem" }}>
-                <PizzaChart size="sm" />
+                <PizzaChart
+                  size="sm"
+                  grades={{
+                    verifiability: verifiabilityGrade(
+                      !!(c.github && c.github.length > 0),
+                      c.audit_count ?? 0,
+                    ),
+                  }}
+                />
               </td>
               <td style={{ padding: "0.4rem 0.6rem", color: "#475569" }}>{EM_DASH}</td>
               <td style={{ padding: "0.4rem 0.6rem" }}>{c.category || EM_DASH}</td>
@@ -245,7 +254,15 @@ export function ProtocolDetail({
           </p>
         </div>
         <div style={{ marginLeft: "auto" }}>
-          <PizzaChart size="lg" />
+          <PizzaChart
+            size="lg"
+            grades={{
+              verifiability: verifiabilityGrade(
+                !!(protocol.github && protocol.github.length > 0),
+                protocol.audit_count ?? 0,
+              ),
+            }}
+          />
         </div>
       </header>
 
