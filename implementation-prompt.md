@@ -1,125 +1,134 @@
 # Prompt
 
-You are implementing **Phase 0** of DefiBeat (see `spec.md` in the repo root — read it in full before starting). Phase 0's "done" definition: list + detail pages live for all DeFiLlama protocols with raw metadata and `unknown` enrichment rows. Work in **5 sequential implementation phases**. After each phase, stop, summarize what changed, and wait for my go-ahead before starting the next.
+You are implementing **Phase 0** of DefiBeat (see `spec.md` in the repo root — read it in full before starting). Phase 0's "done" definition: list + detail pages live for all DeFiLlama protocols with raw metadata and `unknown` enrichment rows, **fully statically rendered from committed files — no database**. Work in **5 sequential implementation phases**. After each phase, stop, summarize what changed, and wait for my go-ahead before starting the next.
 
 ## Pre-flight (before Phase 1)
 
 Confirm you've read `spec.md` in full, then ask for or confirm each of the following before writing code:
 
 - **Contact URL** for the `User-Agent: DefiBeat (+<contact-url>)` header sent to DeFiLlama.
-- **Shared-secret env var name** for `/api/sync` auth (default: `SYNC_SECRET`, header `x-sync-secret`).
-- **Neon connection strings** for (a) production and (b) a throwaway integration-test branch.
 - **Vercel project** name/slug this deploys into.
-- **GitHub repo** slug for the Actions workflow.
+- **GitHub repo** slug.
 - **pnpm + Node versions** to pin via `packageManager` and `.nvmrc` / `engines`.
 
-Flag contradictions between `spec.md` prose and the "Interview decisions" / "Landing page" sections (those win per spec) before proceeding.
+Flag contradictions between `spec.md` prose and the "Interview decisions" / "Landing page" / "Deployment inputs (2026-04-22 pivot)" sections (those win, pivot wins hardest) before proceeding.
 
 ## Ground rules
 
-- Treat `spec.md` as authoritative. Where the **Interview decisions (2026-04-21)** or **Landing page: category tabs + Summary table** sections conflict with earlier prose, those sections win.
-- **The DB is derived state** (spec Key Principle #11). Any instance must be rebuildable from scratch via a `pnpm rebuild-db` command: drop → apply `schema.sql` → load curated files (empty at Phase 0) → run DeFiLlama sync. Do not introduce DB-only state that can't be reconstructed.
-- No features beyond Phase 0. Stub Phase 1/2/3 tables and queue interfaces but do not implement workers.
+- Treat `spec.md` as authoritative. The **Deployment inputs (2026-04-22 pivot)** note wins over anything DB-shaped elsewhere.
+- **The git repo is the source of truth at Phase 0** (spec Key Principle #11). Protocol data lives in `data/defillama-snapshot.json` + `data/overlays/<slug>.ts`. Do not introduce a database, a queue, a shared secret, or a Vercel API route.
+- No features beyond Phase 0. No stubs for Phase 1/2/3 workers beyond what the registry API naturally permits.
 - No speculative abstractions, no comments explaining what code does, no README/docs unless I ask.
-- TypeScript + Next.js (App Router) on Vercel, Postgres (Neon). pnpm workspaces. Dark-only UI, slate base + cyan (#22d3ee) accent, pizza slices use green/yellow/red.
+- TypeScript + Next.js (App Router) on Vercel. pnpm workspaces. Dark-only UI, slate base + cyan (#22d3ee) accent, pizza slices use green/yellow/red.
 - Use a feature branch per phase; commit in logical chunks; don't push without asking.
 - After each phase, run typecheck + build + tests and report results. If something in the spec is ambiguous, ask before guessing.
 
 ## Testing policy (applies to all phases)
 
 - **Framework**: Vitest for units + integration; a single Playwright smoke test added in Phase 5.
-- **Philosophy**: test logic that can silently break (diff detection, delist rule, auth, category mapping). Do **not** test framework glue, do **not** write snapshot or component tests, do **not** mock full DeFiLlama payloads — use small hand-crafted fixtures.
-- **Integration tests** hit a real Postgres. Pick **one** of: (a) a dedicated Neon branch, or (b) testcontainers-postgres. Decide in Phase 1 and justify in one line. Tests must bootstrap by running `schema.sql` on a clean DB (same path as `rebuild-db`).
+- **Philosophy**: test logic that can silently break (snapshot normalization, parent mapping, `is_dead` derivation, 14-day delist rule, overlay merge precedence, category mapping, prefix-boost ranking). Do **not** test framework glue, do **not** write snapshot or component tests, do **not** mock full DeFiLlama payloads — use small hand-crafted fixtures under `fixtures/`.
+- **Integration tests** run against a small committed fixture snapshot (e.g. `fixtures/snapshot.small.json`) plus a couple of fixture overlays. No database, no testcontainers, no Neon branch.
 - Each phase lists its required tests under **Tests**. Don't add more than listed without asking.
 
-## Phase 1 — Repo skeleton & schema
+## Phase 1 — Repo skeleton & registry package
 
 1. Fork prep: prune the checked-in l2beat packages aggressively (delete rollup packages; keep `@l2beat/discovery` + the UI package in the workspace). List everything you delete.
-2. Set up pnpm workspace, Next.js app (App Router, TS strict), shared `@defibeat/db` package. Use **raw SQL migrations** — no ORM. Thin query layer: `pg` (or `postgres`) + hand-written parameterized queries. Justify the driver pick in one line.
-3. Write the **full Postgres schema** from spec §"Data model" into a single `schema.sql` (idempotent where practical; destined to be applied to an empty DB). Include all tables listed in the spec — even those empty until Phase 1/2/3. Required columns: `delisted_at`, `last_seen_in_defillama`, `last_updated` (material-change), `last_synced_at` (every run), `is_dead` (derived from DeFiLlama signals), provenance cross-cutting columns, no `parser_version`. Must apply cleanly on a fresh Neon DB.
-4. Implement `pnpm rebuild-db`: drops all tables, applies `schema.sql`, loads curated files (none exist yet — leave a `curated/` directory with a `.gitkeep`), then invokes the sync entry point (stubbed in Phase 1; wired in Phase 2).
-5. Stub the Postgres-backed queue (pgboss) and leave worker interfaces for site/docs/github/audit/onchain with TODOs.
-6. A tiny migration runner (~30 lines) that applies numbered `migrations/*.sql` files in order and records them in a `_migrations` table. Used only for rare in-place changes; the default path is `rebuild-db`.
-7. Install Vitest, wire `pnpm test`, decide + document the integration-DB approach (per testing policy above).
-8. Pin pnpm via `packageManager` and Node via `.nvmrc` (or `engines`).
+2. Set up pnpm workspace + Next.js app (App Router, TS strict).
+3. Create `packages/registry` exporting:
+   - `type Protocol`, `type Overlay`, `type Snapshot`
+   - `listProtocols(): Protocol[]`
+   - `getProtocol(slug: string): Protocol | undefined`
+   - `listChildren(parentSlug: string): Protocol[]`
+   The implementation reads `data/defillama-snapshot.json` and dynamically imports every `data/overlays/*.ts` at module load, merges them per-field, attaches a `_provenance` map (`"defillama" | "curated"` per field), and caches the merged index for the lifetime of the process.
+4. Type the `Overlay` shape as a strict subset of `Protocol` so unknown keys fail typecheck. Fields carry neither `_provenance` nor timestamps — those come from the snapshot.
+5. Create `data/` with a placeholder `defillama-snapshot.json` (can be an empty `{ "generated_at": "...", "protocols": {} }` at this stage) and an empty `data/overlays/` with a `.gitkeep`.
+6. Install Vitest, wire `pnpm test`.
+7. Pin pnpm via `packageManager` and Node via `.nvmrc` (or `engines`).
 
 **Tests**: none yet (just the harness).
 
-**Checkpoint**: `pnpm rebuild-db` succeeds against a fresh Neon branch, typecheck passes, `pnpm build` succeeds, `pnpm test` runs (zero tests is fine).
+**Checkpoint**: typecheck passes, `pnpm build` succeeds, `pnpm test` runs (zero tests is fine), registry `listProtocols()` returns `[]` on the empty placeholder snapshot.
 
-## Phase 2 — Sync worker + GitHub Actions trigger
+## Phase 2 — `pnpm sync` CLI
 
-1. Implement `/api/sync` as a protected Vercel route (shared-secret header auth). Sends `User-Agent: DefiBeat (+<contact-url>)` to `https://api.llama.fi/protocols`.
-2. Upsert into `protocols` + `chain_deployments` with **per-row diff detection** on material fields (spec §"Refresh cadence"). On each run:
-   - always update `last_seen_in_defillama` and `last_synced_at`
-   - bump `last_updated` **only** on material-field change (enumerate the material fields in a single constant reused by the diff function)
-   - recompute `is_dead` from DeFiLlama's own deprecation signals (`deadUrl`/`deadFrom`/category hints); no TVL-history inference
-3. Auto-delist after 14 consecutive days absent from DeFiLlama (set `delisted_at`).
-4. `parentProtocol` only for `parent_slug`; no suffix parsing.
-5. **Stay under Vercel's 300s function budget**: batch upserts via a single `INSERT ... ON CONFLICT` with `unnest` (or equivalent) — not per-row round-trips. Expect ~6k rows.
-6. GitHub Actions `workflow_dispatch` workflow that calls the route with the secret.
-7. Silent last-good failure mode; no banners.
+1. Create `packages/sync` — a plain node CLI (no Vercel route, no HTTP server). Entry point: `pnpm sync`.
+2. Fetch `https://api.llama.fi/protocols` with `User-Agent: DefiBeat (+<contact-url>)`.
+3. Normalize into the `ProtocolSnapshot` shape from spec §"Data model":
+   - `parent_slug` from `parentProtocol` only; no suffix parsing.
+   - `is_dead` from `deadUrl` / `deadFrom` / category hints.
+   - Raw `category`, raw `chains`, `tvl`, `tvl_by_chain`, `website`, `twitter`, `audit_count`, `audit_links`, `hallmarks`.
+4. **Carry forward** per-slug timestamps by reading the existing `data/defillama-snapshot.json` first:
+   - `first_seen_at`: set on first appearance; immutable thereafter.
+   - `last_seen_at`: bumped to `generated_at` whenever the slug is present in the latest DeFiLlama response.
+   - `delisted_at`: set to the current `generated_at` iff the slug has been absent for **≥14 days** since `last_seen_at`. Once set, stays set.
+5. Write the whole `data/defillama-snapshot.json` file atomically. One file, not per-slug.
+6. (Optional, can defer) GitHub Actions `workflow_dispatch` that runs `pnpm sync` and opens a PR if the diff is non-empty. Fine to skip this in Phase 2 and do it by hand.
 
-**Tests**:
-- **Unit**: material-change diff function — fixtures for (a) TVL-only change → no `last_updated` bump (but row is still updated), (b) description-only change → no bump, (c) logo URL change → no bump, (d) chains change → bump, (e) new slug, (f) identical row → no-op.
-- **Unit**: `parentProtocol` → `parent_slug` mapping incl. null case.
-- **Unit**: `is_dead` derivation from DeFiLlama signals (present `deadUrl` → dead; absent → alive; edge cases).
-- **Integration**: run the upsert twice against a clean DB with a small fixture list; assert idempotency, `last_synced_at` bumps both times, `last_updated` only moves on material diffs.
-- **Integration**: delist rule boundary — seed rows with `last_seen_in_defillama` 13 and 14 days ago, run sync without them; assert only the 14-day row gets `delisted_at`.
-- **Integration**: `/api/sync` returns 401 on missing/wrong secret, 200 with the right one (mock the fetch).
+**Tests** (all unit, against small hand-crafted DeFiLlama-response fixtures):
+- normalize: key fields map correctly; null TVL stays null; empty arrays stay empty.
+- `parentProtocol` → `parent_slug` mapping incl. null case.
+- `is_dead` derivation: `deadUrl` present → dead; absent → alive; category hint edge case.
+- **14-day delist rule boundary**: given a prior snapshot where slug X has `last_seen_at` 13 days before the new `generated_at` and slug Y has it 14 days before, and neither appears in the new response: X stays live, Y gets `delisted_at` set.
+- `first_seen_at` immutability across runs; `last_seen_at` bumps when present.
+- Already-delisted slug stays delisted even if it reappears (policy call: confirm with me if ambiguous — default: reappearing clears `delisted_at` and re-opens `last_seen_at`; flag this decision in the PR).
 
-**Checkpoint**: dispatch the workflow against a real Neon DB, confirm ~6k rows land and re-syncs are idempotent. Report counts + test results + wall-clock time (must be <300s).
+**Checkpoint**: run `pnpm sync` against real DeFiLlama, confirm ~6k entries land in `data/defillama-snapshot.json`, commit the initial snapshot so deploys are reproducible from the repo alone. Report counts + test results + wall-clock time.
 
 ## Phase 3 — Protocol detail page
 
-1. `/protocol/{slug}` with the L2BEAT dense table component ported near-verbatim, repalette to slate + cyan.
-2. Rows per spec §"Detail page field rendering": TVL, Website, Github (`unknown` / em-dash), Audits (count + collapsed expandable list annotated by auditor domain), Admin (`unknown` / em-dash), Review status, Hallmarks as a chronological timeline row, Updated timestamp sourced from `last_synced_at` (UTC ISO-like, always visible).
-3. Chain tabs across the header (top-N by per-chain TVL, ~7 visible + "more" dropdown). Collapsed breadcrumb when family == instance.
-4. Children table on a parent's page if other protocols point to it via `parent_slug`.
-5. Delisted → HTTP 410 with stub page preserving **last-known protocol name**, `delisted_at`, and a DeFiLlama link.
-6. `noindex` meta on all `/protocol/*` at Phase 0. Leave a TODO pointing at the spec rule: flip to indexable per-protocol once it reaches `machine_summarized` (Phase 3).
-7. ISR hourly revalidation.
-8. Pizza chart header placeholder: fully gray 7-slice SVG with em-dash tooltip. Clicking a slice scrolls to the matching dense-table section (wire the anchors even though slices are all unknown).
+1. `/protocol/[slug]/page.tsx` with the L2BEAT dense table component ported near-verbatim, repalette to slate + cyan.
+2. `generateStaticParams` returns every non-delisted slug from `listProtocols()`. Delisted slugs are excluded from SSG and handled by a sibling `route.ts` (see #5).
+3. Rows per spec §"Detail page field rendering": TVL, Website, Github (`unknown` / em-dash), Audits (count + collapsed expandable list annotated by auditor domain), Admin (`unknown` / em-dash), Review status, Hallmarks as a chronological timeline row, Updated timestamp sourced from the snapshot's `generated_at` (UTC ISO-like, always visible).
+4. Chain tabs across the header (top-N by per-chain TVL from `tvl_by_chain`, ~7 visible + "more" dropdown). Collapsed breadcrumb when family == instance.
+5. Delisted → a `route.ts` that checks `getProtocol(slug)?.delisted_at`; if set, return an HTML response with **HTTP 410** preserving last-known name + `delisted_at` + DeFiLlama link. Unknown slug → `notFound()` (404).
+6. Children table on a parent's page using `listChildren(slug)`.
+7. `noindex` meta on all `/protocol/*` at Phase 0. TODO comment referencing the spec's per-protocol flip rule at `machine_summarized`.
+8. Pizza chart header placeholder: fully gray 7-slice SVG with em-dash tooltip. Clicking a slice scrolls to the matching dense-table section (wire the anchors).
+9. Each rendered field reads its `_provenance` and renders `[defillama]` / `[curated]` / em-dash accordingly.
 
 **Tests**:
 - **Unit**: TVL formatter (`$42.3M`, one decimal, K/M/B; null → `unknown` / em-dash; `0` → `$0`).
 - **Unit**: UTC timestamp formatter.
 - **Unit**: auditor-domain extraction from audit URLs.
-- **Unit**: hallmarks tuple parsing (DeFiLlama returns `[[timestamp, description], ...]`); test empty, single, multiple, malformed.
-- **Integration**: route handler returns 410 for a row with `delisted_at` set **and response body includes the last-known name + DeFiLlama link**; 200 otherwise; 404 for unknown slug.
-- **Integration**: children table — seed a parent + two children via `parent_slug`, assert the parent's page query returns both children; a non-parent's page returns none.
+- **Unit**: hallmarks tuple parsing (`[[timestamp, description], ...]`; empty, single, multiple, malformed).
+- **Unit**: overlay merge — overlay field wins over snapshot; omitted overlay field defers to snapshot; `_provenance` tags accordingly.
+- **Integration** (against `fixtures/snapshot.small.json` + a fixture overlay): the `/protocol/[slug]` route returns 410 for a delisted slug with body including last-known name + DeFiLlama link; 200 for live; 404 for unknown slug.
+- **Integration**: `listChildren(parent)` returns children; non-parent returns none.
 
-**Checkpoint**: visit 5 real slugs incl. a multi-chain protocol, a parent-with-children, a delisted one. Screenshots or a short written walkthrough + test results.
+**Checkpoint**: visit 5 real slugs incl. a multi-chain protocol, a parent-with-children, a delisted one. Screenshots or a short walkthrough + test results.
 
 ## Phase 4 — Landing page
 
-1. Category tabs exactly as spec §"Landing page": `All | Lending | DEX | Yield | Derivatives | Bridges | Liquid Staking | CDP | Stablecoins | RWA | Others`. Static `category-map.ts`; unmapped → `Others` + `console.warn` server-side.
+1. Category tabs: `All | Lending | DEX | Yield | Derivatives | Bridges | Liquid Staking | CDP | Stablecoins | RWA | Others`. Static `category-map.ts`; unmapped → `Others` + `console.warn` at build time.
 2. Summary table columns: `# | Name | Chain | Risks | Stage | Type | TVL`. TVL-desc default, top 200 per tab, "show all" toggle.
-3. Server search (name/slug/category ILIKE with prefix-boost ranking; case-insensitive). Review-status filter. Per-slice pizza filter chips (wired; all show "unknown" at Phase 0).
-4. `Chain` column: primary + `+N` chip. `Risks`: tiny gray pizza with hover popover. `Stage`: `—`. Tab counts exclude delisted + dead, computed once per ISR window.
-5. "Show inactive" toggle re-includes dead protocols (but never delisted).
-6. Reviewed grid component built but hidden until any protocol is `reviewed`.
+3. Search + filters work as **in-memory filter/sort over `listProtocols()`**. Prefix-boost ranking on name/slug/category, case-insensitive.
+4. Per-slice pizza filter chips (wired; all "unknown" at Phase 0 so they're no-ops).
+5. `Chain` column: primary (highest per-chain TVL) + `+N` chip. `Risks`: tiny gray pizza with hover popover. `Stage`: `—`. Tab counts exclude delisted + dead, computed at build time.
+6. "Show inactive" toggle re-includes dead (never delisted).
+7. Reviewed grid component built but hidden until any protocol is `reviewed`.
+8. Page is fully static (no ISR needed — the registry is a function of the commit).
 
 **Tests**:
 - **Unit**: `category-map.ts` — every seed mapping in the spec, plus an unknown category routing to `Others`.
-- **Unit**: prefix-boost ranking — given a query and a list of candidates, assert prefix matches rank above mid-string matches; assert case-insensitivity.
-- **Integration**: landing query returns ≤200 rows per tab, excludes delisted + dead by default, includes dead (not delisted) when "show inactive" is on.
-- **Integration**: search + category tab intersect correctly (e.g. search "aave" inside `Lending` tab returns only Lending matches, not DEX matches).
+- **Unit**: prefix-boost ranking — prefix matches rank above mid-string matches; case-insensitive.
+- **Unit**: primary-chain-selection from `tvl_by_chain` (empty → null; single chain; tie-break on chain name alpha).
+- **Integration** (against `fixtures/snapshot.small.json`): landing query returns ≤200 per tab, excludes delisted + dead by default, includes dead (not delisted) when "show inactive" is on.
+- **Integration**: search + category tab intersect correctly (search inside `Lending` returns only Lending matches).
 
-**Checkpoint**: landing renders against the full dataset; confirm counts, sort, search, filters work + test results.
+**Checkpoint**: landing renders against the real committed snapshot; confirm counts, sort, search, filters work + test results.
 
 ## Phase 5 — Methodology, footer, polish + smoke test
 
 1. `/methodology` as static MDX: Defiscan rubric inheritance + "not yet rating" disclaimer + pizza legend. Indexable.
-2. Footer: methodology link, GitHub issues link for corrections/takedowns, Defiscan credit.
+2. Footer: methodology link, GitHub issues link for corrections/takedowns, note pointing curators at `data/overlays/`, Defiscan credit.
 3. Landing page indexable; `/protocol/*` stays `noindex`.
 4. Dark-only theme final pass, cyan accent audit (pizza is the only non-cyan surface).
-5. Lighthouse / typecheck / build pass. Verify HTTP 410 actually returns 410 (not 404 or 200).
+5. Lighthouse / typecheck / build pass. Verify HTTP 410 actually returns 410 (not 404 or 200) in a real `next start`.
 
 **Tests**:
-- **Playwright smoke** (one spec, four checks): (a) landing page loads and shows the category tabs; (b) a known protocol detail page loads, shows the dense table, and has `noindex` in its meta; (c) `/methodology` loads and does **not** have `noindex`; (d) a delisted slug returns HTTP 410. Run against `pnpm build && pnpm start` in CI.
+- **Playwright smoke** (one spec, four checks): (a) landing loads and shows category tabs; (b) a known protocol detail page loads, shows the dense table, and has `noindex` in its meta; (c) `/methodology` loads and does **not** have `noindex`; (d) a delisted slug returns HTTP 410. Run against `pnpm build && pnpm start` in CI.
 
-**Checkpoint**: full Phase 0 walkthrough against production-like deploy on a preview URL + green smoke test.
+**Checkpoint**: full Phase 0 walkthrough against a Vercel preview URL + green smoke test.
 
 ---
 
