@@ -16,3 +16,19 @@ export type LlamaProtocol = {
   tvl?: number | null;
   chainTvls?: Record<string, number | null> | null;
 };
+
+export type LlamaParentProtocol = {
+  id: string;
+  name: string;
+  url?: string | null;
+  description?: string | null;
+  logo?: string | null;
+  chains?: string[] | null;
+  twitter?: string | null;
+  github?: string[] | null;
+  symbol?: string | null;
+};
+
+export function parentSlugFromId(id: string): string {
+  return id.startsWith("parent#") ? id.slice("parent#".length) : id;
+}

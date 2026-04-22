@@ -20,6 +20,7 @@ export default function HomePage() {
       primary_chain: primaryChain(p.tvl_by_chain) ?? p.chains[0] ?? null,
       tvl: p.tvl,
       is_dead: p.is_dead,
+      is_parent: p.is_parent,
       delisted_at: p.delisted_at,
     };
   });

@@ -81,11 +81,29 @@ export function buildIndex(dataDir: string = DATA_DIR): {
   for (const [slug, snap] of Object.entries(snapshot.protocols)) {
     const merged = mergeProtocol(snap, overlays.get(slug), warnings);
     bySlug.set(slug, merged);
-    if (merged.parent_slug) {
-      const bucket = childrenByParent.get(merged.parent_slug) ?? [];
-      bucket.push(merged);
-      childrenByParent.set(merged.parent_slug, bucket);
+  }
+
+  const INHERITABLE = ["github", "twitter", "website"] as const;
+  for (const child of bySlug.values()) {
+    if (child.is_parent) continue;
+    if (!child.parent_slug) continue;
+    const parent = bySlug.get(child.parent_slug);
+    if (!parent) continue;
+    for (const field of INHERITABLE) {
+      if (child._provenance[field] !== "defillama") continue;
+      if (child[field] !== null && !(Array.isArray(child[field]) && child[field].length === 0)) continue;
+      const parentValue = parent[field];
+      if (parentValue === null || (Array.isArray(parentValue) && parentValue.length === 0)) continue;
+      (child as Record<string, unknown>)[field] = parentValue;
+      child._provenance[field] = "defillama-parent";
     }
+  }
+
+  for (const child of bySlug.values()) {
+    if (!child.parent_slug) continue;
+    const bucket = childrenByParent.get(child.parent_slug) ?? [];
+    bucket.push(child);
+    childrenByParent.set(child.parent_slug, bucket);
   }
 
   for (const w of warnings) {

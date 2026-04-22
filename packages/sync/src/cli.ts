@@ -3,13 +3,14 @@ import { readFileSync, writeFileSync, existsSync, renameSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ProtocolSnapshot, Snapshot } from "@defibeat/registry";
-import type { LlamaProtocol } from "./types";
-import { normalizeProtocol } from "./normalize";
+import type { LlamaParentProtocol, LlamaProtocol } from "./types";
+import { normalizeParent, normalizeProtocol } from "./normalize";
 import { carryForward } from "./carry-forward";
 import { buildSummary, formatSummary } from "./summary";
 
 const CONTACT = "https://github.com/guil-lambert/defibeat";
 const LLAMA_URL = "https://api.llama.fi/protocols";
+const LLAMA_LITE_URL = "https://api.llama.fi/lite/protocols2";
 
 function findRepoRoot(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
@@ -22,18 +23,27 @@ function findRepoRoot(): string {
   return process.cwd();
 }
 
-async function fetchLlama(): Promise<LlamaProtocol[]> {
-  const res = await fetch(LLAMA_URL, {
+async function fetchJson(url: string): Promise<unknown> {
+  const res = await fetch(url, {
     headers: { "User-Agent": `DefiBeat (+${CONTACT})` },
   });
   if (!res.ok) {
-    throw new Error(`DeFiLlama ${res.status}: ${res.statusText}`);
+    throw new Error(`${url} → ${res.status}: ${res.statusText}`);
   }
-  const json = (await res.json()) as LlamaProtocol[];
-  if (!Array.isArray(json)) {
-    throw new Error("DeFiLlama response was not an array");
-  }
-  return json;
+  return res.json();
+}
+
+async function fetchLlama(): Promise<LlamaProtocol[]> {
+  const json = await fetchJson(LLAMA_URL);
+  if (!Array.isArray(json)) throw new Error("DeFiLlama /protocols was not an array");
+  return json as LlamaProtocol[];
+}
+
+async function fetchParents(): Promise<LlamaParentProtocol[]> {
+  const json = (await fetchJson(LLAMA_LITE_URL)) as { parentProtocols?: LlamaParentProtocol[] };
+  const parents = json.parentProtocols;
+  if (!Array.isArray(parents)) throw new Error("DeFiLlama /lite/protocols2 missing parentProtocols");
+  return parents;
 }
 
 function loadPrevious(snapshotPath: string): Snapshot | null {
@@ -57,12 +67,32 @@ async function main(): Promise<void> {
 
   console.error(`[sync] fetching ${LLAMA_URL}`);
   const entries = await fetchLlama();
-  console.error(`[sync] received ${entries.length} entries`);
+  console.error(`[sync] received ${entries.length} child entries`);
+
+  console.error(`[sync] fetching parents from ${LLAMA_LITE_URL}`);
+  const parents = await fetchParents();
+  console.error(`[sync] received ${parents.length} parent entries`);
 
   const generatedAt = new Date().toISOString();
-  const knownSlugs = new Set(entries.map((e) => e.slug).filter((s): s is string => !!s));
-
   const fresh: Record<string, ProtocolSnapshot> = {};
+
+  const childSlugs = new Set(entries.map((e) => e.slug).filter((s): s is string => !!s));
+
+  let parentCollisions = 0;
+  for (const parent of parents) {
+    const normalized = normalizeParent(parent, generatedAt);
+    if (childSlugs.has(normalized.slug)) {
+      parentCollisions++;
+      continue;
+    }
+    fresh[normalized.slug] = normalized;
+  }
+  if (parentCollisions > 0) {
+    console.error(`[sync] skipped ${parentCollisions} parent slugs that collide with a child slug`);
+  }
+
+  const knownSlugs = new Set<string>([...childSlugs, ...Object.keys(fresh)]);
+
   for (const entry of entries) {
     if (!entry.slug || !entry.name) continue;
     fresh[entry.slug] = normalizeProtocol(entry, generatedAt, knownSlugs);

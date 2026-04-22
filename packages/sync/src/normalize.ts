@@ -1,5 +1,6 @@
 import type { ProtocolSnapshot } from "@defibeat/registry";
-import type { LlamaProtocol } from "./types";
+import type { LlamaParentProtocol, LlamaProtocol } from "./types";
+import { parentSlugFromId } from "./types";
 
 export function isDead(entry: LlamaProtocol): boolean {
   if (entry.deadUrl) return true;
@@ -21,7 +22,10 @@ export function resolveParentSlug(
 ): string | null {
   const raw = entry.parentProtocol;
   if (!raw) return null;
-  return knownSlugs.has(raw) ? raw : null;
+  if (knownSlugs.has(raw)) return raw;
+  const stripped = parentSlugFromId(raw);
+  if (knownSlugs.has(stripped)) return stripped;
+  return null;
 }
 
 export function normalizeProtocol(
@@ -52,6 +56,34 @@ export function normalizeProtocol(
     hallmarks: entry.hallmarks ?? [],
     parent_slug: resolveParentSlug(entry, knownSlugs),
     is_dead: isDead(entry),
+    is_parent: false,
+    first_seen_at: generatedAt,
+    last_seen_at: generatedAt,
+    delisted_at: null,
+  };
+}
+
+export function normalizeParent(
+  parent: LlamaParentProtocol,
+  generatedAt: string,
+): ProtocolSnapshot {
+  const slug = parentSlugFromId(parent.id);
+  return {
+    slug,
+    name: parent.name,
+    category: "",
+    chains: parent.chains ?? [],
+    tvl: null,
+    tvl_by_chain: {},
+    website: parent.url ?? null,
+    twitter: parent.twitter ?? null,
+    github: parent.github ?? null,
+    audit_count: 0,
+    audit_links: [],
+    hallmarks: [],
+    parent_slug: null,
+    is_dead: false,
+    is_parent: true,
     first_seen_at: generatedAt,
     last_seen_at: generatedAt,
     delisted_at: null,

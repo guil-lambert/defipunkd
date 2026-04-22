@@ -15,6 +15,7 @@ export type ProtocolSnapshot = {
   hallmarks: Array<[number, string]>;
   parent_slug: string | null;
   is_dead: boolean;
+  is_parent: boolean;
   first_seen_at: string;
   last_seen_at: string;
   delisted_at: string | null;
@@ -25,7 +26,7 @@ export type Snapshot = {
   protocols: Record<Slug, ProtocolSnapshot>;
 };
 
-export type ProvenanceTag = "defillama" | "curated";
+export type ProvenanceTag = "defillama" | "curated" | "defillama-parent";
 
 export type Protocol = ProtocolSnapshot & {
   _provenance: Partial<Record<keyof ProtocolSnapshot, ProvenanceTag>>;

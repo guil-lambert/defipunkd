@@ -9,6 +9,7 @@ export type LandingRow = {
   primary_chain: string | null;
   tvl: number | null;
   is_dead: boolean;
+  is_parent: boolean;
   delisted_at: string | null;
 };
 
@@ -28,6 +29,7 @@ export type FilterOptions = {
 export function filterAndSort(rows: LandingRow[], opts: FilterOptions): LandingRow[] {
   const visible = rows.filter((r) => {
     if (r.delisted_at) return false;
+    if (r.is_parent) return false;
     if (r.is_dead && !opts.showInactive) return false;
     if (opts.tab === "All") return true;
     return bucketCategory(r.category) === opts.tab;
@@ -41,6 +43,7 @@ export function tabCounts(rows: LandingRow[]): Record<Tab, number> {
   const counts: Record<string, number> = { All: 0 };
   for (const r of rows) {
     if (r.delisted_at) continue;
+    if (r.is_parent) continue;
     if (r.is_dead) continue;
     counts.All = (counts.All ?? 0) + 1;
     const bucket = bucketCategory(r.category);

@@ -10,6 +10,7 @@ function row(overrides: Partial<LandingRow>): LandingRow {
     primary_chain: "Ethereum",
     tvl: 100,
     is_dead: false,
+    is_parent: false,
     delisted_at: null,
     ...overrides,
   };

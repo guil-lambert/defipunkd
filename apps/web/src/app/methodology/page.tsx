@@ -54,10 +54,15 @@ export default function MethodologyPage() {
         via{" "}
         <code style={{ color: "#cbd5e1" }}>pnpm sync</code>, which writes the full list into a
         committed JSON snapshot. Human curators can override individual fields by dropping a JSON
-        file into <code style={{ color: "#cbd5e1" }}>data/overlays/</code> and opening a PR. Every
-        field displays a <code style={{ color: "#cbd5e1" }}>[defillama]</code> or{" "}
-        <code style={{ color: "#cbd5e1" }}>[curated]</code> tag so you always know where a value
-        came from.
+        file into <code style={{ color: "#cbd5e1" }}>data/overlays/</code> and opening a PR.
+      </p>
+      <p>
+        Every field displays a provenance tag so you always know where the value came from:
+        <code style={{ color: "#cbd5e1", marginLeft: 6 }}>[defillama]</code> for the raw DeFiLlama
+        value, <code style={{ color: "#cbd5e1" }}>[curated]</code> for a human-authored overlay,
+        and <code style={{ color: "#cbd5e1" }}>[defillama-parent]</code> when a child protocol
+        inherits a field (github, twitter, website) from its parent protocol because DeFiLlama
+        only records the value at the family level.
       </p>
       <p>
         DefiBeat mirrors DeFiLlama: if DeFiLlama delists a protocol, DefiBeat delists it after a
