@@ -2,7 +2,7 @@
 
 import { useMemo, useState, Fragment } from "react";
 import { filterAndSortNodes, type LandingNode, type LandingRow } from "../lib/landing";
-import { TABS, type Tab } from "../lib/category-map";
+import { DEFAULT_TAB, TABS, type Tab } from "../lib/category-map";
 import { PIZZA_SLICES, PizzaChart } from "./PizzaChart";
 import { EM_DASH, formatTvl } from "../lib/format";
 
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export function LandingTable({ nodes, tabCounts }: Props) {
-  const [tab, setTab] = useState<Tab>("All");
+  const [tab, setTab] = useState<Tab>(DEFAULT_TAB);
   const [query, setQuery] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [showAll, setShowAll] = useState(false);

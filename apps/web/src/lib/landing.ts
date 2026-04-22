@@ -1,4 +1,4 @@
-import { bucketCategory, type Tab } from "./category-map";
+import { bucketCategory, isCexCategory, type Tab } from "./category-map";
 import { rankMatch } from "./search";
 
 export type LandingRow = {
@@ -127,6 +127,7 @@ export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): L
   const visible = nodes.filter((n) => {
     if (!includeInBrowse(n, opts)) return false;
     if (opts.tab === "All") return true;
+    if (opts.tab === "DeFi") return !isCexCategory(n.category);
     return bucketCategory(n.category) === opts.tab;
   });
   return [...visible].sort(tvlSortDesc);
@@ -142,11 +143,12 @@ export function tabCounts(rows: LandingRow[]): Record<Tab, number> {
 }
 
 export function tabCountsFromNodes(nodes: LandingNode[]): Record<Tab, number> {
-  const counts: Record<string, number> = { All: 0 };
+  const counts: Record<string, number> = { All: 0, DeFi: 0 };
   for (const n of nodes) {
     if (n.delisted_at) continue;
     if (n.is_dead) continue;
     counts.All = (counts.All ?? 0) + 1;
+    if (!isCexCategory(n.category)) counts.DeFi = (counts.DeFi ?? 0) + 1;
     const bucket = bucketCategory(n.category);
     counts[bucket] = (counts[bucket] ?? 0) + 1;
   }

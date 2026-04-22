@@ -1,5 +1,6 @@
 export const TABS = [
   "All",
+  "DeFi",
   "Lending",
   "DEX",
   "Yield",
@@ -12,9 +13,17 @@ export const TABS = [
   "Others",
 ] as const;
 
-export type Tab = (typeof TABS)[number];
+export const DEFAULT_TAB: Tab = "DeFi";
 
-const RAW_TO_TAB: Record<string, Exclude<Tab, "All">> = {
+export function isCexCategory(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  return raw.trim().toLowerCase() === "cex";
+}
+
+export type Tab = (typeof TABS)[number];
+export type BucketTab = Exclude<Tab, "All" | "DeFi">;
+
+const RAW_TO_TAB: Record<string, BucketTab> = {
   lending: "Lending",
   "liquid lending": "Lending",
   cdp: "CDP",
@@ -40,7 +49,7 @@ const RAW_TO_TAB: Record<string, Exclude<Tab, "All">> = {
 export function bucketCategory(
   raw: string | null | undefined,
   onUnmapped?: (raw: string) => void,
-): Exclude<Tab, "All"> {
+): BucketTab {
   if (!raw || raw.trim() === "") return "Others";
   const key = raw.trim().toLowerCase();
   const mapped = RAW_TO_TAB[key];
