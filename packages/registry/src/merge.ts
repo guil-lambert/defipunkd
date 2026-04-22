@@ -14,6 +14,7 @@ const MERGEABLE_KEYS = [
   "audit_links",
   "hallmarks",
   "parent_slug",
+  "forked_from",
   "is_dead",
 ] as const satisfies ReadonlyArray<keyof ProtocolSnapshot>;
 

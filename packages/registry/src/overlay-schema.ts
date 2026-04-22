@@ -14,6 +14,7 @@ export const OverlaySchema = z
     audit_links: z.array(z.string()).nullable(),
     hallmarks: z.array(z.tuple([z.number(), z.string()])).nullable(),
     parent_slug: z.string().nullable(),
+    forked_from: z.array(z.number()).nullable(),
     is_dead: z.boolean().nullable(),
   })
   .partial()

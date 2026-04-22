@@ -23,7 +23,9 @@ export function worstGrade(grades: GradeColor[]): GradeColor {
 }
 
 export function dominantChildGrade<T extends { tvl: number | null; slug: string }>(
-  children: Array<T & { verifiability_grade: GradeColor }>,
+  children: T[],
+  getGrade: (c: T) => GradeColor = (c) =>
+    (c as unknown as { verifiability_grade: GradeColor }).verifiability_grade,
 ): GradeColor {
   let bestGrade: GradeColor = "gray";
   let bestTvl = -Infinity;
@@ -33,7 +35,7 @@ export function dominantChildGrade<T extends { tvl: number | null; slug: string 
     if (tvl > bestTvl || (tvl === bestTvl && c.slug < bestSlug)) {
       bestTvl = tvl;
       bestSlug = c.slug;
-      bestGrade = c.verifiability_grade;
+      bestGrade = getGrade(c);
     }
   }
   return bestGrade;

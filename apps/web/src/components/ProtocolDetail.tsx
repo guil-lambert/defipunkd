@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import type { Protocol, ProvenanceTag } from "@defibeat/registry";
 import { auditorDomain, EM_DASH, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
 import { verifiabilityGrade } from "../lib/verifiability";
+import { dependenciesGrade } from "../lib/dependencies";
 import { PizzaChart } from "./PizzaChart";
 
 type RowProps = {
@@ -192,6 +193,7 @@ function ChildrenTable({
                       !!(c.github && c.github.length > 0),
                       c.audit_count ?? 0,
                     ),
+                    dependencies: dependenciesGrade(c.category, c.forked_from),
                   }}
                 />
               </td>
@@ -261,6 +263,7 @@ export function ProtocolDetail({
                 !!(protocol.github && protocol.github.length > 0),
                 protocol.audit_count ?? 0,
               ),
+              dependencies: dependenciesGrade(protocol.category, protocol.forked_from),
             }}
           />
         </div>

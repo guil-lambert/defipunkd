@@ -341,7 +341,13 @@ function Row({ rank, row, isFamilyHead, isExpanded, onToggle, isChild }: RowProp
         ) : null}
       </td>
       <td style={{ padding: "0.2rem 0.6rem" }}>
-        <PizzaChart size="sm" grades={{ verifiability: row.verifiability_grade }} />
+        <PizzaChart
+          size="sm"
+          grades={{
+            verifiability: row.verifiability_grade,
+            dependencies: row.dependencies_grade,
+          }}
+        />
       </td>
       <td style={{ padding: "0.45rem 0.6rem", color: "#475569" }}>{EM_DASH}</td>
       <td style={{ padding: "0.45rem 0.6rem" }}>{row.category || EM_DASH}</td>

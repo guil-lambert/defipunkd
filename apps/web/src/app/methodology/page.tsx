@@ -130,9 +130,33 @@ export default function MethodologyPage() {
         auditor-reputation weighting, scope review, and source-to-bytecode correspondence.
       </p>
       <p>
+        <strong style={{ color: "#cbd5e1" }}>Dependencies</strong> is graded with a simple
+        category-based first pass plus an opportunistic <code style={{ color: "#cbd5e1" }}>forkedFrom</code>{" "}
+        check:
+      </p>
+      <ul style={{ color: "#cbd5e1" }}>
+        <li>
+          <strong style={{ color: "#dc2626" }}>red</strong> — protocol category is{" "}
+          <em>Liquid Staking</em>, <em>RWA Lending</em>, or one of the bridge categories
+          (<em>Bridge</em>, <em>Canonical Bridge</em>, <em>Cross Chain Bridge</em>,{" "}
+          <em>Bridge Aggregator</em>). These categories carry unavoidable external-protocol,
+          validator, or counterparty risk by construction.
+        </li>
+        <li>
+          <strong style={{ color: "#f59e0b" }}>orange</strong> — DeFiLlama records a non-empty{" "}
+          <code style={{ color: "#cbd5e1" }}>forkedFrom</code> lineage, i.e. the contracts
+          inherit their base logic from another protocol&rsquo;s codebase. DeFiLlama&rsquo;s
+          fork-lineage data is largely paywalled, so this signal currently covers only a handful
+          of protocols &mdash; real fork detection is Phase-2 work.
+        </li>
+        <li>
+          <strong style={{ color: "#334155" }}>gray</strong> — neither signal fires. Most
+          protocols sit here until deeper dependency analysis lands.
+        </li>
+      </ul>
+      <p>
         <strong style={{ color: "#cbd5e1" }}>Control</strong>,{" "}
-        <strong style={{ color: "#cbd5e1" }}>Ability to exit</strong>,{" "}
-        <strong style={{ color: "#cbd5e1" }}>Dependencies</strong>, and{" "}
+        <strong style={{ color: "#cbd5e1" }}>Ability to exit</strong>, and{" "}
         <strong style={{ color: "#cbd5e1" }}>Access</strong> all render gray — no automated
         heuristic grades them yet. In particular,{" "}
         <strong style={{ color: "#cbd5e1" }}>Access</strong> (whether the protocol is permissioned,

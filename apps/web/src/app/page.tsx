@@ -4,6 +4,7 @@ import { bucketCategory } from "../lib/category-map";
 import { primaryChain } from "../lib/format";
 import { buildNodes, tabCountsFromNodes, type LandingRow } from "../lib/landing";
 import { verifiabilityGrade } from "../lib/verifiability";
+import { dependenciesGrade } from "../lib/dependencies";
 
 export const dynamic = "force-static";
 
@@ -28,6 +29,7 @@ export default function HomePage() {
         !!(p.github && p.github.length > 0),
         p.audit_count ?? 0,
       ),
+      dependencies_grade: dependenciesGrade(p.category, p.forked_from),
     };
   });
 

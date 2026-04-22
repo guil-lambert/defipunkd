@@ -1,6 +1,7 @@
 import { bucketCategory, isCexCategory, type Tab } from "./category-map";
 import { rankMatch } from "./search";
 import { dominantChildGrade, type GradeColor } from "./verifiability";
+export type { GradeColor } from "./verifiability";
 
 export type LandingRow = {
   slug: string;
@@ -14,6 +15,7 @@ export type LandingRow = {
   parent_slug: string | null;
   delisted_at: string | null;
   verifiability_grade: GradeColor;
+  dependencies_grade: GradeColor;
 };
 
 export type LandingNode = LandingRow & { children?: LandingRow[] };
@@ -71,7 +73,8 @@ export function buildNodes(rows: LandingRow[]): LandingNode[] {
         ...r,
         category: derivedCategory,
         tvl: sumTvl(kids),
-        verifiability_grade: dominantChildGrade(kids),
+        verifiability_grade: dominantChildGrade(kids, (k) => k.verifiability_grade),
+        dependencies_grade: dominantChildGrade(kids, (k) => k.dependencies_grade),
         children: [...kids].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1)),
       });
     }

@@ -14,6 +14,7 @@ export type ProtocolSnapshot = {
   audit_links: string[];
   hallmarks: Array<[number, string]>;
   parent_slug: string | null;
+  forked_from: number[] | null;
   is_dead: boolean;
   is_parent: boolean;
   first_seen_at: string;

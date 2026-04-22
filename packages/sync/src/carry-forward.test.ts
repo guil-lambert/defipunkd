@@ -17,6 +17,7 @@ function fresh(slug: string, generatedAt: string): ProtocolSnapshot {
     audit_links: [],
     hallmarks: [],
     parent_slug: null,
+    forked_from: null,
     is_dead: false,
     is_parent: false,
     first_seen_at: generatedAt,

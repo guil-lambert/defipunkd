@@ -2,6 +2,16 @@ import type { ProtocolSnapshot } from "@defibeat/registry";
 import type { LlamaParentProtocol, LlamaProtocol } from "./types";
 import { parentSlugFromId } from "./types";
 
+export function normalizeForkedFrom(raw: LlamaProtocol["forkedFrom"]): number[] | null {
+  if (!raw || !Array.isArray(raw) || raw.length === 0) return null;
+  const out: number[] = [];
+  for (const v of raw) {
+    const n = typeof v === "number" ? v : Number.parseInt(String(v), 10);
+    if (Number.isFinite(n)) out.push(n);
+  }
+  return out.length > 0 ? out : null;
+}
+
 export function isDead(entry: LlamaProtocol): boolean {
   if (entry.deadUrl) return true;
   if (entry.deadFrom !== null && entry.deadFrom !== undefined && entry.deadFrom !== "") return true;
@@ -55,6 +65,7 @@ export function normalizeProtocol(
     audit_links: entry.audit_links ?? [],
     hallmarks: entry.hallmarks ?? [],
     parent_slug: resolveParentSlug(entry, knownSlugs),
+    forked_from: normalizeForkedFrom(entry.forkedFrom),
     is_dead: isDead(entry),
     is_parent: false,
     first_seen_at: generatedAt,
@@ -82,6 +93,7 @@ export function normalizeParent(
     audit_links: [],
     hallmarks: [],
     parent_slug: null,
+    forked_from: null,
     is_dead: false,
     is_parent: true,
     first_seen_at: generatedAt,

@@ -14,6 +14,7 @@ function row(overrides: Partial<LandingRow>): LandingRow {
     parent_slug: null,
     delisted_at: null,
     verifiability_grade: "gray",
+    dependencies_grade: "gray",
     ...overrides,
   };
 }
