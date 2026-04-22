@@ -103,6 +103,46 @@ export default function MethodologyPage() {
       </div>
 
       <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
+        What is graded today
+      </h2>
+      <p>
+        Only{" "}
+        <strong style={{ color: "#cbd5e1" }}>Verifiability</strong> currently carries a real color
+        on the pizza. The rule is a deliberately coarse first-pass heuristic from raw DeFiLlama
+        signals:
+      </p>
+      <ul style={{ color: "#cbd5e1" }}>
+        <li>
+          <strong style={{ color: "#16a34a" }}>green</strong> — protocol has a GitHub repo{" "}
+          <em>and</em> at least one audit
+        </li>
+        <li>
+          <strong style={{ color: "#f59e0b" }}>orange</strong> — it has one but not the other
+        </li>
+        <li>
+          <strong style={{ color: "#dc2626" }}>red</strong> — neither
+        </li>
+      </ul>
+      <p>
+        For family rows (Uniswap, Aave, Morpho, &hellip;) the family&rsquo;s slice takes the grade
+        of the highest-TVL child so a small outlier deployment doesn&rsquo;t drag a well-graded
+        family down. A thorough Verifiability assessment in a later phase will replace this with
+        auditor-reputation weighting, scope review, and source-to-bytecode correspondence.
+      </p>
+      <p>
+        <strong style={{ color: "#cbd5e1" }}>Control</strong>,{" "}
+        <strong style={{ color: "#cbd5e1" }}>Ability to exit</strong>,{" "}
+        <strong style={{ color: "#cbd5e1" }}>Dependencies</strong>, and{" "}
+        <strong style={{ color: "#cbd5e1" }}>Access</strong> all render gray — no automated
+        heuristic grades them yet. In particular,{" "}
+        <strong style={{ color: "#cbd5e1" }}>Access</strong> (whether the protocol is permissioned,
+        uses whitelists, geo-restricts users, or depends on off-chain operators to function) is
+        not a signal DeFiLlama carries in a usable form, so at Phase 0 we simply surface it as
+        unknown and will populate it when crawler workers read the project&rsquo;s own docs and
+        frontend (Phase 1) and when onchain discovery flags whitelist-gated entry points (Phase 2).
+      </p>
+
+      <h2 style={{ color: "#e2e8f0", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem", marginTop: "2rem" }}>
         Audits and source code feed Verifiability
       </h2>
       <p>
