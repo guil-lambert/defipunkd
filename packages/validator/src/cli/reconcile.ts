@@ -110,10 +110,14 @@ async function reconcileSlug(root: string, opts: ReconcileOptions): Promise<void
       console.log(`[reconcile] ${slug}: raw LLM output saved to ${rawPath}`);
 
       const extracted = extractFencedJson(llmResult.output);
-      const parsed = MasterSchema.safeParse(extracted);
+      const { cleaned, salvageFlags } = salvageCommonShapeMistakes(extracted);
+      const parsed = MasterSchema.safeParse(cleaned);
       if (parsed.success) {
         master = parsed.data;
-        console.log(`[reconcile] ${slug}: LLM synthesis OK (${model})`);
+        master.flags.push(...salvageFlags);
+        console.log(
+          `[reconcile] ${slug}: LLM synthesis OK (${model})${salvageFlags.length > 0 ? ` (${salvageFlags.length} fields salvaged)` : ""}`,
+        );
       } else {
         const issues = parsed.error.issues.slice(0, 5).map((i) => `  - ${i.path.join(".") || "(root)"}: ${i.message}`).join("\n");
         console.warn(
@@ -245,6 +249,56 @@ async function invokeClaude(model: string, prompt: string): Promise<LlmResult> {
   } finally {
     clearInterval(heartbeat);
   }
+}
+
+/**
+ * Rescue common shape mistakes Sonnet makes so one typo doesn't trash the
+ * whole master file. Strictly defensive — if we can't safely coerce, we
+ * drop the offending entry and record a flag so a human can re-check.
+ */
+function salvageCommonShapeMistakes(raw: unknown): { cleaned: unknown; salvageFlags: string[] } {
+  const flags: string[] = [];
+  if (!raw || typeof raw !== "object") return { cleaned: raw, salvageFlags: flags };
+  const out = structuredClone(raw) as Record<string, unknown>;
+
+  const pm = (out.protocol_metadata ?? {}) as Record<string, unknown>;
+
+  // admin_addresses: strings → drop, flag. Keep only objects.
+  if (Array.isArray(pm.admin_addresses)) {
+    const before = pm.admin_addresses.length;
+    const kept = pm.admin_addresses.filter((x) => x && typeof x === "object");
+    if (kept.length !== before) {
+      flags.push(`salvage: dropped ${before - kept.length} admin_addresses entries that were strings (should be objects)`);
+      pm.admin_addresses = kept;
+    }
+  }
+
+  // voting_token: string address → null + flag
+  if (typeof pm.voting_token === "string") {
+    flags.push(`salvage: voting_token was a bare string, dropped to null`);
+    pm.voting_token = null;
+  }
+
+  // audits: string URLs → drop, flag
+  if (Array.isArray(pm.audits)) {
+    const before = pm.audits.length;
+    const kept = pm.audits.filter((x) => x && typeof x === "object");
+    if (kept.length !== before) {
+      flags.push(`salvage: dropped ${before - kept.length} audits entries that were strings (should be {firm, url, date} objects)`);
+      pm.audits = kept;
+    }
+  }
+
+  // Drop empty-string scalars that should be omitted or URL-valid
+  for (const key of ["docs_url", "governance_forum", "bug_bounty_url", "security_contact", "deployed_contracts_doc"]) {
+    if (pm[key] === "" || pm[key] === "unknown") {
+      flags.push(`salvage: ${key} was empty/unknown string, removed`);
+      delete pm[key];
+    }
+  }
+
+  out.protocol_metadata = pm;
+  return { cleaned: out, salvageFlags: flags };
 }
 
 function extractFencedJson(output: string): unknown {

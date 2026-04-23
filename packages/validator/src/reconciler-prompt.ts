@@ -99,5 +99,14 @@ Produce an improved master file. Be conservative. Your judgment calls:
 - Do NOT invent evidence URLs, admin addresses, or audit reports. Everything must trace back to the inputs above.
 - The output MUST match the master schema exactly — all five slices present, all required fields filled.
 
+## Shape reminders (these are the fields Sonnet is most likely to get wrong)
+
+- \`protocol_metadata.admin_addresses\` is an array of OBJECTS, NOT strings. Each element MUST be \`{"chain": "<string>", "address": "0x…", "role": "<string>", "actor_class": "eoa" | "multisig" | "timelock" | "governance" | "unknown"}\`. NEVER emit \`["0x…", "0x…"]\` — always wrap each one.
+- \`protocol_metadata.voting_token\` is either \`null\` or \`{"chain": "<string>", "address": "0x…", "symbol": "<string optional>"}\`. Not a bare address string.
+- \`protocol_metadata.audits\` is an array of \`{"firm": "<string>", "url": "https://…", "date": "YYYY-MM"}\` objects, not a list of URLs.
+- \`slices.<id>.rationale.steelman\` is either \`null\` (only when grade="unknown") or \`{"red": "...", "orange": "...", "green": "..."}\`. Not a single string.
+- \`slices.<id>.dissent\` is an array; each element MUST be \`{"path": "<string>", "model": "<string>", "grade": "<grade>", "reason": "<string>"}\`. If no dissent, use \`[]\`.
+- If a scalar field (\`docs_url\`, \`governance_forum\`, \`bug_bounty_url\`, etc.) has no verified value, OMIT it from \`protocol_metadata\` entirely — do NOT set it to \`"unknown"\` or \`""\`.
+
 Output the JSON now.`;
 }
