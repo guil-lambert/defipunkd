@@ -1,4 +1,4 @@
-import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId, Rationale } from "@defipunkd/registry";
 import type { GradeColor } from "./verifiability";
 import { verifiabilityGrade } from "./verifiability";
 import { dependenciesGrade } from "./dependencies";
@@ -9,12 +9,19 @@ export type SliceAssessment = {
   grade: GradeColor;
   headline: string;
   rationale: string;
+  structured?: Rationale;
   strength?: "strong" | "weak";
 };
 
-function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "rationale" | "strength"> {
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "rationale" | "structured" | "strength"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
-  return { grade, headline: a.headline, rationale: a.rationale, strength: a.strength };
+  return {
+    grade,
+    headline: a.headline,
+    rationale: a.rationale.verdict,
+    structured: a.rationale,
+    strength: a.strength,
+  };
 }
 
 const BRIDGE_CATS = new Set([

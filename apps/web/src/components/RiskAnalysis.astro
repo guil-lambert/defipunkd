@@ -1,5 +1,5 @@
 ---
-import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding } from "@defipunkd/registry";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
 import { GRADE_FILL } from "../lib/pizza";
 import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
@@ -33,7 +33,7 @@ function promptFor(sliceId: SliceId): string {
 function stubFor(sliceId: SliceId): string {
   return JSON.stringify(
     {
-      schema_version: 1,
+      schema_version: 2,
       slug: protocol.slug,
       slice: sliceId,
       snapshot_generated_at: snapshotGeneratedAt,
@@ -43,7 +43,11 @@ function stubFor(sliceId: SliceId): string {
       chat_url: null,
       grade: "",
       headline: "",
-      rationale: "",
+      rationale: {
+        findings: [],
+        steelman: { red: "", orange: "", green: "" },
+        verdict: "",
+      },
       evidence: [],
       unknowns: [],
     },
@@ -158,7 +162,30 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
             {s.strength && <span class:list={["strength", `strength-${s.strength}`]}>{s.strength} consensus</span>}
           </div>
           <div class="headline">{s.headline}</div>
-          <p class="rationale">{s.rationale}</p>
+          {s.structured ? (
+            <div class="structured">
+              {s.structured.findings.length > 0 && (
+                <dl class="findings">
+                  {s.structured.findings.map((f: Finding) => (
+                    <div class="finding">
+                      <dt>{f.code}</dt>
+                      <dd>{f.text}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {s.structured.steelman && (
+                <div class="steelman">
+                  <div class="steelman-row grade-red"><span class="steelman-label">Steel-man red</span><span class="steelman-text">{s.structured.steelman.red}</span></div>
+                  <div class="steelman-row grade-orange"><span class="steelman-label">Steel-man orange</span><span class="steelman-text">{s.structured.steelman.orange}</span></div>
+                  <div class="steelman-row grade-green"><span class="steelman-label">Steel-man green</span><span class="steelman-text">{s.structured.steelman.green}</span></div>
+                </div>
+              )}
+              <p class="verdict">{s.structured.verdict}</p>
+            </div>
+          ) : (
+            <p class="rationale">{s.rationale}</p>
+          )}
 
           <details class="audit-panel">
             <summary>Audit this slice yourself · DEFI@home</summary>
@@ -415,6 +442,59 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     font-size: 0.88rem;
     line-height: 1.5;
     margin: 0;
+  }
+  .structured { display: flex; flex-direction: column; gap: 0.75rem; }
+  .findings {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: min-content 1fr;
+    gap: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .finding { display: contents; }
+  .findings dt {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--surface-raised);
+    padding: 0.05rem 0.45rem;
+    border-radius: 3px;
+    align-self: start;
+    white-space: nowrap;
+  }
+  .findings dd { margin: 0; color: var(--text); }
+  .steelman {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--surface-raised);
+    border-radius: 4px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .steelman-row { display: grid; grid-template-columns: 9rem 1fr; gap: 0.75rem; }
+  .steelman-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--text-muted);
+    align-self: start;
+    padding-top: 0.1rem;
+  }
+  .steelman-row.grade-red .steelman-label { color: var(--grade-red); }
+  .steelman-row.grade-orange .steelman-label { color: var(--grade-orange); }
+  .steelman-row.grade-green .steelman-label { color: var(--grade-green); }
+  .steelman-text { color: var(--text-muted); }
+  .verdict {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.5;
   }
 
   .audit-panel {

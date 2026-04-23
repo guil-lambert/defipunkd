@@ -8,7 +8,7 @@ export type ScoredSubmission = {
 };
 
 export type Assessment = {
-  schema_version: 1;
+  schema_version: 2;
   slug: string;
   slice: Submission["slice"];
   snapshot_generated_at: string;
@@ -141,7 +141,7 @@ export function computeQuorum(
       .filter((s) => s.submission.grade === topGrade)
       .sort((a, b) => b.weight - a.weight)[0]!;
     const assessment: Assessment = {
-      schema_version: 1,
+      schema_version: 2,
       slug,
       slice,
       snapshot_generated_at: primary.submission.snapshot_generated_at,

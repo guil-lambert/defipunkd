@@ -3,24 +3,24 @@ import { crossCheck, isExplorerUrl, type CrossCheckContext } from "./cross-check
 import type { Submission } from "./schema";
 
 const sub = (over: Partial<Submission> = {}): Submission => ({
-  schema_version: 1,
+  schema_version: 2,
   slug: "lido",
   slice: "ability-to-exit",
   snapshot_generated_at: "2026-04-22T22:09:47.359Z",
-  prompt_version: 4,
+  prompt_version: 5,
   analysis_date: "2026-04-23",
   model: "claude-sonnet-4-6",
   chat_url: null,
   grade: "orange",
   headline: "x",
-  rationale: "x",
+  rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "x" },
   evidence: [{ url: "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1", shows: "y" }],
   unknowns: [],
   ...over,
 });
 
 const ctx = (over: Partial<CrossCheckContext> = {}): CrossCheckContext => ({
-  currentPromptVersion: 4,
+  currentPromptVersion: 5,
   currentSnapshotGeneratedAt: "2026-04-22T22:09:47.359Z",
   knownSlugs: new Set(["lido", "aave", "uniswap"]),
   filePath: "data/submissions/lido/ability-to-exit/claude-sonnet-4-6-2026-04-23-a9b2.json",
@@ -67,7 +67,7 @@ describe("crossCheck", () => {
 
   it("does not require explorer URL on the access slice", () => {
     const issues = crossCheck(
-      sub({ slice: "access", evidence: [{ url: "https://lido.fi/terms", shows: "y" }], grade: "green", headline: "permissionless", rationale: "y" }),
+      sub({ slice: "access", evidence: [{ url: "https://lido.fi/terms", shows: "y" }], grade: "green", headline: "permissionless", rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "y" } }),
       ctx({ filePath: "data/submissions/lido/access/x.json" }),
     );
     expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(false);

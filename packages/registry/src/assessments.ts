@@ -5,17 +5,25 @@ export type AssessmentGrade = "green" | "orange" | "red" | "unknown";
 export type AssessmentStrength = "strong" | "weak";
 export type SliceId = "control" | "ability-to-exit" | "dependencies" | "access" | "verifiability";
 
+export type Finding = { code: string; text: string };
+export type Steelman = { red: string; orange: string; green: string };
+export type Rationale = {
+  findings: Finding[];
+  steelman: Steelman | null;
+  verdict: string;
+};
+
 export type LoadedAssessment = {
   slug: string;
   slice: SliceId;
   grade: AssessmentGrade;
   strength: AssessmentStrength;
   headline: string;
-  rationale: string;
+  rationale: Rationale;
 };
 
 type RawAssessment = {
-  schema_version: 1;
+  schema_version: number;
   slug: string;
   slice: SliceId;
   consensus_grade: AssessmentGrade;
@@ -25,7 +33,7 @@ type RawAssessment = {
 
 type RawSubmission = {
   headline: string;
-  rationale: string;
+  rationale: Rationale;
 };
 
 export function loadAssessments(dataDir: string): Map<string, Map<SliceId, LoadedAssessment>> {
