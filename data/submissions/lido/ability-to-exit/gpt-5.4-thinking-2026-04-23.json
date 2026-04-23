@@ -1,1 +1,108 @@
-{"schema_version":2,"slug":"lido","slice":"ability-to-exit","snapshot_generated_at":"2026-04-22T22:09:47.359Z","prompt_version":5,"analysis_date":"2026-04-23","model":"gpt-5.4-thinking","chat_url":null,"grade":"orange","headline":"Finalized Lido withdrawals remain claimable on-chain, but request placement and finalization can be paused and a governance-linked path can prolong that pause.","rationale":{"findings":[{"code":"E1","text":"The user-facing Ethereum withdrawal exit functions on WithdrawalQueueERC721 are `requestWithdrawals`, `requestWithdrawalsWstETH`, `requestWithdrawalsWithPermit`, `requestWithdrawalsWstETHWithPermit`, `claimWithdrawals`, and `claimWithdrawal`; the deployed mainnet withdrawal queue proxy is `0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1` and its implementation is `0xE42C659Dc09109566720EA8b2De186c2Be7D94D9`."},{"code":"E2","text":"Request-placement functions call `_checkResumed()` and therefore revert while the queue is paused, whereas `claimWithdrawals` and `claimWithdrawal` have no pause guard and instead rely on ownership/finalization checks: they revert unless the caller owns the request and the request is finalized and unclaimed."},{"code":"E3","text":"`pauseFor(uint256)` and `pauseUntil(uint256)` are both restricted to `PAUSE_ROLE`, and the contract explicitly supports `PAUSE_INFINITELY`; current documented holders of the withdrawal queue `PAUSE_ROLE` are GateSeal Withdrawal Queue (`0x8A854C4E750CDf24f138f34A9061b2f556066912`) and the Reseal Manager (`0x7914b5a1539b97Bd0bbd155757F25FD79A522d24`)."},{"code":"E4","text":"Lido distinguishes a fast emergency pause from governance-linked control: the GateSeal committee can trigger a one-time emergency seal on WithdrawalQueue for a fixed 14-day window, while the Reseal Manager can extend an existing temporary pause into a governance-controlled pause tied to non-Normal Dual Governance phases; upgrades and proxy admin control sit with the Lido DAO Agent and require DAO voting."},{"code":"E5","text":"The withdrawal queue is FIFO, request placement is effectively unbounded in count, and each individual request is bounded between `MIN_STETH_WITHDRAWAL_AMOUNT = 100` wei and `MAX_STETH_WITHDRAWAL_AMOUNT = 1000 ether` worth of stETH per request; request placement and finalization are the pausable parts of the queue, but I did not find a hard documented maximum wait time or a simple documented daily withdrawal cap in the checked allowed sources."},{"code":"E6","text":"I found no permissionless forced-exit or escape-hatch function for users in the WithdrawalQueue contract; the checked contract source exposes ordinary request/claim flows plus oracle/finalization and pause controls, but no separate adversarial-admin bypass for queued withdrawals."},{"code":"E7","text":"The deployed implementation is verified on Etherscan and exposes both `Read Contract` and `Write Contract` tabs, so the exit functions are directly callable on-chain without relying on Lido’s frontend."}],"steelman":{"red":"Because the contract supports `PAUSE_INFINITELY` and current `PAUSE_ROLE` is not limited to a pure DAO vote path, a governance-linked pause extension could leave new withdrawal requests and finalization blocked for an unbounded period.","orange":"The strongest fit is orange because already-finalized withdrawals remain claimable, but request placement and finalization can still be paused, first by a fast 14-day GateSeal emergency path and then potentially prolonged through the Reseal Manager into governance-controlled pause state.","green":"The best green argument is that the actual user claim path for finalized withdrawals is on-chain and not pause-gated, and the fast emergency multisig path itself is capped at 14 days rather than being an uncapped unilateral multisig freeze."},"verdict":"Choosing orange because the most important user-protective fact is that `claimWithdrawals` / `claimWithdrawal` stay callable for already-finalized exits, but Lido still retains a documented path to pause request placement and finalization, with an emergency GateSeal capped at 14 days and a separate governance-linked reseal path that can prolong the pause beyond that window."},"evidence":[{"url":"[https://github.com/lidofinance/core/blob/master/contracts/0.8.9/WithdrawalQueue.sol","shows":"WithdrawalQueue](https://github.com/lidofinance/core/blob/master/contracts/0.8.9/WithdrawalQueue.sol%22,%22shows%22:%22WithdrawalQueue) source code defining `PAUSE_ROLE`, `RESUME_ROLE`, `pauseFor`, `pauseUntil`, `resume`, request functions, claim functions, and the fact that claims of finalized requests remain available while placement/finalization are paused.","chain":"Ethereum","address":"0xE42C659Dc09109566720EA8b2De186c2Be7D94D9","fetched_at":"2026-04-23T17:26:00Z"},{"url":"[https://github.com/lidofinance/core/blob/master/deployed-mainnet.json","shows":"Mainnet](https://github.com/lidofinance/core/blob/master/deployed-mainnet.json%22,%22shows%22:%22Mainnet) deployment registry mapping WithdrawalQueueERC721 proxy `0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1` to implementation `0xE42C659Dc09109566720EA8b2De186c2Be7D94D9`, and listing GateSeal / committee metadata in the same deployment manifest.","chain":"Ethereum","address":"0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1","commit":"cbcc6d1","fetched_at":"2026-04-23T17:26:00Z"},{"url":"[https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1","shows":"Deployed](https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1%22,%22shows%22:%22Deployed) Lido Withdrawal Queue proxy on Ethereum mainnet, confirming the live contract address users interact with for withdrawal requests/claims.","chain":"Ethereum","address":"0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1","fetched_at":"2026-04-23T17:26:00Z"},{"url":"[https://etherscan.io/address/0xe42c659dc09109566720ea8b2de186c2be7d94d9?age=90D&amt=0-1","shows":"Verified](https://etherscan.io/address/0xe42c659dc09109566720ea8b2de186c2be7d94d9?age=90D&amt=0-1%22,%22shows%22:%22Verified) WithdrawalQueueERC721 implementation on Etherscan with `Read Contract` and `Write Contract` tabs exposed, supporting direct on-chain interaction without Lido’s frontend.","chain":"Ethereum","address":"0xE42C659Dc09109566720EA8b2De186c2Be7D94D9","fetched_at":"2026-04-23T17:26:00Z"},{"url":"[https://github.com/lidofinance/docs/blob/main/docs/guides/protocol-levers.md","shows":"Lido](https://github.com/lidofinance/docs/blob/main/docs/guides/protocol-levers.md%22,%22shows%22:%22Lido) governance-levers documentation listing current holders for WithdrawalQueueERC721 `PAUSE_ROLE` and `RESUME_ROLE`, stating that the GateSeal mechanism is time-limited and that the Reseal Manager can extend a seal window while upgrades require a DAO vote through the Aragon Agent.","chain":"Ethereum","address":"0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1","commit":"d44c996","fetched_at":"2026-04-23T17:26:00Z"},{"url":"[https://github.com/lidofinance/docs/blob/main/docs/contracts/gate-seal.md","shows":"GateSeal](https://github.com/lidofinance/docs/blob/main/docs/contracts/gate-seal.md%22,%22shows%22:%22GateSeal) documentation stating that the WithdrawalQueue GateSeal is a one-time panic button, the sealing committee is a multisig-like committee, and the seal duration is limited to 14 days; it also explains the ResealManager governance-linked extension path.","chain":"Ethereum","address":"0x8A854C4E750CDf24f138f34A9061b2f556066912","commit":"6ff4a7e","fetched_at":"2026-04-23T17:26:00Z"},{"url":"[https://etherscan.io/address/0x8A854C4E750CDf24f138f34A9061b2f556066912","shows":"Deployed](https://etherscan.io/address/0x8A854C4E750CDf24f138f34A9061b2f556066912%22,%22shows%22:%22Deployed) GateSeal contract for WithdrawalQueue, with constructor/view surface showing sealing committee, seal duration, sealables, and expiry for the live emergency-pause contract.","chain":"Ethereum","address":"0x8A854C4E750CDf24f138f34A9061b2f556066912","fetched_at":"2026-04-23T17:26:00Z"}],"unknowns":["E5: I did not find a hard documented maximum withdrawal-queue duration or a simple documented daily withdrawal cap for users in the checked allowed sources; the sources I checked document FIFO ordering, per-request size bounds, and waiting-time estimation tooling, but not a guaranteed maximum wait.","E6: I did not find a dedicated permissionless escape hatch beyond the standard request-and-claim flow, but proving absence exhaustively from the allowed sources is hard; I found no function explicitly labeled as emergency exit / forced user exit / escape hatch in the live queue source I checked."]}
+{
+  "schema_version": 2,
+  "slug": "lido",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 5,
+  "analysis_date": "2026-04-23",
+  "model": "gpt-5.4-thinking",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Finalized Lido withdrawals remain claimable on-chain, but request placement and finalization can be paused and a governance-linked path can prolong that pause.",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The user-facing Ethereum withdrawal exit functions on WithdrawalQueueERC721 are `requestWithdrawals`, `requestWithdrawalsWstETH`, `requestWithdrawalsWithPermit`, `requestWithdrawalsWstETHWithPermit`, `claimWithdrawals`, and `claimWithdrawal`; the deployed mainnet withdrawal queue proxy is `0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1` and its implementation is `0xE42C659Dc09109566720EA8b2De186c2Be7D94D9`."
+      },
+      {
+        "code": "E2",
+        "text": "Request-placement functions call `_checkResumed()` and therefore revert while the queue is paused, whereas `claimWithdrawals` and `claimWithdrawal` have no pause guard and instead rely on ownership/finalization checks: they revert unless the caller owns the request and the request is finalized and unclaimed."
+      },
+      {
+        "code": "E3",
+        "text": "`pauseFor(uint256)` and `pauseUntil(uint256)` are both restricted to `PAUSE_ROLE`, and the contract explicitly supports `PAUSE_INFINITELY`; current documented holders of the withdrawal queue `PAUSE_ROLE` are GateSeal Withdrawal Queue (`0x8A854C4E750CDf24f138f34A9061b2f556066912`) and the Reseal Manager (`0x7914b5a1539b97Bd0bbd155757F25FD79A522d24`)."
+      },
+      {
+        "code": "E4",
+        "text": "Lido distinguishes a fast emergency pause from governance-linked control: the GateSeal committee can trigger a one-time emergency seal on WithdrawalQueue for a fixed 14-day window, while the Reseal Manager can extend an existing temporary pause into a governance-controlled pause tied to non-Normal Dual Governance phases; upgrades and proxy admin control sit with the Lido DAO Agent and require DAO voting."
+      },
+      {
+        "code": "E5",
+        "text": "The withdrawal queue is FIFO, request placement is effectively unbounded in count, and each individual request is bounded between `MIN_STETH_WITHDRAWAL_AMOUNT = 100` wei and `MAX_STETH_WITHDRAWAL_AMOUNT = 1000 ether` worth of stETH per request; request placement and finalization are the pausable parts of the queue, but I did not find a hard documented maximum wait time or a simple documented daily withdrawal cap in the checked allowed sources."
+      },
+      {
+        "code": "E6",
+        "text": "I found no permissionless forced-exit or escape-hatch function for users in the WithdrawalQueue contract; the checked contract source exposes ordinary request/claim flows plus oracle/finalization and pause controls, but no separate adversarial-admin bypass for queued withdrawals."
+      },
+      {
+        "code": "E7",
+        "text": "The deployed implementation is verified on Etherscan and exposes both `Read Contract` and `Write Contract` tabs, so the exit functions are directly callable on-chain without relying on Lido’s frontend."
+      }
+    ],
+    "steelman": {
+      "red": "Because the contract supports `PAUSE_INFINITELY` and current `PAUSE_ROLE` is not limited to a pure DAO vote path, a governance-linked pause extension could leave new withdrawal requests and finalization blocked for an unbounded period.",
+      "orange": "The strongest fit is orange because already-finalized withdrawals remain claimable, but request placement and finalization can still be paused, first by a fast 14-day GateSeal emergency path and then potentially prolonged through the Reseal Manager into governance-controlled pause state.",
+      "green": "The best green argument is that the actual user claim path for finalized withdrawals is on-chain and not pause-gated, and the fast emergency multisig path itself is capped at 14 days rather than being an uncapped unilateral multisig freeze."
+    },
+    "verdict": "Choosing orange because the most important user-protective fact is that `claimWithdrawals` / `claimWithdrawal` stay callable for already-finalized exits, but Lido still retains a documented path to pause request placement and finalization, with an emergency GateSeal capped at 14 days and a separate governance-linked reseal path that can prolong the pause beyond that window."
+  },
+  "evidence": [
+    {
+      "url": "https://raw.githubusercontent.com/lidofinance/core/master/contracts/0.8.9/WithdrawalQueue.sol",
+      "shows": "WithdrawalQueue source code defining `PAUSE_ROLE`, `RESUME_ROLE`, `pauseFor`, `pauseUntil`, `resume`, request functions, claim functions, and the fact that claims of finalized requests remain available while placement/finalization are paused.",
+      "chain": "Ethereum",
+      "address": "0xE42C659Dc09109566720EA8b2De186c2Be7D94D9",
+      "fetched_at": "2026-04-23T17:26:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/lidofinance/core/cbcc6d1/deployed-mainnet.json",
+      "shows": "Mainnet deployment registry mapping WithdrawalQueueERC721 proxy `0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1` to implementation `0xE42C659Dc09109566720EA8b2De186c2Be7D94D9`, and listing GateSeal / committee metadata in the same deployment manifest.",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "commit": "cbcc6d1",
+      "fetched_at": "2026-04-23T17:26:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1",
+      "shows": "Deployed Lido Withdrawal Queue proxy on Ethereum mainnet, confirming the live contract address users interact with for withdrawal requests/claims.",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "fetched_at": "2026-04-23T17:26:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xe42c659dc09109566720ea8b2de186c2be7d94d9",
+      "shows": "Verified WithdrawalQueueERC721 implementation on Etherscan with `Read Contract` and `Write Contract` tabs exposed, supporting direct on-chain interaction without Lido’s frontend.",
+      "chain": "Ethereum",
+      "address": "0xE42C659Dc09109566720EA8b2De186c2Be7D94D9",
+      "fetched_at": "2026-04-23T17:26:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/lidofinance/docs/d44c996/docs/guides/protocol-levers.md",
+      "shows": "Lido governance-levers documentation listing current holders for WithdrawalQueueERC721 `PAUSE_ROLE` and `RESUME_ROLE`, stating that the GateSeal mechanism is time-limited and that the Reseal Manager can extend a seal window while upgrades require a DAO vote through the Aragon Agent.",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "commit": "d44c996",
+      "fetched_at": "2026-04-23T17:26:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/lidofinance/docs/6ff4a7e/docs/contracts/gate-seal.md",
+      "shows": "GateSeal documentation stating that the WithdrawalQueue GateSeal is a one-time panic button, the sealing committee is a multisig-like committee, and the seal duration is limited to 14 days; it also explains the ResealManager governance-linked extension path.",
+      "chain": "Ethereum",
+      "address": "0x8A854C4E750CDf24f138f34A9061b2f556066912",
+      "commit": "6ff4a7e",
+      "fetched_at": "2026-04-23T17:26:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x8A854C4E750CDf24f138f34A9061b2f556066912",
+      "shows": "Deployed GateSeal contract for WithdrawalQueue, with constructor/view surface showing sealing committee, seal duration, sealables, and expiry for the live emergency-pause contract.",
+      "chain": "Ethereum",
+      "address": "0x8A854C4E750CDf24f138f34A9061b2f556066912",
+      "fetched_at": "2026-04-23T17:26:00Z"
+    }
+  ],
+  "unknowns": [
+    "E5: I did not find a hard documented maximum withdrawal-queue duration or a simple documented daily withdrawal cap for users in the checked allowed sources; the sources I checked document FIFO ordering, per-request size bounds, and waiting-time estimation tooling, but not a guaranteed maximum wait.",
+    "E6: I did not find a dedicated permissionless escape hatch beyond the standard request-and-claim flow, but proving absence exhaustively from the allowed sources is hard; I found no function explicitly labeled as emergency exit / forced user exit / escape hatch in the live queue source I checked."
+  ]
+}
