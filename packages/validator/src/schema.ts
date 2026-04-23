@@ -12,7 +12,7 @@ export const SLICES = [
 const EvidenceSchema = z
   .object({
     url: z.string().url(),
-    shows: z.string().min(1).max(240),
+    shows: z.string().min(1),
     chain: z.string().optional(),
     address: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
     commit: z.string().regex(/^[0-9a-f]{7,40}$/).optional(),
@@ -31,10 +31,10 @@ const base = z
     model: z.string().min(1).max(120),
     chat_url: z.string().url().nullable().optional(),
     grade: z.enum(GRADES),
-    headline: z.string().min(1).max(80),
-    rationale: z.string().min(1).max(600),
+    headline: z.string().min(1),
+    rationale: z.string().min(1),
     evidence: z.array(EvidenceSchema),
-    unknowns: z.array(z.string().max(240)),
+    unknowns: z.array(z.string().min(1)),
   })
   .strict();
 
