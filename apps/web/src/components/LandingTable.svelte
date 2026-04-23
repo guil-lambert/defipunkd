@@ -305,15 +305,16 @@
   col.c-chain { width: 10rem; }
   col.c-type { width: 9rem; }
   col.c-tvl { width: 7rem; }
-  @media (max-width: 720px) {
+  @media (max-width: 960px) {
     .scroll {
       margin-left: -1.5rem;
       margin-right: -1.5rem;
     }
-    table { min-width: 640px; width: max-content; }
+    table { table-layout: auto; min-width: 760px; width: max-content; }
     th, td { white-space: nowrap; }
     th:first-child, td:first-child { padding-left: 1.5rem; }
     th:last-child, td:last-child { padding-right: 1.5rem; }
+    col.c-name { width: 18rem; }
   }
   thead tr { text-align: left; color: var(--text-muted); font-size: 0.8rem; }
   th { padding: 0.45rem 0.6rem; font-weight: 500; }
