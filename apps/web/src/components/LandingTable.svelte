@@ -5,7 +5,8 @@
     type SortDir,
     type SortField,
   } from "../lib/landing";
-  import { DEFAULT_TAB, TABS, type Tab } from "../lib/category-map";
+  import { CHAIN_TABS, DEFAULT_TAB, TABS, type Tab } from "../lib/category-map";
+  const ALL_TABS: readonly Tab[] = [...TABS, ...CHAIN_TABS];
   import { PIZZA_SLICES, GRADE_FILL, GRADE_TOOLTIP, pizzaGradesFor, type PizzaGrades, type PizzaSize } from "../lib/pizza";
   import { EM_DASH, formatTvl } from "../lib/format";
 
@@ -87,7 +88,7 @@
 
 <section>
   <nav class="tabs">
-    {#each TABS as t}
+    {#each ALL_TABS as t}
       {@const active = t === tab}
       {@const count = tabCounts[t] ?? 0}
       <button

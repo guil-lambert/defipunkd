@@ -1,4 +1,4 @@
-import { bucketCategory, isCexCategory, type Tab } from "./category-map";
+import { bucketCategory, CHAIN_TABS, isCexCategory, isChainTab, type Tab } from "./category-map";
 import { rankMatch } from "./search";
 import { dominantChildGrade, type GradeColor } from "./verifiability";
 export type { GradeColor } from "./verifiability";
@@ -166,6 +166,7 @@ export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): L
     if (!includeInBrowse(n, opts)) return false;
     if (opts.tab === "All") return true;
     if (opts.tab === "DeFi") return !isCexCategory(n.category);
+    if (isChainTab(opts.tab)) return n.chains.includes(opts.tab);
     return bucketCategory(n.category) === opts.tab;
   });
   const sort = opts.sort ?? { field: "tvl" as const, dir: "desc" as const };
@@ -190,6 +191,9 @@ export function tabCountsFromNodes(nodes: LandingNode[]): Record<Tab, number> {
     if (!isCexCategory(n.category)) counts.DeFi = (counts.DeFi ?? 0) + 1;
     const bucket = bucketCategory(n.category);
     counts[bucket] = (counts[bucket] ?? 0) + 1;
+    for (const chain of CHAIN_TABS) {
+      if (n.chains.includes(chain)) counts[chain] = (counts[chain] ?? 0) + 1;
+    }
   }
   return counts as Record<Tab, number>;
 }

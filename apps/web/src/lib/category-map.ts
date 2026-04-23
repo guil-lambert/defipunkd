@@ -32,9 +32,34 @@ export const TABS = [
   "NFT Lending",
   "Insurance",
   "Reserve Currency",
+  "Onchain Capital Allocator",
   "Chain",
   "Others",
 ] as const;
+
+export const CHAIN_TABS = [
+  "Ethereum",
+  "Arbitrum",
+  "Binance",
+  "Base",
+  "Polygon",
+  "Avalanche",
+  "Solana",
+  "Optimism",
+  "Bitcoin",
+  "Hyperliquid L1",
+  "Sui",
+  "Aptos",
+  "Cardano",
+  "Tron",
+  "TON",
+] as const;
+
+export type ChainTab = (typeof CHAIN_TABS)[number];
+const CHAIN_TAB_SET = new Set<string>(CHAIN_TABS);
+export function isChainTab(t: string): t is ChainTab {
+  return CHAIN_TAB_SET.has(t);
+}
 
 export const DEFAULT_TAB: Tab = "DeFi";
 
@@ -43,8 +68,9 @@ export function isCexCategory(raw: string | null | undefined): boolean {
   return raw.trim().toLowerCase() === "cex";
 }
 
-export type Tab = (typeof TABS)[number];
-export type BucketTab = Exclude<Tab, "All" | "DeFi">;
+export type CategoryTab = (typeof TABS)[number];
+export type Tab = CategoryTab | ChainTab;
+export type BucketTab = Exclude<CategoryTab, "All" | "DeFi">;
 
 const RAW_TO_TAB: Record<string, BucketTab> = {
   lending: "Lending",
@@ -93,6 +119,7 @@ const RAW_TO_TAB: Record<string, BucketTab> = {
   insurance: "Insurance",
   "reserve currency": "Reserve Currency",
   chain: "Chain",
+  "onchain capital allocator": "Onchain Capital Allocator",
 };
 
 export function bucketCategory(
