@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(2);
+    expect(PROMPT_VERSION).toBe(3);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -24,6 +24,31 @@ describe("buildPrompt", () => {
     expect(p).toContain("NEVER wrap it in markdown link syntax");
     expect(p).toContain('NEVER use branch names ("main", "master"');
     expect(p).toContain("^[0-9a-f]{7,40}$");
+  });
+
+  it("shows concrete CORRECT/WRONG examples for the markdown-URL anti-pattern", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("CORRECT:");
+    expect(p).toContain("WRONG:");
+    expect(p).toContain("[https://etherscan.io");
+  });
+
+  it("requires a checklist-code prefix on unknowns[] entries", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("prefixed with the relevant checklist item code");
+    expect(p).toContain('"E3:"');
+  });
+
+  it("requires at least one block-explorer URL for on-chain slices", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("AT LEAST ONE block-explorer URL");
+    expect(p).toContain("control, ability-to-exit, dependencies, verifiability");
+  });
+
+  it("documents the optional chat_url field for shareable LLM transcripts", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("chat_url");
+    expect(p).toContain("claude.ai/share");
   });
 
   it("includes the steel-man-before-grading rule", () => {
@@ -61,7 +86,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             2");
+    expect(p).toContain("prompt_version:             3");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
