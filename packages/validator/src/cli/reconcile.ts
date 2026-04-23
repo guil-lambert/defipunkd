@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
-import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
+import Anthropic from "@anthropic-ai/sdk";
 import { SLICE_IDS } from "@defipunkd/prompts";
 import { SubmissionSchema, type Submission } from "../schema";
 import type { Assessment } from "../quorum";
@@ -13,7 +13,6 @@ type ReconcileOptions = {
   slug: string;
   useLlm: boolean;
   model: string;
-  claudeBin: string;
 };
 
 async function main(): Promise<number> {
@@ -21,13 +20,11 @@ async function main(): Promise<number> {
   const slugs: string[] = [];
   let useLlm = true;
   let model = "claude-sonnet-4-6";
-  let claudeBin = "claude";
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
     if (a === "--no-llm") useLlm = false;
     else if (a === "--model") model = args[++i]!;
-    else if (a === "--claude-bin") claudeBin = args[++i]!;
     else if (a === "--all") {
       // handled below
     } else if (!a.startsWith("--")) slugs.push(a);
@@ -52,7 +49,7 @@ async function main(): Promise<number> {
   let exitCode = 0;
   for (const slug of slugs) {
     try {
-      await reconcileSlug(root, { slug, useLlm, model, claudeBin });
+      await reconcileSlug(root, { slug, useLlm, model });
     } catch (err) {
       console.error(`[reconcile] ${slug}: ${(err as Error).message}`);
       exitCode = 1;
@@ -62,7 +59,7 @@ async function main(): Promise<number> {
 }
 
 async function reconcileSlug(root: string, opts: ReconcileOptions): Promise<void> {
-  const { slug, useLlm, model, claudeBin } = opts;
+  const { slug, useLlm, model } = opts;
   const submissionsBySlice = loadSubmissions(root, slug);
   const totalSubmissions = Array.from(submissionsBySlice.values()).reduce((a, b) => a + b.length, 0);
   if (totalSubmissions === 0) {
@@ -96,10 +93,10 @@ async function reconcileSlug(root: string, opts: ReconcileOptions): Promise<void
     };
     const prompt = buildReconcilerPrompt(promptInput);
 
-    console.log(`[reconcile] ${slug}: calling ${claudeBin} --model ${model} (prompt ${prompt.length} chars, timeout ${LLM_TIMEOUT_MS}ms)…`);
+    console.log(`[reconcile] ${slug}: calling Anthropic API — ${model} (prompt ${prompt.length} chars, timeout ${LLM_TIMEOUT_MS}ms)…`);
     const t0 = Date.now();
-    const llmResult = await invokeClaude(claudeBin, model, prompt);
-    console.log(`[reconcile] ${slug}: ${claudeBin} returned in ${Date.now() - t0}ms (ok=${llmResult.ok})`);
+    const llmResult = await invokeClaude(model, prompt);
+    console.log(`[reconcile] ${slug}: API returned in ${Date.now() - t0}ms (ok=${llmResult.ok})`);
     if (llmResult.ok) {
       const extracted = extractFencedJson(llmResult.output);
       const parsed = MasterSchema.safeParse(extracted);
@@ -169,65 +166,45 @@ function loadAssessments(root: string, slug: string): Map<Submission["slice"], A
 type LlmResult = { ok: true; output: string } | { ok: false; reason: string };
 
 const LLM_TIMEOUT_MS = Number(process.env.RECONCILE_LLM_TIMEOUT_MS ?? 10 * 60 * 1000);
+const MAX_OUTPUT_TOKENS = 16_000;
 
-async function invokeClaude(claudeBin: string, model: string, prompt: string): Promise<LlmResult> {
+async function invokeClaude(model: string, prompt: string): Promise<LlmResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return { ok: false, reason: "ANTHROPIC_API_KEY not set" };
   }
-  // stdin-pipe the prompt, --bare for reproducibility, inherit stderr so
-  // any progress / error output is visible live in CI.
-  return new Promise<LlmResult>((resolve) => {
-    const child = spawn(
-      claudeBin,
-      [
-        "--bare",
-        "--model",
-        model,
-        "--output-format",
-        "text",
-        "--permission-mode",
-        "bypassPermissions",
-        "--verbose",
-        "-p",
-      ],
-      { stdio: ["pipe", "pipe", "inherit"], env: process.env },
-    );
+  const client = new Anthropic({ timeout: LLM_TIMEOUT_MS });
 
-    let stdout = "";
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
-      stdout += chunk;
+  const heartbeat = setInterval(() => {
+    console.log(`[reconcile] …still waiting on Anthropic API`);
+  }, 30_000);
+
+  try {
+    // Streaming so we get live "assistant is writing" progress without
+    // holding the whole response in memory, and so long generations don't
+    // hit the non-streaming 10-minute server-side limit.
+    let output = "";
+    const stream = client.messages.stream({
+      model,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      messages: [{ role: "user", content: prompt }],
     });
-
-    const heartbeat = setInterval(() => {
-      console.log(`[reconcile] …still waiting on claude (stdout=${stdout.length} chars so far)`);
-    }, 30_000);
-
-    const timer = setTimeout(() => {
-      console.error(`[reconcile] claude CLI timed out after ${LLM_TIMEOUT_MS}ms, killing child`);
-      child.kill("SIGKILL");
-    }, LLM_TIMEOUT_MS);
-
-    child.on("error", (err) => {
-      clearInterval(heartbeat);
-      clearTimeout(timer);
-      resolve({ ok: false, reason: err.message });
-    });
-    child.on("close", (code, signal) => {
-      clearInterval(heartbeat);
-      clearTimeout(timer);
-      if (signal === "SIGKILL") {
-        resolve({ ok: false, reason: `claude CLI timed out after ${LLM_TIMEOUT_MS}ms` });
-      } else if (code !== 0) {
-        resolve({ ok: false, reason: `claude CLI exit ${code}` });
-      } else {
-        resolve({ ok: true, output: stdout });
+    for await (const event of stream) {
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        output += event.delta.text;
       }
-    });
-
-    child.stdin.write(prompt);
-    child.stdin.end();
-  });
+    }
+    const final = await stream.finalMessage();
+    if (final.stop_reason === "max_tokens") {
+      return { ok: false, reason: `hit max_tokens=${MAX_OUTPUT_TOKENS}, response truncated` };
+    }
+    return { ok: true, output };
+  } catch (err) {
+    const e = err as { message?: string; status?: number; error?: { message?: string } };
+    const reason = `Anthropic API error${e.status ? ` (${e.status})` : ""}: ${e.error?.message ?? e.message ?? "unknown"}`;
+    return { ok: false, reason };
+  } finally {
+    clearInterval(heartbeat);
+  }
 }
 
 function extractFencedJson(output: string): unknown {
