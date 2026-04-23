@@ -1,25 +1,28 @@
 <script lang="ts">
   import {
     filterAndSortNodes,
+    type ChainTabKey,
     type LandingNode,
     type SortDir,
     type SortField,
   } from "../lib/landing";
-  import { CHAIN_TABS, DEFAULT_TAB, TABS, type Tab } from "../lib/category-map";
-  const ALL_TABS: readonly Tab[] = [...TABS, ...CHAIN_TABS];
+  import { CHAIN_TABS, DEFAULT_TAB, TABS, type CategoryTab, type Tab } from "../lib/category-map";
   import { PIZZA_SLICES, GRADE_FILL, GRADE_TOOLTIP, pizzaGradesFor, type PizzaGrades, type PizzaSize } from "../lib/pizza";
   import { EM_DASH, formatTvl } from "../lib/format";
 
   const DEFAULT_PAGE = 200;
+  const CHAIN_ROW: readonly ChainTabKey[] = ["All", ...CHAIN_TABS];
 
   type Props = {
     nodes: LandingNode[];
     tabCounts: Record<Tab, number>;
+    chainTvl: Record<ChainTabKey, number>;
   };
 
-  let { nodes, tabCounts }: Props = $props();
+  let { nodes, tabCounts, chainTvl }: Props = $props();
 
-  let tab = $state<Tab>(DEFAULT_TAB);
+  let tab = $state<CategoryTab>(DEFAULT_TAB);
+  let chainTab = $state<ChainTabKey>("All");
   let query = $state("");
   let showInactive = $state(false);
   let showAll = $state(false);
@@ -31,6 +34,7 @@
   const filtered = $derived(
     filterAndSortNodes(nodes, {
       tab,
+      chainTab,
       query,
       showInactive,
       sort: { field: sortField, dir: sortDir },
@@ -87,8 +91,8 @@
 </script>
 
 <section>
-  <nav class="tabs">
-    {#each ALL_TABS as t}
+  <nav class="tabs" aria-label="Category">
+    {#each TABS as t}
       {@const active = t === tab}
       {@const count = tabCounts[t] ?? 0}
       <button
@@ -98,6 +102,20 @@
         onclick={() => { tab = t; showAll = false; }}
       >
         {t}<span class="count">{count.toLocaleString()}</span>
+      </button>
+    {/each}
+  </nav>
+  <nav class="tabs chains" aria-label="Chain">
+    {#each CHAIN_ROW as c}
+      {@const active = c === chainTab}
+      {@const tvl = chainTvl[c] ?? 0}
+      <button
+        type="button"
+        aria-pressed={active}
+        class:active
+        onclick={() => { chainTab = c; showAll = false; }}
+      >
+        {c}<span class="count">{formatTvl(tvl)}</span>
       </button>
     {/each}
   </nav>
@@ -251,6 +269,9 @@
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs button { flex-shrink: 0; }
+  .tabs.chains { margin-top: -0.5rem; }
+  .tabs.chains button { background: transparent; border: 1px solid var(--surface-raised); }
+  .tabs.chains button.active { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
   .tabs button {
     min-height: 44px;
     padding: 0 0.9rem;

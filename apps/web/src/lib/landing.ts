@@ -1,4 +1,4 @@
-import { bucketCategory, CHAIN_TABS, isCexCategory, isChainTab, type Tab } from "./category-map";
+import { bucketCategory, CHAIN_TABS, isCexCategory, type CategoryTab, type ChainTab, type Tab } from "./category-map";
 import { rankMatch } from "./search";
 import { dominantChildGrade, type GradeColor } from "./verifiability";
 export type { GradeColor } from "./verifiability";
@@ -10,6 +10,7 @@ export type LandingRow = {
   chains: string[];
   primary_chain: string | null;
   tvl: number | null;
+  tvl_by_chain?: Record<string, number>;
   is_dead: boolean;
   is_parent: boolean;
   parent_slug: string | null;
@@ -100,7 +101,8 @@ export type SortField = "tvl" | "name" | "chain" | "type";
 export type SortDir = "asc" | "desc";
 
 export type FilterOptions = {
-  tab: Tab;
+  tab: CategoryTab;
+  chainTab?: ChainTab | "All";
   query: string;
   showInactive: boolean;
   sort?: { field: SortField; dir: SortDir };
@@ -164,9 +166,9 @@ export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): L
 
   const visible = nodes.filter((n) => {
     if (!includeInBrowse(n, opts)) return false;
+    if (opts.chainTab && opts.chainTab !== "All" && !n.chains.includes(opts.chainTab)) return false;
     if (opts.tab === "All") return true;
     if (opts.tab === "DeFi") return !isCexCategory(n.category);
-    if (isChainTab(opts.tab)) return n.chains.includes(opts.tab);
     return bucketCategory(n.category) === opts.tab;
   });
   const sort = opts.sort ?? { field: "tvl" as const, dir: "desc" as const };
@@ -191,9 +193,23 @@ export function tabCountsFromNodes(nodes: LandingNode[]): Record<Tab, number> {
     if (!isCexCategory(n.category)) counts.DeFi = (counts.DeFi ?? 0) + 1;
     const bucket = bucketCategory(n.category);
     counts[bucket] = (counts[bucket] ?? 0) + 1;
-    for (const chain of CHAIN_TABS) {
-      if (n.chains.includes(chain)) counts[chain] = (counts[chain] ?? 0) + 1;
-    }
   }
   return counts as Record<Tab, number>;
+}
+
+export type ChainTabKey = ChainTab | "All";
+
+export function chainTvlFromNodes(nodes: LandingNode[]): Record<ChainTabKey, number> {
+  const tvl: Record<string, number> = { All: 0 };
+  for (const c of CHAIN_TABS) tvl[c] = 0;
+  for (const n of nodes) {
+    if (n.delisted_at) continue;
+    if (n.is_dead) continue;
+    if (typeof n.tvl === "number") tvl.All = (tvl.All ?? 0) + n.tvl;
+    for (const c of CHAIN_TABS) {
+      const v = n.tvl_by_chain?.[c];
+      if (typeof v === "number") tvl[c] = (tvl[c] ?? 0) + v;
+    }
+  }
+  return tvl as Record<ChainTabKey, number>;
 }
