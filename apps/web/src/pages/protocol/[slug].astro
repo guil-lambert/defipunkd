@@ -1,0 +1,53 @@
+---
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { listProtocols, listChildren, type Snapshot } from "@defibeat/registry";
+import Base from "../../layouts/Base.astro";
+import ProtocolDetail from "../../components/ProtocolDetail.astro";
+import Delisted from "../../components/Delisted.astro";
+
+export async function getStaticPaths() {
+  return listProtocols().map((p) => ({
+    params: { slug: p.slug },
+    props: { protocol: p, children: p.delisted_at ? [] : listChildren(p.slug) },
+  }));
+}
+
+function findSnapshotPath(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 6; i++) {
+    const candidate = join(dir, "data", "defillama-snapshot.json");
+    try {
+      readFileSync(candidate, "utf8");
+      return candidate;
+    } catch {
+      const parent = dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  }
+  throw new Error("snapshot not found");
+}
+
+let cachedGeneratedAt: string | null = null;
+function snapshotGeneratedAt(): string {
+  if (cachedGeneratedAt) return cachedGeneratedAt;
+  const raw = readFileSync(findSnapshotPath(), "utf8");
+  const snap = JSON.parse(raw) as Snapshot;
+  cachedGeneratedAt = snap.generated_at;
+  return cachedGeneratedAt;
+}
+
+const { protocol, children } = Astro.props;
+const isDelisted = !!protocol.delisted_at;
+const title = isDelisted
+  ? `${protocol.name} (delisted) · DefiBeat`
+  : `${protocol.name} · DefiBeat`;
+---
+<Base title={title} noindex>
+  {isDelisted ? (
+    <Delisted protocol={protocol} />
+  ) : (
+    <ProtocolDetail protocol={protocol} snapshotGeneratedAt={snapshotGeneratedAt()} children={children} />
+  )}
+</Base>

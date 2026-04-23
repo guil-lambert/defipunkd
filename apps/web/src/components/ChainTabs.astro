@@ -1,0 +1,74 @@
+---
+import { formatTvl } from "../lib/format";
+
+interface Props {
+  chains: string[];
+  tvlByChain: Record<string, number>;
+}
+const { chains, tvlByChain } = Astro.props;
+
+const ranked = [...chains].sort((a, b) => (tvlByChain[b] ?? 0) - (tvlByChain[a] ?? 0));
+const visible = ranked.slice(0, 7);
+const overflow = ranked.slice(7);
+const primary = visible[0];
+---
+<nav class="chain-tabs">
+  {visible.map((c) => (
+    <span class:list={["tab", { active: c === primary }]} aria-current={c === primary ? "page" : undefined}>
+      {c}
+      {typeof tvlByChain[c] === "number" && (
+        <span class="mono tabular tvl">{formatTvl(tvlByChain[c]!)}</span>
+      )}
+    </span>
+  ))}
+  {overflow.length > 0 && (
+    <details>
+      <summary class="overflow-summary">+{overflow.length} more</summary>
+      <div class="overflow-list">
+        {overflow.map((c) => (<span class="overflow-item">{c}</span>))}
+      </div>
+    </details>
+  )}
+</nav>
+
+<style>
+  .chain-tabs {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.85rem;
+    border-radius: 4px;
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+  .tab.active {
+    background: var(--accent-link);
+    color: var(--bg);
+  }
+  .tvl { margin-left: 6px; opacity: 0.7; }
+  .overflow-summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.85rem;
+    background: var(--surface-raised);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+  .overflow-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0.25rem;
+    gap: 0.15rem;
+  }
+  .overflow-item { color: var(--text); font-size: 0.85rem; }
+</style>

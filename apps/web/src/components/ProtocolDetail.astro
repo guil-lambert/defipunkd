@@ -1,0 +1,201 @@
+---
+import type { Protocol, ProvenanceTag } from "@defibeat/registry";
+import { auditorDomain, EM_DASH, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
+import { verifiabilityGrade } from "../lib/verifiability";
+import { dependenciesGrade } from "../lib/dependencies";
+import { pizzaGradesFor } from "../lib/pizza";
+import PizzaChart from "./PizzaChart.astro";
+import ProtocolLogo from "./ProtocolLogo.astro";
+import ChainTabs from "./ChainTabs.astro";
+import ChildrenTable from "./ChildrenTable.astro";
+
+interface Props {
+  protocol: Protocol;
+  snapshotGeneratedAt: string;
+  children: Protocol[];
+}
+const { protocol, snapshotGeneratedAt, children } = Astro.props;
+const prov = protocol._provenance;
+const hallmarks = parseHallmarks(protocol.hallmarks);
+const grades = pizzaGradesFor(
+  protocol.category,
+  verifiabilityGrade(!!(protocol.github && protocol.github.length > 0), protocol.audit_count ?? 0),
+  dependenciesGrade(protocol.category, protocol.forked_from),
+);
+
+const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ?? null;
+
+type RowDef = {
+  label: string;
+  anchor?: string;
+  provenance: ProvenanceTag | null;
+};
+
+const simpleRows: RowDef[] = [
+  { label: "Control", anchor: "control", provenance: null },
+  { label: "Ability to exit", anchor: "ability-to-exit", provenance: null },
+  { label: "Dependencies", anchor: "dependencies", provenance: null },
+  { label: "Access", anchor: "access", provenance: null },
+  { label: "Verifiability", anchor: "verifiability", provenance: null },
+];
+---
+<main class="detail">
+  <div class="back">
+    <a href="/">← back to index</a>
+  </div>
+  <header class="head">
+    <div class="title">
+      <ProtocolLogo src={protocol.logo} name={protocol.name} size={40} />
+      <div>
+        <h1>{protocol.name}</h1>
+        <p class="subtitle">
+          {protocol.category || EM_DASH}
+          {protocol.parent_slug && (
+            <>
+              {" · child of "}
+              <a href={`/protocol/${protocol.parent_slug}`} class="link">{protocol.parent_slug}</a>
+            </>
+          )}
+        </p>
+      </div>
+    </div>
+    <div class="pizza">
+      <PizzaChart size="lg" grades={grades} />
+    </div>
+  </header>
+
+  {protocol.chains.length > 0 && (
+    <section class="chains">
+      <ChainTabs chains={protocol.chains} tvlByChain={protocol.tvl_by_chain} />
+    </section>
+  )}
+
+  <div class="scroll">
+    <table class="fields">
+      <tbody>
+        <tr>
+          <th scope="row">TVL</th>
+          <td><span class="mono tabular">{formatTvl(protocol.tvl)}</span></td>
+          <td class="prov">{prov.tvl ? <span class="tag">[{prov.tvl}]</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Chains</th>
+          <td>{protocol.chains.length > 0 ? protocol.chains.join(", ") : <span class="muted">unknown</span>}</td>
+          <td class="prov">{prov.chains ? <span class="tag">[{prov.chains}]</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Website</th>
+          <td>{protocol.website ? <a href={protocol.website} class="link" rel="noreferrer" target="_blank">{protocol.website}</a> : <span class="muted">unknown</span>}</td>
+          <td class="prov">{prov.website ? <span class="tag">[{prov.website}]</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Twitter</th>
+          <td>{protocol.twitter ? <a href={`https://twitter.com/${protocol.twitter}`} class="link" rel="noreferrer" target="_blank">@{protocol.twitter}</a> : <span class="muted">unknown</span>}</td>
+          <td class="prov">{prov.twitter ? <span class="tag">[{prov.twitter}]</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr id="verifiability">
+          <th scope="row">GitHub</th>
+          <td>
+            {protocol.github && protocol.github.length > 0 ? (
+              <ul class="bare">
+                {protocol.github.map((g) => (<li><a href={g} class="link" rel="noreferrer" target="_blank">{g}</a></li>))}
+              </ul>
+            ) : (<span class="muted">unknown</span>)}
+          </td>
+          <td class="prov">{prov.github ? <span class="tag">[{prov.github}]</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Audits</th>
+          <td>
+            {protocol.audit_count === 0 && protocol.audit_links.length === 0 ? (
+              <span class="muted">unknown</span>
+            ) : (
+              <details>
+                <summary class="clickable">{protocol.audit_count} audit{protocol.audit_count === 1 ? "" : "s"}</summary>
+                <ul class="bare audits">
+                  {protocol.audit_links.map((l) => (
+                    <li><a href={l} class="link" rel="noreferrer" target="_blank">{auditorDomain(l) ?? l}</a></li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </td>
+          <td class="prov">{auditsProv ? <span class="tag">[{auditsProv}]</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        {simpleRows.map((r) => (
+          <tr id={r.anchor}>
+            <th scope="row">{r.label}</th>
+            <td><span class="muted">unknown</span></td>
+            <td class="prov"><span class="muted">{EM_DASH}</span></td>
+          </tr>
+        ))}
+        <tr>
+          <th scope="row">Review status</th>
+          <td><span class="muted">listed</span></td>
+          <td class="prov"><span class="tag">[defillama]</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Hallmarks</th>
+          <td>
+            {hallmarks.length === 0 ? (<span class="muted">unknown</span>) : (
+              <ul class="bare">
+                {hallmarks.map((h) => (
+                  <li class="hallmark">
+                    <span class="muted ts">{formatUtc(new Date(h.unixTs * 1000).toISOString())}</span>
+                    {h.description}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </td>
+          <td class="prov">{prov.hallmarks ? <span class="tag">[{prov.hallmarks}]</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Updated</th>
+          <td>{formatUtc(snapshotGeneratedAt)}</td>
+          <td class="prov"><span class="tag">[defillama]</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ChildrenTable children={children} />
+</main>
+
+<style>
+  .detail { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; color: var(--text); }
+  .back { margin-bottom: 1rem; }
+  .back a { color: var(--accent-link); font-size: 0.85rem; text-decoration: none; }
+  .head { display: flex; gap: 1.5rem; align-items: flex-start; }
+  .title { display: flex; gap: 0.75rem; align-items: center; }
+  h1 { margin: 0; color: var(--text); font-size: 1.75rem; }
+  .subtitle { color: var(--text-muted); margin: 0.25rem 0 0 0; }
+  .pizza { margin-left: auto; }
+  .chains { margin-top: 1.5rem; }
+  .scroll { overflow-x: auto; }
+  .fields { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin-top: 0.5rem; }
+  .fields th {
+    text-align: left;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--surface-raised);
+    color: var(--text-muted);
+    font-weight: 500;
+    width: 18rem;
+    vertical-align: top;
+  }
+  .fields td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--surface-raised);
+    color: var(--text);
+  }
+  .fields td.prov { width: 8rem; text-align: right; }
+  .muted { color: var(--text-muted); }
+  .tag { color: var(--text-muted); font-size: 0.8em; }
+  .link { color: var(--accent-link); }
+  .bare { margin: 0; padding: 0; list-style: none; }
+  .audits { padding-top: 0.5rem; }
+  .audits li { padding: 0.15rem 0; }
+  .hallmark { padding: 0.2rem 0; color: var(--text); }
+  .ts { margin-right: 8px; }
+  .clickable { cursor: pointer; }
+</style>

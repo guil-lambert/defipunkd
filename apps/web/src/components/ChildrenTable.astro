@@ -1,0 +1,81 @@
+---
+import type { Protocol } from "@defibeat/registry";
+import { EM_DASH, formatTvl } from "../lib/format";
+import { verifiabilityGrade } from "../lib/verifiability";
+import { dependenciesGrade } from "../lib/dependencies";
+import { pizzaGradesFor } from "../lib/pizza";
+import PizzaChart from "./PizzaChart.astro";
+
+interface Props {
+  children: Protocol[];
+}
+const { children } = Astro.props;
+const rows = [...children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1));
+---
+{rows.length > 0 && (
+  <section class="family">
+    <h2>Family members</h2>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Chain</th>
+            <th>Risks</th>
+            <th>Stage</th>
+            <th>Type</th>
+            <th class="right">TVL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((c, i) => (
+            <tr>
+              <td class="muted">{i + 1}</td>
+              <td><a href={`/protocol/${c.slug}`} class="link">{c.name}</a></td>
+              <td>{c.chains[0] ?? EM_DASH}</td>
+              <td>
+                <PizzaChart
+                  size="sm"
+                  grades={pizzaGradesFor(
+                    c.category,
+                    verifiabilityGrade(!!(c.github && c.github.length > 0), c.audit_count ?? 0),
+                    dependenciesGrade(c.category, c.forked_from),
+                  )}
+                />
+              </td>
+              <td class="muted">{EM_DASH}</td>
+              <td>{c.category || EM_DASH}</td>
+              <td class="right mono tabular">{formatTvl(c.tvl)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}
+
+<style>
+  .family { margin-top: 2rem; }
+  h2 {
+    color: var(--text);
+    border-bottom: 1px solid var(--surface-raised);
+    padding-bottom: 0.5rem;
+  }
+  .scroll { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+  }
+  thead tr {
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  th, td { padding: 0.4rem 0.6rem; }
+  tbody tr { border-top: 1px solid var(--surface-raised); }
+  .right { text-align: right; }
+  .muted { color: var(--text-muted); }
+  .link { color: var(--accent-link); }
+</style>
