@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(3);
+    expect(PROMPT_VERSION).toBe(4);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -45,10 +45,12 @@ describe("buildPrompt", () => {
     expect(p).toContain("control, ability-to-exit, dependencies, verifiability");
   });
 
-  it("documents the optional chat_url field for shareable LLM transcripts", () => {
+  it("instructs the LLM to leave chat_url null and explains why", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("chat_url");
-    expect(p).toContain("claude.ai/share");
+    expect(p).toContain("ALWAYS set this field to null");
+    expect(p).toContain('"chat_url": null');
+    expect(p).toContain("Share publicly");
   });
 
   it("includes the steel-man-before-grading rule", () => {
@@ -86,7 +88,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             3");
+    expect(p).toContain("prompt_version:             4");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
