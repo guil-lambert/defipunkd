@@ -1,0 +1,212 @@
+---
+import type { Protocol } from "@defibeat/registry";
+import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
+import { verifiabilityGrade } from "../lib/verifiability";
+import { dependenciesGrade } from "../lib/dependencies";
+import { pizzaGradesFor } from "../lib/pizza";
+import PizzaChart from "./PizzaChart.astro";
+
+interface Props {
+  protocol: Protocol;
+}
+const { protocol } = Astro.props;
+
+const grades = pizzaGradesFor(
+  protocol.category,
+  verifiabilityGrade(!!(protocol.github && protocol.github.length > 0), protocol.audit_count ?? 0),
+  dependenciesGrade(protocol.category, protocol.forked_from),
+);
+
+const primary = primaryChain(protocol.tvl_by_chain) ?? protocol.chains[0] ?? null;
+const extraChains = Math.max(0, protocol.chains.length - 1);
+
+function safeHost(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+const websiteHost = safeHost(protocol.website);
+
+const firstGithub = protocol.github && protocol.github.length > 0 ? protocol.github[0]! : null;
+const githubShort = firstGithub ? firstGithub.replace(/^https?:\/\/(www\.)?github\.com\//, "") : null;
+
+const about = (() => {
+  const cat = protocol.category ? protocol.category.toLowerCase() : "protocol";
+  const where = primary
+    ? ` on ${primary}${extraChains > 0 ? ` and ${extraChains} other chain${extraChains === 1 ? "" : "s"}` : ""}`
+    : "";
+  return `${protocol.name} is a ${cat} ${protocol.category ? "protocol" : ""}${where}.`.replace(/\s+/g, " ").trim();
+})();
+---
+<section class="summary">
+  <div class="grid">
+    <div class="cell">
+      <div class="k">Total value locked</div>
+      <div class="v mono tabular">{formatTvl(protocol.tvl)}</div>
+    </div>
+
+    <div class="cell">
+      <div class="k">Stage</div>
+      <div class="v muted">{EM_DASH}</div>
+      <a href="#stage" class="sub">not yet assessed</a>
+    </div>
+
+    <div class="cell">
+      <div class="k">Chain{protocol.chains.length === 1 ? "" : "s"}</div>
+      <div class="v">
+        {primary ?? EM_DASH}
+        {extraChains > 0 && <span class="chip">+{extraChains}</span>}
+      </div>
+    </div>
+
+    <div class="cell pizza-cell">
+      <PizzaChart size="lg" grades={grades} />
+    </div>
+
+    <div class="cell">
+      <div class="k">Type</div>
+      <div class="v">{protocol.category || EM_DASH}</div>
+    </div>
+
+    <div class="cell">
+      <div class="k">Website</div>
+      <div class="v">
+        {protocol.website ? (
+          <a href={protocol.website} class="link" rel="noreferrer" target="_blank">{websiteHost ?? protocol.website}</a>
+        ) : (
+          <span class="muted">{EM_DASH}</span>
+        )}
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="k">GitHub</div>
+      <div class="v">
+        {firstGithub ? (
+          <a href={firstGithub} class="link" rel="noreferrer" target="_blank">{githubShort}</a>
+        ) : (
+          <span class="muted">{EM_DASH}</span>
+        )}
+      </div>
+    </div>
+
+    <div class="cell wide control">
+      <div class="k">Control criteria</div>
+      <div class="pills">
+        <span class="pill">Immutable<span class="pill-dash">{EM_DASH}</span></span>
+        <span class="pill">Pausable<span class="pill-dash">{EM_DASH}</span></span>
+        <span class="pill">Upgradeable<span class="pill-dash">{EM_DASH}</span></span>
+      </div>
+      <a href="#control" class="sub">Phase 3 — not yet assessed</a>
+    </div>
+
+    <div class="cell wide about">
+      <div class="k">About</div>
+      <div class="v body">{about}</div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .summary { margin-top: 1rem; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem 1.5rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    align-items: start;
+  }
+  .cell { min-width: 0; }
+  .pizza-cell {
+    grid-column: 4;
+    grid-row: 1 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wide.control {
+    grid-column: 1 / 3;
+    grid-row: 3;
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-raised);
+  }
+  .wide.about {
+    grid-column: 3 / 5;
+    grid-row: 3;
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-raised);
+  }
+
+  .k {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .v {
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .v.body { font-size: 0.88rem; font-weight: 400; color: var(--text-muted); line-height: 1.5; }
+  .muted { color: var(--text-muted); }
+  .sub {
+    display: inline-block;
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    color: var(--accent-link);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .sub:hover { text-decoration: underline; }
+  .link { color: var(--accent-link); font-size: 0.95rem; font-weight: 500; }
+  .chip {
+    margin-left: 0.4rem;
+    padding: 0 0.4rem;
+    background: var(--surface-raised);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    vertical-align: middle;
+  }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--surface-raised);
+    border-radius: 999px;
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  .pill-dash { color: var(--text-muted); }
+
+  @media (max-width: 720px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem 1.25rem;
+      padding: 1rem;
+    }
+    .pizza-cell { grid-column: 1 / -1; grid-row: auto; }
+    .wide.control, .wide.about {
+      grid-column: 1 / -1;
+      grid-row: auto;
+      padding-top: 1rem;
+    }
+  }
+</style>

@@ -1,15 +1,12 @@
 ---
 import type { Protocol, ProvenanceTag } from "@defibeat/registry";
 import { auditorDomain, EM_DASH, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
-import { verifiabilityGrade } from "../lib/verifiability";
-import { dependenciesGrade } from "../lib/dependencies";
-import { pizzaGradesFor } from "../lib/pizza";
-import PizzaChart from "./PizzaChart.astro";
 import ProtocolLogo from "./ProtocolLogo.astro";
 import ChainTabs from "./ChainTabs.astro";
 import ChildrenTable from "./ChildrenTable.astro";
 import RiskAnalysis from "./RiskAnalysis.astro";
 import StagePreview from "./StagePreview.astro";
+import ProtocolSummary from "./ProtocolSummary.astro";
 
 interface Props {
   protocol: Protocol;
@@ -19,12 +16,6 @@ interface Props {
 const { protocol, snapshotGeneratedAt, children } = Astro.props;
 const prov = protocol._provenance;
 const hallmarks = parseHallmarks(protocol.hallmarks);
-const grades = pizzaGradesFor(
-  protocol.category,
-  verifiabilityGrade(!!(protocol.github && protocol.github.length > 0), protocol.audit_count ?? 0),
-  dependenciesGrade(protocol.category, protocol.forked_from),
-);
-
 const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ?? null;
 
 ---
@@ -48,10 +39,9 @@ const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ??
         </p>
       </div>
     </div>
-    <div class="pizza">
-      <PizzaChart size="lg" grades={grades} />
-    </div>
   </header>
+
+  <ProtocolSummary protocol={protocol} />
 
   {protocol.chains.length > 0 && (
     <section class="chains">
@@ -156,7 +146,6 @@ const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ??
   .title { display: flex; gap: 0.75rem; align-items: center; }
   h1 { margin: 0; color: var(--text); font-size: 1.75rem; }
   .subtitle { color: var(--text-muted); margin: 0.25rem 0 0 0; }
-  .pizza { margin-left: auto; }
   .chains { margin-top: 1.5rem; }
   .scroll { overflow-x: auto; }
   .fields { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin-top: 0.5rem; }
