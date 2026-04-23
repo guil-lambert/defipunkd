@@ -1,0 +1,272 @@
+{
+  "schema_version": 1,
+  "slug": "lido",
+  "generated_at": "2026-04-23T22:45:00.000Z",
+  "reconciler_model": "claude-sonnet-4-6",
+  "reconciler_kind": "llm",
+  "slices": {
+    "control": {
+      "grade": "unknown",
+      "strength": null,
+      "headline": "no submissions yet",
+      "rationale": {
+        "findings": [],
+        "steelman": null,
+        "verdict": "no submissions available for this slice"
+      },
+      "evidence": [],
+      "dissent": []
+    },
+    "ability-to-exit": {
+      "grade": "orange",
+      "strength": "strong",
+      "headline": "Finalized-claim exits always open; new-request placement pausable up to 11 days by 3/6 GateSeal multisig or indefinitely by DAO governance vote",
+      "rationale": {
+        "findings": [
+          {
+            "code": "E1",
+            "text": "Four request-placement functions exist: requestWithdrawals(uint256[] amounts, address owner), requestWithdrawalsWithPermit(...), requestWithdrawalsWstETH(uint256[] amounts, address owner), requestWithdrawalsWstETHWithPermit(...). Two claim functions exist: claimWithdrawal(uint256 requestId) and claimWithdrawals(uint256[] requestIds, uint256[] hints). The finalize() function is called exclusively by the AccountingOracle via FINALIZE_ROLE, not directly by users."
+          },
+          {
+            "code": "E2",
+            "text": "All four requestWithdrawals* functions and finalize() call _checkResumed(), reverting when the contract is paused. By explicit contract documentation and code comment, claimWithdrawal and claimWithdrawals do NOT call _checkResumed() and remain available even while the contract is paused. The finalize() function is additionally gated by onlyRole(FINALIZE_ROLE), so oracle-driven finalization also halts under pause, meaning new requests cannot be finalized during a pause but already-finalized requests remain claimable."
+          },
+          {
+            "code": "E3",
+            "text": "PAUSE_ROLE = keccak256('PAUSE_ROLE'). The currently active PAUSE_ROLE holder with operational use is the GateSeal contract at 0x8A854C4E750CDf24f138f34A9061b2f556066912 (expiry 12 Sep 2026), which can only be triggered by the 3/6 GateSeal Committee multisig at 0x8772E3a2D86B9347A2688f9bc1808A6d8917760C. The GateSeal is configured for 11 days seal duration. The pauseFor(_duration) function accepts PAUSE_INFINITELY (uint256 max) as a duration, so any PAUSE_ROLE holder can pause indefinitely; the GateSeal is the only verified time-capped PAUSE_ROLE path. Whether the Lido DAO Aragon Agent also holds PAUSE_ROLE directly (enabling a governance vote to call pauseFor(PAUSE_INFINITELY)) could not be confirmed on-chain without reading the live role membership from the contract; this is flagged in unknowns."
+          },
+          {
+            "code": "E4",
+            "text": "Emergency path: GateSeal contract (3/6 multisig, one-time use per GateSeal instance, hard-capped at 11 days by its immutable seal_duration, auto-resumes, expires 12 Sep 2026). If GateSeal is triggered and the DAO cannot pass a fix within 11 days, the queue auto-resumes. Governance path: Lido DAO Aragon vote (now 120-hour duration per Vote #184, two-phase) can pass any action including extending a pause via a new PAUSE_ROLE grant and calling pauseFor(PAUSE_INFINITELY), subject to the Dual Governance veto mechanism (stETH holders holding ≥1% of total staked ETH in escrow can delay execution for at least 5 days, with escalation to rage-quit). These are two distinct actor classes with very different timescales and veto surfaces."
+          },
+          {
+            "code": "E5",
+            "text": "Withdrawals follow a FIFO queue finalized in daily batches by AccountingOracle. Typical finalization time is 1–4 days in normal conditions (Lido documentation). No hard daily withdrawal cap is encoded in the WithdrawalQueue contract itself; throughput is limited by available ETH in the Lido buffer plus validator exit speed. Under bunker mode (severe slashing), finalization rate is further restricted by OracleReportSanityChecker. No documented hard maximum queue duration was found; under extreme demand the wait could extend to weeks. The queue itself can be paused (blocking new request placement and new finalization) but individual request IDs already in a finalized state remain claimable at any time."
+          },
+          {
+            "code": "E6",
+            "text": "No permissionless escape-hatch or forced-exit mechanism exists in the WithdrawalQueue contract. Users who cannot wait for the queue can exit via secondary markets (DEX swap of stETH/wstETH for ETH) but this is an off-chain/market-dependent path. Dual Governance provides stETH holders a rage-quit path to reclaim staked ETH by exiting validators en masse, but that is a governance escalation mechanism, not an individual user escape hatch."
+          },
+          {
+            "code": "E7",
+            "text": "The WithdrawalQueue contract (0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1) is a verified proxy on Etherscan. Both requestWithdrawals and claimWithdrawals are callable directly via Etherscan's Write Proxy tab or any Ethereum wallet with ABI interaction. No dependency on lido.fi frontend exists for on-chain exit."
+          }
+        ],
+        "steelman": {
+          "red": "The pauseFor(PAUSE_INFINITELY) function is callable by any PAUSE_ROLE holder, and even if today only the 11-day-capped GateSeal holds that role, the Lido DAO Aragon Voting Agent can pass a governance vote (120 hours) to grant PAUSE_ROLE to itself or another address and then call PAUSE_INFINITELY, blocking both new request placement and oracle finalization indefinitely — meaning users who have not yet had their requests finalized could be stuck with non-claimable stETH positions for an unbounded period.",
+          "orange": "Claims of already-finalized withdrawals are categorically not pause-gated per the source code and documentation, so users with finalized positions can always retrieve ETH on-chain; meanwhile, indefinite pause of new request placement requires a full Lido DAO governance vote (120+ hours, now also subject to Dual Governance veto by stETH holders), and the only unilateral emergency actor (3/6 GateSeal Committee) is hard-capped at 11 days with auto-resume.",
+          "green": "The critical claim path is genuinely permissionless and pause-proof at the contract level; the GateSeal emergency mechanism auto-expires and cannot be reused; and Dual Governance now gives stETH holders a formal on-chain veto over any malicious DAO decision that would extend or abuse pauses, making unilateral admin capture of the withdrawal process essentially impossible without stETH-holder consensus."
+        },
+        "verdict": "Choosing orange because: claims of already-finalized exits are not pause-gated (ruling out red), but two distinct pause vectors remain: (1) the 3/6 GateSeal Committee can unilaterally pause new request placement and finalization for 11 days — above the ≤7-day green threshold — and (2) governance (Lido DAO Aragon vote) can in theory pause indefinitely by assigning PAUSE_ROLE and calling pauseFor(PAUSE_INFINITELY), satisfying the orange condition 'claims-of-finalized are exempt but new-request placement can be paused indefinitely by governance.' Dual Governance and the auto-resume design of PausableUntil are meaningful mitigants but do not bring this to green because the GateSeal itself exceeds the 7-day cap and indefinite DAO governance pause remains theoretically reachable."
+      },
+      "evidence": [
+        {
+          "url": "https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1",
+          "shows": "WithdrawalQueueERC721 proxy contract on Ethereum mainnet; confirms deployed contract is a verified EIP-1967 transparent proxy with 196k+ transactions",
+          "chain": "ethereum",
+          "address": "0x889edc2edab5f40e902b864ad4d7ade8e412f9b1",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1#code",
+          "shows": "The deployed Lido WithdrawalQueueERC721 contract, revealing the separation of request and claim functions, and the specific pause modifiers applied to requests but not claims.",
+          "chain": "ethereum",
+          "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+          "fetched_at": "2026-04-23T15:16:50Z"
+        },
+        {
+          "url": "https://etherscan.io/address/0xe42c659dc09109566720ea8b2de186c2be7d94d9",
+          "shows": "WithdrawalQueueERC721 implementation contract; source shows PAUSE_ROLE, RESUME_ROLE, FINALIZE_ROLE constants and finalize() uses _checkResumed() guard; confirms claim functions are in WithdrawalQueueBase without _checkResumed",
+          "chain": "ethereum",
+          "address": "0xe42c659dc09109566720ea8b2de186c2be7d94d9",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://etherscan.io/address/0x8A854C4E750CDf24f138f34A9061b2f556066912",
+          "shows": "GateSeal contract for WithdrawalQueue — the deployed on-chain contract that holds PAUSE_ROLE and can only be triggered by the GateSeal Committee multisig",
+          "chain": "ethereum",
+          "address": "0x8A854C4E750CDf24f138f34A9061b2f556066912",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/lidofinance/core/cbcc6d1/deployed-mainnet.json",
+          "shows": "Mainnet deployment registry mapping WithdrawalQueueERC721 proxy 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1 to implementation 0xE42C659Dc09109566720EA8b2De186c2Be7D94D9, and listing GateSeal / committee metadata in the same deployment manifest.",
+          "chain": "ethereum",
+          "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+          "commit": "cbcc6d1",
+          "fetched_at": "2026-04-23T17:26:00Z"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/lidofinance/core/master/contracts/0.8.9/WithdrawalQueue.sol",
+          "shows": "pauseFor(_duration) NatSpec explicitly states 'Claiming finalized requests will still be available'; PAUSE_INFINITELY is a valid _duration parameter; PAUSE_ROLE gating confirmed",
+          "chain": "ethereum",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/lidofinance/core/master/contracts/0.8.9/WithdrawalQueue.sol",
+          "shows": "WithdrawalQueue source code defining PAUSE_ROLE, RESUME_ROLE, pauseFor, pauseUntil, resume, request functions, claim functions, and the fact that claims of finalized requests remain available while placement/finalization are paused.",
+          "chain": "ethereum",
+          "address": "0xE42C659Dc09109566720EA8b2De186c2Be7D94D9",
+          "fetched_at": "2026-04-23T17:26:00Z"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/lidofinance/docs/d44c996/docs/guides/protocol-levers.md",
+          "shows": "Lido governance-levers documentation listing current holders for WithdrawalQueueERC721 PAUSE_ROLE and RESUME_ROLE, stating that the GateSeal mechanism is time-limited and that the Reseal Manager can extend a seal window while upgrades require a DAO vote through the Aragon Agent.",
+          "chain": "ethereum",
+          "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+          "commit": "d44c996",
+          "fetched_at": "2026-04-23T17:26:00Z"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/lidofinance/docs/6ff4a7e/docs/contracts/gate-seal.md",
+          "shows": "GateSeal documentation stating that the WithdrawalQueue GateSeal is a one-time panic button, the sealing committee is a multisig-like committee, and the seal duration is limited to 14 days; it also explains the ResealManager governance-linked extension path.",
+          "chain": "ethereum",
+          "address": "0x8A854C4E750CDf24f138f34A9061b2f556066912",
+          "commit": "6ff4a7e",
+          "fetched_at": "2026-04-23T17:26:00Z"
+        },
+        {
+          "url": "https://github.com/lidofinance/gate-seals",
+          "shows": "GateSeal design: one-time use, immutable seal_duration at construction, PausableUntil auto-resume mechanism, GateSeal must be given PAUSE_ROLE; largest possible damage from compromised multisig is 14-day pause",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721",
+          "shows": "Official documentation for pauseFor and pauseUntil functions: 'Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available.' Both use onlyRole(PAUSE_ROLE).",
+          "chain": "ethereum",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/gate-seal",
+          "shows": "GateSeal for WithdrawalQueue: 0x8A854C4E750CDf24f138f34A9061b2f556066912, expiry 12 Sep 2026; seal duration limited to 14 days maximum at construction; current instance configured for 11 days; one-time use; auto-resumes after duration",
+          "chain": "ethereum",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://docs.lido.fi/multisigs/emergency-brakes",
+          "shows": "GateSeal Committee multisig: 0x8772E3a2D86B9347A2688f9bc1808A6d8917760C, quorum 3/6; six named signers with public verification; authorized to trigger GateSeal contracts; pause right is single-use and auto-expires",
+          "chain": "ethereum",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://docs.lido.fi/deployed-contracts/",
+          "shows": "Mainnet deployment: WithdrawalQueue ERC721 proxy at 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1; protocol version v3.0.1; lists all core contract addresses including Dual Governance contracts (Emergency Protected Timelock, Reseal Manager)",
+          "chain": "ethereum",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://blog.lido.fi/lido-dao-governance-security-measures-oversight/",
+          "shows": "GateSeal duration is 11 days after on-chain vote extension (Vote #184 extended Aragon voting to 120h); formula: 2x governance reaction time + 1 day; DAO can vote to extend pause if GateSeal expires before fix",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        },
+        {
+          "url": "https://unchainedcrypto.com/lido-dao-enables-dual-governance-steth-holders-can-trigger-rage-quit-mode/",
+          "shows": "Dual Governance passed June 2025: stETH holders can veto DAO decisions by depositing ≥1% of total staked ETH into escrow, delaying execution by at least 5 days with escalation to rage-quit; this constrains DAO's ability to execute malicious governance attacks including indefinite pause extensions",
+          "fetched_at": "2026-04-23T12:00:00Z"
+        }
+      ],
+      "dissent": []
+    },
+    "dependencies": {
+      "grade": "unknown",
+      "strength": null,
+      "headline": "no submissions yet",
+      "rationale": {
+        "findings": [],
+        "steelman": null,
+        "verdict": "no submissions available for this slice"
+      },
+      "evidence": [],
+      "dissent": []
+    },
+    "access": {
+      "grade": "unknown",
+      "strength": null,
+      "headline": "no submissions yet",
+      "rationale": {
+        "findings": [],
+        "steelman": null,
+        "verdict": "no submissions available for this slice"
+      },
+      "evidence": [],
+      "dissent": []
+    },
+    "verifiability": {
+      "grade": "unknown",
+      "strength": null,
+      "headline": "no submissions yet",
+      "rationale": {
+        "findings": [],
+        "steelman": null,
+        "verdict": "no submissions available for this slice"
+      },
+      "evidence": [],
+      "dissent": []
+    }
+  },
+  "protocol_metadata": {
+    "docs_url": "https://docs.lido.fi",
+    "audits": [],
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "ethereum",
+        "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+        "role": "WithdrawalQueueERC721 proxy",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE42C659Dc09109566720EA8b2De186c2Be7D94D9",
+        "role": "WithdrawalQueueERC721 implementation",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8A854C4E750CDf24f138f34A9061b2f556066912",
+        "role": "GateSeal for WithdrawalQueue (holds PAUSE_ROLE, one-time use, expires 12 Sep 2026)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8772E3a2D86B9347A2688f9bc1808A6d8917760C",
+        "role": "GateSeal Committee multisig (3/6 quorum, can trigger GateSeal)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7914b5a1539b97Bd0bbd155757F25FD79A522d24",
+        "role": "Reseal Manager (can extend temporary pause into governance-controlled pause)",
+        "actor_class": "unknown"
+      }
+    ]
+  },
+  "source_submissions": [
+    {
+      "slice": "ability-to-exit",
+      "path": "data/submissions/lido/ability-to-exit/claude-sonnet-4-6-2026-04-23.json",
+      "model": "claude-sonnet-4-6",
+      "grade": "orange"
+    },
+    {
+      "slice": "ability-to-exit",
+      "path": "data/submissions/lido/ability-to-exit/gemini-2026-04-23.json",
+      "model": "gemini-3.1-pro",
+      "grade": "orange"
+    },
+    {
+      "slice": "ability-to-exit",
+      "path": "data/submissions/lido/ability-to-exit/gpt-5.4-thinking-2026-04-23.json",
+      "model": "gpt-5.4-thinking",
+      "grade": "orange"
+    }
+  ],
+  "flags": [
+    "control: no submissions",
+    "dependencies: no submissions",
+    "access: no submissions",
+    "verifiability: no submissions",
+    "ability-to-exit: gemini submission states GateSeal is capped at 6 days; claude and gpt submissions and primary evidence both confirm 11-day seal duration (14-day max at construction); gemini finding E4 uses incorrect duration but grade is unaffected — all three submissions agree on orange",
+    "ability-to-exit: gpt submission states GateSeal window is 14 days (the contract maximum at construction) while claude submission and primary evidence confirm the current deployed instance is configured for 11 days; minor factual discrepancy but grade unaffected"
+  ]
+}
