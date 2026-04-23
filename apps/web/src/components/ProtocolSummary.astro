@@ -1,5 +1,6 @@
 ---
 import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
+import { getProtocolMetadata } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
 import { verifiabilityGrade } from "../lib/verifiability";
 import { dependenciesGrade } from "../lib/dependencies";
@@ -49,8 +50,26 @@ function safeHost(url: string | null): string | null {
 }
 const websiteHost = safeHost(protocol.website);
 
-const firstGithub = protocol.github && protocol.github.length > 0 ? protocol.github[0]! : null;
+const metadata = getProtocolMetadata(protocol.slug);
+const refreshedGithub = metadata?.github && metadata.github.length > 0 ? metadata.github : null;
+const githubUrls = refreshedGithub ?? protocol.github ?? [];
+const firstGithub = githubUrls.length > 0 ? githubUrls[0]! : null;
 const githubShort = firstGithub ? firstGithub.replace(/^https?:\/\/(www\.)?github\.com\//, "") : null;
+
+const upgradeability = metadata?.upgradeability ?? null;
+const bugBountyUrl = metadata?.bug_bounty_url ?? null;
+const governanceForum = metadata?.governance_forum ?? null;
+const docsUrl = metadata?.docs_url ?? null;
+const bugBountyHost = safeHost(bugBountyUrl);
+const governanceHost = safeHost(governanceForum);
+const docsHost = safeHost(docsUrl);
+
+const upgradeabilityLabel: Record<string, string> = {
+  immutable: "Immutable",
+  upgradeable: "Upgradeable",
+  mixed: "Mixed",
+  unknown: "Unknown",
+};
 
 const about = (() => {
   const cat = protocol.category ? protocol.category.toLowerCase() : "protocol";
@@ -138,9 +157,38 @@ const about = (() => {
     <div class="cell wide control">
       <div class="k">Control criteria</div>
       <div class="pills">
-        <span class="pill">Immutable<span class="pill-dash">{EM_DASH}</span></span>
-        <span class="pill">Pausable<span class="pill-dash">{EM_DASH}</span></span>
-        <span class="pill">Upgradeable<span class="pill-dash">{EM_DASH}</span></span>
+        <span class="pill">
+          Upgradeability
+          {upgradeability ? (
+            <span class={`pill-val grade-${upgradeability}`}>{upgradeabilityLabel[upgradeability]}</span>
+          ) : (
+            <span class="pill-dash">{EM_DASH}</span>
+          )}
+        </span>
+        <span class="pill">
+          Bug bounty
+          {bugBountyUrl ? (
+            <a href={bugBountyUrl} class="pill-link" rel="noreferrer" target="_blank">{bugBountyHost}</a>
+          ) : (
+            <span class="pill-dash">{EM_DASH}</span>
+          )}
+        </span>
+        <span class="pill">
+          Governance forum
+          {governanceForum ? (
+            <a href={governanceForum} class="pill-link" rel="noreferrer" target="_blank">{governanceHost}</a>
+          ) : (
+            <span class="pill-dash">{EM_DASH}</span>
+          )}
+        </span>
+        <span class="pill">
+          Docs
+          {docsUrl ? (
+            <a href={docsUrl} class="pill-link" rel="noreferrer" target="_blank">{docsHost}</a>
+          ) : (
+            <span class="pill-dash">{EM_DASH}</span>
+          )}
+        </span>
       </div>
     </div>
 
@@ -300,6 +348,21 @@ const about = (() => {
     font-weight: 500;
   }
   .pill-dash { color: var(--text-muted); }
+  .pill-val { color: var(--text); font-weight: 600; }
+  .pill-val.grade-immutable { color: var(--grade-green); }
+  .pill-val.grade-upgradeable { color: var(--grade-orange); }
+  .pill-val.grade-mixed { color: var(--grade-orange); }
+  .pill-val.grade-unknown { color: var(--text-muted); }
+  .pill-link {
+    color: var(--accent-link);
+    text-decoration: none;
+    font-weight: 500;
+    max-width: 14ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pill-link:hover { text-decoration: underline; }
 
   @media (max-width: 720px) {
     .grid {

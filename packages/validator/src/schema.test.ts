@@ -105,6 +105,45 @@ describe("SubmissionSchema", () => {
     expect(SubmissionSchema.safeParse(bad).success).toBe(false);
   });
 
+  it("accepts schema_version 3 with protocol_metadata populated", () => {
+    const v3 = {
+      ...(VALID as object),
+      schema_version: 3,
+      protocol_metadata: {
+        github: ["https://github.com/lidofinance/lido-dao"],
+        docs_url: "https://docs.lido.fi",
+        audits: [{ firm: "Trail of Bits", url: "https://report.example/tob.pdf", date: "2023-10" }],
+        governance_forum: "https://research.lido.fi",
+        voting_token: { chain: "Ethereum", address: "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32", symbol: "LDO" },
+        bug_bounty_url: "https://immunefi.com/bounty/lido",
+        security_contact: "security@lido.fi",
+        deployed_contracts_doc: "https://docs.lido.fi/deployed-contracts",
+        admin_addresses: [
+          { chain: "Ethereum", address: "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c", role: "Aragon Agent", actor_class: "governance" },
+        ],
+        upgradeability: "upgradeable",
+      },
+    };
+    const result = SubmissionSchema.safeParse(v3);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects protocol_metadata with invalid actor_class", () => {
+    const bad = {
+      ...(VALID as object),
+      schema_version: 3,
+      protocol_metadata: {
+        admin_addresses: [{ chain: "Ethereum", address: "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c", role: "x", actor_class: "dao" }],
+      },
+    };
+    expect(SubmissionSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it("rejects invalid schema_version (only 2 or 3 allowed)", () => {
+    const bad = { ...(VALID as object), schema_version: 1 };
+    expect(SubmissionSchema.safeParse(bad).success).toBe(false);
+  });
+
   it("committed JSON Schema declares the same required fields", () => {
     expect(jsonSchema.required).toEqual(
       expect.arrayContaining([

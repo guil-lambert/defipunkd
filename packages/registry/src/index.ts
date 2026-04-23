@@ -3,12 +3,19 @@ import { join, basename, dirname, resolve } from "node:path";
 import { OverlaySchema, type Overlay } from "./overlay-schema";
 import { mergeProtocol, type MergeWarning } from "./merge";
 import type { Protocol, Snapshot } from "./types";
-import { loadAssessments, type LoadedAssessment, type SliceId as AssessmentSliceId } from "./assessments";
+import {
+  loadAssessments,
+  aggregateProtocolMetadata,
+  type LoadedAssessment,
+  type SliceId as AssessmentSliceId,
+  type ProtocolMetadata,
+} from "./assessments";
 
 export type { Protocol, Snapshot, ProtocolSnapshot, ProvenanceTag, Slug } from "./types";
 export { OverlaySchema, type Overlay } from "./overlay-schema";
 export {
   loadAssessments,
+  aggregateProtocolMetadata,
   type LoadedAssessment,
   type AssessmentGrade,
   type AssessmentStrength,
@@ -16,6 +23,11 @@ export {
   type Rationale,
   type Finding,
   type Steelman,
+  type ProtocolMetadata,
+  type AuditEntry,
+  type VotingToken,
+  type AdminAddress,
+  type Upgradeability,
 } from "./assessments";
 
 function resolveDataDir(): string {
@@ -154,4 +166,16 @@ export function getAssessments(): Map<string, Map<AssessmentSliceId, LoadedAsses
 
 export function listChildren(parentSlug: string): Protocol[] {
   return getCache().childrenByParent.get(parentSlug) ?? [];
+}
+
+let cachedMetadata: Map<string, ProtocolMetadata> | null = null;
+export function getProtocolMetadata(slug: string): ProtocolMetadata | undefined {
+  if (!cachedMetadata) {
+    cachedMetadata = new Map();
+    for (const [s, bySlice] of getAssessments()) {
+      const merged = aggregateProtocolMetadata(bySlice);
+      if (merged) cachedMetadata.set(s, merged);
+    }
+  }
+  return cachedMetadata.get(slug);
 }
