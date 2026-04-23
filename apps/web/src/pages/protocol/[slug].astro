@@ -1,17 +1,20 @@
 ---
+// On-demand rendered + ISR-cached by Vercel adapter. No getStaticPaths —
+// Astro will route any /protocol/:slug to this handler and the Vercel
+// adapter caches the result at the edge for `isr.expiration` seconds.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { listProtocols, listChildren, getAssessments, type Snapshot } from "@defipunkd/registry";
+import { getProtocol, listChildren, getAssessments, type Snapshot } from "@defipunkd/registry";
 import Base from "../../layouts/Base.astro";
 import ProtocolDetail from "../../components/ProtocolDetail.astro";
 import Delisted from "../../components/Delisted.astro";
 
-export async function getStaticPaths() {
-  return listProtocols().map((p) => ({
-    params: { slug: p.slug },
-    props: { protocol: p, children: p.delisted_at ? [] : listChildren(p.slug) },
-  }));
+const slug = Astro.params.slug!;
+const rawProtocol = getProtocol(slug);
+if (!rawProtocol) {
+  return new Response(`Protocol not found: ${slug}`, { status: 404 });
 }
+const children = rawProtocol.delisted_at ? [] : listChildren(slug);
 
 function findSnapshotPath(): string {
   let dir = process.cwd();
@@ -38,7 +41,6 @@ function snapshotGeneratedAt(): string {
   return cachedGeneratedAt;
 }
 
-const { protocol: rawProtocol, children } = Astro.props;
 const isDelisted = !!rawProtocol.delisted_at;
 
 function sumChildTvl(kids: typeof children): number | null {

@@ -66,20 +66,23 @@ ${submissionsBlock}
 
 ## Your task
 
-Produce an improved master file. Be conservative. Your judgment calls:
+Produce an improved master file. You are SYNTHESIZING, not just picking — the master file should read like one careful assessment, not a copy-paste from any single submission. But every factual claim must trace back to content in the submissions below; you are combining their language, not inventing content.
 
 1. **Per-slice grade**: the draft already reflects the deterministic majority-weighted grade. You MAY override only if:
    - The highest-weighted submission's evidence clearly contradicts its own grade, OR
    - A later submission cites strictly stronger evidence (a block-explorer link pinning the real deployed state) that the majority missed.
    When you override, add an entry to \`flags[]\` explaining it: e.g. \`"control: overrode orange→red because submission #2 cited a UUPS proxy owner that is an EOA"\`.
 
-2. **Per-slice headline**: pick the clearest one-liner across submissions of the winning grade. Must be one sentence, concrete, no hedging.
+2. **Per-slice headline** — SYNTHESIZE: write a single sentence that captures the sharpest version of the winning-grade consensus. Draw language from across the submissions; prefer the most concrete quantitative claims (e.g. "14-day pause cap via 3/6 multisig" beats "can be paused by admins"). Don't echo any one submission verbatim — aim for the best sentence you could write given what the three submissions together observed. No hedging words ("some", "may be able to") unless the underlying fact is itself uncertain.
 
-3. **Per-slice rationale**: pick the best \`rationale\` object from submissions of the winning grade. Don't merge rationales — pick one coherent voice.
+3. **Per-slice rationale** — SYNTHESIZE the rationale object:
+   - \`findings[]\`: union the key observations across all winning-grade submissions. If three submissions each produced an \`E1\` about the same topic, merge them into one \`E1\` combining their strongest phrasings — not three redundant entries. Use your own \`code\` values (E1, E2, E3, …) numbered in order; ignore the submissions' original numbering. Each entry's \`text\` should be a coherent synthesis that includes the strongest specific details (addresses, role names, time bounds, function names) from whichever submission had them.
+   - \`steelman\` — SYNTHESIZE three fresh paragraphs. For each of red/orange/green, write the strongest one-sentence case that grade could be made from the submissions' collective evidence. Don't copy any submission's steelman verbatim; combine the sharpest arguments.
+   - \`verdict\`: write a fresh one-to-three-sentence verdict explaining why the winning grade ranks above the two adjacent grades, referencing the specific evidence that tips it. Must begin with "Choosing <grade> because".
 
-4. **Evidence dedupe**: union evidence[] from all winning-grade submissions, deduped by URL. Prefer block-explorer URLs first, then GitHub commit-pinned URLs, then everything else.
+4. **Evidence dedupe**: union evidence[] from all winning-grade submissions, deduped by URL. Prefer block-explorer URLs first, then GitHub commit-pinned URLs, then everything else. Keep the \`shows\` field short and specific. If two submissions cited the same URL with different \`shows\`, combine the sharpest details from each into one entry.
 
-5. **Dissent**: list each submission whose grade disagreed with the final grade, with a one-sentence \`reason\` field summarizing what they argued.
+5. **Dissent** — SUMMARIZE: for each submission whose grade disagreed with the final grade, write a one-sentence \`reason\` that captures the substantive argument they made, not just "argued for red". Draw from their headline + verdict.
 
 6. **protocol_metadata**: merge across ALL submissions (all slices). Union arrays (github, audits, admin_addresses) deduped by identity. For scalar fields (docs_url, governance_forum, voting_token, bug_bounty_url, security_contact, deployed_contracts_doc, upgradeability) pick the value supported by the most submissions; break ties by preferring values from the most recent prompt_version. Leave null/empty fields you cannot verify from the inputs.
 
@@ -88,6 +91,14 @@ Produce an improved master file. Be conservative. Your judgment calls:
    - grade override you made
    - protocol_metadata fields with contradictory values across submissions
    - missing slices (no submissions)
+   - synthesis choices worth calling out (e.g. "control: adopted gpt's Reseal Manager address but claude's role-list framing because claude's was more precise")
+
+## Synthesis discipline (read before writing)
+
+- **Every factual claim must be present in at least one submission.** You combine their words and emphasis; you do not introduce new facts. If no submission mentioned it, you cannot include it.
+- **Prefer specific over general.** When a submission says "11 days via 3/6 GateSeal multisig 0x8772…" and another says "pausable by committee", keep the specific version.
+- **Don't average disagreements.** If two submissions give different answers about a fact (e.g. different admin addresses), either pick the better-supported one and flag it, or include both and flag the contradiction. Don't smooth it over.
+- **Length discipline.** findings[] entries should be 1–3 sentences each, not paragraphs. The full rationale fits the reader of a protocol summary card, not a security report.
 
 ## Hard rules
 
