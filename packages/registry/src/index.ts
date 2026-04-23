@@ -8,7 +8,7 @@ export type { Protocol, Snapshot, ProtocolSnapshot, ProvenanceTag, Slug } from "
 export { OverlaySchema, type Overlay } from "./overlay-schema";
 
 function resolveDataDir(): string {
-  const env = process.env.DEFIBEAT_DATA_DIR;
+  const env = process.env.DEFIPUNKD_DATA_DIR;
   if (env) return resolve(env);
   let dir = process.cwd();
   for (let i = 0; i < 6; i++) {

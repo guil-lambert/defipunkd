@@ -36,7 +36,7 @@ function withFixture(
   run: (dir: string) => void,
   overlays: Record<string, unknown> = {},
 ): void {
-  const dir = join(tmpdir(), `defibeat-inherit-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = join(tmpdir(), `defipunkd-inherit-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   mkdirSync(join(dir, "overlays"), { recursive: true });
   writeFileSync(
     join(dir, "defillama-snapshot.json"),

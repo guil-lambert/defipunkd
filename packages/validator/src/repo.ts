@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import type { Snapshot } from "@defibeat/registry";
+import type { Snapshot } from "@defipunkd/registry";
 
 export function findRepoRoot(start: string = process.cwd()): string {
   let dir = resolve(start);

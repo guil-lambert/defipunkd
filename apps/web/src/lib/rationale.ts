@@ -1,4 +1,4 @@
-import type { Protocol } from "@defibeat/registry";
+import type { Protocol } from "@defipunkd/registry";
 import type { GradeColor } from "./verifiability";
 import { verifiabilityGrade } from "./verifiability";
 import { dependenciesGrade } from "./dependencies";
@@ -50,7 +50,7 @@ function verifiabilityRationale(p: Protocol): { grade: GradeColor; headline: str
     grade: "red",
     headline: "No public repo or audits",
     rationale:
-      "Neither a GitHub repository nor any audit is recorded. At Phase 0 this is the most conservative verifiability signal DefiBeat can assign.",
+      "Neither a GitHub repository nor any audit is recorded. At Phase 0 this is the most conservative verifiability signal defipunkd can assign.",
   };
 }
 

@@ -1,4 +1,4 @@
-import type { ProtocolSnapshot, Snapshot } from "@defibeat/registry";
+import type { ProtocolSnapshot, Snapshot } from "@defipunkd/registry";
 
 const DELIST_GRACE_DAYS = 14;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

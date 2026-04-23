@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { SLICE_IDS, type SliceId } from "@defibeat/prompts";
+import { SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { findRepoRoot, loadSnapshot } from "../repo";
 
 type Task = {

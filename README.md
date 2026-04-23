@@ -1,14 +1,18 @@
-# DefiBeat
+# defipunkd
 
 Live, evidence-based transparency registry for DeFi protocols. An L2BEAT-for-DeFi in spirit, forked from [l2beat/l2beat](https://github.com/l2beat/l2beat) (MIT).
 
-DefiBeat is **not** a risk-rating system. It is a protocol registry and evidence intake layer with deterministic data collection today and human-reviewed publication later. Phase 0 displays raw DeFiLlama fields with missingness visible; grades for specific dimensions are filled in by human review over time.
+defipunkd is **not** a risk-rating system. It is a protocol registry and evidence intake layer with deterministic data collection today and human-reviewed publication later. Phase 0 displays raw DeFiLlama fields with missingness visible; grades for specific dimensions are filled in by human review over time.
 
 Audience: DeFi power users, researchers, and auditors who want dense evidence on proxies, multisigs, timelocks, upgradeability, and dependencies — without marketing polish. See [`spec.md`](./spec.md) for the full product framing and phase plan.
 
+## Not quite a "*beat"
+
+Unlike L2BEAT, WalletBeat, and the other "beat" projects, **defipunkd is not human-curated**. It is tool-assisted first, with an optional human curation layer that is deliberately minimal and not strictly required. There are thousands of DeFi protocols — hand-curating each one does not scale. The registry starts from DeFiLlama, layers deterministic signals (verifiability, dependencies), and defers judgment calls to a distributed `DEFI@home` process where any number of independent auditors submit graded assessments and a quorum decides.
+
 ## DEFI@home — distributed protocol assessment
 
-DefiBeat does not run crawlers. Instead, contributors assess protocols by running a pinned prompt through an LLM of their choice (Claude, ChatGPT, Gemini, etc.) and submitting the JSON output as a pull request. A quorum bot merges your submission once ≥3 independent runs agree on grade and overlapping evidence.
+defipunkd does not run crawlers. Instead, contributors assess protocols by running a pinned prompt through an LLM of their choice (Claude, ChatGPT, Gemini, etc.) and submitting the JSON output as a pull request. A quorum bot merges your submission once ≥3 independent runs agree on grade and overlapping evidence.
 
 **The flow:**
 
@@ -58,7 +62,7 @@ pnpm dev                              # astro dev on :4321
 pnpm test                             # vitest, all workspaces
 pnpm typecheck                        # astro check + tsc --noEmit
 pnpm build                            # production build (all workspaces)
-pnpm --filter @defibeat/web preview   # serve dist/ statically
+pnpm --filter @defipunkd/web preview   # serve dist/ statically
 ```
 
 ## Frontend stack
@@ -89,7 +93,7 @@ pnpm sync
 
 Pulls `api.llama.fi/protocols`, re-normalizes, writes `data/defillama-snapshot.json`, and prints a human-readable TVL diff. Commit the resulting file; the site rebuilds from it.
 
-Upstream etiquette: sync sends `User-Agent: DefiBeat (+<contact>)`. Run manually or via a scheduled `workflow_dispatch` that commits the diff as a PR — do not hammer the API.
+Upstream etiquette: sync sends `User-Agent: defipunkd (+<contact>)`. Run manually or via a scheduled `workflow_dispatch` that commits the diff as a PR — do not hammer the API.
 
 ## Curating a protocol
 

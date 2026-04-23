@@ -1,4 +1,4 @@
-# DefiBeat — DeFi Transparency Registry MVP Spec
+# defipunkd — DeFi Transparency Registry MVP Spec
 
 > **Pivot — DEFI@home (2026-04-23).** This spec was originally written around a three-phase enrichment pipeline (Phase 1 crawlers, Phase 2 `@l2beat/discovery`-based onchain workers, Phase 3 LLM classification). **That plan is superseded.** Risk-slice grading now happens via **DEFI@home**: contributors run a pinned prompt through an LLM of their choice, submit JSON output as a pull request against `data/submissions/<slug>/<slice>/`, and a quorum bot merges to `data/assessments/` once ≥3 independent runs agree on grade and overlapping evidence. See `README.md` (top section), `packages/prompts/` (prompt source), and `data/schema/slice-assessment.v1.json` (output contract).
 >
@@ -19,7 +19,7 @@ The initial version is **not** a final risk rating system. It is a protocol regi
 
 ## Product name
 
-**DefiBeat.** Matches the repo; evokes L2BEAT lineage.
+**defipunkd.** Matches the repo; evokes L2BEAT lineage.
 
 ## Core idea
 
@@ -86,7 +86,7 @@ Solo builder, solo reviewer. Throughput is ~5–10 reviewed protocols per week, 
 - **Reviewer flow is already GitHub.** Corrections are PRs; the review surface is `gh pr view`. No second system to build.
 - **Provenance is `git blame`.** Who curated a field, when, and why (commit message + PR discussion) comes free. No `source_type` / `retrieved_at` / `artifact_hash` columns to maintain at Phase 0.
 - **Deploys are immutable.** The site at commit X is deterministically reproducible. No "what did the DB look like on Tuesday" questions.
-- **Forks are trivial.** Anyone can `git clone` DefiBeat and run their own instance with zero infra beyond Vercel.
+- **Forks are trivial.** Anyone can `git clone` defipunkd and run their own instance with zero infra beyond Vercel.
 - **L2BEAT precedent.** l2beat/l2beat keeps static project metadata in `packages/config/src/projects/**.ts`; their DB only holds time-series. We go further and skip the DB entirely until Phase 2.
 
 ## MVP scope
@@ -97,7 +97,7 @@ Pull `https://api.llama.fi/protocols` via `pnpm sync` — a node CLI run locally
 
 Provides: protocol name, slug, category, chains, TVL, website, audit count, audit links, twitter, hallmarks, parent protocol relationships, other metadata.
 
-**Upstream etiquette**: send a `User-Agent: DefiBeat (+<contact-url>)`. Manual triggering keeps frequency naturally low.
+**Upstream etiquette**: send a `User-Agent: defipunkd (+<contact-url>)`. Manual triggering keeps frequency naturally low.
 
 ### Ingest policy
 
@@ -373,7 +373,7 @@ At Phase 0 everything is `listed`.
 
 ### Protocol detail page
 
-**L2BEAT-identical dense table** layout, DefiBeat palette. Every field row shows value + `[defillama]` / `[curated]` tag + missingness state.
+**L2BEAT-identical dense table** layout, defipunkd palette. Every field row shows value + `[defillama]` / `[curated]` tag + missingness state.
 
 - Chain sub-nav: tabs across the top, one per chain (top-N by per-chain TVL + "more" dropdown, threshold ~7)
 - Breadcrumb collapsed when family == instance
@@ -515,10 +515,10 @@ Top 200 by TVL per tab. "Show all" expands.
 
 Current Phase 0 inputs:
 
-- **GitHub repo**: `guil-lambert/defibeat`
-- **User-Agent contact URL**: `https://github.com/guil-lambert/defibeat` — sent as `User-Agent: DefiBeat (+https://github.com/guil-lambert/defibeat)` from `pnpm sync`.
-- **Footer corrections/takedowns link**: `https://github.com/guil-lambert/defibeat/issues` (and the `data/overlays/` directory for PRs).
-- **Vercel project slug**: `defibeat`.
+- **GitHub repo**: `guil-lambert/defipunkd`
+- **User-Agent contact URL**: `https://github.com/guil-lambert/defipunkd` — sent as `User-Agent: defipunkd (+https://github.com/guil-lambert/defipunkd)` from `pnpm sync`.
+- **Footer corrections/takedowns link**: `https://github.com/guil-lambert/defipunkd/issues` (and the `data/overlays/` directory for PRs).
+- **Vercel project slug**: `defipunkd`.
 - **Node**: 22 LTS, pinned via `.nvmrc` + `engines`.
 - **pnpm**: 9 (latest), pinned via `packageManager` for Corepack.
 

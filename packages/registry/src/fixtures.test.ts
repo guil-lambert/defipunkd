@@ -27,7 +27,7 @@ describe("buildIndex against fixtures/small", () => {
 
 describe("buildIndex overlay failure modes", () => {
   it("orphan overlay warns and is skipped (no resurrection)", () => {
-    const dir = join(tmpdir(), `defibeat-orphan-${Date.now()}`);
+    const dir = join(tmpdir(), `defipunkd-orphan-${Date.now()}`);
     mkdirSync(join(dir, "overlays"), { recursive: true });
     writeFileSync(
       join(dir, "defillama-snapshot.json"),
@@ -44,7 +44,7 @@ describe("buildIndex overlay failure modes", () => {
   });
 
   it("malformed overlay (unknown key) throws — fail the build", () => {
-    const dir = join(tmpdir(), `defibeat-malformed-${Date.now()}`);
+    const dir = join(tmpdir(), `defipunkd-malformed-${Date.now()}`);
     mkdirSync(join(dir, "overlays"), { recursive: true });
     writeFileSync(
       join(dir, "defillama-snapshot.json"),
