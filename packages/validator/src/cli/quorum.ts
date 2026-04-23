@@ -46,7 +46,13 @@ async function main(): Promise<number> {
       const entries = files
         .map((f) => {
           const fullPath = join(sliceDir, f);
-          const raw = JSON.parse(readFileSync(fullPath, "utf8"));
+          let raw: unknown;
+          try {
+            raw = JSON.parse(readFileSync(fullPath, "utf8"));
+          } catch (err) {
+            console.error(`skipping unparseable submission ${slug}/${sliceId}/${f}: ${(err as Error).message}`);
+            return null;
+          }
           const parsed = SubmissionSchema.safeParse(raw);
           if (!parsed.success) {
             console.error(`skipping invalid submission ${slug}/${sliceId}/${f}`);
