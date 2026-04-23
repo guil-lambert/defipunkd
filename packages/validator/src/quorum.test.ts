@@ -126,6 +126,71 @@ describe("computeQuorum", () => {
     }
   });
 
+  it("merges protocol_metadata across submissions (union arrays, consensus scalars)", () => {
+    const r = computeQuorum(
+      [
+        withPath(
+          mkSub({
+            model: "a",
+            protocol_metadata: {
+              github: ["https://github.com/org/a"],
+              docs_url: "https://docs.a",
+              upgradeability: "upgradeable",
+              admin_addresses: [{ chain: "Ethereum", address: "0x1111111111111111111111111111111111111111", role: "owner", actor_class: "multisig" }],
+              audits: [{ firm: "ToB", url: "https://tob.example/r.pdf" }],
+            },
+          }),
+          "a.json",
+        ),
+        withPath(
+          mkSub({
+            model: "b",
+            protocol_metadata: {
+              github: ["https://github.com/org/a", "https://github.com/org/b"],
+              docs_url: "https://docs.a",
+              upgradeability: "upgradeable",
+            },
+          }),
+          "b.json",
+        ),
+        withPath(
+          mkSub({
+            model: "c",
+            protocol_metadata: {
+              bug_bounty_url: "https://immunefi.com/bounty/x",
+              upgradeability: "mixed",
+            },
+          }),
+          "c.json",
+        ),
+      ],
+      ctx,
+    );
+    expect(r.kind).toBe("assessment");
+    if (r.kind === "assessment") {
+      const md = r.assessment.protocol_metadata!;
+      expect(md.github).toEqual(expect.arrayContaining(["https://github.com/org/a", "https://github.com/org/b"]));
+      expect(md.github).toHaveLength(2);
+      expect(md.docs_url).toBe("https://docs.a");
+      // 2/3 say upgradeable, 1/3 says mixed → majority wins
+      expect(md.upgradeability).toBe("upgradeable");
+      expect(md.bug_bounty_url).toBe("https://immunefi.com/bounty/x");
+      expect(md.admin_addresses).toHaveLength(1);
+      expect(md.audits).toHaveLength(1);
+      expect(r.assessment.schema_version).toBe(3);
+    }
+  });
+
+  it("omits protocol_metadata when no submissions provide it", () => {
+    const r = computeQuorum(
+      [withPath(mkSub({ model: "a" }), "a.json"), withPath(mkSub({ model: "b" }), "b.json")],
+      ctx,
+    );
+    if (r.kind === "assessment") {
+      expect(r.assessment.protocol_metadata).toBeUndefined();
+    }
+  });
+
   it("tiebreaks primary submission by highest individual weight", () => {
     const r = computeQuorum(
       [

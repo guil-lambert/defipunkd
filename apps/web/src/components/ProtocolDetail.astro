@@ -1,5 +1,6 @@
 ---
 import type { Protocol, ProvenanceTag, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
+import { getProtocolMetadata } from "@defipunkd/registry";
 import { auditorDomain, EM_DASH, formatProvTag, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
 import ProtocolLogo from "./ProtocolLogo.astro";
 import ChainTabs from "./ChainTabs.astro";
@@ -19,6 +20,24 @@ const hasFamily = children.length > 0;
 const prov = protocol._provenance;
 const hallmarks = parseHallmarks(protocol.hallmarks);
 const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ?? null;
+
+const metadata = getProtocolMetadata(protocol.slug);
+// Prefer quorum-refreshed metadata over DeFiLlama when the registry field
+// is still unset via curation. Curated overlays still win — don't overwrite
+// a human edit with an LLM refresh.
+const useMetaGithub = metadata?.github && metadata.github.length > 0 && prov.github !== "curated";
+const githubUrls = useMetaGithub ? metadata!.github! : (protocol.github ?? []);
+const githubProvTag = useMetaGithub ? "defi@home" : (prov.github ?? null);
+
+const useMetaAudits = metadata?.audits && metadata.audits.length > 0 && prov.audit_links !== "curated";
+const auditsProvTag = useMetaAudits ? "defi@home" : auditsProv;
+
+const upgradeabilityLabel: Record<string, string> = {
+  immutable: "Immutable",
+  upgradeable: "Upgradeable",
+  mixed: "Mixed (some immutable, some upgradeable)",
+  unknown: "Unknown",
+};
 
 ---
 <aside class="side-nav" aria-label="Page sections">
@@ -86,18 +105,30 @@ const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ??
         <tr id="verifiability">
           <th scope="row">GitHub</th>
           <td>
-            {protocol.github && protocol.github.length > 0 ? (
+            {githubUrls.length > 0 ? (
               <ul class="bare">
-                {protocol.github.map((g) => (<li><a href={g} class="link" rel="noreferrer" target="_blank">{g}</a></li>))}
+                {githubUrls.map((g) => (<li><a href={g} class="link" rel="noreferrer" target="_blank">{g}</a></li>))}
               </ul>
             ) : (<span class="muted">unknown</span>)}
           </td>
-          <td class="prov">{protocol.github && protocol.github.length > 0 && prov.github ? <span class="tag">{formatProvTag(prov.github)}</span> : <span class="muted">{EM_DASH}</span>}</td>
+          <td class="prov">{githubUrls.length > 0 && githubProvTag ? <span class="tag">{formatProvTag(githubProvTag)}</span> : <span class="muted">{EM_DASH}</span>}</td>
         </tr>
         <tr>
           <th scope="row">Audits</th>
           <td>
-            {protocol.audit_count === 0 && protocol.audit_links.length === 0 ? (
+            {useMetaAudits ? (
+              <details>
+                <summary class="clickable">{metadata!.audits!.length} audit{metadata!.audits!.length === 1 ? "" : "s"}</summary>
+                <ul class="bare audits">
+                  {metadata!.audits!.map((a) => (
+                    <li>
+                      <a href={a.url} class="link" rel="noreferrer" target="_blank">{a.firm}</a>
+                      {a.date && <span class="muted"> {EM_DASH} {a.date}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : protocol.audit_count === 0 && protocol.audit_links.length === 0 ? (
               <span class="muted">unknown</span>
             ) : (
               <details>
@@ -110,7 +141,50 @@ const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ??
               </details>
             )}
           </td>
-          <td class="prov">{auditsProv ? <span class="tag">{formatProvTag(auditsProv)}</span> : <span class="muted">{EM_DASH}</span>}</td>
+          <td class="prov">{auditsProvTag ? <span class="tag">{formatProvTag(auditsProvTag)}</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Docs</th>
+          <td>{metadata?.docs_url ? <a href={metadata.docs_url} class="link" rel="noreferrer" target="_blank">{metadata.docs_url}</a> : <span class="muted">unknown</span>}</td>
+          <td class="prov">{metadata?.docs_url ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Governance forum</th>
+          <td>{metadata?.governance_forum ? <a href={metadata.governance_forum} class="link" rel="noreferrer" target="_blank">{metadata.governance_forum}</a> : <span class="muted">unknown</span>}</td>
+          <td class="prov">{metadata?.governance_forum ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Voting token</th>
+          <td>
+            {metadata?.voting_token ? (
+              <>
+                {metadata.voting_token.symbol && <span class="mono">{metadata.voting_token.symbol} </span>}
+                <span class="mono muted">{metadata.voting_token.chain}:</span>
+                <span class="mono">{metadata.voting_token.address}</span>
+              </>
+            ) : <span class="muted">unknown</span>}
+          </td>
+          <td class="prov">{metadata?.voting_token ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Bug bounty</th>
+          <td>{metadata?.bug_bounty_url ? <a href={metadata.bug_bounty_url} class="link" rel="noreferrer" target="_blank">{metadata.bug_bounty_url}</a> : <span class="muted">unknown</span>}</td>
+          <td class="prov">{metadata?.bug_bounty_url ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Security contact</th>
+          <td>{metadata?.security_contact ? <span class="mono">{metadata.security_contact}</span> : <span class="muted">unknown</span>}</td>
+          <td class="prov">{metadata?.security_contact ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Deployed contracts</th>
+          <td>{metadata?.deployed_contracts_doc ? <a href={metadata.deployed_contracts_doc} class="link" rel="noreferrer" target="_blank">{metadata.deployed_contracts_doc}</a> : <span class="muted">unknown</span>}</td>
+          <td class="prov">{metadata?.deployed_contracts_doc ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
+        </tr>
+        <tr>
+          <th scope="row">Upgradeability</th>
+          <td>{metadata?.upgradeability ? upgradeabilityLabel[metadata.upgradeability] : <span class="muted">unknown</span>}</td>
+          <td class="prov">{metadata?.upgradeability ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
         </tr>
         <tr>
           <th scope="row">Review status</th>

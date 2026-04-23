@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(5);
+    expect(PROMPT_VERSION).toBe(6);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -81,7 +81,8 @@ describe("buildPrompt", () => {
       expect(p).toContain(INPUTS.slug);
       expect(p).toContain(INPUTS.snapshotGeneratedAt);
       expect(p).toContain(INPUTS.analysisDate);
-      expect(p).toContain('"schema_version": 2');
+      expect(p).toContain('"schema_version": 3');
+      expect(p).toContain('"protocol_metadata"');
     }
   });
 
@@ -89,7 +90,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             5");
+    expect(p).toContain("prompt_version:             6");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -105,6 +106,18 @@ describe("buildPrompt", () => {
     });
     expect(p).toContain("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
     expect(p).toContain('"role": "stETH"');
+  });
+
+  it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("Protocol metadata refresh");
+    expect(p).toContain("bug_bounty_url");
+    expect(p).toContain("security_contact");
+    expect(p).toContain("governance_forum");
+    expect(p).toContain("voting_token");
+    expect(p).toContain("admin_addresses");
+    expect(p).toContain("upgradeability");
+    expect(p).toContain("deployed_contracts_doc");
   });
 
   it("returns distinct bodies per slice", () => {
