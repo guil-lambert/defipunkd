@@ -8,6 +8,7 @@ import vercel from "@astrojs/vercel/serverless";
 // so we render on demand and cache at the edge — no more 8107-page
 // static build for every master-file update.
 export default defineConfig({
+  site: "https://defipunkd.com",
   output: "server",
   adapter: vercel({
     isr: {
