@@ -1,0 +1,74 @@
+---
+import Base from "../layouts/Base.astro";
+---
+<Base title="Contribute · DefiBeat" description="DEFI@home — help DefiBeat assess DeFi protocols by running a pinned prompt in an LLM of your choice.">
+  <main class="page">
+    <div class="back">
+      <a href="/">← back to index</a>
+    </div>
+    <h1>DEFI@home — contribute an assessment</h1>
+    <p class="lede">
+      DefiBeat does not run crawlers. Instead, contributors assess protocols by running a pinned prompt through an LLM of their choice (Claude, ChatGPT, Gemini, etc.) and submitting the JSON output as a pull request. A quorum bot merges your submission once ≥3 independent runs agree.
+    </p>
+
+    <h2>The flow</h2>
+    <ol>
+      <li>Open any protocol's page and click <strong>Audit this slice yourself</strong> under one of the 5 Risk analysis cards.</li>
+      <li>Copy the generated prompt — it includes the snapshot timestamp, the protocol's chains, GitHub repos, and audit links already pinned in. Paste it into Claude, ChatGPT, Gemini, or any LLM with browsing / tool use.</li>
+      <li>The LLM returns a single JSON object matching the <a href="https://github.com/guil-lambert/defibeat/blob/main/data/schema/slice-assessment.v1.json" rel="noreferrer" target="_blank" class="link">slice-assessment.v1.json</a> schema. No markdown fences, no prose outside JSON.</li>
+      <li>Click <strong>Submit your run</strong> on the same card. It opens GitHub's new-file interface pre-pointed at <code>data/submissions/&lt;slug&gt;/&lt;slice&gt;/</code>. Paste your JSON, commit, open the PR.</li>
+      <li>CI validates your JSON against the schema. The quorum bot compares it against other submissions; overlapping grades + citations land an accepted assessment into <code>data/assessments/</code>, which the site reads on next build.</li>
+    </ol>
+
+    <h2>Why the prompt is pinned</h2>
+    <p>
+      The prompt you see on the protocol page has the DeFiLlama snapshot timestamp, analysis date, and prompt version baked in. That means a contributor running the same prompt a week from now operates on the same inputs — the determinism of the workflow comes from consensus across re-runs, not from the LLM being deterministic.
+    </p>
+    <p>
+      Every submission records the model used (<code>claude-opus-4-7</code>, <code>gpt-5</code>, etc.) and the commit SHA of any repo it cites. Reviewers can re-open the same PR two months later and re-verify every citation.
+    </p>
+
+    <h2>What counts as evidence</h2>
+    <ul>
+      <li>Public block explorers (Etherscan, Basescan, Arbiscan, etc.) for addresses in the protocol's contract set.</li>
+      <li>Commits in the protocol's linked GitHub repositories.</li>
+      <li>Audit PDFs or reports linked from DeFiLlama or the protocol's docs.</li>
+      <li>DeFiLlama's pinned fields — but only for category / chain lists, never for risk assessment.</li>
+    </ul>
+    <p>
+      Anything outside that list (Twitter threads, Medium posts, Discord screenshots) does not count. The review is a PR against a git repo; if a reviewer can't independently re-fetch the URL later, the evidence isn't evidence.
+    </p>
+
+    <h2>When to say <code>unknown</code></h2>
+    <p>
+      If you cannot find a signal after checking the sources above, submit <code>grade: "unknown"</code> with at least one entry in <code>unknowns[]</code> describing what you looked for. "I couldn't find the timelock delay" is useful to the next contributor; a guessed grade is a defect.
+    </p>
+
+    <h2>Quorum and autorun</h2>
+    <p>
+      A GitHub Action runs the same prompts nightly through Claude and commits its output as a third voice alongside human submissions. The quorum bot accepts a slice once any 3 submissions — human or automated — agree on grade and share at least one evidence URL. Disagreements are opened as issues and invite a second round. Both the autorun Action and the quorum bot land in a follow-up to this MVP.
+    </p>
+  </main>
+</Base>
+
+<style>
+  .page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .back { margin-bottom: 1rem; }
+  .back a { color: var(--accent-link); font-size: 0.85rem; text-decoration: none; }
+  h1 { margin-bottom: 0.5rem; }
+  .lede { color: var(--text-muted); margin-top: 0; }
+  h2 {
+    color: var(--text);
+    border-bottom: 1px solid var(--surface-raised);
+    padding-bottom: 0.5rem;
+    margin-top: 2rem;
+  }
+  .link, a { color: var(--accent-link); }
+  code, strong { color: var(--text); }
+</style>
