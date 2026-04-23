@@ -33,7 +33,12 @@ export function cleanupSubmission(raw: unknown): CleanupResult {
       const row = entry as Record<string, unknown>;
       const url = row.url;
       if (typeof url !== "string") return;
-      const match = url.match(MARKDOWN_URL);
+      const cleaned = normalizeUrl(url);
+      if (cleaned.value !== url) {
+        row.url = cleaned.value;
+        changes.push(`normalized evidence[${i}].url (${cleaned.reason})`);
+      }
+      const match = (row.url as string).match(MARKDOWN_URL);
       if (match) {
         const inner = match[1]!.trim();
         const outer = match[2]!.trim();
@@ -50,6 +55,41 @@ export function cleanupSubmission(raw: unknown): CleanupResult {
   }
 
   return { cleaned: cloned, changes, errors };
+}
+
+function normalizeUrl(raw: string): { value: string; reason: string } {
+  let v = raw.trim();
+  const reasons: string[] = [];
+
+  if (v.startsWith("<") && v.endsWith(">")) {
+    v = v.slice(1, -1).trim();
+    reasons.push("stripped angle brackets");
+  }
+
+  const quoted = /^(['"`])(.*)\1$/.exec(v);
+  if (quoted) {
+    v = quoted[2]!.trim();
+    reasons.push("stripped surrounding quotes");
+  }
+
+  const trailing = v.match(/[.,;:!?)\]]+$/);
+  if (trailing) {
+    const stripped = v.slice(0, v.length - trailing[0].length);
+    try {
+      new URL(stripped);
+      v = stripped;
+      reasons.push("stripped trailing punctuation");
+    } catch {
+      // keep original if stripping doesn't yield a valid URL
+    }
+  }
+
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v) && /^[a-z0-9.-]+\.[a-z]{2,}/i.test(v)) {
+    v = `https://${v}`;
+    reasons.push("added https:// scheme");
+  }
+
+  return { value: v, reason: reasons.join(", ") || "no change" };
 }
 
 function walkStrings(
