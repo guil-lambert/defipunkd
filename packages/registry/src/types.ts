@@ -28,7 +28,7 @@ export type Snapshot = {
   protocols: Record<Slug, ProtocolSnapshot>;
 };
 
-export type ProvenanceTag = "defillama" | "curated" | "defillama-parent";
+export type ProvenanceTag = "defillama" | "curated" | "defillama-parent" | "defi@home";
 
 export type Protocol = ProtocolSnapshot & {
   _provenance: Partial<Record<keyof ProtocolSnapshot, ProvenanceTag>>;

@@ -1,5 +1,9 @@
 export const EM_DASH = "\u2014";
 
+export function formatProvTag(tag: string): string {
+  return tag === "defi@home" ? "[:]" : `[${tag}]`;
+}
+
 export function formatTvl(n: number | null | undefined): string {
   if (n === null || n === undefined) return EM_DASH;
   if (n === 0) return "$0";
