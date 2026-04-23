@@ -20,9 +20,32 @@ const EvidenceSchema = z
   })
   .strict();
 
+const FindingSchema = z
+  .object({
+    code: z.string().regex(/^[A-Z][A-Z0-9-]{0,15}$/, { message: "finding code must look like E1, C2-emergency, V4a, etc." }),
+    text: z.string().min(1),
+  })
+  .strict();
+
+const SteelmanSchema = z
+  .object({
+    red: z.string().min(1),
+    orange: z.string().min(1),
+    green: z.string().min(1),
+  })
+  .strict();
+
+const RationaleSchema = z
+  .object({
+    findings: z.array(FindingSchema),
+    steelman: SteelmanSchema.nullable(),
+    verdict: z.string().min(1),
+  })
+  .strict();
+
 const base = z
   .object({
-    schema_version: z.literal(1),
+    schema_version: z.literal(2),
     slug: z.string().regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/),
     slice: z.enum(SLICES),
     snapshot_generated_at: z.string().datetime(),
@@ -32,7 +55,7 @@ const base = z
     chat_url: z.string().url().nullable().optional(),
     grade: z.enum(GRADES),
     headline: z.string().min(1),
-    rationale: z.string().min(1),
+    rationale: RationaleSchema,
     evidence: z.array(EvidenceSchema),
     unknowns: z.array(z.string().min(1)),
   })
@@ -53,6 +76,13 @@ export const SubmissionSchema = base.superRefine((val, ctx) => {
         code: z.ZodIssueCode.custom,
         path: ["evidence"],
         message: 'grade!="unknown" requires evidence[] to have ≥1 entry',
+      });
+    }
+    if (val.rationale.steelman === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["rationale", "steelman"],
+        message: 'grade!="unknown" requires rationale.steelman to be present (red/orange/green)',
       });
     }
   }

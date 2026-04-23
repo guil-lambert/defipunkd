@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://defipunkd.xyz/schema/slice-assessment.v1.json",
+  "$id": "https://defipunkd.xyz/schema/slice-assessment.v2.json",
   "title": "defipunkdSliceAssessment",
   "description": "One slice of the 5-slice risk assessment for a DeFi protocol. Submitted by human contributors running the defipunkd prompt through an LLM of their choice, merged by a quorum bot into data/assessments/.",
   "type": "object",
@@ -20,7 +20,7 @@
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$" },
     "slice": {
       "type": "string",
@@ -62,9 +62,46 @@
       "description": "One-line human-readable summary shown on the protocol card."
     },
     "rationale": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Prose explanation. Every factual claim must map to an evidence[] entry."
+      "type": "object",
+      "description": "Structured explanation. Every factual claim in findings[] or verdict must map to an evidence[] entry.",
+      "required": ["findings", "steelman", "verdict"],
+      "additionalProperties": false,
+      "properties": {
+        "findings": {
+          "type": "array",
+          "description": "One entry per checklist item inspected. code must match the checklist prefix (e.g. E1, C2-emergency).",
+          "items": {
+            "type": "object",
+            "required": ["code", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]{0,15}$" },
+              "text": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "steelman": {
+          "description": "One-sentence strongest argument for each of the three plausible grades. Must be null only when grade=\"unknown\".",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["red", "orange", "green"],
+              "additionalProperties": false,
+              "properties": {
+                "red": { "type": "string", "minLength": 1 },
+                "orange": { "type": "string", "minLength": 1 },
+                "green": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        },
+        "verdict": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One-sentence conclusion. Typically 'Choosing <grade> because <reason>.' For grade=unknown, summarize what blocked the assessment."
+        }
+      }
     },
     "evidence": {
       "type": "array",
@@ -92,7 +129,12 @@
     {
       "if": { "properties": { "grade": { "const": "unknown" } } },
       "then": { "properties": { "unknowns": { "minItems": 1 } } },
-      "else": { "properties": { "evidence": { "minItems": 1 } } }
+      "else": {
+        "properties": {
+          "evidence": { "minItems": 1 },
+          "rationale": { "properties": { "steelman": { "type": "object" } } }
+        }
+      }
     }
   ]
 }

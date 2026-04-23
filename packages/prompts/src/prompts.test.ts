@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(4);
+    expect(PROMPT_VERSION).toBe(5);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -55,9 +55,10 @@ describe("buildPrompt", () => {
 
   it("includes the steel-man-before-grading rule", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("Steel-man red:");
-    expect(p).toContain("Steel-man orange:");
-    expect(p).toContain("Steel-man green:");
+    expect(p).toContain("rationale.steelman");
+    expect(p).toContain('"red":');
+    expect(p).toContain('"orange":');
+    expect(p).toContain('"green":');
   });
 
   it("each slice carries a mandatory inspection checklist", () => {
@@ -80,7 +81,7 @@ describe("buildPrompt", () => {
       expect(p).toContain(INPUTS.slug);
       expect(p).toContain(INPUTS.snapshotGeneratedAt);
       expect(p).toContain(INPUTS.analysisDate);
-      expect(p).toContain('"schema_version": 1');
+      expect(p).toContain('"schema_version": 2');
     }
   });
 
@@ -88,7 +89,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             4");
+    expect(p).toContain("prompt_version:             5");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 

@@ -5,21 +5,32 @@ import { fileURLToPath } from "node:url";
 import { SubmissionSchema } from "./schema";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const jsonSchemaPath = join(here, "..", "..", "..", "data", "schema", "slice-assessment.v1.json");
+const jsonSchemaPath = join(here, "..", "..", "..", "data", "schema", "slice-assessment.v2.json");
 const jsonSchema = JSON.parse(readFileSync(jsonSchemaPath, "utf8"));
 
 const VALID: unknown = {
-  schema_version: 1,
+  schema_version: 2,
   slug: "lido",
   slice: "ability-to-exit",
   snapshot_generated_at: "2026-04-22T22:09:47.359Z",
-  prompt_version: 4,
+  prompt_version: 5,
   analysis_date: "2026-04-23",
   model: "claude-sonnet-4-6",
   chat_url: null,
   grade: "orange",
   headline: "Claims exempt from pause; new requests pausable 14d or indefinitely via DAO",
-  rationale: "Steel-man red: indefinite pause exists. Steel-man orange: 14d cap + claim exempt. Steel-man green: claims always open. Choosing orange.",
+  rationale: {
+    findings: [
+      { code: "E1", text: "Request: requestWithdrawals; Claim: claimWithdrawals, claimWithdrawal." },
+      { code: "E2", text: "Request functions guarded by _checkResumed(); claim functions have no pause guard." },
+    ],
+    steelman: {
+      red: "Indefinite pause exists and traps unfinalized requests.",
+      orange: "GateSeal capped at 14d and claims-of-finalized are never blocked.",
+      green: "Claims are always open on-chain.",
+    },
+    verdict: "Choosing orange because GateSeal exceeds the 7-day green threshold but claims stay open.",
+  },
   evidence: [
     {
       url: "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
@@ -70,10 +81,15 @@ describe("SubmissionSchema", () => {
   });
 
   it("enforces grade=unknown ⇒ unknowns[] non-empty", () => {
-    const bad = { ...(VALID as object), grade: "unknown", evidence: [], unknowns: [] };
+    const bad = { ...(VALID as object), grade: "unknown", evidence: [], unknowns: [], rationale: { findings: [], steelman: null, verdict: "not enough info" } };
     expect(SubmissionSchema.safeParse(bad).success).toBe(false);
-    const ok = { ...(VALID as object), grade: "unknown", evidence: [], unknowns: ["E1: x"] };
+    const ok = { ...(VALID as object), grade: "unknown", evidence: [], unknowns: ["E1: x"], rationale: { findings: [], steelman: null, verdict: "not enough info" } };
     expect(SubmissionSchema.safeParse(ok).success).toBe(true);
+  });
+
+  it("enforces grade!=unknown ⇒ rationale.steelman required", () => {
+    const bad = { ...(VALID as object), rationale: { findings: [], steelman: null, verdict: "x" } };
+    expect(SubmissionSchema.safeParse(bad).success).toBe(false);
   });
 
   it("enforces grade!=unknown ⇒ evidence[] non-empty", () => {

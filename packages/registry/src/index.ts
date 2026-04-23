@@ -13,6 +13,9 @@ export {
   type AssessmentGrade,
   type AssessmentStrength,
   type SliceId as AssessmentSliceId,
+  type Rationale,
+  type Finding,
+  type Steelman,
 } from "./assessments";
 
 function resolveDataDir(): string {

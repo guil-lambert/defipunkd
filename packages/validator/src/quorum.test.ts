@@ -3,24 +3,24 @@ import { computeQuorum, type QuorumContext } from "./quorum";
 import type { Submission } from "./schema";
 
 const ctx: QuorumContext = {
-  currentPromptVersion: 4,
+  currentPromptVersion: 5,
   currentSnapshotGeneratedAt: "2026-04-22T22:09:47.359Z",
   now: "2026-04-23T12:00:00Z",
 };
 
 function mkSub(over: Partial<Submission> = {}): Submission {
   return {
-    schema_version: 1,
+    schema_version: 2,
     slug: "lido",
     slice: "ability-to-exit",
     snapshot_generated_at: "2026-04-22T22:09:47.359Z",
-    prompt_version: 4,
+    prompt_version: 5,
     analysis_date: "2026-04-23",
     model: "claude-sonnet-4-6",
     chat_url: null,
     grade: "orange",
     headline: "x",
-    rationale: "x",
+    rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "x" },
     evidence: [{ url: "https://etherscan.io/address/0x1", shows: "y" }],
     unknowns: [],
     ...over,
