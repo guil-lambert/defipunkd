@@ -9,16 +9,16 @@ interface Props {
 const { protocol } = Astro.props;
 const slices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol);
 
+const VIEW = 360;
+const CENTER = VIEW / 2;
 const RADIUS = 110;
-const CENTER = 180;
 const LABEL_RADIUS = 150;
-const CONTAINER = 360;
 
 type SlicePath = {
   assessment: SliceAssessment;
   d: string;
-  labelX: number;
-  labelY: number;
+  labelLeftPct: number;
+  labelTopPct: number;
 };
 
 const slicePaths: SlicePath[] = slices.map((s, i) => {
@@ -35,19 +35,10 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
   return {
     assessment: s,
     d: `M${CENTER},${CENTER} L${x0},${y0} A${RADIUS},${RADIUS} 0 0,1 ${x1},${y1} Z`,
-    labelX,
-    labelY,
+    labelLeftPct: (labelX / VIEW) * 100,
+    labelTopPct: (labelY / VIEW) * 100,
   };
 });
-
-const hoverRules = slices
-  .map(
-    (s) => `
-  .rosette:has([data-slice="${s.id}"]:hover) [data-rlabel="${s.id}"] { color: var(--text); }
-  .rosette:has([data-slice="${s.id}"]:hover) [data-tip="${s.id}"] { opacity: 1; }
-`,
-  )
-  .join("");
 ---
 <section class="risk-analysis" id="risk-analysis">
   <h2>Risk analysis</h2>
@@ -55,22 +46,28 @@ const hoverRules = slices
     One card per dimension. At Phase 0 most cards read <em>not yet assessed</em>; only Verifiability and Dependencies carry automated signals. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
   </p>
 
-  <div class="rosette" style={`width:${CONTAINER}px;height:${CONTAINER}px`}>
-    <svg width={CONTAINER} height={CONTAINER} viewBox={`0 0 ${CONTAINER} ${CONTAINER}`} role="img" aria-label="Risk rosette">
-      {slicePaths.map(({ assessment, d }) => (
-        <a href={`#${assessment.id}`} data-slice={assessment.id} class="slice">
-          <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--bg)" stroke-width="2">
-            <title>{`${assessment.label} \u2014 ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
-          </path>
-        </a>
+  <div class="rosette-wrap">
+    <div class="rosette">
+      <svg viewBox={`0 0 ${VIEW} ${VIEW}`} role="img" aria-label="Risk rosette" preserveAspectRatio="xMidYMid meet">
+        {slicePaths.map(({ assessment, d }) => (
+          <a href={`#${assessment.id}`} data-slice={assessment.id} class="slice">
+            <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--bg)" stroke-width="2">
+              <title>{`${assessment.label} \u2014 ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
+            </path>
+          </a>
+        ))}
+      </svg>
+      {slicePaths.map(({ assessment, labelLeftPct, labelTopPct }) => (
+        <span class="rlabel" data-rlabel={assessment.id} style={`left:${labelLeftPct}%;top:${labelTopPct}%`}>
+          {assessment.label}
+        </span>
       ))}
-    </svg>
-    {slicePaths.map(({ assessment, labelX, labelY }) => (
-      <span class="rlabel" data-rlabel={assessment.id} style={`left:${labelX}px;top:${labelY}px`}>
-        {assessment.label}
-      </span>
-    ))}
+    </div>
+
     <div class="tip-slot">
+      <div class="tip-default">
+        <span>Hover a slice to see the rationale · click to jump to the card below.</span>
+      </div>
       {slices.map((s) => (
         <div class:list={["tip", `grade-${s.grade}`]} data-tip={s.id}>
           <div class="tip-meta">
@@ -81,9 +78,6 @@ const hoverRules = slices
           <p class="tip-rationale">{s.rationale}</p>
         </div>
       ))}
-      <div class="tip-default">
-        <span>Hover a slice to see the rationale · click to jump to the card below.</span>
-      </div>
     </div>
   </div>
 
@@ -104,44 +98,40 @@ const hoverRules = slices
   </ol>
 </section>
 
-<style set:html={hoverRules}></style>
-
 <style>
   .risk-analysis {
     margin-top: 2.5rem;
     padding-top: 1.25rem;
     border-top: 1px solid var(--surface-raised);
   }
-  h2 {
-    margin: 0 0 0.25rem 0;
-    color: var(--text);
-  }
-  .lede {
-    color: var(--text-muted);
-    margin: 0 0 1.25rem 0;
-    font-size: 0.9rem;
-  }
+  h2 { margin: 0 0 0.25rem 0; color: var(--text); }
+  .lede { color: var(--text-muted); margin: 0 0 1.25rem 0; font-size: 0.9rem; }
   .link { color: var(--accent-link); }
+
+  .rosette-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
 
   .rosette {
     position: relative;
-    margin: 0 auto 2rem;
-    max-width: 100%;
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 1 / 1;
   }
   .rosette svg {
-    display: block;
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: auto;
+    height: 100%;
+    display: block;
   }
-  .slice {
-    cursor: pointer;
-  }
-  .slice path {
-    transition: opacity 150ms ease;
-  }
-  .rosette:has(.slice:hover) .slice:not(:hover) path {
-    opacity: 0.25;
-  }
+  .slice { cursor: pointer; }
+  .slice path { transition: opacity 150ms ease; }
+  .rosette:has(.slice:hover) .slice:not(:hover) path { opacity: 0.25; }
 
   .rlabel {
     position: absolute;
@@ -151,7 +141,7 @@ const hoverRules = slices
     text-transform: uppercase;
     color: var(--text-muted);
     text-align: center;
-    width: 90px;
+    width: 6rem;
     font-weight: 600;
     pointer-events: none;
     transition: color 150ms ease;
@@ -159,13 +149,9 @@ const hoverRules = slices
   }
 
   .tip-slot {
-    position: absolute;
-    left: 50%;
-    top: 100%;
-    transform: translateX(-50%);
-    width: min(380px, 92vw);
+    position: relative;
+    width: min(420px, 100%);
     min-height: 7.5rem;
-    margin-top: 0.5rem;
   }
   .tip,
   .tip-default {
@@ -177,9 +163,8 @@ const hoverRules = slices
     border-radius: 4px;
     padding: 0.75rem 1rem;
     transition: opacity 150ms ease;
-    pointer-events: none;
   }
-  .tip { opacity: 0; }
+  .tip { opacity: 0; pointer-events: none; }
   .tip-default {
     display: flex;
     align-items: center;
@@ -189,9 +174,8 @@ const hoverRules = slices
     font-style: italic;
     text-align: center;
     border-left-color: var(--surface-raised);
-    transition: opacity 150ms ease;
   }
-  .rosette:has(.slice:hover) .tip-default { opacity: 0; }
+  .rosette-wrap:has(.slice:hover) .tip-default { opacity: 0; }
 
   .tip.grade-gray { border-left-color: var(--grade-gray); }
   .tip.grade-green { border-left-color: var(--grade-green); }
@@ -234,6 +218,18 @@ const hoverRules = slices
     margin: 0;
   }
 
+  /* Hover-to-highlight wiring — one :has() pair per slice */
+  .rosette-wrap:has([data-slice="control"]:hover) [data-rlabel="control"] { color: var(--text); }
+  .rosette-wrap:has([data-slice="control"]:hover) [data-tip="control"] { opacity: 1; }
+  .rosette-wrap:has([data-slice="ability-to-exit"]:hover) [data-rlabel="ability-to-exit"] { color: var(--text); }
+  .rosette-wrap:has([data-slice="ability-to-exit"]:hover) [data-tip="ability-to-exit"] { opacity: 1; }
+  .rosette-wrap:has([data-slice="dependencies"]:hover) [data-rlabel="dependencies"] { color: var(--text); }
+  .rosette-wrap:has([data-slice="dependencies"]:hover) [data-tip="dependencies"] { opacity: 1; }
+  .rosette-wrap:has([data-slice="access"]:hover) [data-rlabel="access"] { color: var(--text); }
+  .rosette-wrap:has([data-slice="access"]:hover) [data-tip="access"] { opacity: 1; }
+  .rosette-wrap:has([data-slice="verifiability"]:hover) [data-rlabel="verifiability"] { color: var(--text); }
+  .rosette-wrap:has([data-slice="verifiability"]:hover) [data-tip="verifiability"] { opacity: 1; }
+
   .cards {
     list-style: none;
     padding: 0;
@@ -250,17 +246,12 @@ const hoverRules = slices
     overflow: hidden;
     scroll-margin-top: 1rem;
   }
-  .stripe {
-    width: 4px;
-    background: var(--grade-gray);
-  }
+  .stripe { width: 4px; background: var(--grade-gray); }
   .card.grade-green .stripe { background: var(--grade-green); }
   .card.grade-orange .stripe { background: var(--grade-orange); }
   .card.grade-red .stripe { background: var(--grade-red); }
   .card.grade-gray .stripe { background: var(--grade-gray); }
-  .body {
-    padding: 0.75rem 1rem 0.9rem 1rem;
-  }
+  .body { padding: 0.75rem 1rem 0.9rem 1rem; }
   .meta {
     display: flex;
     align-items: baseline;
@@ -294,11 +285,5 @@ const hoverRules = slices
     font-size: 0.88rem;
     line-height: 1.5;
     margin: 0;
-  }
-
-  @media (max-width: 480px) {
-    .rosette { width: 300px !important; height: 300px !important; }
-    .rlabel { font-size: 0.65rem; width: 70px; }
-    .tip-slot { margin-top: 1rem; min-height: 8.5rem; }
   }
 </style>
