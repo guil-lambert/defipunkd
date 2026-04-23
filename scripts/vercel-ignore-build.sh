@@ -13,14 +13,25 @@
 # (apps/web/**, packages/registry/**, packages/prompts/**, data/defillama-
 # snapshot.json, data/overlays/**, pnpm-lock.yaml, etc.) we proceed.
 #
-# NOTE: data/assessments/** is in the exclude list today because the site
-# does not yet read those files. Once the protocol pages render merged
-# assessments, remove "data/assessments/" from EXCLUDE_RE so quorum-bot
-# PRs trigger a rebuild.
+# NOTE: data/assessments/** and data/master/** are NOT excluded because
+# the site now renders both (assessments via getAssessments, master files
+# via getMaster / getProtocolMetadata). Changes there must trigger a
+# rebuild so the serverless function bundle picks up the new JSON.
+#
+# EXCEPTION: preview builds on auto-run bot branches (reconcile/auto-run-*,
+# quorum/auto-run-*) are skipped unconditionally — nobody previews bot
+# PRs; the real build happens on merge to main.
 
 set -u
 
-EXCLUDE_RE='^(data/submissions/|data/assessments/|data/schema/|\.github/|packages/validator/|packages/sync/|\.claude/|\.agents/|skills-lock\.json$|.*\.md$)'
+# Skip preview builds on bot-opened auto-run branches.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" != "main" ] \
+   && echo "${VERCEL_GIT_COMMIT_REF:-}" | grep -Eq '^(reconcile|quorum)/auto-run-'; then
+  echo "SKIP: preview build on bot branch '${VERCEL_GIT_COMMIT_REF}' — merge to main will trigger the real build."
+  exit 0
+fi
+
+EXCLUDE_RE='^(data/submissions/|data/schema/|\.github/|packages/validator/|packages/sync/|\.claude/|\.agents/|skills-lock\.json$|.*\.md$)'
 
 if ! git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
   echo "proceed: cannot determine previous commit, cannot reason about diff"
