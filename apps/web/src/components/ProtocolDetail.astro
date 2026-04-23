@@ -1,5 +1,5 @@
 ---
-import type { Protocol, ProvenanceTag } from "@defipunkd/registry";
+import type { Protocol, ProvenanceTag, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
 import { auditorDomain, EM_DASH, formatProvTag, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
 import ProtocolLogo from "./ProtocolLogo.astro";
 import ChainTabs from "./ChainTabs.astro";
@@ -12,8 +12,9 @@ interface Props {
   protocol: Protocol;
   snapshotGeneratedAt: string;
   children: Protocol[];
+  assessments?: Map<AssessmentSliceId, LoadedAssessment>;
 }
-const { protocol, snapshotGeneratedAt, children } = Astro.props;
+const { protocol, snapshotGeneratedAt, children, assessments } = Astro.props;
 const hasFamily = children.length > 0;
 const prov = protocol._provenance;
 const hallmarks = parseHallmarks(protocol.hallmarks);
@@ -49,7 +50,7 @@ const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ??
     </div>
   </header>
 
-  <ProtocolSummary protocol={protocol} />
+  <ProtocolSummary protocol={protocol} assessments={assessments} />
 
   {protocol.chains.length > 0 && (
     <section class="chains">
@@ -142,7 +143,7 @@ const auditsProv: ProvenanceTag | null = prov.audit_links ?? prov.audit_count ??
   </div>
   </section>
 
-  <RiskAnalysis protocol={protocol} snapshotGeneratedAt={snapshotGeneratedAt} />
+  <RiskAnalysis protocol={protocol} snapshotGeneratedAt={snapshotGeneratedAt} assessments={assessments} />
 
   <StagePreview protocol={protocol} />
 

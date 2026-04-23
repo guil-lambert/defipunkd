@@ -1,4 +1,4 @@
-import type { Protocol } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
 import type { GradeColor } from "./verifiability";
 import { verifiabilityGrade } from "./verifiability";
 import { dependenciesGrade } from "./dependencies";
@@ -9,7 +9,13 @@ export type SliceAssessment = {
   grade: GradeColor;
   headline: string;
   rationale: string;
+  strength?: "strong" | "weak";
 };
+
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "rationale" | "strength"> {
+  const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
+  return { grade, headline: a.headline, rationale: a.rationale, strength: a.strength };
+}
 
 const BRIDGE_CATS = new Set([
   "Bridge",
@@ -104,10 +110,13 @@ function dependenciesRationale(p: Protocol): { grade: GradeColor; headline: stri
   };
 }
 
-export function assessProtocol(p: Protocol): SliceAssessment[] {
+export function assessProtocol(
+  p: Protocol,
+  assessments?: Map<AssessmentSliceId, LoadedAssessment>,
+): SliceAssessment[] {
   const v = verifiabilityRationale(p);
   const d = dependenciesRationale(p);
-  return [
+  const base: SliceAssessment[] = [
     {
       id: "control",
       label: "Control",
@@ -147,6 +156,12 @@ export function assessProtocol(p: Protocol): SliceAssessment[] {
       rationale: v.rationale,
     },
   ];
+
+  if (!assessments) return base;
+  return base.map((s) => {
+    const a = assessments.get(s.id);
+    return a ? { ...s, ...overrideFromAssessment(a) } : s;
+  });
 }
 
 export function cexAssessment(): SliceAssessment[] {

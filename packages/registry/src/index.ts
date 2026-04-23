@@ -3,9 +3,17 @@ import { join, basename, dirname, resolve } from "node:path";
 import { OverlaySchema, type Overlay } from "./overlay-schema";
 import { mergeProtocol, type MergeWarning } from "./merge";
 import type { Protocol, Snapshot } from "./types";
+import { loadAssessments, type LoadedAssessment, type SliceId as AssessmentSliceId } from "./assessments";
 
 export type { Protocol, Snapshot, ProtocolSnapshot, ProvenanceTag, Slug } from "./types";
 export { OverlaySchema, type Overlay } from "./overlay-schema";
+export {
+  loadAssessments,
+  type LoadedAssessment,
+  type AssessmentGrade,
+  type AssessmentStrength,
+  type SliceId as AssessmentSliceId,
+} from "./assessments";
 
 function resolveDataDir(): string {
   const env = process.env.DEFIPUNKD_DATA_DIR;
@@ -132,6 +140,13 @@ export function listProtocols(): Protocol[] {
 
 export function getProtocol(slug: string): Protocol | undefined {
   return getCache().bySlug.get(slug);
+}
+
+let cachedAssessments: Map<string, Map<AssessmentSliceId, LoadedAssessment>> | null = null;
+export function getAssessments(): Map<string, Map<AssessmentSliceId, LoadedAssessment>> {
+  if (cachedAssessments) return cachedAssessments;
+  cachedAssessments = loadAssessments(DATA_DIR);
+  return cachedAssessments;
 }
 
 export function listChildren(parentSlug: string): Protocol[] {

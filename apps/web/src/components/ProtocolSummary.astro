@@ -1,5 +1,5 @@
 ---
-import type { Protocol } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
 import { verifiabilityGrade } from "../lib/verifiability";
 import { dependenciesGrade } from "../lib/dependencies";
@@ -8,8 +8,9 @@ import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rati
 
 interface Props {
   protocol: Protocol;
+  assessments?: Map<AssessmentSliceId, LoadedAssessment>;
 }
-const { protocol } = Astro.props;
+const { protocol, assessments } = Astro.props;
 
 const grades = pizzaGradesFor(
   protocol.category,
@@ -17,7 +18,7 @@ const grades = pizzaGradesFor(
   dependenciesGrade(protocol.category, protocol.forked_from),
 );
 
-const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol);
+const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
 const PZ_VIEW = 360;
 const PZ_CENTER = PZ_VIEW / 2;
 const PZ_RADIUS = 150;
