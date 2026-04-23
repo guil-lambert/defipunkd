@@ -1,0 +1,121 @@
+name: DEFI@home quorum
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "data/submissions/**"
+  workflow_dispatch:
+
+concurrency:
+  group: quorum
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  quorum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run quorum
+        id: quorum
+        run: |
+          pnpm --filter @defibeat/validator run quorum -- --json > quorum-report.json
+          cat quorum-report.json
+
+      - name: Open / update aggregation issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('quorum-report.json', 'utf8'));
+
+            // Lazy-open aggregation issue per (slug, slice) when we observe any change
+            for (const c of report.changes) {
+              if (c.kind === 'insufficient' || c.kind === 'unchanged') continue;
+              const title = `[${c.slug} / ${c.slice}] DEFI@home`;
+              const existing = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${context.repo.owner}/${context.repo.repo} is:issue in:title "${title}"`,
+              });
+              const found = existing.data.items.find((i) => i.title === title);
+
+              let body;
+              if (c.kind === 'disagreement') {
+                const dis = report.disagreements.find((d) => d.slug === c.slug && d.slice === c.slice);
+                const table = dis ? dis.submissions.map((s) =>
+                  `| \`${s.model}\` | **${s.grade}** | ${s.headline} | w=${s.weight} | ${s.chat_url ? `[chat](${s.chat_url})` : '—'} |`
+                ).join('\n') : '';
+                body = `## Current state: **no consensus** (${c.submissionCount} submissions)\n\n${dis ? dis.reason : ''}\n\n| model | grade | headline | weight | chat |\n|---|---|---|---|---|\n${table}\n\nAnother submission is needed to reach consensus.`;
+              } else {
+                body = `## Current state: **${c.currentGrade}** (${c.strength || '—'}, ${c.submissionCount} submissions)\n\n${c.kind === 'new' ? 'First assessment has reached consensus.' : `Consensus updated from ${c.previousGrade} to ${c.currentGrade}.`}\n\nAn assessment PR is being opened into \`data/assessments/${c.slug}/${c.slice}.json\`.`;
+              }
+
+              const labels = ['defi-at-home', `slice:${c.slice}`];
+              if (c.kind === 'disagreement') labels.push('quorum-disagreement');
+
+              if (found) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: found.number,
+                  body,
+                });
+                // Sync labels: add quorum-disagreement on disagreement, remove on consensus
+                if (c.kind === 'disagreement') {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: found.number,
+                    labels: ['quorum-disagreement'],
+                  });
+                } else {
+                  try {
+                    await github.rest.issues.removeLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: found.number,
+                      name: 'quorum-disagreement',
+                    });
+                  } catch (_) {}
+                }
+              } else {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                  labels,
+                });
+              }
+            }
+
+      - name: Open assessments PR if anything changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "[quorum] merge new / updated assessments"
+          title: "[quorum] DEFI@home assessments — ${{ github.run_number }}"
+          body: |
+            Automated quorum merge. See workflow run for the report.
+          branch: quorum/auto-run-${{ github.run_number }}
+          add-paths: data/assessments/**
+          delete-branch: true

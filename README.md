@@ -16,7 +16,7 @@ DefiBeat does not run crawlers. Instead, contributors assess protocols by runnin
 2. Copy the generated prompt — it has the snapshot timestamp, chains, GitHub repos, and audit links already pinned in. Paste into your LLM.
 3. The LLM returns one JSON object matching [`data/schema/slice-assessment.v1.json`](./data/schema/slice-assessment.v1.json) — every claim must cite a verifiable URL (block explorer, repo at a pinned commit SHA, or audit PDF).
 4. Click **Submit your run**. GitHub opens its new-file UI pre-pointed at `data/submissions/<slug>/<slice>/` with a JSON stub. Paste your output, commit, open the PR.
-5. CI validates the schema. The quorum bot merges into `data/assessments/` once consensus is reached.
+5. CI validates the schema within ~30 s; if 2+ contributors agree, the quorum bot opens a follow-up PR merging your assessment into `data/assessments/` within 24 h. Disagreements open a per-(slug, slice) aggregation issue instead.
 
 The determinism comes from **consensus across re-runs**, not from the LLM being deterministic. Every submission records the model used, the prompt version, and the snapshot timestamp — anyone can re-run the same prompt later and the citations should still be re-verifiable. See [`/contribute`](./apps/web/src/pages/contribute.astro) on the site for full documentation, and [`packages/prompts/`](./packages/prompts/) for the prompt source.
 
