@@ -118,21 +118,20 @@
     <table>
       <thead>
         <tr>
-          <th class="rank">#</th>
           <th class="sortable name-col">
             <button type="button" onclick={() => showSort && onSortClick("name")} disabled={!showSort} aria-sort={ariaSort("name")}
               class:is-active={showSort && sortField === "name"}>
               Name<span class="arrow">{arrow("name")}</span>
             </button>
           </th>
+          <th>Risks</th>
+          <th>Stage</th>
           <th class="sortable">
             <button type="button" onclick={() => showSort && onSortClick("chain")} disabled={!showSort} aria-sort={ariaSort("chain")}
               class:is-active={showSort && sortField === "chain"}>
               Chain<span class="arrow">{arrow("chain")}</span>
             </button>
           </th>
-          <th>Risks</th>
-          <th>Stage</th>
           <th class="sortable">
             <button type="button" onclick={() => showSort && onSortClick("type")} disabled={!showSort} aria-sort={ariaSort("type")}
               class:is-active={showSort && sortField === "type"}>
@@ -151,10 +150,10 @@
         {#each visible as node, i (node.slug)}
           {@const isFamily = !!(node.children && node.children.length > 0)}
           {@const isExp = !!expanded[node.slug]}
-          {@render row(i + 1, node, isFamily, isExp, false)}
+          {@render row(node, isFamily, isExp, false)}
           {#if isFamily && isExp}
             {#each node.children ?? [] as child (child.slug)}
-              {@render row(null, child, false, false, true)}
+              {@render row(child, false, false, true)}
             {/each}
           {/if}
         {/each}
@@ -172,13 +171,12 @@
   </div>
 </section>
 
-{#snippet row(rank: number | null, row: LandingNode, isFamilyHead: boolean, isExpanded: boolean, isChild: boolean)}
+{#snippet row(row: LandingNode, isFamilyHead: boolean, isExpanded: boolean, isChild: boolean)}
   {@const extraChains = Math.max(0, row.chains.length - 1)}
   {@const grades = pizzaGradesFor(row.category, row.verifiability_grade, row.dependencies_grade)}
   {@const pz = pizzaPaths(grades, "sm")}
   {@const initial = row.name.charAt(0).toUpperCase()}
   <tr class:child={isChild}>
-    <td class="rank-cell">{rank ?? ""}</td>
     <td class="name-cell" class:child-cell={isChild}>
       {#if isFamilyHead}
         <button
@@ -205,12 +203,6 @@
         <span class="muted small-pad">(inactive)</span>
       {/if}
     </td>
-    <td>
-      {row.primary_chain ?? EM_DASH}
-      {#if extraChains > 0}
-        <span class="extra-chains">+{extraChains}</span>
-      {/if}
-    </td>
     <td class="pizza-cell">
       <svg width={pz.radius * 2} height={pz.radius * 2} viewBox={`0 0 ${pz.radius * 2} ${pz.radius * 2}`} role="img" aria-label="risk pizza (all unknown)">
         {#each pz.paths as p}
@@ -223,6 +215,12 @@
       </svg>
     </td>
     <td class="muted">{EM_DASH}</td>
+    <td>
+      {row.primary_chain ?? EM_DASH}
+      {#if extraChains > 0}
+        <span class="extra-chains">+{extraChains}</span>
+      {/if}
+    </td>
     <td>{row.category || EM_DASH}</td>
     <td class="tvl mono tabular">{formatTvl(row.tvl)}</td>
   </tr>
