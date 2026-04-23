@@ -200,9 +200,15 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
                 <strong>On the GitHub commit page</strong> (URL params only prefill file content, not the commit form):
               </p>
               <ul class="audit-hints">
-                <li>Commit message: <code>{suggestedCommit(s.id as SliceId)}</code></li>
+                <li>
+                  Commit message: <code>{suggestedCommit(s.id as SliceId)}</code>
+                  <button type="button" class="mini-copy" data-copy-text={suggestedCommit(s.id as SliceId)} aria-label="Copy commit message">copy</button>
+                </li>
                 <li>Radio: pick <em>"Create a new branch for this commit and start a pull request"</em></li>
-                <li>Branch name: <code>{suggestedBranch(s.id as SliceId)}</code> (rename GitHub's auto-suggested <code>{`<username>-patch-N`}</code>)</li>
+                <li>
+                  Branch name: <code>{suggestedBranch(s.id as SliceId)}</code>
+                  <button type="button" class="mini-copy" data-copy-text={suggestedBranch(s.id as SliceId)} aria-label="Copy branch name">copy</button>
+                </li>
               </ul>
               <div class="audit-toolbar">
                 <button type="button" class="copy-btn" data-copy-target={`#prompt-${s.id}`}>
@@ -223,13 +229,16 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
 
 <script>
   document.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement)?.closest?.("[data-copy-target]") as HTMLButtonElement | null;
+    const btn = (e.target as HTMLElement)?.closest?.("[data-copy-target],[data-copy-text]") as HTMLButtonElement | null;
     if (!btn) return;
-    const sel = btn.getAttribute("data-copy-target");
-    if (!sel) return;
-    const target = document.querySelector(sel) as HTMLElement | null;
-    if (!target) return;
-    navigator.clipboard.writeText(target.textContent ?? "").then(() => {
+    let text = btn.getAttribute("data-copy-text") ?? "";
+    if (!text) {
+      const sel = btn.getAttribute("data-copy-target");
+      const target = sel ? (document.querySelector(sel) as HTMLElement | null) : null;
+      if (!target) return;
+      text = target.textContent ?? "";
+    }
+    navigator.clipboard.writeText(text).then(() => {
       const prev = btn.textContent;
       btn.textContent = "Copied ✓";
       setTimeout(() => {
@@ -542,6 +551,20 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     font-size: 0.82rem;
     line-height: 1.6;
   }
+  .audit-hints li { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+  .mini-copy {
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    border: 1px solid var(--surface-raised);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mini-copy:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
   .audit-hints code {
     color: var(--text);
     background: var(--bg);
