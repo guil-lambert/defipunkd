@@ -19,13 +19,30 @@ export type PromptInputs = {
 export function buildReconcilerPrompt(inputs: PromptInputs): string {
   const { slug, draft, submissionsBySlice } = inputs;
 
+  // Trim each submission for the prompt: the draft master already carries
+  // the winning submission's full rationale + evidence. For the prompt we
+  // only need enough to let Sonnet decide whether to override the grade,
+  // which headline reads clearest, and what protocol_metadata to union.
+  // We keep: grade, headline, rationale, unknowns, protocol_metadata.
+  // We drop: evidence[] (verbose, already in draft for winner), findings[]
+  // text duplication, schema_version, snapshot_generated_at, analysis_date,
+  // prompt_version, chat_url.
+  const trimSubmission = (s: Submission) => ({
+    model: s.model,
+    grade: s.grade,
+    headline: s.headline,
+    rationale: s.rationale,
+    unknowns: s.unknowns,
+    protocol_metadata: s.protocol_metadata,
+  });
+
   const submissionsBlock = Object.entries(submissionsBySlice)
     .map(([slice, entries]) => {
       if (entries.length === 0) return `### ${slice}\n(no submissions)`;
       const items = entries
         .map(
           (e, i) =>
-            `#### ${slice} #${i + 1} — ${e.submission.model} — grade=${e.submission.grade}\npath: ${e.path}\n\n\`\`\`json\n${JSON.stringify(e.submission, null, 2)}\n\`\`\``,
+            `#### ${slice} #${i + 1} — ${e.submission.model} — grade=${e.submission.grade}\npath: ${e.path}\n\n\`\`\`json\n${JSON.stringify(trimSubmission(e.submission), null, 2)}\n\`\`\``,
         )
         .join("\n\n");
       return `### ${slice}\n${items}`;
@@ -81,6 +98,15 @@ Produce an improved master file. Be conservative. Your judgment calls:
 - \`source_submissions\` must include every submission you read (copy from the draft).
 - Do NOT invent evidence URLs, admin addresses, or audit reports. Everything must trace back to the inputs above.
 - The output MUST match the master schema exactly — all five slices present, all required fields filled.
+
+## Shape reminders (these are the fields Sonnet is most likely to get wrong)
+
+- \`protocol_metadata.admin_addresses\` is an array of OBJECTS, NOT strings. Each element MUST be \`{"chain": "<string>", "address": "0x…", "role": "<string>", "actor_class": "eoa" | "multisig" | "timelock" | "governance" | "unknown"}\`. NEVER emit \`["0x…", "0x…"]\` — always wrap each one.
+- \`protocol_metadata.voting_token\` is either \`null\` or \`{"chain": "<string>", "address": "0x…", "symbol": "<string optional>"}\`. Not a bare address string.
+- \`protocol_metadata.audits\` is an array of \`{"firm": "<string>", "url": "https://…", "date": "YYYY-MM"}\` objects, not a list of URLs.
+- \`slices.<id>.rationale.steelman\` is either \`null\` (only when grade="unknown") or \`{"red": "...", "orange": "...", "green": "..."}\`. Not a single string.
+- \`slices.<id>.dissent\` is an array; each element MUST be \`{"path": "<string>", "model": "<string>", "grade": "<grade>", "reason": "<string>"}\`. If no dissent, use \`[]\`.
+- If a scalar field (\`docs_url\`, \`governance_forum\`, \`bug_bounty_url\`, etc.) has no verified value, OMIT it from \`protocol_metadata\` entirely — do NOT set it to \`"unknown"\` or \`""\`.
 
 Output the JSON now.`;
 }
