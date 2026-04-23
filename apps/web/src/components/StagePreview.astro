@@ -1,0 +1,250 @@
+---
+import type { Protocol } from "@defibeat/registry";
+
+interface Props {
+  protocol: Protocol;
+}
+const { protocol } = Astro.props;
+
+type StageInfo = {
+  id: "stage-0" | "stage-1" | "stage-2";
+  label: string;
+  grade: "red" | "orange" | "green";
+  summary: string;
+  body: string;
+};
+
+const stages: StageInfo[] = [
+  {
+    id: "stage-0",
+    label: "Stage 0",
+    grade: "red",
+    summary: "requirements pending",
+    body:
+      "Governance is largely off-chain, contracts are upgradeable with short or no timelock, and the protocol depends on a multisig or team with full discretion. At Phase 0 DefiBeat does not automatically evaluate these; the assessment lands with crawler-based onchain discovery.",
+  },
+  {
+    id: "stage-1",
+    label: "Stage 1",
+    grade: "orange",
+    summary: "requirements pending",
+    body:
+      "Users can exit or opt out on their own terms even if the team disappears. Upgrades run through a meaningful timelock with an emergency security council clearly scoped. The walkaway test is the headline criterion.",
+  },
+  {
+    id: "stage-2",
+    label: "Stage 2",
+    grade: "green",
+    summary: "requirements pending",
+    body:
+      "Protocol is fully permissionless and immutable, or upgrades require a supermajority of token holders with a long timelock and no emergency override. This is the terminal stage of the DeFiScan v2 framework.",
+  },
+];
+---
+<section class="stage-preview" id="stage">
+  <h2>Stage</h2>
+  <p class="lede">
+    Preview of the Phase-3 maturity framework. DefiBeat will adopt <a href="https://docs.defiscan.info/" rel="noreferrer" target="_blank" class="link">DeFiScan v2's stages</a> verbatim; the section is rendered below in its intended shape so the structure is visible today.
+  </p>
+
+  <div class="claim">
+    <span class="claim-text">
+      <strong>{protocol.name}</strong> has <strong>not yet been assessed</strong> under the DeFiScan v2 stage framework.
+    </span>
+  </div>
+
+  <div class="note note-info">
+    <span class="note-icon" aria-hidden="true">i</span>
+    <div>
+      <strong>The walkaway test is the central criterion.</strong> Once stages land, protocols reach Stage 1 only if users can exit in the presence of malicious operators even when the emergency council disappears.
+    </div>
+  </div>
+
+  <details class="scope">
+    <summary>Scope of assessment</summary>
+    <div class="scope-body">
+      Stages are assessed per-protocol against DeFiScan v2's criteria: governance structure, upgradeability path, timelock durations, emergency-council scope, and the walkaway test. The analysis depends on onchain discovery (roles, owners, timelocks) and deeper review of deployed contracts — neither of which DefiBeat automates at Phase 0.
+    </div>
+  </details>
+
+  <div class="stage-list">
+    {stages.map((s) => (
+      <details class:list={["stage-item", `grade-${s.grade}`]}>
+        <summary>
+          <span class:list={["badge", `badge-${s.grade}`]}>{s.label}</span>
+          <span class="status muted">
+            <span class="dash" aria-hidden="true">—</span> {s.summary}
+          </span>
+          <span class="chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="stage-body">{s.body}</div>
+      </details>
+    ))}
+  </div>
+
+  <a href="https://docs.defiscan.info/" rel="noreferrer" target="_blank" class="learn-more">
+    Learn more about DeFiScan v2 stages →
+  </a>
+
+  <div class="note note-disclaimer">
+    <span class="note-icon" aria-hidden="true">i</span>
+    <div>
+      Stages are an opinionated assessment of maturity, not a rating of security or safety. A protocol can sit at Stage 2 and still carry substantial technical or economic risk; the framework exists to incentivize decentralization, not to rank protocols.
+    </div>
+  </div>
+</section>
+
+<style>
+  .stage-preview {
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--surface-raised);
+  }
+  h2 { margin: 0 0 0.25rem 0; color: var(--text); }
+  .lede { color: var(--text-muted); margin: 0 0 1.25rem 0; font-size: 0.9rem; }
+  .link { color: var(--accent-link); }
+
+  .claim {
+    display: flex;
+    align-items: center;
+    padding: 0.9rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+  }
+  .claim-text { color: var(--text-muted); font-size: 0.95rem; }
+  .claim-text strong { color: var(--text); font-weight: 600; }
+
+  .note {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--surface-raised);
+    border-left-width: 3px;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+  .note strong { color: var(--text); font-weight: 600; }
+  .note-info { border-left-color: var(--grade-green); background: var(--surface); }
+  .note-disclaimer {
+    border-left-color: var(--accent-link);
+    background: var(--surface);
+    margin-top: 1rem;
+    margin-bottom: 0;
+  }
+  .note-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-style: italic;
+  }
+
+  .scope {
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+  .scope > summary {
+    list-style: none;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    color: var(--text);
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+  }
+  .scope > summary::-webkit-details-marker { display: none; }
+  .scope > summary::after {
+    content: "▾";
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    transition: transform 150ms ease;
+  }
+  .scope[open] > summary::after { transform: rotate(180deg); }
+  .scope-body {
+    padding: 0 1rem 0.9rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .stage-list {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+  .stage-item {
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+  }
+  .stage-item > summary {
+    list-style: none;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    font-size: 0.92rem;
+  }
+  .stage-item > summary::-webkit-details-marker { display: none; }
+  .chevron {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    transition: transform 150ms ease;
+  }
+  .stage-item[open] .chevron { transform: rotate(180deg); }
+  .status { color: var(--text); font-weight: 500; }
+  .status.muted { color: var(--text-muted); font-weight: 400; }
+  .dash { color: var(--text-muted); margin-right: 0.25rem; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+    min-width: 4rem;
+    height: 1.25rem;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bg);
+    border: 1px solid transparent;
+  }
+  .badge-red { background: var(--grade-red); border-color: var(--grade-red); }
+  .badge-orange { background: var(--grade-orange); border-color: var(--grade-orange); }
+  .badge-green { background: var(--grade-green); border-color: var(--grade-green); }
+
+  .stage-body {
+    padding: 0 1rem 0.9rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .learn-more {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--accent-link);
+    text-decoration: underline;
+    font-size: 0.88rem;
+  }
+</style>
