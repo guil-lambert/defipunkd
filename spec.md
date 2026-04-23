@@ -179,12 +179,16 @@ Merge happens once at module load (build time in Next.js server components). No 
 
 ## Visual design
 
-**Dark-only, custom DefiBeat palette** at Phase 0. No light theme shipped.
+**Dark-only, radiographic palette** at Phase 0. No light theme shipped. Aesthetic direction: clinical, unbothered, evidence-first — see `.impeccable.md` for full design context.
 
-- Base: cool slate (neutral dark)
-- Accent (single color): **cyan (~#22d3ee)** — used for active states, review-status highlights, and reviewer-stamped rows once they exist
-- Dense table component inherited from L2BEAT near-verbatim; palette swapped
-- Pizza slices use a narrow green/yellow/red risk palette; cyan is the system accent everywhere else
+- Base: deep ink (`#08090c`) with a tinted surface hierarchy (`#10131a`, `#1e2330`).
+- Primary text `#d8e4ec`, muted text `#6b7785` (WCAG AA on base).
+- Single system accent: **cool blue `#7bb4cc`** — links, active tabs, selection. Used sparingly; accents are evidentiary, not decorative.
+- Pizza slice palette: green `#34ad70`, orange `#e28e28`, red `#d13b3b`, unknown/gray `#6b7785`. Each slice color carries a single meaning.
+- **CEX category short-circuits grading**: all five slices render red regardless of per-dimension signals. Custodial exchanges fail every transparency axis by construction.
+- Typography: **IBM Plex Sans + IBM Plex Mono**, one-family carried hard. Mono + `tabular-nums` on every TVL display.
+- Dense table component inherited from L2BEAT near-verbatim; palette and type swapped.
+- Logos: `logo` URL from the DeFiLlama payload, rendered client-side with a letter-tile fallback for nulls and 404s.
 
 ### Provenance badge style
 
@@ -290,7 +294,10 @@ type ProtocolSnapshot = {
   audit_links: string[];
   hallmarks: Array<[number, string]>;  // [unix_ts, description]
   parent_slug: string | null;          // from parentProtocol only
+  forked_from: number[] | null;        // DeFiLlama forkedFrom list (numeric ids)
+  logo: string | null;                 // canonical URL from /protocols payload
   is_dead: boolean;                    // derived from deadUrl/deadFrom/category
+  is_parent: boolean;                  // true for synthesized parent rows
   first_seen_at: string;               // ISO UTC, carried forward across syncs
   last_seen_at: string;                // ISO UTC, bumped when present in latest sync
   delisted_at: string | null;          // set after 14 consecutive days absent
@@ -399,7 +406,8 @@ Addendum resolving spec ambiguities. Where this section conflicts with earlier p
   - Collateral risk applies to **every category**, not just credit markets.
 - **Placement**: landing browse-all table row (tiny), protocol detail page header (large), and `/methodology` legend.
 - **Phase 0 empty state**: fully gray "unknown" pizza with em-dash tooltip.
-- **Color semantics**: narrow **green/yellow/red** risk palette for slices. Cyan remains the system accent everywhere else.
+- **Color semantics**: narrow **green / orange / red** risk palette for slices, with a muted gray for unknown. The cool-blue `#7bb4cc` accent is reserved for links and active state — never a slice fill.
+- **CEX override**: if `category === "CEX"`, all five slices render red. Decided because custodial exchanges fail every transparency dimension by construction; applying the normal per-dimension rubric would misleadingly show unknowns as gray.
 - **Stage encoding**: overall Defiscan stage = **worst slice**.
 - **Multi-chain handling**: pizza reflects the **primary (highest-TVL) chain only**.
 - **Interaction**: clicking a slice **anchors/scrolls to the matching section of the detail dense table**.
