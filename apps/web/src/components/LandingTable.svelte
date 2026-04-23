@@ -214,7 +214,7 @@
     <td class="pizza-cell">
       <svg width={pz.radius * 2} height={pz.radius * 2} viewBox={`0 0 ${pz.radius * 2} ${pz.radius * 2}`} role="img" aria-label="risk pizza (all unknown)">
         {#each pz.paths as p}
-          <a href="/methodology#what-is-graded-today">
+          <a href={`/protocol/${row.slug}`}>
             <path d={p.d} fill={p.fill} stroke="#08090c" stroke-width={pz.stroke}>
               <title>{`${p.label} \u2014 ${p.tooltip}`}</title>
             </path>
@@ -239,22 +239,17 @@
   .tabs {
     display: flex;
     gap: 0.25rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    padding: 0 1.5rem 0.25rem;
     margin-bottom: 1rem;
   }
-  @media (max-width: 720px) {
-    .tabs {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      margin-left: -1.5rem;
-      margin-right: -1.5rem;
-      padding: 0 1.5rem 0.25rem;
-    }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tabs button { flex-shrink: 0; }
-  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex-shrink: 0; }
   .tabs button {
     min-height: 44px;
     padding: 0 0.9rem;
