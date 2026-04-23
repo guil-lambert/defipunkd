@@ -1,6 +1,6 @@
 # defipunkd
 
-Live, evidence-based transparency registry for DeFi protocols. An L2BEAT-for-DeFi in spirit, forked from [l2beat/l2beat](https://github.com/l2beat/l2beat) (MIT).
+Live, evidence-based transparency registry for DeFi protocols. An L2BEAT-for-DeFi in spirit.
 
 defipunkd is **not** a risk-rating system. It is a protocol registry and evidence intake layer with deterministic data collection today and human-reviewed publication later. Phase 0 displays raw DeFiLlama fields with missingness visible; grades for specific dimensions are filled in by human review over time.
 
@@ -79,7 +79,7 @@ Measured on the current snapshot (8105 protocols, 8107 total pages = landing + m
 | Metric | Value |
 |---|---|
 | Pages emitted | 8107 |
-| Build wall-clock | ~290 s (~35 ms/page, per-page Astro render dominates) |
+| Build wall-clock | ~650 s on Vercel (~75 ms/page, per-page Astro render dominates) |
 | JS on `/` | ~8.6 KB gzipped (Svelte runtime + `LandingTable` island) |
 | JS on `/methodology` | 0 B |
 | JS on `/protocol/{slug}` | 0 B |
@@ -93,7 +93,7 @@ pnpm sync
 
 Pulls `api.llama.fi/protocols`, re-normalizes, writes `data/defillama-snapshot.json`, and prints a human-readable TVL diff. Commit the resulting file; the site rebuilds from it.
 
-Upstream etiquette: sync sends `User-Agent: defipunkd (+<contact>)`. Run manually or via a scheduled `workflow_dispatch` that commits the diff as a PR — do not hammer the API.
+Upstream etiquette: sync sends `User-Agent: defipunkd (+<contact>)`. The intended path is the scheduled `.github/workflows/sync.yml` action (weekly, Monday 06:00 UTC) which runs `pnpm sync` and opens a PR with the diff as the body. Merging the PR is the refresh — Vercel rebuilds the site from the new snapshot. Run `pnpm sync` locally only as an ad-hoc escape hatch; do not hammer the API from CI or cron jobs outside this workflow.
 
 ## Curating a protocol
 
@@ -111,4 +111,4 @@ Visual direction: radiographic — clinical, monochrome, evidentiary. One typefa
 
 ## License
 
-MIT, inherited from L2BEAT upstream. The Defiscan rubric is adapted with attribution.
+MIT. The Defiscan rubric is adapted with attribution.
