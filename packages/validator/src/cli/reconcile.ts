@@ -96,7 +96,10 @@ async function reconcileSlug(root: string, opts: ReconcileOptions): Promise<void
     };
     const prompt = buildReconcilerPrompt(promptInput);
 
+    console.log(`[reconcile] ${slug}: calling ${claudeBin} --model ${model} (prompt ${prompt.length} chars, timeout ${LLM_TIMEOUT_MS}ms)…`);
+    const t0 = Date.now();
     const llmResult = invokeClaude(claudeBin, model, prompt);
+    console.log(`[reconcile] ${slug}: ${claudeBin} returned in ${Date.now() - t0}ms (ok=${llmResult.ok})`);
     if (llmResult.ok) {
       const extracted = extractFencedJson(llmResult.output);
       const parsed = MasterSchema.safeParse(extracted);
@@ -165,21 +168,44 @@ function loadAssessments(root: string, slug: string): Map<Submission["slice"], A
 
 type LlmResult = { ok: true; output: string } | { ok: false; reason: string };
 
+const LLM_TIMEOUT_MS = Number(process.env.RECONCILE_LLM_TIMEOUT_MS ?? 5 * 60 * 1000);
+
 function invokeClaude(claudeBin: string, model: string, prompt: string): LlmResult {
   if (!process.env.ANTHROPIC_API_KEY) {
     return { ok: false, reason: "ANTHROPIC_API_KEY not set" };
   }
+  // Pipe the prompt via stdin instead of argv — avoids ARG_MAX issues and
+  // some CI-shell argv-quoting hazards for 30KB+ prompts.
+  // --bare skips hook / MCP / CLAUDE.md auto-discovery for reproducibility.
   const res = spawnSync(
     claudeBin,
-    ["-p", prompt, "--model", model, "--output-format", "text", "--permission-mode", "bypassPermissions"],
+    [
+      "--bare",
+      "--model",
+      model,
+      "--output-format",
+      "text",
+      "--permission-mode",
+      "bypassPermissions",
+      "-p",
+    ],
     {
+      input: prompt,
       encoding: "utf8",
       env: process.env,
       maxBuffer: 10 * 1024 * 1024,
+      timeout: LLM_TIMEOUT_MS,
     },
   );
-  if (res.error) return { ok: false, reason: res.error.message };
-  if (res.status !== 0) return { ok: false, reason: `claude CLI exit ${res.status}: ${res.stderr.slice(0, 500)}` };
+  if (res.error) {
+    const msg = (res.error as NodeJS.ErrnoException).code === "ETIMEDOUT"
+      ? `claude CLI timed out after ${LLM_TIMEOUT_MS}ms`
+      : res.error.message;
+    return { ok: false, reason: msg };
+  }
+  if (res.status !== 0) {
+    return { ok: false, reason: `claude CLI exit ${res.status}: ${(res.stderr ?? "").slice(0, 500)}` };
+  }
   return { ok: true, output: res.stdout };
 }
 
