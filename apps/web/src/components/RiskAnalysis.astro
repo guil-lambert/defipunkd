@@ -55,10 +55,16 @@ function submitUrl(sliceId: SliceId): string {
   const params = new URLSearchParams({
     filename: `data/submissions/${protocol.slug}/${sliceId}/your-model-${ANALYSIS_DATE}.json`,
     value: stubFor(sliceId),
-    message: `[DEFI@home] ${protocol.slug} / ${sliceId} submission`,
-    description: `Slug: ${protocol.slug}\nSlice: ${sliceId}\nAnalysis date: ${ANALYSIS_DATE}\nPrompt version: ${PROMPT_VERSION}\nSnapshot: ${snapshotGeneratedAt}\n\nSuggested branch name: defi-at-home/${protocol.slug}-${sliceId}\n(GitHub defaults to <username>-patch-N; feel free to rename in the 'New branch name' box before submitting.)`,
   });
   return `https://github.com/${REPO}/new/main?${params.toString()}`;
+}
+
+function suggestedCommit(sliceId: SliceId): string {
+  return `[DEFI@home] ${protocol.slug} / ${sliceId} submission`;
+}
+
+function suggestedBranch(sliceId: SliceId): string {
+  return `defi-at-home/${protocol.slug}-${sliceId}`;
 }
 
 const promptsBySlice = Object.fromEntries(
@@ -161,8 +167,13 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
                 <strong>Before submitting:</strong> enable <em>Share publicly</em> on your chat session and paste the resulting URL into the <code>chat_url</code> field. Submissions with a verifiable public transcript get extra weight from the quorum bot. <a href="/contribute#sharing-your-chat" class="link">Per-platform instructions →</a>
               </p>
               <p class="audit-intro audit-branch">
-                <strong>On the GitHub commit page:</strong> pick <em>"Create a new branch for this commit and start a pull request"</em>. The suggested branch name <code>{`${protocol.slug}-${s.id}`}</code> is in the prefilled description — feel free to rename the <code>{`<username>-patch-N`}</code> default GitHub proposes.
+                <strong>On the GitHub commit page</strong> (URL params only prefill file content, not the commit form):
               </p>
+              <ul class="audit-hints">
+                <li>Commit message: <code>{suggestedCommit(s.id as SliceId)}</code></li>
+                <li>Radio: pick <em>"Create a new branch for this commit and start a pull request"</em></li>
+                <li>Branch name: <code>{suggestedBranch(s.id as SliceId)}</code> (rename GitHub's auto-suggested <code>{`<username>-patch-N`}</code>)</li>
+              </ul>
               <div class="audit-toolbar">
                 <button type="button" class="copy-btn" data-copy-target={`#prompt-${s.id}`}>
                   Copy prompt
@@ -420,6 +431,21 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     font-size: 0.82rem;
     line-height: 1.5;
     margin: 0;
+  }
+  .audit-hints {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .audit-hints code {
+    color: var(--text);
+    background: var(--bg);
+    padding: 0 0.3rem;
+    border-radius: 3px;
+    border: 1px solid var(--surface-raised);
+    font-size: 0.75rem;
   }
   .audit-toolbar {
     display: flex;
