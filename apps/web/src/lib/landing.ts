@@ -18,6 +18,7 @@ export type LandingRow = {
   logo: string | null;
   verifiability_grade: GradeColor;
   dependencies_grade: GradeColor;
+  assessment_grades?: Partial<Record<"control" | "ability-to-exit" | "dependencies" | "access" | "verifiability", GradeColor>>;
 };
 
 export type LandingNode = LandingRow & { children?: LandingRow[] };
