@@ -1,0 +1,67 @@
+name: DEFI@home autorun (third voice)
+
+on:
+  schedule:
+    - cron: "0 4 * * MON"
+  workflow_dispatch:
+    inputs:
+      target_count:
+        description: "Max number of (slug, slice) pairs to assess this run"
+        required: false
+        default: "50"
+      model:
+        description: "Anthropic model ID"
+        required: false
+        default: "claude-sonnet-4-6"
+
+concurrency:
+  group: autorun
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autorun:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate submissions
+        env:
+          TARGET_COUNT: ${{ inputs.target_count || '50' }}
+          MODEL: ${{ inputs.model || 'claude-sonnet-4-6' }}
+        run: |
+          pnpm --filter @defibeat/validator exec tsx src/cli/autorun-generate.ts \
+            --count "$TARGET_COUNT" \
+            --model "$MODEL"
+
+      - name: Open PR with new submissions
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "[autorun] new DEFI@home submissions"
+          title: "[autorun] DEFI@home submissions — ${{ github.run_number }}"
+          body: |
+            Scheduled third-voice submissions generated via the Anthropic API.
+
+            Model: `${{ inputs.model || 'claude-sonnet-4-6' }}`
+            Target count: `${{ inputs.target_count || '50' }}`
+
+            Each submission's `model` field is suffixed with `(autorun)` so the quorum bot can weight appropriately.
+          branch: autorun/run-${{ github.run_number }}
+          add-paths: data/submissions/**
+          delete-branch: true

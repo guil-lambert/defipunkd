@@ -1,0 +1,117 @@
+name: Validate DEFI@home submission
+
+on:
+  pull_request:
+    paths:
+      - "data/submissions/**"
+
+concurrency:
+  group: validate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Collect changed submission files
+        id: files
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1 || true
+          changed=$(git diff --name-only --diff-filter=AM origin/${{ github.event.pull_request.base.ref }}...HEAD \
+            -- 'data/submissions/**/*.json' | tr '\n' ' ')
+          echo "list=$changed" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo $changed | wc -w)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate
+        if: steps.files.outputs.count != '0'
+        id: validate
+        run: |
+          pnpm --filter @defibeat/validator run validate --json ${{ steps.files.outputs.list }} > validate-report.json
+          cat validate-report.json
+        continue-on-error: true
+
+      - name: Post PR comment and labels
+        if: steps.files.outputs.count != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('validate-report.json', 'utf8'));
+            const ok = report.ok;
+
+            const lines = [];
+            lines.push(ok ? '✅ **DEFI@home validator — all submissions valid**' : '❌ **DEFI@home validator — issues found**');
+            lines.push('');
+            for (const r of report.reports) {
+              lines.push(`### \`${r.file}\``);
+              if (r.errors.length) {
+                lines.push('**errors:**');
+                for (const e of r.errors) lines.push(`- ${e}`);
+              }
+              if (r.warnings.length) {
+                lines.push('**warnings:**');
+                for (const w of r.warnings) lines.push(`- ${w}`);
+              }
+              if (r.autoFixed.length) {
+                lines.push('**auto-fixes applied:**');
+                for (const a of r.autoFixed) lines.push(`- ${a}`);
+              }
+              if (!r.errors.length && !r.warnings.length && !r.autoFixed.length) {
+                lines.push('_clean_');
+              }
+              lines.push('');
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: lines.join('\n'),
+            });
+
+            // Compute labels from the first valid submission
+            const labels = ['submission'];
+            for (const r of report.reports) {
+              if (r.errors.length) continue;
+              try {
+                const raw = JSON.parse(fs.readFileSync(r.file, 'utf8'));
+                labels.push(`slice:${raw.slice}`);
+                const model = (raw.model || '').toLowerCase();
+                if (model.includes('claude')) labels.push('model-family:claude');
+                else if (model.includes('gpt') || model.includes('openai')) labels.push('model-family:gpt');
+                else if (model.includes('gemini')) labels.push('model-family:gemini');
+                else labels.push('model-family:other');
+                if (raw.chat_url) labels.push('chat-url-included');
+                labels.push('awaiting-quorum');
+                break;
+              } catch (_) {}
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [...new Set(labels)],
+            });
+
+            if (!ok) core.setFailed('Submission validation failed; see comment above.');

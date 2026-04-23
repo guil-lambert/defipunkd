@@ -63,7 +63,15 @@ import Base from "../layouts/Base.astro";
 
     <h2>Quorum and autorun</h2>
     <p>
-      A GitHub Action runs the same prompts nightly through Claude and commits its output as a third voice alongside human submissions. The quorum bot accepts a slice once any 3 submissions — human or automated — agree on grade and share at least one evidence URL. Disagreements are opened as issues and invite a second round. Both the autorun Action and the quorum bot land in a follow-up to this MVP.
+      Three GitHub Actions run the semi-automated pipeline:
+    </p>
+    <ul>
+      <li><strong>Validate-on-PR</strong> — every submission PR is schema-checked, format-cleaned (markdown-wrapped URLs auto-stripped where inner == outer), and labeled. Latency ~30 s. Failures block the PR with a structured comment.</li>
+      <li><strong>Quorum merge</strong> — runs nightly and after every submission push to main. Computes consensus per (slug, slice); strong = ≥60 % weight + ≥3 submissions, weak = ≥50 % weight + ≥2 submissions. On consensus, opens a PR into <code>data/assessments/</code>. On the first submission for a (slug, slice) pair, lazily opens a persistent aggregation issue that serves as the discussion anchor.</li>
+      <li><strong>Autorun (third voice)</strong> — weekly, picks (slug, slice) pairs stuck at 1–2 submissions (ordered by TVL), runs the same pinned prompt through the Anthropic API, and opens a PR with the generated submissions. Models suffixed with <code>(autorun)</code> so their weight is transparent.</li>
+    </ul>
+    <p>
+      Weighting: base 1.0 + 0.3 for a public <code>chat_url</code> share link + up to 0.3 for block-explorer URLs in evidence, −0.2 per older <code>prompt_version</code>. Highest-weight submission becomes the canonical rationale in the merged assessment.
     </p>
   </main>
 </Base>
