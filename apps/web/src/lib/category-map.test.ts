@@ -12,7 +12,7 @@ describe("bucketCategory seed mappings", () => {
     ["Yield", "Yield"],
     ["Yield Aggregator", "Yield"],
     ["Derivatives", "Derivatives"],
-    ["Options", "Derivatives"],
+    ["Options", "Options"],
     ["Perps", "Derivatives"],
     ["Cross Chain", "Bridges"],
     ["Bridge", "Bridges"],

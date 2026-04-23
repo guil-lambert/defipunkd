@@ -38,8 +38,35 @@ function snapshotGeneratedAt(): string {
   return cachedGeneratedAt;
 }
 
-const { protocol, children } = Astro.props;
-const isDelisted = !!protocol.delisted_at;
+const { protocol: rawProtocol, children } = Astro.props;
+const isDelisted = !!rawProtocol.delisted_at;
+
+function sumChildTvl(kids: typeof children): number | null {
+  let total = 0;
+  let any = false;
+  for (const k of kids) {
+    if (typeof k.tvl === "number") { total += k.tvl; any = true; }
+  }
+  return any ? total : null;
+}
+function dominantChildCategory(kids: typeof children): string {
+  let best = "", bestTvl = -Infinity, bestSlug = "";
+  for (const k of kids) {
+    const t = typeof k.tvl === "number" ? k.tvl : -1;
+    if (t > bestTvl || (t === bestTvl && k.slug < bestSlug)) {
+      bestTvl = t; bestSlug = k.slug; best = k.category || "";
+    }
+  }
+  return best;
+}
+
+const protocol = rawProtocol.is_parent && children.length > 0
+  ? {
+      ...rawProtocol,
+      tvl: sumChildTvl(children),
+      category: rawProtocol.category || dominantChildCategory(children),
+    }
+  : rawProtocol;
 const title = isDelisted
   ? `${protocol.name} (delisted) · defipunkd`
   : `${protocol.name} · defipunkd`;

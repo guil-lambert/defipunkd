@@ -4,7 +4,7 @@ import Base from "../layouts/Base.astro";
 import LandingTable from "../components/LandingTable.svelte";
 import { bucketCategory } from "../lib/category-map";
 import { primaryChain } from "../lib/format";
-import { buildNodes, tabCountsFromNodes, type LandingRow } from "../lib/landing";
+import { buildNodes, chainTvlFromNodes, tabCountsFromNodes, type LandingRow } from "../lib/landing";
 import { verifiabilityGrade } from "../lib/verifiability";
 import { dependenciesGrade } from "../lib/dependencies";
 
@@ -20,6 +20,7 @@ const rows: LandingRow[] = protocols.map((p) => {
     chains: p.chains,
     primary_chain: primaryChain(p.tvl_by_chain) ?? p.chains[0] ?? null,
     tvl: p.tvl,
+    tvl_by_chain: p.tvl_by_chain,
     is_dead: p.is_dead,
     is_parent: p.is_parent,
     parent_slug: p.parent_slug,
@@ -38,24 +39,31 @@ if (unmapped.size > 0) {
 
 const nodes = buildNodes(rows);
 const counts = tabCountsFromNodes(nodes);
+const chainTvl = chainTvlFromNodes(nodes);
 const live = counts.All ?? 0;
 ---
 <Base>
   <main class="page">
     <header class="hero">
-      <h1>defipunkd</h1>
+      <h1>
+        <svg class="logo" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M3 3h4v2h-2v6h2v2h-4zM13 3h-4v2h2v6h-2v2h4zM7 6h2v2h-2zM7 9h2v2h-2z" fill="currentColor"/>
+        </svg>
+        DeFiPunkd
+      </h1>
       <p class="subtitle">
         {live.toLocaleString()} live protocols · {protocols.length.toLocaleString()} total ·{" "}
         <a href="/methodology">methodology</a>
       </p>
     </header>
-    <LandingTable client:load nodes={nodes} tabCounts={counts} />
+    <LandingTable client:load nodes={nodes} tabCounts={counts} chainTvl={chainTvl} />
   </main>
 </Base>
 
 <style>
   .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
   .hero { margin-bottom: 1.5rem; }
-  h1 { margin: 0; }
+  h1 { margin: 0; display: inline-flex; align-items: center; gap: 0.4rem; line-height: 1; flex-wrap: nowrap; }
+  .logo { width: 1em; height: 1em; flex-shrink: 0; }
   .subtitle { color: var(--text-muted); margin-top: 0.25rem; }
 </style>

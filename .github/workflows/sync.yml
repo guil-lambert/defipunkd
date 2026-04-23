@@ -1,0 +1,42 @@
+name: DeFiLlama snapshot sync
+
+on:
+  schedule:
+    - cron: "0 6 * * MON"
+  workflow_dispatch:
+
+concurrency:
+  group: snapshot-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Refresh snapshot
+        run: pnpm sync | tee sync-diff.txt
+
+      - name: Open PR with snapshot diff
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(data): refresh defillama-snapshot"
+          title: "chore(data): refresh defillama-snapshot — ${{ github.run_number }}"
+          body-path: sync-diff.txt
+          branch: sync/snapshot-${{ github.run_number }}
+          add-paths: data/defillama-snapshot.json
+          delete-branch: true

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { PROMPT_VERSION } from "@defipunkd/prompts";
 import { SubmissionSchema } from "../schema";
 import { cleanupSubmission } from "../cleanup";
@@ -32,7 +32,7 @@ async function main(): Promise<number> {
   const reports: Report[] = [];
 
   for (const argFile of files) {
-    const file = resolve(argFile);
+    const file = isAbsolute(argFile) ? argFile : resolve(root, argFile);
     const relative = file.startsWith(root) ? file.slice(root.length + 1) : file;
     const report: Report = { file: relative, errors: [], warnings: [], autoFixed: [] };
 

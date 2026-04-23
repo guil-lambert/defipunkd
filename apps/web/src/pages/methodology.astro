@@ -29,7 +29,7 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
       Every protocol is seeded from <a href="https://defillama.com/" rel="noreferrer" target="_blank">DeFiLlama</a> via <code>pnpm sync</code>, which writes the full list into a committed JSON snapshot. Human curators can override individual fields by dropping a JSON file into <code>data/overlays/</code> and opening a PR.
     </p>
     <p>
-      Every field displays a provenance tag so you always know where the value came from: <code>[defillama]</code> for the raw DeFiLlama value, <code>[curated]</code> for a human-authored overlay, and <code>[defillama-parent]</code> when a child protocol inherits a field (github, twitter, website) from its parent protocol because DeFiLlama only records the value at the family level.
+      Every field displays a provenance tag so you always know where the value came from: <code>[defillama]</code> for the raw DeFiLlama value, <code>[curated]</code> for a human-authored overlay, <code>[defillama-parent]</code> when a child protocol inherits a field (github, twitter, website) from its parent protocol because DeFiLlama only records the value at the family level, and <code>[:]</code> — the DeFiPunkd logo itself — for anything attested by the DEFI@home quorum. The glyph only appears where there is evidence behind it; an em-dash means unsourced.
     </p>
     <p>defipunkd mirrors DeFiLlama: if DeFiLlama delists a protocol, defipunkd delists it after a 14-day grace window.</p>
 
@@ -77,6 +77,17 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
     <h2>Audits and source code feed Verifiability</h2>
     <p>
       Each protocol detail page shows the raw audit count, expandable list of audit links, and the project's GitHub repositories. These feed the Verifiability slice, not a slice of their own: an audit count is a famously weak signal in isolation — auditor quality, report scope, and whether post-audit changes were reviewed matter far more than the integer. GitHub is surfaced so you can check whether the deployed addresses match the published source. At Phase 0 the data is raw and the slice stays gray; a future phase will grade auditor reputation and source-to-bytecode correspondence as part of the Verifiability assessment.
+    </p>
+
+    <h2>DEFI@home — distributed assessment</h2>
+    <p>
+      defipunkd does not run crawlers and does not hand-curate every protocol. The slice grades that aren't produced by the deterministic heuristics above are filled in by <strong>DEFI@home</strong>: a distributed, BOINC-style process where any number of independent auditors run a pinned prompt through the LLM of their choice (Claude, ChatGPT, Gemini, …) and submit the JSON output as a pull request.
+    </p>
+    <p>
+      Each protocol page exposes an <strong>Audit this slice yourself</strong> button under every Risk-analysis card. The button copies a prompt with the snapshot timestamp, chains, GitHub repos, and audit links already pinned in, so re-runs remain verifiable against a fixed evidence set. Submissions must match <a href="https://github.com/guil-lambert/defipunkd/blob/main/data/schema/slice-assessment.v1.json" rel="noreferrer" target="_blank">slice-assessment.v1.json</a>: every claim cites a block explorer, a repo at a pinned commit SHA, or an audit PDF.
+    </p>
+    <p>
+      Determinism comes from <strong>consensus across independent re-runs</strong>, not from any single LLM output. A quorum bot merges an assessment into <code>data/assessments/</code> once ≥3 contributors (using different models or accounts) agree on grade and overlapping evidence; disagreements open a per-(slug, slice) aggregation issue. A scheduled GitHub Action also runs the prompts via the Anthropic SDK as a "third voice" so coverage doesn't depend on volunteer traffic alone. See <a href="/contribute">/contribute</a> for the full flow.
     </p>
 
     <h2>Stages</h2>
