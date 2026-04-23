@@ -1,18 +1,91 @@
 ---
 import type { Protocol } from "@defibeat/registry";
-import { assessProtocol, cexAssessment } from "../lib/rationale";
+import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
+import { GRADE_FILL } from "../lib/pizza";
 
 interface Props {
   protocol: Protocol;
 }
 const { protocol } = Astro.props;
-const slices = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol);
+const slices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol);
+
+const RADIUS = 110;
+const CENTER = 180;
+const LABEL_RADIUS = 150;
+const CONTAINER = 360;
+
+type SlicePath = {
+  assessment: SliceAssessment;
+  d: string;
+  labelX: number;
+  labelY: number;
+};
+
+const slicePaths: SlicePath[] = slices.map((s, i) => {
+  const angle = (2 * Math.PI) / slices.length;
+  const a0 = -Math.PI / 2 + i * angle;
+  const a1 = a0 + angle;
+  const x0 = CENTER + RADIUS * Math.cos(a0);
+  const y0 = CENTER + RADIUS * Math.sin(a0);
+  const x1 = CENTER + RADIUS * Math.cos(a1);
+  const y1 = CENTER + RADIUS * Math.sin(a1);
+  const aMid = a0 + angle / 2;
+  const labelX = CENTER + LABEL_RADIUS * Math.cos(aMid);
+  const labelY = CENTER + LABEL_RADIUS * Math.sin(aMid);
+  return {
+    assessment: s,
+    d: `M${CENTER},${CENTER} L${x0},${y0} A${RADIUS},${RADIUS} 0 0,1 ${x1},${y1} Z`,
+    labelX,
+    labelY,
+  };
+});
+
+const hoverRules = slices
+  .map(
+    (s) => `
+  .rosette:has([data-slice="${s.id}"]:hover) [data-rlabel="${s.id}"] { color: var(--text); }
+  .rosette:has([data-slice="${s.id}"]:hover) [data-tip="${s.id}"] { opacity: 1; }
+`,
+  )
+  .join("");
 ---
 <section class="risk-analysis" id="risk-analysis">
   <h2>Risk analysis</h2>
   <p class="lede">
     One card per dimension. At Phase 0 most cards read <em>not yet assessed</em>; only Verifiability and Dependencies carry automated signals. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
   </p>
+
+  <div class="rosette" style={`width:${CONTAINER}px;height:${CONTAINER}px`}>
+    <svg width={CONTAINER} height={CONTAINER} viewBox={`0 0 ${CONTAINER} ${CONTAINER}`} role="img" aria-label="Risk rosette">
+      {slicePaths.map(({ assessment, d }) => (
+        <a href={`#${assessment.id}`} data-slice={assessment.id} class="slice">
+          <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--bg)" stroke-width="2">
+            <title>{`${assessment.label} \u2014 ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
+          </path>
+        </a>
+      ))}
+    </svg>
+    {slicePaths.map(({ assessment, labelX, labelY }) => (
+      <span class="rlabel" data-rlabel={assessment.id} style={`left:${labelX}px;top:${labelY}px`}>
+        {assessment.label}
+      </span>
+    ))}
+    <div class="tip-slot">
+      {slices.map((s) => (
+        <div class:list={["tip", `grade-${s.grade}`]} data-tip={s.id}>
+          <div class="tip-meta">
+            <span class="tip-label">{s.label}</span>
+            <span class="tip-grade">{s.grade === "gray" ? "unknown" : s.grade}</span>
+          </div>
+          <div class="tip-headline">{s.headline}</div>
+          <p class="tip-rationale">{s.rationale}</p>
+        </div>
+      ))}
+      <div class="tip-default">
+        <span>Hover a slice to see the rationale · click to jump to the card below.</span>
+      </div>
+    </div>
+  </div>
 
   <ol class="cards">
     {slices.map((s) => (
@@ -31,6 +104,8 @@ const slices = protocol.category === "CEX" ? cexAssessment() : assessProtocol(pr
   </ol>
 </section>
 
+<style set:html={hoverRules}></style>
+
 <style>
   .risk-analysis {
     margin-top: 2.5rem;
@@ -47,6 +122,118 @@ const slices = protocol.category === "CEX" ? cexAssessment() : assessProtocol(pr
     font-size: 0.9rem;
   }
   .link { color: var(--accent-link); }
+
+  .rosette {
+    position: relative;
+    margin: 0 auto 2rem;
+    max-width: 100%;
+  }
+  .rosette svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .slice {
+    cursor: pointer;
+  }
+  .slice path {
+    transition: opacity 150ms ease;
+  }
+  .rosette:has(.slice:hover) .slice:not(:hover) path {
+    opacity: 0.25;
+  }
+
+  .rlabel {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: center;
+    width: 90px;
+    font-weight: 600;
+    pointer-events: none;
+    transition: color 150ms ease;
+    line-height: 1.2;
+  }
+
+  .tip-slot {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    width: min(380px, 92vw);
+    min-height: 7.5rem;
+    margin-top: 0.5rem;
+  }
+  .tip,
+  .tip-default {
+    position: absolute;
+    inset: 0;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-left-width: 3px;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    transition: opacity 150ms ease;
+    pointer-events: none;
+  }
+  .tip { opacity: 0; }
+  .tip-default {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-style: italic;
+    text-align: center;
+    border-left-color: var(--surface-raised);
+    transition: opacity 150ms ease;
+  }
+  .rosette:has(.slice:hover) .tip-default { opacity: 0; }
+
+  .tip.grade-gray { border-left-color: var(--grade-gray); }
+  .tip.grade-green { border-left-color: var(--grade-green); }
+  .tip.grade-orange { border-left-color: var(--grade-orange); }
+  .tip.grade-red { border-left-color: var(--grade-red); }
+
+  .tip-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .tip-label {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .tip-grade {
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .tip.grade-green .tip-grade { color: var(--grade-green); }
+  .tip.grade-orange .tip-grade { color: var(--grade-orange); }
+  .tip.grade-red .tip-grade { color: var(--grade-red); }
+  .tip-headline {
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+  .tip-rationale {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    margin: 0;
+  }
+
   .cards {
     list-style: none;
     padding: 0;
@@ -107,5 +294,11 @@ const slices = protocol.category === "CEX" ? cexAssessment() : assessProtocol(pr
     font-size: 0.88rem;
     line-height: 1.5;
     margin: 0;
+  }
+
+  @media (max-width: 480px) {
+    .rosette { width: 300px !important; height: 300px !important; }
+    .rlabel { font-size: 0.65rem; width: 70px; }
+    .tip-slot { margin-top: 1rem; min-height: 8.5rem; }
   }
 </style>
