@@ -22,7 +22,6 @@
   let query = $state("");
   let showInactive = $state(false);
   let showAll = $state(false);
-  let pizzaFilters = $state<Record<string, boolean>>({});
   let expanded = $state<Record<string, boolean>>({});
   let sortField = $state<SortField>("tvl");
   let sortDir = $state<SortDir>("desc");
@@ -37,7 +36,6 @@
     }),
   );
   const visible = $derived(showAll ? filtered : filtered.slice(0, DEFAULT_PAGE));
-  const activePizzas = $derived(Object.keys(pizzaFilters).filter((k) => pizzaFilters[k]));
   const showSort = $derived(!searching);
 
   function onSortClick(field: SortField) {
@@ -114,24 +112,6 @@
       <input type="checkbox" bind:checked={showInactive} />
       Show inactive
     </label>
-  </div>
-
-  <div class="chips">
-    {#each PIZZA_SLICES as s}
-      {@const on = !!pizzaFilters[s.id]}
-      <button
-        type="button"
-        aria-pressed={on}
-        class:on
-        title={`${s.label} ${EM_DASH} all unknown at Phase 0`}
-        onclick={() => { pizzaFilters = { ...pizzaFilters, [s.id]: !pizzaFilters[s.id] }; }}
-      >
-        {s.label}
-      </button>
-    {/each}
-    {#if activePizzas.length > 0}
-      <span class="chips-note">(filters are no-ops at Phase 0)</span>
-    {/if}
   </div>
 
   <div class="scroll">
@@ -291,29 +271,6 @@
     align-items: center;
     color: var(--text-muted);
     font-size: 0.85rem;
-  }
-  .chips {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
-  .chips button {
-    min-height: 44px;
-    padding: 0 0.9rem;
-    border: 1px solid var(--surface-raised);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    cursor: pointer;
-  }
-  .chips button.on { background: var(--accent-link); color: var(--bg); }
-  .chips-note {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    align-self: center;
-    margin-left: 0.5rem;
   }
   .scroll { overflow-x: auto; }
   table {
