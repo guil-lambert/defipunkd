@@ -78,6 +78,15 @@ jobs:
             pnpm --silent --filter @defipunkd/validator run reconcile -- $slugs
           fi
 
+      - name: Upload raw LLM output as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconcile-raw-${{ github.run_number }}
+          path: data/master/*.raw.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Open PR with master files
         uses: peter-evans/create-pull-request@v7
         with:
@@ -88,5 +97,5 @@ jobs:
 
             See workflow run for per-slug logs.
           branch: reconcile/auto-run-${{ github.run_number }}
-          add-paths: data/master/**
+          add-paths: data/master/*.json
           delete-branch: true

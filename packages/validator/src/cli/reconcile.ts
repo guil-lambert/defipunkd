@@ -101,16 +101,27 @@ async function reconcileSlug(root: string, opts: ReconcileOptions): Promise<void
     const llmResult = await invokeClaude(model, prompt);
     console.log(`[reconcile] ${slug}: API returned in ${Date.now() - t0}ms (ok=${llmResult.ok})`);
     if (llmResult.ok) {
+      // Always save the raw output next to the master file for inspection,
+      // regardless of whether it validated. Critical for diagnosing schema
+      // drift between the prompt contract and what Sonnet actually emits.
+      const rawPath = join(root, "data", "master", `${slug}.raw.txt`);
+      mkdirSync(resolve(rawPath, ".."), { recursive: true });
+      writeFileSync(rawPath, llmResult.output);
+      console.log(`[reconcile] ${slug}: raw LLM output saved to ${rawPath}`);
+
       const extracted = extractFencedJson(llmResult.output);
       const parsed = MasterSchema.safeParse(extracted);
       if (parsed.success) {
         master = parsed.data;
         console.log(`[reconcile] ${slug}: LLM synthesis OK (${model})`);
       } else {
+        const issues = parsed.error.issues.slice(0, 5).map((i) => `  - ${i.path.join(".") || "(root)"}: ${i.message}`).join("\n");
         console.warn(
-          `[reconcile] ${slug}: LLM output failed master schema, falling back to draft. First issue: ${parsed.error.issues[0]?.message}`,
+          `[reconcile] ${slug}: LLM output failed master schema (${parsed.error.issues.length} issues), falling back to draft:\n${issues}`,
         );
-        master.flags.push(`reconciler: LLM output rejected by schema — ${parsed.error.issues[0]?.message ?? "unknown"}`);
+        const firstPath = parsed.error.issues[0]?.path.join(".") || "(root)";
+        const firstMsg = parsed.error.issues[0]?.message ?? "unknown";
+        master.flags.push(`reconciler: LLM output rejected by schema at ${firstPath} — ${firstMsg}`);
       }
     } else {
       console.warn(`[reconcile] ${slug}: LLM call failed (${llmResult.reason}), using deterministic draft`);
