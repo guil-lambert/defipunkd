@@ -11,7 +11,6 @@
   import { EM_DASH, formatTvl } from "../lib/format";
 
   const DEFAULT_PAGE = 200;
-  const CHAIN_ROW: readonly ChainTabKey[] = ["All", ...CHAIN_TABS];
 
   type Props = {
     nodes: LandingNode[];
@@ -20,6 +19,17 @@
   };
 
   let { nodes, tabCounts, chainTvl }: Props = $props();
+
+  const FIXED_CATS = ["All", "DeFi"] as const;
+  const sortedCategoryTabs: CategoryTab[] = [
+    ...FIXED_CATS,
+    ...(TABS.filter((t) => !FIXED_CATS.includes(t as typeof FIXED_CATS[number])) as CategoryTab[])
+      .sort((a, b) => (tabCounts[b] ?? 0) - (tabCounts[a] ?? 0)),
+  ];
+  const sortedChainRow: ChainTabKey[] = [
+    "All",
+    ...[...CHAIN_TABS].sort((a, b) => (chainTvl[b] ?? 0) - (chainTvl[a] ?? 0)),
+  ];
 
   let tab = $state<CategoryTab>(DEFAULT_TAB);
   let chainTab = $state<ChainTabKey>("All");
@@ -92,7 +102,7 @@
 
 <section>
   <nav class="tabs" aria-label="Category">
-    {#each TABS as t}
+    {#each sortedCategoryTabs as t}
       {@const active = t === tab}
       {@const count = tabCounts[t] ?? 0}
       <button
@@ -106,7 +116,7 @@
     {/each}
   </nav>
   <nav class="tabs chains" aria-label="Chain">
-    {#each CHAIN_ROW as c}
+    {#each sortedChainRow as c}
       {@const active = c === chainTab}
       {@const tvl = chainTvl[c] ?? 0}
       <button
@@ -115,7 +125,7 @@
         class:active
         onclick={() => { chainTab = c; showAll = false; }}
       >
-        {c}<span class="count">{formatTvl(tvl)}</span>
+        {c}{#if c !== "All"}<span class="count">{formatTvl(tvl)}</span>{/if}
       </button>
     {/each}
   </nav>
