@@ -1,5 +1,6 @@
 ---
-import { listProtocols } from "@defipunkd/registry";
+import { listProtocols, getAssessments } from "@defipunkd/registry";
+import type { GradeColor } from "../lib/verifiability";
 import Base from "../layouts/Base.astro";
 import LandingTable from "../components/LandingTable.svelte";
 import { bucketCategory } from "../lib/category-map";
@@ -9,10 +10,20 @@ import { verifiabilityGrade } from "../lib/verifiability";
 import { dependenciesGrade } from "../lib/dependencies";
 
 const protocols = listProtocols();
+const assessments = getAssessments();
 const unmapped = new Set<string>();
 
 const rows: LandingRow[] = protocols.map((p) => {
   bucketCategory(p.category, (raw) => unmapped.add(raw));
+  const bySlice = assessments.get(p.slug);
+  const assessment_grades = bySlice
+    ? Object.fromEntries(
+        Array.from(bySlice.entries()).map(([sliceId, a]) => [
+          sliceId,
+          (a.grade === "unknown" ? "gray" : a.grade) as GradeColor,
+        ]),
+      )
+    : undefined;
   return {
     slug: p.slug,
     name: p.name,
@@ -28,6 +39,7 @@ const rows: LandingRow[] = protocols.map((p) => {
     logo: p.logo,
     verifiability_grade: verifiabilityGrade(!!(p.github && p.github.length > 0), p.audit_count ?? 0),
     dependencies_grade: dependenciesGrade(p.category, p.forked_from),
+    assessment_grades,
   };
 });
 

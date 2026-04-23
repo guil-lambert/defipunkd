@@ -145,7 +145,6 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
             {s.strength && <span class:list={["strength", `strength-${s.strength}`]}>{s.strength}</span>}
           </div>
           <div class="tip-headline">{s.headline}</div>
-          <p class="tip-rationale">{s.rationale}</p>
         </div>
       ))}
     </div>
@@ -164,27 +163,42 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
           <div class="headline">{s.headline}</div>
           {s.structured ? (
             <div class="structured">
-              {s.structured.findings.length > 0 && (
-                <dl class="findings">
-                  {s.structured.findings.map((f: Finding) => (
-                    <div class="finding">
-                      <dt>{f.code}</dt>
-                      <dd>{f.text}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-              {s.structured.steelman && (
-                <div class="steelman">
-                  <div class="steelman-row grade-red"><span class="steelman-label">Steel-man red</span><span class="steelman-text">{s.structured.steelman.red}</span></div>
-                  <div class="steelman-row grade-orange"><span class="steelman-label">Steel-man orange</span><span class="steelman-text">{s.structured.steelman.orange}</span></div>
-                  <div class="steelman-row grade-green"><span class="steelman-label">Steel-man green</span><span class="steelman-text">{s.structured.steelman.green}</span></div>
+              {s.structured.steelman && s.grade !== "gray" && (
+                <div class:list={["steelman-chosen", `grade-${s.grade}`]}>
+                  <span class="steelman-label">Steel-man {s.grade}</span>
+                  <span class="steelman-text">{s.structured.steelman[s.grade as "red" | "orange" | "green"]}</span>
                 </div>
               )}
-              <p class="verdict">{s.structured.verdict}</p>
+              <details class="drawer">
+                <summary>Verdict</summary>
+                <p class="verdict">{s.structured.verdict}</p>
+              </details>
+              {s.structured.findings.length > 0 && (
+                <details class="drawer">
+                  <summary>Evidence ({s.structured.findings.length})</summary>
+                  <dl class="findings">
+                    {s.structured.findings.map((f: Finding) => (
+                      <div class="finding">
+                        <dt>{f.code}</dt>
+                        <dd>{f.text}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </details>
+              )}
             </div>
           ) : (
             <p class="rationale">{s.rationale}</p>
+          )}
+
+          {s.models && s.models.length > 0 && (
+            <div class="sources">
+              <span class="sources-label">Sources</span>
+              <span class="model-badges">
+                {s.models.map((m) => <span class="model-badge">{m}</span>)}
+              </span>
+              <a class="sources-link" href={`https://github.com/guil-lambert/defipunkd/tree/main/data/submissions/${protocol.slug}/${s.id}`} rel="noreferrer" target="_blank">View raw submissions ↗</a>
+            </div>
           )}
 
           <details class="audit-panel">
@@ -200,9 +214,15 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
                 <strong>On the GitHub commit page</strong> (URL params only prefill file content, not the commit form):
               </p>
               <ul class="audit-hints">
-                <li>Commit message: <code>{suggestedCommit(s.id as SliceId)}</code></li>
+                <li>
+                  Commit message: <code>{suggestedCommit(s.id as SliceId)}</code>
+                  <button type="button" class="mini-copy" data-copy-text={suggestedCommit(s.id as SliceId)} aria-label="Copy commit message">copy</button>
+                </li>
                 <li>Radio: pick <em>"Create a new branch for this commit and start a pull request"</em></li>
-                <li>Branch name: <code>{suggestedBranch(s.id as SliceId)}</code> (rename GitHub's auto-suggested <code>{`<username>-patch-N`}</code>)</li>
+                <li>
+                  Branch name: <code>{suggestedBranch(s.id as SliceId)}</code>
+                  <button type="button" class="mini-copy" data-copy-text={suggestedBranch(s.id as SliceId)} aria-label="Copy branch name">copy</button>
+                </li>
               </ul>
               <div class="audit-toolbar">
                 <button type="button" class="copy-btn" data-copy-target={`#prompt-${s.id}`}>
@@ -223,13 +243,16 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
 
 <script>
   document.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement)?.closest?.("[data-copy-target]") as HTMLButtonElement | null;
+    const btn = (e.target as HTMLElement)?.closest?.("[data-copy-target],[data-copy-text]") as HTMLButtonElement | null;
     if (!btn) return;
-    const sel = btn.getAttribute("data-copy-target");
-    if (!sel) return;
-    const target = document.querySelector(sel) as HTMLElement | null;
-    if (!target) return;
-    navigator.clipboard.writeText(target.textContent ?? "").then(() => {
+    let text = btn.getAttribute("data-copy-text") ?? "";
+    if (!text) {
+      const sel = btn.getAttribute("data-copy-target");
+      const target = sel ? (document.querySelector(sel) as HTMLElement | null) : null;
+      if (!target) return;
+      text = target.textContent ?? "";
+    }
+    navigator.clipboard.writeText(text).then(() => {
       const prev = btn.textContent;
       btn.textContent = "Copied ✓";
       setTimeout(() => {
@@ -443,39 +466,17 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     line-height: 1.5;
     margin: 0;
   }
-  .structured { display: flex; flex-direction: column; gap: 0.75rem; }
-  .findings {
-    margin: 0;
-    padding: 0;
+  .structured { display: flex; flex-direction: column; gap: 0.6rem; }
+  .steelman-chosen {
     display: grid;
-    grid-template-columns: min-content 1fr;
-    gap: 0.25rem 0.75rem;
-    font-size: 0.85rem;
-    line-height: 1.5;
-  }
-  .finding { display: contents; }
-  .findings dt {
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    background: var(--surface-raised);
-    padding: 0.05rem 0.45rem;
-    border-radius: 3px;
-    align-self: start;
-    white-space: nowrap;
-  }
-  .findings dd { margin: 0; color: var(--text); }
-  .steelman {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
+    grid-template-columns: max-content 1fr;
+    gap: 0.6rem;
     padding: 0.6rem 0.8rem;
     background: var(--surface-raised);
     border-radius: 4px;
-    font-size: 0.82rem;
+    font-size: 0.85rem;
     line-height: 1.5;
   }
-  .steelman-row { display: grid; grid-template-columns: 9rem 1fr; gap: 0.75rem; }
   .steelman-label {
     font-size: 0.68rem;
     letter-spacing: 0.06em;
@@ -483,19 +484,102 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     font-weight: 600;
     color: var(--text-muted);
     align-self: start;
-    padding-top: 0.1rem;
+    padding-top: 0.15rem;
+    white-space: nowrap;
   }
-  .steelman-row.grade-red .steelman-label { color: var(--grade-red); }
-  .steelman-row.grade-orange .steelman-label { color: var(--grade-orange); }
-  .steelman-row.grade-green .steelman-label { color: var(--grade-green); }
+  .steelman-chosen.grade-red .steelman-label { color: var(--grade-red); }
+  .steelman-chosen.grade-orange .steelman-label { color: var(--grade-orange); }
+  .steelman-chosen.grade-green .steelman-label { color: var(--grade-green); }
   .steelman-text { color: var(--text-muted); }
+
+  .drawer {
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    background: var(--surface-raised);
+  }
+  .drawer[open] { padding-bottom: 0.5rem; }
+  .drawer > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.35rem 0.8rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .drawer > summary::-webkit-details-marker { display: none; }
+  .drawer > summary::after {
+    content: " ▸";
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    transition: transform 150ms ease;
+    display: inline-block;
+  }
+  .drawer[open] > summary::after { transform: rotate(90deg); }
   .verdict {
-    margin: 0;
+    margin: 0.1rem 0.8rem 0.3rem 0.8rem;
     color: var(--text);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 500;
     line-height: 1.5;
   }
+  .findings {
+    margin: 0.1rem 0.8rem 0.3rem 0.8rem;
+    padding: 0;
+    display: grid;
+    grid-template-columns: min-content 1fr;
+    gap: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .finding { display: contents; }
+  .findings dt {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 0.05rem 0.45rem;
+    border-radius: 3px;
+    align-self: start;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .findings dd { margin: 0; color: var(--text-muted); }
+
+  .sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+  }
+  .sources-label {
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.68rem;
+  }
+  .model-badges { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
+  .model-badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: 0.72rem;
+    font-weight: 500;
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+  .sources-link {
+    color: var(--accent-link);
+    font-size: 0.75rem;
+    text-decoration: none;
+    margin-left: auto;
+  }
+  .sources-link:hover { text-decoration: underline; }
 
   .audit-panel {
     margin-top: 0.75rem;
@@ -542,6 +626,20 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     font-size: 0.82rem;
     line-height: 1.6;
   }
+  .audit-hints li { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+  .mini-copy {
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    border: 1px solid var(--surface-raised);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mini-copy:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
   .audit-hints code {
     color: var(--text);
     background: var(--bg);
