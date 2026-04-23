@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ProtocolSnapshot, Snapshot } from "@defibeat/registry";
+import type { ProtocolSnapshot, Snapshot } from "@defipunkd/registry";
 import { carryForward } from "./carry-forward";
 
 function fresh(slug: string, generatedAt: string): ProtocolSnapshot {

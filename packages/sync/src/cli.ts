@@ -2,13 +2,13 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ProtocolSnapshot, Snapshot } from "@defibeat/registry";
+import type { ProtocolSnapshot, Snapshot } from "@defipunkd/registry";
 import type { LlamaParentProtocol, LlamaProtocol } from "./types";
 import { normalizeParent, normalizeProtocol } from "./normalize";
 import { carryForward } from "./carry-forward";
 import { buildSummary, formatSummary } from "./summary";
 
-const CONTACT = "https://github.com/guil-lambert/defibeat";
+const CONTACT = "https://github.com/guil-lambert/defipunkd";
 const LLAMA_URL = "https://api.llama.fi/protocols";
 const LLAMA_LITE_URL = "https://api.llama.fi/lite/protocols2";
 
@@ -25,7 +25,7 @@ function findRepoRoot(): string {
 
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url, {
-    headers: { "User-Agent": `DefiBeat (+${CONTACT})` },
+    headers: { "User-Agent": `defipunkd (+${CONTACT})` },
   });
   if (!res.ok) {
     throw new Error(`${url} → ${res.status}: ${res.statusText}`);
@@ -62,7 +62,7 @@ function writeAtomic(path: string, data: string): void {
 
 async function main(): Promise<void> {
   const start = Date.now();
-  const repoRoot = resolve(process.env.DEFIBEAT_REPO_ROOT ?? findRepoRoot());
+  const repoRoot = resolve(process.env.DEFIPUNKD_REPO_ROOT ?? findRepoRoot());
   const snapshotPath = join(repoRoot, "data", "defillama-snapshot.json");
 
   console.error(`[sync] fetching ${LLAMA_URL}`);

@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { PROMPT_VERSION, SLICE_IDS } from "@defibeat/prompts";
+import { PROMPT_VERSION, SLICE_IDS } from "@defipunkd/prompts";
 import { SubmissionSchema, type Submission } from "../schema";
 import { computeQuorum, type Assessment, type Disagreement } from "../quorum";
 import { findRepoRoot, loadSnapshot } from "../repo";

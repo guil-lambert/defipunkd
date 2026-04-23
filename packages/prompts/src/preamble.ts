@@ -1,4 +1,4 @@
-export const preamble = `You are contributing a single-slice assessment to DefiBeat, a git-native transparency registry for DeFi protocols. Your JSON output will be attached to a pull request and compared against ≥2 other independent runs. Disagreements are surfaced publicly — be conservative, cite everything, return grade="unknown" when a signal cannot be determined, and resist stopping at the first damning finding.
+export const preamble = `You are contributing a single-slice assessment to defipunkd, a git-native transparency registry for DeFi protocols. Your JSON output will be attached to a pull request and compared against ≥2 other independent runs. Disagreements are surfaced publicly — be conservative, cite everything, return grade="unknown" when a signal cannot be determined, and resist stopping at the first damning finding.
 
 ### Pinned inputs (do not infer; these are ground truth)
 - protocol.slug:              {{slug}}

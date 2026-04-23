@@ -4,13 +4,13 @@
 >
 > Anything below references the original Phase 0 build as it was actually executed. Keep for historical reference; do not use as a forward-looking roadmap.
 
-You are implementing **Phase 0** of DefiBeat (see `spec.md` in the repo root — read it in full before starting). Phase 0's "done" definition: list + detail pages live for all DeFiLlama protocols with raw metadata and `unknown` enrichment rows, **fully statically rendered from committed files — no database**. Work in **5 sequential implementation phases**. After each phase, stop, summarize what changed, and wait for my go-ahead before starting the next.
+You are implementing **Phase 0** of defipunkd (see `spec.md` in the repo root — read it in full before starting). Phase 0's "done" definition: list + detail pages live for all DeFiLlama protocols with raw metadata and `unknown` enrichment rows, **fully statically rendered from committed files — no database**. Work in **5 sequential implementation phases**. After each phase, stop, summarize what changed, and wait for my go-ahead before starting the next.
 
 ## Pre-flight (before Phase 1)
 
 Confirm you've read `spec.md` in full, then ask for or confirm each of the following before writing code:
 
-- **Contact URL** for the `User-Agent: DefiBeat (+<contact-url>)` header sent to DeFiLlama.
+- **Contact URL** for the `User-Agent: defipunkd (+<contact-url>)` header sent to DeFiLlama.
 - **Vercel project** name/slug this deploys into.
 - **GitHub repo** slug.
 - **pnpm + Node versions** to pin via `packageManager` and `.nvmrc` / `engines`.
@@ -61,7 +61,7 @@ Flag contradictions between `spec.md` prose and the "Interview decisions" / "Lan
 ## Phase 2 — `pnpm sync` CLI
 
 1. Create `packages/sync` — a plain node CLI (no Vercel route, no HTTP server). Entry point: `pnpm sync`.
-2. Fetch `https://api.llama.fi/protocols` with `User-Agent: DefiBeat (+<contact-url>)`.
+2. Fetch `https://api.llama.fi/protocols` with `User-Agent: defipunkd (+<contact-url>)`.
 3. Normalize into the `ProtocolSnapshot` shape from spec §"Data model":
    - `parent_slug` from `parentProtocol` only, and **only when it matches an existing slug in the snapshot** (strict slug-only linkage; string-label parents ignored, no slugification, no alias file).
    - `is_dead` from `deadUrl` / `deadFrom` / category hints.
@@ -134,7 +134,7 @@ Flag contradictions between `spec.md` prose and the "Interview decisions" / "Lan
 ## Phase 5 — Methodology, footer, polish + smoke test
 
 1. `/methodology` as static MDX (minimal content): "Registry only, no ratings" framing; DeFiLlama seed + curated overlays explanation; **7-slice pizza legend** (all gray at Phase 0) explaining each slice (chain/ownership, upgradeability, exit window, autonomy/accessibility, oracle dependency, external dependencies, collateral risk); note that Defiscan stages arrive in Phase 3 with links out to Defiscan's framework. Indexable.
-2. Footer: methodology link, GitHub issues link (`https://github.com/guil-lambert/defibeat/issues`) for corrections/takedowns, note pointing curators at `data/overlays/`, Defiscan credit.
+2. Footer: methodology link, GitHub issues link (`https://github.com/guil-lambert/defipunkd/issues`) for corrections/takedowns, note pointing curators at `data/overlays/`, Defiscan credit.
 3. Landing page indexable; `/protocol/*` stays `noindex`.
 4. Dark-only theme final pass, cyan accent audit (pizza is the only non-cyan surface).
 5. Lighthouse / typecheck / build pass. Verify HTTP 410 actually returns 410 (not 404 or 200) in a real `next start`.

@@ -1,4 +1,4 @@
-import type { ProtocolSnapshot, Snapshot } from "@defibeat/registry";
+import type { ProtocolSnapshot, Snapshot } from "@defipunkd/registry";
 
 export type SyncSummary = {
   total: number;
@@ -57,7 +57,7 @@ export function buildSummary(
 
 export function formatSummary(s: SyncSummary): string {
   const lines: string[] = [];
-  lines.push(`# DefiBeat sync`);
+  lines.push(`# defipunkd sync`);
   lines.push(``);
   lines.push(`- total protocols: **${s.total}**`);
   lines.push(`- new: **${s.newSlugs.length}**`);

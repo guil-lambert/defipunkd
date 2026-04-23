@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { buildPrompt, PROMPT_VERSION, SLICE_IDS, type SliceId } from "@defibeat/prompts";
+import { buildPrompt, PROMPT_VERSION, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { SubmissionSchema } from "../schema";
 import { cleanupSubmission } from "../cleanup";
 import { findRepoRoot, loadSnapshot } from "../repo";

@@ -1,4 +1,4 @@
-import type { ProtocolSnapshot } from "@defibeat/registry";
+import type { ProtocolSnapshot } from "@defipunkd/registry";
 import type { LlamaParentProtocol, LlamaProtocol } from "./types";
 import { parentSlugFromId } from "./types";
 

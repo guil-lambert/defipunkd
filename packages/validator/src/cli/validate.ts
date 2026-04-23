@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { PROMPT_VERSION } from "@defibeat/prompts";
+import { PROMPT_VERSION } from "@defipunkd/prompts";
 import { SubmissionSchema } from "../schema";
 import { cleanupSubmission } from "../cleanup";
 import { crossCheck } from "../cross-check";
@@ -20,7 +20,7 @@ async function main(): Promise<number> {
   const files = args.filter((a) => !a.startsWith("--"));
 
   if (files.length === 0) {
-    console.error("usage: defibeat-validate <file.json> [<file.json> ...] [--write]");
+    console.error("usage: defipunkd-validate <file.json> [<file.json> ...] [--write]");
     return 2;
   }
 
