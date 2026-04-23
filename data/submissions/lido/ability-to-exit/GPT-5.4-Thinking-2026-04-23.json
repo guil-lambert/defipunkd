@@ -1,1 +1,57 @@
-{"schema_version":1,"slug":"lido","slice":"ability-to-exit","snapshot_generated_at":"2026-04-22T22:09:47.359Z","prompt_version":4,"analysis_date":"2026-04-23","model":"GPT-5.4 Thinking","chat_url":null,"grade":"orange","headline":"Finalized Lido claims stay open; governance can still freeze new exits","rationale":"Steel-man red: a governance-linked reseal path can keep withdrawal requests and finalization paused indefinitely. Steel-man orange: claimWithdrawals/claimWithdrawal stay callable while request placement/finalization can be halted, with a 14-day GateSeal committee emergency path and a separate governance-linked reseal path. Steel-man green: finalized exits are permissionless on-chain. Choosing orange because finalized claims are pause-exempt, but new exits/finalization can still be frozen beyond 14 days through governance-linked reseal.","evidence":[{"url":"[https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1","shows":"Deployed](https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1%22,%22shows%22:%22Deployed) Ethereum mainnet WithdrawalQueue proxy; explorer page links the implementation and shows recent direct user transactions invoking Request Withdrawal and Claim Withdrawal methods, supporting that exit functions are callable on-chain without the frontend.","chain":"Ethereum","address":"0x889edc2edab5f40e902b864ad4d7ade8e412f9b1"},{"url":"[https://github.com/lidofinance/core/blob/master/deployed-mainnet.json","shows":"Maps](https://github.com/lidofinance/core/blob/master/deployed-mainnet.json%22,%22shows%22:%22Maps) the mainnet WithdrawalQueueERC721 proxy at 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1 to implementation 0xE42C659Dc09109566720EA8b2De186c2Be7D94D9 and identifies the implementation source file.","commit":"cbcc6d1"},{"url":"[https://github.com/lidofinance/core/blob/master/contracts/0.8.9/WithdrawalQueue.sol","shows":"Enumerates](https://github.com/lidofinance/core/blob/master/contracts/0.8.9/WithdrawalQueue.sol%22,%22shows%22:%22Enumerates) exit functions: requestWithdrawals, requestWithdrawalsWstETH, requestWithdrawalsWithPermit, requestWithdrawalsWstETHWithPermit, claimWithdrawalsTo, claimWithdrawals, claimWithdrawal. request* paths call _checkResumed(); pauseFor/pauseUntil are onlyRole(PAUSE_ROLE) and explicitly state finalized claims remain available; claim* paths are ownership/finalization checks and are not wrapped in _checkResumed().","commit":"9496e61"},{"url":"[https://github.com/lidofinance/docs/blob/main/docs/guides/protocol-levers.md","shows":"Lists](https://github.com/lidofinance/docs/blob/main/docs/guides/protocol-levers.md%22,%22shows%22:%22Lists) WithdrawalQueue role holders: PAUSE_ROLE is held by the Withdrawal Queue GateSeal and the Reseal Manager; RESUME_ROLE is held by the Reseal Manager. Also states protocol proxy admins are set to the Lido DAO Agent, tying the slow path to DAO governance rather than a unilateral operator.","commit":"d44c996"},{"url":"[https://github.com/lidofinance/docs/blob/main/docs/contracts/gate-seal.md","shows":"Describes](https://github.com/lidofinance/docs/blob/main/docs/contracts/gate-seal.md%22,%22shows%22:%22Describes) GateSeal as a committee-operated one-time immediate emergency pause with pause duration capped at 14 days; identifies the active WithdrawalQueue GateSeal address; and states the ResealManager can extend a temporary pause into a governance-controlled pause until governance explicitly unpauses.","commit":"836e675"},{"url":"[https://etherscan.io/address/0x7914b5a1539b97bd0bbd155757f25fd79a522d24","shows":"Verified](https://etherscan.io/address/0x7914b5a1539b97bd0bbd155757f25fd79a522d24%22,%22shows%22:%22Verified) Ethereum contract for the ResealManager. The ABI exposes reseal, resume, PAUSE_INFINITELY, EMERGENCY_PROTECTED_TIMELOCK, and CallerIsNotGovernance, supporting that the indefinite pause extension path is implemented via a governance-linked contract rather than the emergency committee directly.","chain":"Ethereum","address":"0x7914b5a1539b97bd0bbd155757f25fd79a522d24"},{"url":"[https://etherscan.io/address/0x8A854C4E750CDf24f138f34A9061b2f556066912","shows":"Verified](https://etherscan.io/address/0x8A854C4E750CDf24f138f34A9061b2f556066912%22,%22shows%22:%22Verified) Ethereum contract for the WithdrawalQueue GateSeal, the emergency pause component referenced in Lido docs for the queue.","chain":"Ethereum","address":"0x8A854C4E750CDf24f138f34A9061b2f556066912"}],"unknowns":["E5: I could not determine a protocol-enforced maximum queue duration or a protocol-enforced daily withdrawal cap from the allowed sources checked.","E6: No dedicated forced-exit or escape-hatch function beyond the standard request/claim path was identified in the checked sources, but I could not prove its nonexistence exhaustively from the allowed sources alone."]}
+{
+  "schema_version": 1,
+  "slug": "lido",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 4,
+  "analysis_date": "2026-04-23",
+  "model": "gpt-5-thinking",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Finalized Lido claims stay open; governance can still freeze new exits",
+  "rationale": "Steel-man red: a governance-linked reseal path can keep withdrawal requests and finalization paused indefinitely. Steel-man orange: claimWithdrawals and claimWithdrawal stay callable while request placement and finalization can be halted, with a 14-day GateSeal committee emergency path and a separate governance-linked reseal path. Steel-man green: finalized exits are permissionless on-chain. Choosing orange because finalized claims are pause-exempt, but new exits and finalization can still be frozen beyond 14 days through governance-linked reseal.",
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1",
+      "shows": "Deployed Ethereum mainnet WithdrawalQueue proxy; explorer page links the implementation and shows recent direct user transactions invoking Request Withdrawal and Claim Withdrawal methods, supporting that exit functions are callable on-chain without the frontend.",
+      "chain": "Ethereum",
+      "address": "0x889edc2edab5f40e902b864ad4d7ade8e412f9b1"
+    },
+    {
+      "url": "https://github.com/lidofinance/core/blob/master/deployed-mainnet.json",
+      "shows": "Maps the mainnet WithdrawalQueueERC721 proxy at 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1 to implementation 0xE42C659Dc09109566720EA8b2De186c2Be7D94D9 and identifies the implementation source file.",
+      "commit": "cbcc6d1"
+    },
+    {
+      "url": "https://github.com/lidofinance/core/blob/master/contracts/0.8.9/WithdrawalQueue.sol",
+      "shows": "Enumerates exit functions: requestWithdrawals, requestWithdrawalsWstETH, requestWithdrawalsWithPermit, requestWithdrawalsWstETHWithPermit, claimWithdrawalsTo, claimWithdrawals, claimWithdrawal. request paths call _checkResumed(); pauseFor and pauseUntil are onlyRole(PAUSE_ROLE) and explicitly state finalized claims remain available; claim paths are ownership and finalization checks and are not wrapped in _checkResumed().",
+      "commit": "9496e61"
+    },
+    {
+      "url": "https://github.com/lidofinance/docs/blob/main/docs/guides/protocol-levers.md",
+      "shows": "Lists WithdrawalQueue role holders: PAUSE_ROLE is held by the Withdrawal Queue GateSeal and the Reseal Manager; RESUME_ROLE is held by the Reseal Manager. Also states protocol proxy admins are set to the Lido DAO Agent, tying the slow path to DAO governance rather than a unilateral operator.",
+      "commit": "d44c996"
+    },
+    {
+      "url": "https://github.com/lidofinance/docs/blob/main/docs/contracts/gate-seal.md",
+      "shows": "Describes GateSeal as a committee-operated one-time immediate emergency pause with pause duration capped at 14 days; identifies the active WithdrawalQueue GateSeal address; and states the ResealManager can extend a temporary pause into a governance-controlled pause until governance explicitly unpauses.",
+      "commit": "836e675"
+    },
+    {
+      "url": "https://etherscan.io/address/0x7914b5a1539b97bd0bbd155757f25fd79a522d24",
+      "shows": "Verified Ethereum contract for the ResealManager. The ABI exposes reseal, resume, PAUSE_INFINITELY, EMERGENCY_PROTECTED_TIMELOCK, and CallerIsNotGovernance, supporting that the indefinite pause extension path is implemented via a governance-linked contract rather than the emergency committee directly.",
+      "chain": "Ethereum",
+      "address": "0x7914b5a1539b97bd0bbd155757f25fd79a522d24"
+    },
+    {
+      "url": "https://etherscan.io/address/0x8A854C4E750CDf24f138f34A9061b2f556066912",
+      "shows": "Verified Ethereum contract for the WithdrawalQueue GateSeal, the emergency pause component referenced in Lido docs for the queue.",
+      "chain": "Ethereum",
+      "address": "0x8A854C4E750CDf24f138f34A9061b2f556066912"
+    }
+  ],
+  "unknowns": [
+    "E5: I could not determine a protocol-enforced maximum queue duration or a protocol-enforced daily withdrawal cap from the allowed sources checked.",
+    "E6: No dedicated forced-exit or escape-hatch function beyond the standard request and claim path was identified in the checked sources, but I could not prove its nonexistence exhaustively from the allowed sources alone."
+  ]
+}
