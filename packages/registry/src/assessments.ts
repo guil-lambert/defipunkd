@@ -20,6 +20,7 @@ export type LoadedAssessment = {
   strength: AssessmentStrength;
   headline: string;
   rationale: Rationale;
+  models: string[];
 };
 
 type RawAssessment = {
@@ -29,6 +30,7 @@ type RawAssessment = {
   consensus_grade: AssessmentGrade;
   consensus_strength: AssessmentStrength;
   primary_submission_path: string;
+  merged_from?: Array<{ model: string }>;
 };
 
 type RawSubmission = {
@@ -93,6 +95,10 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         continue;
       }
 
+      const models = Array.from(
+        new Set((raw.merged_from ?? []).map((m) => m.model).filter((m) => typeof m === "string" && m.length > 0)),
+      );
+
       bySlice.set(sliceId, {
         slug: raw.slug,
         slice: raw.slice,
@@ -100,6 +106,7 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         strength: raw.consensus_strength,
         headline: sub.headline,
         rationale: sub.rationale,
+        models,
       });
     }
 

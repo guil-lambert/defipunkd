@@ -11,9 +11,10 @@ export type SliceAssessment = {
   rationale: string;
   structured?: Rationale;
   strength?: "strong" | "weak";
+  models?: string[];
 };
 
-function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "rationale" | "structured" | "strength"> {
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "rationale" | "structured" | "strength" | "models"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
   return {
     grade,
@@ -21,6 +22,7 @@ function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "gra
     rationale: a.rationale.verdict,
     structured: a.rationale,
     strength: a.strength,
+    models: a.models,
   };
 }
 
