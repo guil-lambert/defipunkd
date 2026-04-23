@@ -22,7 +22,7 @@ export const preamble = `You are contributing a single-slice assessment to defip
    d) DeFiLlama's pinned fields (for category / chain lists only — not for risk assessment).
 3. If you cannot find a signal after checking the sources above, set grade="unknown" with at least one entry in unknowns[] naming what you looked for and why you could not determine it.
 4. Every factual claim in rationale must map to at least one evidence[] entry.
-5. Output exactly one JSON object matching the output contract at the end of this prompt. No markdown fences, no prose outside JSON.
+5. Output exactly one JSON object matching the output contract at the end of this prompt, wrapped in a single fenced code block with language tag "json" (\`\`\`json ... \`\`\`). This gives the chat UI's copy button a clean single-click copy of the JSON content (the fence is stripped automatically). Nothing before or after the fence — no prose, no explanations, no summary, no follow-up questions. The fence is the ONLY thing that should wrap the JSON; do not nest additional fences inside it.
 
 ### Format rules (validation will reject submissions that violate these)
 6. evidence[].url must be a bare URL string starting with https:// or http://. NEVER wrap it in markdown link syntax. Concretely:
