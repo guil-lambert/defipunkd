@@ -19,13 +19,30 @@ export type PromptInputs = {
 export function buildReconcilerPrompt(inputs: PromptInputs): string {
   const { slug, draft, submissionsBySlice } = inputs;
 
+  // Trim each submission for the prompt: the draft master already carries
+  // the winning submission's full rationale + evidence. For the prompt we
+  // only need enough to let Sonnet decide whether to override the grade,
+  // which headline reads clearest, and what protocol_metadata to union.
+  // We keep: grade, headline, rationale, unknowns, protocol_metadata.
+  // We drop: evidence[] (verbose, already in draft for winner), findings[]
+  // text duplication, schema_version, snapshot_generated_at, analysis_date,
+  // prompt_version, chat_url.
+  const trimSubmission = (s: Submission) => ({
+    model: s.model,
+    grade: s.grade,
+    headline: s.headline,
+    rationale: s.rationale,
+    unknowns: s.unknowns,
+    protocol_metadata: s.protocol_metadata,
+  });
+
   const submissionsBlock = Object.entries(submissionsBySlice)
     .map(([slice, entries]) => {
       if (entries.length === 0) return `### ${slice}\n(no submissions)`;
       const items = entries
         .map(
           (e, i) =>
-            `#### ${slice} #${i + 1} — ${e.submission.model} — grade=${e.submission.grade}\npath: ${e.path}\n\n\`\`\`json\n${JSON.stringify(e.submission, null, 2)}\n\`\`\``,
+            `#### ${slice} #${i + 1} — ${e.submission.model} — grade=${e.submission.grade}\npath: ${e.path}\n\n\`\`\`json\n${JSON.stringify(trimSubmission(e.submission), null, 2)}\n\`\`\``,
         )
         .join("\n\n");
       return `### ${slice}\n${items}`;

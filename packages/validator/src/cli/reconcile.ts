@@ -93,7 +93,10 @@ async function reconcileSlug(root: string, opts: ReconcileOptions): Promise<void
     };
     const prompt = buildReconcilerPrompt(promptInput);
 
-    console.log(`[reconcile] ${slug}: calling Anthropic API — ${model} (prompt ${prompt.length} chars, timeout ${LLM_TIMEOUT_MS}ms)…`);
+    const { inputTokens, worstCaseUsd } = estimateCost(prompt.length, MAX_OUTPUT_TOKENS);
+    console.log(
+      `[reconcile] ${slug}: calling Anthropic API — ${model} (prompt ${prompt.length} chars ≈ ${inputTokens} tokens, max_out=${MAX_OUTPUT_TOKENS}, worst-case ~$${worstCaseUsd.toFixed(3)}, timeout ${LLM_TIMEOUT_MS}ms)…`,
+    );
     const t0 = Date.now();
     const llmResult = await invokeClaude(model, prompt);
     console.log(`[reconcile] ${slug}: API returned in ${Date.now() - t0}ms (ok=${llmResult.ok})`);
@@ -166,7 +169,26 @@ function loadAssessments(root: string, slug: string): Map<Submission["slice"], A
 type LlmResult = { ok: true; output: string } | { ok: false; reason: string };
 
 const LLM_TIMEOUT_MS = Number(process.env.RECONCILE_LLM_TIMEOUT_MS ?? 10 * 60 * 1000);
-const MAX_OUTPUT_TOKENS = 16_000;
+// 8K output tokens is enough for a master file (~10KB text ≈ 3K tokens) with
+// comfortable margin. Lower = tighter cost cap in runaway scenarios.
+const MAX_OUTPUT_TOKENS = 8_000;
+
+// Sonnet 4.6 pricing (as of 2026-04): $3 / Mtok input, $15 / Mtok output.
+// Used only for cost-estimate logging so we see the bill before it lands.
+const SONNET_INPUT_USD_PER_MTOK = 3;
+const SONNET_OUTPUT_USD_PER_MTOK = 15;
+const CHARS_PER_TOKEN_ESTIMATE = 4;
+
+function estimateCost(promptChars: number, maxOutputTokens: number): {
+  inputTokens: number;
+  worstCaseUsd: number;
+} {
+  const inputTokens = Math.ceil(promptChars / CHARS_PER_TOKEN_ESTIMATE);
+  const worstCaseUsd =
+    (inputTokens * SONNET_INPUT_USD_PER_MTOK) / 1_000_000 +
+    (maxOutputTokens * SONNET_OUTPUT_USD_PER_MTOK) / 1_000_000;
+  return { inputTokens, worstCaseUsd };
+}
 
 async function invokeClaude(model: string, prompt: string): Promise<LlmResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -194,6 +216,13 @@ async function invokeClaude(model: string, prompt: string): Promise<LlmResult> {
       }
     }
     const final = await stream.finalMessage();
+    const u = final.usage;
+    const actualUsd =
+      (u.input_tokens * SONNET_INPUT_USD_PER_MTOK) / 1_000_000 +
+      (u.output_tokens * SONNET_OUTPUT_USD_PER_MTOK) / 1_000_000;
+    console.log(
+      `[reconcile] usage: input=${u.input_tokens} output=${u.output_tokens} (actual ~$${actualUsd.toFixed(4)})`,
+    );
     if (final.stop_reason === "max_tokens") {
       return { ok: false, reason: `hit max_tokens=${MAX_OUTPUT_TOKENS}, response truncated` };
     }
