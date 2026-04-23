@@ -16,7 +16,34 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(1);
+    expect(PROMPT_VERSION).toBe(2);
+  });
+
+  it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("NEVER wrap it in markdown link syntax");
+    expect(p).toContain('NEVER use branch names ("main", "master"');
+    expect(p).toContain("^[0-9a-f]{7,40}$");
+  });
+
+  it("includes the steel-man-before-grading rule", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("Steel-man red:");
+    expect(p).toContain("Steel-man orange:");
+    expect(p).toContain("Steel-man green:");
+  });
+
+  it("each slice carries a mandatory inspection checklist", () => {
+    for (const slice of SLICE_IDS) {
+      const p = buildPrompt(slice, INPUTS);
+      expect(p).toContain("MANDATORY INSPECTION CHECKLIST");
+    }
+  });
+
+  it("ability-to-exit calls out the emergency-vs-governance pause distinction", () => {
+    const p = buildPrompt("ability-to-exit", INPUTS);
+    expect(p).toContain("EMERGENCY vs GOVERNANCE");
+    expect(p).toContain("PAUSE_INFINITELY");
   });
 
   it("emits a prompt for every slice", () => {
@@ -34,7 +61,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             1");
+    expect(p).toContain("prompt_version:             2");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
