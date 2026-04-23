@@ -1,5 +1,5 @@
 ---
-import type { Protocol } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
 import { GRADE_FILL } from "../lib/pizza";
 import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
@@ -7,9 +7,10 @@ import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
 interface Props {
   protocol: Protocol;
   snapshotGeneratedAt: string;
+  assessments?: Map<AssessmentSliceId, LoadedAssessment>;
 }
-const { protocol, snapshotGeneratedAt } = Astro.props;
-const slices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol);
+const { protocol, snapshotGeneratedAt, assessments } = Astro.props;
+const slices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
 
 const ANALYSIS_DATE = new Date().toISOString().slice(0, 10);
 const REPO = "guil-lambert/defipunkd";
@@ -137,6 +138,7 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
           <div class="tip-meta">
             <span class="tip-label">{s.label}</span>
             <span class="tip-grade">{s.grade === "gray" ? "unknown" : s.grade}</span>
+            {s.strength && <span class:list={["strength", `strength-${s.strength}`]}>{s.strength}</span>}
           </div>
           <div class="tip-headline">{s.headline}</div>
           <p class="tip-rationale">{s.rationale}</p>
@@ -153,6 +155,7 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
           <div class="meta">
             <span class="label">{s.label}</span>
             <span class="grade">{s.grade === "gray" ? "unknown" : s.grade}</span>
+            {s.strength && <span class:list={["strength", `strength-${s.strength}`]}>{s.strength} consensus</span>}
           </div>
           <div class="headline">{s.headline}</div>
           <p class="rationale">{s.rationale}</p>
@@ -389,6 +392,18 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
   .card.grade-green .grade { color: var(--grade-green); }
   .card.grade-orange .grade { color: var(--grade-orange); }
   .card.grade-red .grade { color: var(--grade-red); }
+  .strength {
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--surface-raised);
+    color: var(--text-muted);
+  }
+  .strength-strong { color: var(--text); border-color: var(--text-muted); }
+  .strength-weak { opacity: 0.75; }
   .headline {
     color: var(--text);
     font-size: 1rem;
