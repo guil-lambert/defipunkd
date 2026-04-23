@@ -116,6 +116,14 @@
 
   <div class="scroll">
     <table>
+      <colgroup>
+        <col class="c-name" />
+        <col class="c-risks" />
+        <col class="c-stage" />
+        <col class="c-chain" />
+        <col class="c-type" />
+        <col class="c-tvl" />
+      </colgroup>
       <thead>
         <tr>
           <th class="sortable name-col">
@@ -289,7 +297,14 @@
     border-collapse: collapse;
     color: var(--text);
     font-size: 0.9rem;
+    table-layout: fixed;
   }
+  col.c-name { width: auto; }
+  col.c-risks { width: 4.5rem; }
+  col.c-stage { width: 4.5rem; }
+  col.c-chain { width: 10rem; }
+  col.c-type { width: 9rem; }
+  col.c-tvl { width: 7rem; }
   @media (max-width: 720px) {
     .scroll {
       margin-left: -1.5rem;
