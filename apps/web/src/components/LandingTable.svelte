@@ -236,6 +236,19 @@
     flex-wrap: wrap;
     margin-bottom: 1rem;
   }
+  @media (max-width: 720px) {
+    .tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+      padding: 0 1.5rem 0.25rem;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs button { flex-shrink: 0; }
+  }
   .tabs button {
     min-height: 44px;
     padding: 0 0.9rem;
@@ -272,12 +285,22 @@
     color: var(--text-muted);
     font-size: 0.85rem;
   }
-  .scroll { overflow-x: auto; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table {
     width: 100%;
     border-collapse: collapse;
     color: var(--text);
     font-size: 0.9rem;
+  }
+  @media (max-width: 720px) {
+    .scroll {
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+    }
+    table { min-width: 640px; width: max-content; }
+    th, td { white-space: nowrap; }
+    th:first-child, td:first-child { padding-left: 1.5rem; }
+    th:last-child, td:last-child { padding-right: 1.5rem; }
   }
   thead tr { text-align: left; color: var(--text-muted); font-size: 0.8rem; }
   th { padding: 0.45rem 0.6rem; font-weight: 500; }
