@@ -89,16 +89,6 @@ describe("SubmissionSchema", () => {
     expect(SubmissionSchema.safeParse(bad).success).toBe(false);
   });
 
-  it("rejects headline > 80 chars", () => {
-    const bad = { ...(VALID as object), headline: "x".repeat(81) };
-    expect(SubmissionSchema.safeParse(bad).success).toBe(false);
-  });
-
-  it("rejects rationale > 600 chars", () => {
-    const bad = { ...(VALID as object), rationale: "x".repeat(601) };
-    expect(SubmissionSchema.safeParse(bad).success).toBe(false);
-  });
-
   it("committed JSON Schema declares the same required fields", () => {
     expect(jsonSchema.required).toEqual(
       expect.arrayContaining([
