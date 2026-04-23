@@ -10,9 +10,11 @@ import {
   type SliceId as AssessmentSliceId,
   type ProtocolMetadata,
 } from "./assessments";
+import { loadMasters, type Master, type MasterSliceConsensus } from "./master";
 
 export type { Protocol, Snapshot, ProtocolSnapshot, ProvenanceTag, Slug } from "./types";
 export { OverlaySchema, type Overlay } from "./overlay-schema";
+export { loadMasters, type Master, type MasterSliceConsensus } from "./master";
 export {
   loadAssessments,
   aggregateProtocolMetadata,
@@ -168,11 +170,29 @@ export function listChildren(parentSlug: string): Protocol[] {
   return getCache().childrenByParent.get(parentSlug) ?? [];
 }
 
+let cachedMasters: Map<string, Master> | null = null;
+export function getMasters(): Map<string, Master> {
+  if (cachedMasters) return cachedMasters;
+  cachedMasters = loadMasters(DATA_DIR);
+  return cachedMasters;
+}
+export function getMaster(slug: string): Master | undefined {
+  return getMasters().get(slug);
+}
+
 let cachedMetadata: Map<string, ProtocolMetadata> | null = null;
 export function getProtocolMetadata(slug: string): ProtocolMetadata | undefined {
   if (!cachedMetadata) {
     cachedMetadata = new Map();
+    // Master files take precedence: they carry the LLM-reconciled metadata.
+    for (const [s, master] of getMasters()) {
+      if (master.protocol_metadata && Object.keys(master.protocol_metadata).length > 0) {
+        cachedMetadata.set(s, master.protocol_metadata);
+      }
+    }
+    // Fallback: per-slice aggregation for slugs without a master file.
     for (const [s, bySlice] of getAssessments()) {
+      if (cachedMetadata.has(s)) continue;
       const merged = aggregateProtocolMetadata(bySlice);
       if (merged) cachedMetadata.set(s, merged);
     }
