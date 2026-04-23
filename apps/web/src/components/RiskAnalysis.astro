@@ -2,12 +2,68 @@
 import type { Protocol } from "@defibeat/registry";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
 import { GRADE_FILL } from "../lib/pizza";
+import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defibeat/prompts";
 
 interface Props {
   protocol: Protocol;
+  snapshotGeneratedAt: string;
 }
-const { protocol } = Astro.props;
+const { protocol, snapshotGeneratedAt } = Astro.props;
 const slices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol);
+
+const ANALYSIS_DATE = new Date().toISOString().slice(0, 10);
+const REPO = "guil-lambert/defibeat";
+
+function promptFor(sliceId: SliceId): string {
+  return buildPrompt(sliceId, {
+    slug: protocol.slug,
+    name: protocol.name,
+    chains: protocol.chains,
+    category: protocol.category || null,
+    website: protocol.website,
+    github: protocol.github ?? [],
+    auditLinks: protocol.audit_links ?? [],
+    snapshotGeneratedAt,
+    analysisDate: ANALYSIS_DATE,
+    addressBook: null,
+  });
+}
+
+function stubFor(sliceId: SliceId): string {
+  return JSON.stringify(
+    {
+      schema_version: 1,
+      slug: protocol.slug,
+      slice: sliceId,
+      snapshot_generated_at: snapshotGeneratedAt,
+      prompt_version: PROMPT_VERSION,
+      analysis_date: ANALYSIS_DATE,
+      model: "",
+      chat_url: null,
+      grade: "",
+      headline: "",
+      rationale: "",
+      evidence: [],
+      unknowns: [],
+    },
+    null,
+    2,
+  );
+}
+
+function submitUrl(sliceId: SliceId): string {
+  const params = new URLSearchParams({
+    filename: `your-model-${ANALYSIS_DATE}.json`,
+    value: stubFor(sliceId),
+  });
+  return `https://github.com/${REPO}/new/main/data/submissions/${protocol.slug}/${sliceId}?${params.toString()}`;
+}
+
+const promptsBySlice = Object.fromEntries(
+  slices
+    .filter((s): s is SliceAssessment & { id: SliceId } => s.id !== undefined)
+    .map((s) => [s.id, promptFor(s.id as SliceId)]),
+) as Record<SliceId, string>;
 
 const VIEW = 360;
 const CENTER = VIEW / 2;
@@ -92,11 +148,50 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
           </div>
           <div class="headline">{s.headline}</div>
           <p class="rationale">{s.rationale}</p>
+
+          <details class="audit-panel">
+            <summary>Audit this slice yourself · DEFI@home</summary>
+            <div class="audit-body">
+              <p class="audit-intro">
+                Paste the prompt below into Claude, ChatGPT, Gemini, or any LLM with browsing. Your JSON output becomes a pull request; the quorum bot merges it once ≥3 independent runs agree. <a href="/contribute" class="link">How it works →</a>
+              </p>
+              <p class="audit-intro audit-share">
+                <strong>Before submitting:</strong> enable <em>Share publicly</em> on your chat session and paste the resulting URL into the <code>chat_url</code> field. Submissions with a verifiable public transcript get extra weight from the quorum bot. <a href="/contribute#sharing-your-chat" class="link">Per-platform instructions →</a>
+              </p>
+              <div class="audit-toolbar">
+                <button type="button" class="copy-btn" data-copy-target={`#prompt-${s.id}`}>
+                  Copy prompt
+                </button>
+                <a href={submitUrl(s.id as SliceId)} rel="noreferrer" target="_blank" class="submit-btn">
+                  Submit your run ↗
+                </a>
+              </div>
+              <pre id={`prompt-${s.id}`} class="prompt">{promptsBySlice[s.id as SliceId]}</pre>
+            </div>
+          </details>
         </div>
       </li>
     ))}
   </ol>
 </section>
+
+<script>
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement)?.closest?.("[data-copy-target]") as HTMLButtonElement | null;
+    if (!btn) return;
+    const sel = btn.getAttribute("data-copy-target");
+    if (!sel) return;
+    const target = document.querySelector(sel) as HTMLElement | null;
+    if (!target) return;
+    navigator.clipboard.writeText(target.textContent ?? "").then(() => {
+      const prev = btn.textContent;
+      btn.textContent = "Copied ✓";
+      setTimeout(() => {
+        btn.textContent = prev;
+      }, 1500);
+    });
+  });
+</script>
 
 <style>
   .risk-analysis {
@@ -283,5 +378,82 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     font-size: 0.88rem;
     line-height: 1.5;
     margin: 0;
+  }
+
+  .audit-panel {
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--surface-raised);
+    padding-top: 0.6rem;
+  }
+  .audit-panel > summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--accent-link);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 0.2rem 0;
+  }
+  .audit-panel > summary::-webkit-details-marker { display: none; }
+  .audit-panel > summary::after {
+    content: " ▸";
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    transition: transform 150ms ease;
+    display: inline-block;
+  }
+  .audit-panel[open] > summary::after { transform: rotate(90deg); }
+
+  .audit-body {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .audit-intro {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .audit-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .copy-btn,
+  .submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid var(--surface-raised);
+    background: var(--surface-raised);
+    color: var(--text);
+    min-height: 32px;
+  }
+  .submit-btn { color: var(--accent-link); background: transparent; }
+  .copy-btn:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
+  .submit-btn:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
+
+  .prompt {
+    background: var(--bg);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    padding: 0.75rem 0.9rem;
+    margin: 0;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    max-height: 22rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 </style>

@@ -1,5 +1,9 @@
 # Prompt
 
+> **Status: historical — Phase 0 MVP is shipped.** This prompt drove the initial 5-phase build (registry → sync CLI → protocol page → landing → methodology + smoke test). The codebase is now beyond that scope. The original `spec.md` enrichment phases (crawlers, onchain workers, LLM classification) have **also been superseded** by **DEFI@home** — see the pivot note at the top of `spec.md` and the dedicated section in `README.md`. Risk-slice grading happens via contributor-submitted LLM-generated JSON, validated against `data/schema/slice-assessment.v1.json`, merged via a quorum bot. There is no crawler worker phase; do not build one.
+>
+> Anything below references the original Phase 0 build as it was actually executed. Keep for historical reference; do not use as a forward-looking roadmap.
+
 You are implementing **Phase 0** of DefiBeat (see `spec.md` in the repo root — read it in full before starting). Phase 0's "done" definition: list + detail pages live for all DeFiLlama protocols with raw metadata and `unknown` enrichment rows, **fully statically rendered from committed files — no database**. Work in **5 sequential implementation phases**. After each phase, stop, summarize what changed, and wait for my go-ahead before starting the next.
 
 ## Pre-flight (before Phase 1)

@@ -1,5 +1,16 @@
 # DefiBeat — DeFi Transparency Registry MVP Spec
 
+> **Pivot — DEFI@home (2026-04-23).** This spec was originally written around a three-phase enrichment pipeline (Phase 1 crawlers, Phase 2 `@l2beat/discovery`-based onchain workers, Phase 3 LLM classification). **That plan is superseded.** Risk-slice grading now happens via **DEFI@home**: contributors run a pinned prompt through an LLM of their choice, submit JSON output as a pull request against `data/submissions/<slug>/<slice>/`, and a quorum bot merges to `data/assessments/` once ≥3 independent runs agree on grade and overlapping evidence. See `README.md` (top section), `packages/prompts/` (prompt source), and `data/schema/slice-assessment.v1.json` (output contract).
+>
+> Specifically superseded:
+> - **Phase 1 crawlers / artifact extraction** — replaced by DEFI@home submissions citing block explorers, pinned GitHub commits, and audit PDFs. No `data/artifacts/` directory; no crawler workers; no robots.txt / UA / rate-limit policy needed.
+> - **Phase 2 onchain workers** (`@l2beat/discovery` integration, SQLite cache, contract / discovery tables) — DEFI@home contributors and the autorun GitHub Action read onchain state via block explorers and cite the URLs as evidence. The "Phase 2 may introduce a DB" provision lapses; the project stays git-native indefinitely.
+> - **Phase 3 LLM classification** (machine-generated claims with hash + substring citation enforcement) — replaced by DEFI@home's per-submission JSON schema, which already enforces evidence URLs and the conditional "grade=unknown ⇒ unknowns[] non-empty, else evidence[] non-empty" rule.
+>
+> What carries over unchanged: the DeFiLlama seed (`pnpm sync` → `data/defillama-snapshot.json`), the `packages/registry` merge of snapshot + overlays, the read-only / git-native operating model, the radiographic visual design, and the `[defillama]` / `[curated]` provenance tagging. Phase 0 (the static-rendered MVP) shipped as described and is the production codebase today.
+>
+> The provenance system gains one new tag class: `[assessment]` for fields populated from `data/assessments/<slug>/<slice>.json`, replacing the planned `[crawler]` / `[onchain]` / `[llm_inference]` classes. The Defiscan stage adoption (originally Phase 3) becomes the next milestone after the quorum bot lands.
+
 ## Goal
 
 Build a live, evidence-based registry of DeFi protocols that can evolve into an L2BEAT-for-DeFi style review system.

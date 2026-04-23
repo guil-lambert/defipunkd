@@ -6,24 +6,46 @@ DefiBeat is **not** a risk-rating system. It is a protocol registry and evidence
 
 Audience: DeFi power users, researchers, and auditors who want dense evidence on proxies, multisigs, timelocks, upgradeability, and dependencies — without marketing polish. See [`spec.md`](./spec.md) for the full product framing and phase plan.
 
+## DEFI@home — distributed protocol assessment
+
+DefiBeat does not run crawlers. Instead, contributors assess protocols by running a pinned prompt through an LLM of their choice (Claude, ChatGPT, Gemini, etc.) and submitting the JSON output as a pull request. A quorum bot merges your submission once ≥3 independent runs agree on grade and overlapping evidence.
+
+**The flow:**
+
+1. Open any protocol page on the site and click **Audit this slice yourself** under one of the 5 Risk analysis cards.
+2. Copy the generated prompt — it has the snapshot timestamp, chains, GitHub repos, and audit links already pinned in. Paste into your LLM.
+3. The LLM returns one JSON object matching [`data/schema/slice-assessment.v1.json`](./data/schema/slice-assessment.v1.json) — every claim must cite a verifiable URL (block explorer, repo at a pinned commit SHA, or audit PDF).
+4. Click **Submit your run**. GitHub opens its new-file UI pre-pointed at `data/submissions/<slug>/<slice>/` with a JSON stub. Paste your output, commit, open the PR.
+5. CI validates the schema. The quorum bot merges into `data/assessments/` once consensus is reached.
+
+The determinism comes from **consensus across re-runs**, not from the LLM being deterministic. Every submission records the model used, the prompt version, and the snapshot timestamp — anyone can re-run the same prompt later and the citations should still be re-verifiable. See [`/contribute`](./apps/web/src/pages/contribute.astro) on the site for full documentation, and [`packages/prompts/`](./packages/prompts/) for the prompt source.
+
+The quorum bot and a scheduled GitHub Action that runs the prompts as a "third voice" via the Anthropic SDK are the next pieces of work; the prompt + schema + submission UX are live.
+
 ## Architecture at a glance
 
 - **Git-native.** Protocol metadata lives as committed files; the repo is the source of truth. Every deploy is a deterministic, immutable snapshot of a commit SHA. No database at Phase 0.
 - **DeFiLlama seeds the universe.** `pnpm sync` fetches `https://api.llama.fi/protocols`, normalizes the payload, and writes `data/defillama-snapshot.json`. Curated overlays live in `data/overlays/<slug>.json` and merge on top.
 - **Read-only.** No submission queue, no auth, no forms. Corrections route to GitHub PRs and issues.
+- **DEFI@home for assessments.** Risk-slice grades are filled in by contributors running pinned LLM prompts and submitting JSON via PR (see above); the quorum bot merges once independent runs agree. No unilateral grading.
 
 ## Workspace layout
 
 ```
 apps/
-  web/                Astro 5 site (the registry UI), one Svelte 5 island
+  web/                       Astro 5 site (the registry UI), one Svelte 5 island
 data/
-  defillama-snapshot.json   Full DeFiLlama seed (committed)
-  overlays/                 Curator overlays (per-slug JSON, committed)
+  defillama-snapshot.json    Full DeFiLlama seed (committed)
+  overlays/                  Curator overlays (per-slug JSON, committed)
+  schema/
+    slice-assessment.v1.json JSON Schema for DEFI@home submissions
+  submissions/               Raw per-contributor LLM runs (one JSON per run)
+  assessments/               Merged per-slice assessments (quorum bot output)
 packages/
-  registry/           Snapshot + overlay merge + typed access
-  sync/               DeFiLlama fetcher / normalizer / carry-forward logic
-spec.md               Product spec and phase roadmap
+  registry/                  Snapshot + overlay merge + typed access
+  sync/                      DeFiLlama fetcher / normalizer / carry-forward logic
+  prompts/                   DEFI@home prompt generator (preamble + 5 slice bodies)
+spec.md                      Product spec and phase roadmap
 ```
 
 ## Development
