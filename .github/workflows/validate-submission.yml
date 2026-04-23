@@ -34,12 +34,22 @@ jobs:
 
       - name: Collect changed submission files
         id: files
-        run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1 || true
-          changed=$(git diff --name-only --diff-filter=AM origin/${{ github.event.pull_request.base.ref }}...HEAD \
-            -- 'data/submissions/**/*.json' | tr '\n' ' ')
-          echo "list=$changed" >> "$GITHUB_OUTPUT"
-          echo "count=$(echo $changed | wc -w)" >> "$GITHUB_OUTPUT"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const res = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const files = res
+              .filter((f) => f.status !== 'removed')
+              .map((f) => f.filename)
+              .filter((f) => f.startsWith('data/submissions/') && f.endsWith('.json'));
+            core.setOutput('list', files.join(' '));
+            core.setOutput('count', String(files.length));
+            core.info(`found ${files.length} submission file(s): ${files.join(', ')}`);
 
       - name: Validate
         if: steps.files.outputs.count != '0'
