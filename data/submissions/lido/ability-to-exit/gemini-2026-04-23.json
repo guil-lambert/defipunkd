@@ -1,0 +1,60 @@
+{
+  "schema_version": 2,
+  "slug": "lido",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 5,
+  "analysis_date": "2026-04-23",
+  "model": "gemini-3.1-pro",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Finalized claims are unpausable and emergency pauses are time-capped, but new requests can be paused indefinitely by governance.",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The primary user-facing exit functions in the Lido WithdrawalQueueERC721 contract are `requestWithdrawals`, `requestWithdrawalsWstETH`, `claimWithdrawal`, and `claimWithdrawals`."
+      },
+      {
+        "code": "E2",
+        "text": "The request placement functions (`requestWithdrawals`, `requestWithdrawalsWstETH`) are gated by an `isPaused` check, meaning the initiation of new exits can be halted. However, the claim functions for finalized funds (`claimWithdrawal`, `claimWithdrawals`) are not guarded by this pause modifier."
+      },
+      {
+        "code": "E3",
+        "text": "The primary indefinite pause power (PAUSE_ROLE) over new withdrawal requests is held by the Lido DAO Governance (Aragon Voting). Governance can pause the queue indefinitely, as unpausing requires a separate RESUME_ROLE vote."
+      },
+      {
+        "code": "E4",
+        "text": "An emergency pause mechanism exists via 'GateSeals', which allow a designated committee multisig to unilaterally pause new withdrawal requests for a strictly capped duration of 6 days. Once triggered, the GateSeal expires and cannot be reused to extend the pause."
+      },
+      {
+        "code": "E5",
+        "text": "Withdrawals utilize a queue system. The maximum queue duration is not hardcapped by the Lido protocol itself; it is dependent on the Ethereum consensus layer's validator exit queue and churn limits, which can result in wait times exceeding 7 days during mass exits."
+      },
+      {
+        "code": "E6",
+        "text": "There is no forced-exit or permissionless escape hatch that bypasses the withdrawal queue; users must wait for Lido node operators to process validator exits if the protocol's ether buffer is insufficient."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are completely independent of the Lido frontend and can be directly executed on-chain using Etherscan's Write Contract interface or any generic EVM wallet interaction."
+      }
+    ],
+    "steelman": {
+      "red": "Governance holds the power to indefinitely pause the placement of new withdrawal requests, which could permanently trap user funds in stETH if the DAO were compromised or voted maliciously.",
+      "orange": "While emergency pauses are strictly time-capped to 6 days and claims of finalized requests cannot be paused, the DAO can pause new requests indefinitely and natural queue times can exceed 7 days.",
+      "green": "Users can claim finalized exits permissionlessly even if the protocol is paused, emergency multisig pauses automatically expire after 6 days, and exiting does not require the project's frontend."
+    },
+    "verdict": "Choosing orange because claims of finalized exits are immune to pausing and the emergency multisig pause is securely time-capped to 6 days, but the indefinite pause power over new withdrawal requests held by Governance and the naturally unbounded queue time prevent a green grade."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1#code",
+      "shows": "The deployed Lido WithdrawalQueueERC721 contract, revealing the separation of request and claim functions, and the specific pause modifiers applied to requests but not claims.",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "fetched_at": "2026-04-23T15:16:50Z"
+    }
+  ],
+  "unknowns": []
+}
