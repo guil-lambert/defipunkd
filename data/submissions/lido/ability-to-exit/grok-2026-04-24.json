@@ -1,0 +1,132 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 11,
+  "analysis_date": "2026-04-24",
+  "model": "grok-2",
+  "chat_url": "https://grok.com/share/c2hhcmQtNQ_ff7d8e97-275e-4a40-95df-b76610fdfd51",
+  "grade": "orange",
+  "headline": "On-chain FIFO withdrawal queue with unpausable claims of finalized exits; emergency pauses capped ~14 days but governance can pause requests indefinitely via roles",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "User-facing exit functions in WithdrawalQueueERC721 (0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1): requestWithdrawals(uint256[] _amounts, address _owner), requestWithdrawalsWstETH(...), requestWithdrawalsWithPermit(...), claimWithdrawals(uint256[] _requestIds, uint256[] _hints), claimWithdrawalsTo(...), claimWithdrawal(uint256 _requestId). Requests lock stETH and mint unstETH NFT; claims burn NFT and send ETH after finalization."
+      },
+      {
+        "code": "E2",
+        "text": "request* functions revert if paused (via PAUSE_ROLE). claim* functions require only: request finalized, not yet claimed, and caller is owner (or approved); no pause check on claims. Finalization uses finalize(...) by FINALIZE_ROLE holder.[](https://docs.lido.fi/contracts/withdrawal-queue-erc721/)"
+      },
+      {
+        "code": "E3",
+        "text": "PAUSE_ROLE holders (ResealManager 0x7914b5a1539b97bd0bbd155757f25fd79a522d24, OraclesGateSeal 0xf9c9fdb4a5d2aa1d836d5370ab9b28bc1847e178) can call pauseFor(uint256 _duration) including PAUSE_INFINITELY constant or pauseUntil(uint256 _pauseUntilInclusive). No per-call max duration enforced for governance path; RESUME_ROLE (ResealManager) to resume. Claims unaffected. (https://docs.lido.fi/contracts/withdrawal-queue-erc721/, https://github.com/lidofinance/docs/blob/main/docs/guides/protocol-levers.md)"
+      },
+      {
+        "code": "E4",
+        "text": "Emergency path: GateSeal/OraclesGateSeal (addresses 0x8A854C4E750CDf24f138f34A9061b2f556066912, 0xf9c9fdb4a5d2aa1d836d5370ab9b28bc1847e178) triggers time-capped pause (~14 days max). Governance path: DAO Agent (0x3e40d73eb977dc6a537af587d48316fee66e9c8c, DEFAULT_ADMIN_ROLE) manages roles and can enable indefinite pause via PAUSE_ROLE grants or long pauseUntil. ResealManager bridges both under DualGovernance. (https://github.com/lidofinance/dual-governance/blob/main/docs/permissions-transition/permissions-transition-mainnet.md, https://docs.lido.fi/token-guides/steth-superuser-functions/)"
+      },
+      {
+        "code": "E5",
+        "text": "FIFO queue with no documented hard daily withdrawal cap or fixed max duration (dynamic based on validator exit rate, buffer ETH, and oracle finalization batches). Queue not directly pausable, but new requests and finalization are gated by pause. No explicit 'maximum queue duration' stated in sources."
+      },
+      {
+        "code": "E6",
+        "text": "No permissionless forced-exit, escape-hatch, or adversarial-admin bypass found beyond standard claim after finalization. Secondary-market sale of stETH provides off-chain liquidity alternative (explicitly documented as user option).[](https://lido.fi/how-lido-works/withdrawals)"
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions (requestWithdrawals, claimWithdrawal, etc.) are public ABI methods directly callable on Etherscan write tab, via any Web3 wallet (e.g. MetaMask contract interaction), or generic contract caller without lido.fi frontend or approvals beyond token permits.[](https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1)"
+      }
+    ],
+    "steelman": {
+      "red": "Governance via Agent (DEFAULT_ADMIN_ROLE) and role holders can invoke PAUSE_INFINITELY or arbitrarily long pauses on request placement/finalization with no hard cap or on-chain permissionless escape hatch for queued stETH, allowing indefinite lockup of new exits under adversarial conditions.",
+      "orange": "Emergency pauses (GateSeal/OraclesGateSeal) are strictly time-capped at ~14 days, claims of finalized requests are never pause-gated and always permissionless, new-request pauses require multi-actor roles (not single EOA) under DualGovernance/timelock oversight, and secondary markets provide immediate exit alternative.",
+      "green": "All exit paths are fully on-chain and frontend-independent, claims of finalized exits remain completely unpausable regardless of any pause state, and emergency pause is narrowly scoped with auto-expiry while governance controls are timelocked and veto-protected."
+    },
+    "verdict": "Choosing orange because the orange steelman best fits: claims are fully exempt from pause (directly verifiable in contract docs and code behavior), emergency path is time-capped at 14 days by dedicated GateSeal contracts (not unilateral), governance pause requires role management via Agent under DualGovernance (not single EOA or 2-of-3 multisig), and new requests have documented secondary-market fallback; this satisfies the 'claims-of-finalized are exempt but new-request placement can be paused indefinitely by governance' clause while green fails on the 14-day cap exceeding 7 days and existence of indefinite governance path, and red overstates risk since claims cannot be paused at all and no admin signature is required for exit."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "shows": "Deployed WithdrawalQueueERC721 proxy contract on Ethereum with verified source, active requestWithdrawals/claimWithdrawal transactions, on-chain state (ETH/stETH balances), and public write functions confirming direct on-chain exit capability without frontend.",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "fetched_at": "2026-04-24T17:46:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+      "shows": "Full specification of user exit functions (requestWithdrawals*, claimWithdrawals*, claimWithdrawal), pause mechanics (pauseFor/pauseUntil with PAUSE_INFINITELY, onlyRole(PAUSE_ROLE)), RESUME_ROLE, claim functions unaffected by pause, FINALIZE_ROLE, FIFO queue, bunker mode, and role table.",
+      "fetched_at": "2026-04-24T09:42:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/docs/blob/main/docs/guides/protocol-levers.md",
+      "shows": "Explicit mapping of PAUSE_ROLE on WithdrawalQueueERC721 to Aragon Agent + GateSeal (0x8A854C4E750CDf24f138f34A9061b2f556066912) and Reseal Manager (0x7914b5a1539b97Bd0bbd155757F25FD79A522d24); confirms pauseFor() controlled by these actors.",
+      "fetched_at": "2026-04-24T15:15:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/dual-governance/blob/main/docs/permissions-transition/permissions-transition-mainnet.md",
+      "shows": "Current on-chain role grants for WithdrawalQueueERC721: PAUSE_ROLE to ResealManager (0x7914b5a1539b97bd0bbd155757f25fd79a522d24) and OraclesGateSeal (0xf9c9fdb4a5d2aa1d836d5370ab9b28bc1847e178); RESUME_ROLE to ResealManager; DEFAULT_ADMIN_ROLE to Agent (0x3e40d73eb977dc6a537af587d48316fee66e9c8c).",
+      "fetched_at": "2026-04-24T00:47:00Z"
+    },
+    {
+      "url": "https://lido.fi/how-lido-works/withdrawals",
+      "shows": "User withdrawal flow (lock stETH for unstETH NFT in FIFO queue, claim after finalization), no hard caps mentioned, explicit secondary-market alternative for instant liquidity, and queue mechanics tied to oracle reports and validator exits.",
+      "fetched_at": "2026-04-24T07:36:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/token-guides/steth-superuser-functions/",
+      "shows": "GateSeal emergency pause mechanism (time-limited up to 14 days by GateSeal Committee 0x8772E3a2D86B9347A2688f9bc1808A6d8917760C) and Reseal Manager (0x7914b5a1539b97Bd0bbd155757F25FD79A522d24) for pause extension under DualGovernance, distinct from unassigned Lido PAUSE_ROLE.",
+      "fetched_at": "2026-04-24T11:07:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core",
+      "shows": "Canonical source repository for Lido DAO smart contracts (including WithdrawalQueueERC721 implementation); confirms monorepo structure with deployed artifacts and V3 releases.",
+      "fetched_at": "2026-04-24T17:50:00Z"
+    }
+  ],
+  "unknowns": [
+    "E5: exact maximum or worst-case queue duration (in days) not documented as a hard cap in sources; only described as dynamic/FIFO-dependent on validator exits and buffer liquidity"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core"
+    ],
+    "docs_url": "https://docs.lido.fi/",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
+        "role": "DAO Agent (DEFAULT_ADMIN_ROLE holder on WithdrawalQueueERC721; manages PAUSE_ROLE grants)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7914b5a1539b97bd0bbd155757f25fd79a522d24",
+        "role": "Reseal Manager (holds PAUSE_ROLE and RESUME_ROLE on WithdrawalQueueERC721)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xf9c9fdb4a5d2aa1d836d5370ab9b28bc1847e178",
+        "role": "OraclesGateSeal (holds PAUSE_ROLE on WithdrawalQueueERC721)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8A854C4E750CDf24f138f34A9061b2f556066912",
+        "role": "GateSeal Withdrawal Queue (emergency pause trigger for WithdrawalQueueERC721)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Lido is the dominant liquid staking protocol on Ethereum (primary chain) where users stake ETH to mint stETH (or wstETH), a yield-bearing liquid receipt token usable across DeFi. Unstaking uses the WithdrawalQueueERC721 contract's FIFO queue: stETH is locked to mint an unstETH NFT claim position; oracles finalize batches by burning stETH and reserving ETH, after which owners permissionlessly claim ETH by burning the NFT. DualGovernance, GateSeal emergency pauses (~14-day cap), and ResealManager provide layered controls distinct from single-admin or immutable designs."
+  }
+}
