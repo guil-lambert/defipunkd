@@ -4,7 +4,7 @@ export const PIZZA_SLICES = [
   { id: "control", label: "Control" },
   { id: "ability-to-exit", label: "Ability to exit" },
   { id: "autonomy", label: "Autonomy" },
-  { id: "access", label: "Access" },
+  { id: "access", label: "Open Access" },
   { id: "verifiability", label: "Verifiability" },
 ] as const;
 

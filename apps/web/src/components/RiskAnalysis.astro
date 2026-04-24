@@ -88,14 +88,17 @@ const TOP_EVIDENCE = 2;
 <section class="risk-analysis" id="risk-analysis">
   <h2>Risk analysis</h2>
   <p class="lede">
-    One card per dimension, sorted by severity. Only <em>Verifiability</em> and <em>Dependencies</em> carry automated signals in Phase 0. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
+    One card per dimension, sorted by severity. Only <em>Verifiability</em> and <em>Autonomy</em> carry automated signals in Phase 0. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
   </p>
 
   <details class="audit-top">
-    <summary><span class="audit-top-title">Audit a dimension yourself · DEFI@home</span></summary>
+    <summary>
+      <span class="audit-top-title">Audit a dimension yourself · DEFI@home</span>
+      <span class="audit-top-tagline">Contribute an LLM-run assessment — any model, any dimension. Three agreeing runs merge automatically into the public record.</span>
+    </summary>
     <div class="audit-top-body">
       <p>
-        Paste a slice prompt into Claude, ChatGPT, Gemini, or any LLM with browsing. Your JSON output becomes a pull request; the quorum bot merges it once ≥3 independent runs agree. <a href="/contribute" class="link">How it works →</a>
+        DEFI@home is a distributed audit network modeled on SETI@home: instead of CPU cycles, it crowdsources LLM reasoning. Paste a slice prompt into Claude, ChatGPT, Gemini, or any browsing-capable model, and submit the JSON output as a pull request. The quorum bot merges it once ≥3 independent runs (from different models) reach the same grade — no single model, and no single contributor, can move the needle alone. <a href="/contribute" class="link">How it works →</a>
       </p>
       <ul class="audit-list">
         {auditSlices.map((a) => (
@@ -199,7 +202,9 @@ const TOP_EVIDENCE = 2;
         </span>
       </summary>
       <ol class="cards unknowns-list">
-        {graySlices.map((s) => (
+        {graySlices.map((s) => {
+          const sliceId = s.id as SliceId;
+          return (
           <li id={s.id} class="card grade-gray">
             <div class="stripe" aria-hidden="true"></div>
             <div class="body">
@@ -209,9 +214,20 @@ const TOP_EVIDENCE = 2;
               </div>
               <div class="headline">{s.headline}</div>
               <p class="rationale">{s.rationale}</p>
+              <div class="unknown-cta">
+                <p class="unknown-cta-blurb">
+                  No model has graded this dimension yet. Run the slice prompt through any LLM and submit the JSON — once ≥3 independent runs agree, the quorum bot merges the verdict here.
+                </p>
+                <div class="unknown-cta-actions">
+                  <button type="button" class="copy-btn" data-copy-target={`#prompt-unknown-${sliceId}`}>Copy prompt</button>
+                  <a href={submitUrl(sliceId)} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
+                </div>
+                <pre id={`prompt-unknown-${sliceId}`} class="prompt-hidden" hidden>{promptFor(sliceId)}</pre>
+              </div>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </details>
   )}
@@ -249,32 +265,44 @@ const TOP_EVIDENCE = 2;
   .link { color: var(--accent-link); }
 
   .audit-top {
+    position: relative;
     margin: 1rem 0 1.5rem 0;
     background: var(--surface);
     border: 1px solid var(--surface-raised);
+    border-left: 10px solid var(--accent-link);
     border-radius: 4px;
-    padding: 0.5rem 0.9rem;
+    padding: 0.65rem 0.9rem 0.65rem 1rem;
   }
   .audit-top[open] { padding-bottom: 0.9rem; }
   .audit-top > summary {
     list-style: none;
     cursor: pointer;
     padding: 0.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
   .audit-top > summary::-webkit-details-marker { display: none; }
   .audit-top-title {
     color: var(--accent-link);
-    font-size: 0.82rem;
-    font-weight: 500;
+    font-size: 0.92rem;
+    font-weight: 600;
   }
-  .audit-top > summary::after {
+  .audit-top-title::after {
     content: " ▸";
     color: var(--text-muted);
     font-size: 0.7rem;
+    margin-left: 0.35rem;
     transition: transform 150ms ease;
     display: inline-block;
   }
-  .audit-top[open] > summary::after { transform: rotate(90deg); }
+  .audit-top[open] .audit-top-title::after { transform: rotate(90deg); }
+  .audit-top-tagline {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    font-weight: 400;
+  }
   .audit-top-body { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
   .audit-top-body p {
     margin: 0;
@@ -547,6 +575,26 @@ const TOP_EVIDENCE = 2;
     font-weight: 500;
   }
   .unknowns-list { margin-top: 0.75rem; gap: 1rem; }
+
+  .unknown-cta {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--surface-raised);
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .unknown-cta-blurb {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .unknown-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 
   .copy-btn,
   .submit-btn {

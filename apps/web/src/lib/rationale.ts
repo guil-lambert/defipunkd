@@ -151,7 +151,7 @@ export function assessProtocol(
     },
     {
       id: "access",
-      label: "Access",
+      label: "Open Access",
       grade: "gray",
       headline: "Not yet assessed",
       rationale:
@@ -180,7 +180,7 @@ export function cexAssessment(): SliceAssessment[] {
     { id: "control", label: "Control", grade: "red", headline: "Operator-controlled", rationale: r },
     { id: "ability-to-exit", label: "Ability to exit", grade: "red", headline: "Withdrawals can be halted", rationale: r },
     { id: "autonomy", label: "Autonomy", grade: "red", headline: "Off-chain counterparty", rationale: r },
-    { id: "access", label: "Access", grade: "red", headline: "Permissioned by design", rationale: r },
+    { id: "access", label: "Open Access", grade: "red", headline: "Permissioned by design", rationale: r },
     { id: "verifiability", label: "Verifiability", grade: "red", headline: "Closed codebase", rationale: r },
   ];
 }

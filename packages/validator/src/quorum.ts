@@ -76,6 +76,13 @@ function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): Scored
   const explorerCount = s.evidence.filter((e) => isExplorerUrl(e.url)).length;
   weight += Math.min(explorerCount * 0.1, 0.3);
 
+  const fetchedAtCount = s.evidence.filter((e) => typeof e.fetched_at === "string" && e.fetched_at.length > 0).length;
+  weight += Math.min(fetchedAtCount * 0.05, 0.2);
+
+  if (Array.isArray(s.unknowns) && s.unknowns.length > 0 && s.grade !== "unknown") {
+    weight += 0.15;
+  }
+
   const versionDelta = ctx.currentPromptVersion - s.prompt_version;
   if (versionDelta > 0) weight -= 0.2 * versionDelta;
 

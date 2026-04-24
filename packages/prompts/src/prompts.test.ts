@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(9);
+    expect(PROMPT_VERSION).toBe(10);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -68,6 +68,26 @@ describe("buildPrompt", () => {
     }
   });
 
+  it("control grades on the uncontested-fast-path delay (v10)", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("uncontested-fast-path delay");
+    expect(p).toContain("SUM OF DELAYS ON THE UNCONTESTED FAST PATH");
+    expect(p).toContain("dynamic / contested extensions");
+  });
+
+  it("control walks the full execution path, not just the first timelock (v10)", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("EXECUTION PATH (enumerate every stage");
+    expect(p).toContain("Do NOT stop at the first timelock-shaped contract");
+  });
+
+  it("control requires Read Contract discipline for numeric constants (v10)", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("Read Contract discipline");
+    expect(p).toContain("Every numeric constant you cite");
+    expect(p).toContain("Empty unknowns[] on a protocol with more than ~3 admin-class contracts");
+  });
+
   it("ability-to-exit calls out the emergency-vs-governance pause distinction", () => {
     const p = buildPrompt("ability-to-exit", INPUTS);
     expect(p).toContain("EMERGENCY vs GOVERNANCE");
@@ -90,7 +110,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             9");
+    expect(p).toContain("prompt_version:             10");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
