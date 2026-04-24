@@ -48,28 +48,35 @@ jobs:
             const fs = require('fs');
             const report = JSON.parse(fs.readFileSync('quorum-report.json', 'utf8'));
 
-            // Lazy-open aggregation issue per (slug, slice) when we observe any change
+            // Group changes by protocol (slug); one aggregation issue per protocol.
+            const bySlug = new Map();
             for (const c of report.changes) {
               if (c.kind === 'insufficient' || c.kind === 'unchanged') continue;
-              const title = `[${c.slug} / ${c.slice}] DEFI@home`;
-              const existing = await github.rest.search.issuesAndPullRequests({
-                q: `repo:${context.repo.owner}/${context.repo.repo} is:issue in:title "${title}"`,
-              });
-              const found = existing.data.items.find((i) => i.title === title);
+              if (!bySlug.has(c.slug)) bySlug.set(c.slug, []);
+              bySlug.get(c.slug).push(c);
+            }
 
-              let body;
+            const sectionFor = (c) => {
               if (c.kind === 'disagreement') {
                 const dis = report.disagreements.find((d) => d.slug === c.slug && d.slice === c.slice);
                 const table = dis ? dis.submissions.map((s) =>
                   `| \`${s.model}\` | **${s.grade}** | ${s.headline} | w=${s.weight} | ${s.chat_url ? `[chat](${s.chat_url})` : '—'} |`
                 ).join('\n') : '';
-                body = `## Current state: **no consensus** (${c.submissionCount} submissions)\n\n${dis ? dis.reason : ''}\n\n| model | grade | headline | weight | chat |\n|---|---|---|---|---|\n${table}\n\nAnother submission is needed to reach consensus.`;
-              } else {
-                body = `## Current state: **${c.currentGrade}** (${c.strength || '—'}, ${c.submissionCount} submissions)\n\n${c.kind === 'new' ? 'First assessment has reached consensus.' : `Consensus updated from ${c.previousGrade} to ${c.currentGrade}.`}\n\nAn assessment PR is being opened into \`data/assessments/${c.slug}/${c.slice}.json\`.`;
+                return `### \`${c.slice}\` — **no consensus** (${c.submissionCount} submissions)\n\n${dis ? dis.reason : ''}\n\n| model | grade | headline | weight | chat |\n|---|---|---|---|---|\n${table}\n\nAnother submission is needed to reach consensus.`;
               }
+              return `### \`${c.slice}\` — **${c.currentGrade}** (${c.strength || '—'}, ${c.submissionCount} submissions)\n\n${c.kind === 'new' ? 'First assessment has reached consensus.' : `Consensus updated from ${c.previousGrade} to ${c.currentGrade}.`}\n\nAssessment PR updates \`data/assessments/${c.slug}/${c.slice}.json\`.`;
+            };
 
-              const labels = ['defi-at-home', `slice:${c.slice}`];
-              if (c.kind === 'disagreement') labels.push('quorum-disagreement');
+            for (const [slug, changes] of bySlug) {
+              const title = `[${slug}] DEFI@home`;
+              const existing = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${context.repo.owner}/${context.repo.repo} is:issue in:title "${title}"`,
+              });
+              const found = existing.data.items.find((i) => i.title === title && i.state === 'open');
+
+              const body = changes.map(sectionFor).join('\n\n---\n\n');
+              const sliceLabels = changes.map((c) => `slice:${c.slice}`);
+              const hasDisagreement = changes.some((c) => c.kind === 'disagreement');
 
               if (found) {
                 await github.rest.issues.createComment({
@@ -78,8 +85,13 @@ jobs:
                   issue_number: found.number,
                   body,
                 });
-                // Sync labels: add quorum-disagreement on disagreement, remove on consensus
-                if (c.kind === 'disagreement') {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: found.number,
+                  labels: sliceLabels,
+                });
+                if (hasDisagreement) {
                   await github.rest.issues.addLabels({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -97,6 +109,8 @@ jobs:
                   } catch (_) {}
                 }
               } else {
+                const labels = ['defi-at-home', ...sliceLabels];
+                if (hasDisagreement) labels.push('quorum-disagreement');
                 await github.rest.issues.create({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
