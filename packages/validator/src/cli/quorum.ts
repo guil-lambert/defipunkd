@@ -228,7 +228,7 @@ type SynthesizeInput = {
 
 async function synthesizeShortHeadline(input: SynthesizeInput): Promise<string | null> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn(`[quorum] ${input.slug}/${input.slice}: ANTHROPIC_API_KEY not set, skipping short_headline synthesis`);
+    console.error(`[quorum] ${input.slug}/${input.slice}: ANTHROPIC_API_KEY not set, skipping short_headline synthesis`);
     return null;
   }
   const prompt = buildShortHeadlinePrompt({
@@ -254,7 +254,7 @@ async function synthesizeShortHeadline(input: SynthesizeInput): Promise<string |
       console.warn(`[quorum] ${input.slug}/${input.slice}: LLM output rejected (empty after sanitize): ${JSON.stringify(text)}`);
       return null;
     }
-    console.log(`[quorum] ${input.slug}/${input.slice}: synthesized short_headline = "${cleaned}"`);
+    console.error(`[quorum] ${input.slug}/${input.slice}: synthesized short_headline = "${cleaned}"`);
     return cleaned;
   } catch (err) {
     const e = err as { message?: string; status?: number };
