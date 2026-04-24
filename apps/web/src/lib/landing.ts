@@ -1,6 +1,7 @@
 import { bucketCategory, CHAIN_TABS, isCexCategory, type CategoryTab, type ChainTab, type Tab } from "./category-map";
 import { rankMatch } from "./search";
 import { dominantChildGrade, type GradeColor } from "./verifiability";
+import { maxTier, type Tier } from "./tier";
 export type { GradeColor } from "./verifiability";
 
 export type LandingRow = {
@@ -19,6 +20,7 @@ export type LandingRow = {
   verifiability_grade: GradeColor;
   autonomy_grade: GradeColor;
   assessment_grades?: Partial<Record<"control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability", GradeColor>>;
+  tier?: Tier;
 };
 
 export type LandingNode = LandingRow & { children?: LandingRow[] };
@@ -78,6 +80,7 @@ export function buildNodes(rows: LandingRow[]): LandingNode[] {
         tvl: sumTvl(kids),
         verifiability_grade: dominantChildGrade(kids, (k) => k.verifiability_grade),
         autonomy_grade: dominantChildGrade(kids, (k) => k.autonomy_grade),
+        tier: maxTier([r.tier ?? "none", ...kids.map((k) => k.tier ?? "none")]),
         children: [...kids].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1)),
       });
     }

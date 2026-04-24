@@ -27,6 +27,7 @@ export {
   type Steelman,
   type ProtocolMetadata,
   type AuditEntry,
+  type HumanSignoff,
   type VotingToken,
   type AdminAddress,
   type Upgradeability,

@@ -9,6 +9,9 @@
   import { CHAIN_TABS, DEFAULT_TAB, TABS, type CategoryTab, type Tab } from "../lib/category-map";
   import { PIZZA_SLICES, GRADE_FILL, GRADE_TOOLTIP, pizzaGradesFor, type PizzaGrades, type PizzaSize } from "../lib/pizza";
   import { EM_DASH, formatTvl } from "../lib/format";
+  import TierGradients from "./TierGradients.svelte";
+  import TierRing from "./TierRing.svelte";
+  import TierLegend from "./TierLegend.svelte";
 
   const DEFAULT_PAGE = 200;
 
@@ -101,6 +104,7 @@
 </script>
 
 <section>
+  <TierGradients />
   <nav class="tabs" aria-label="Category">
     {#each sortedCategoryTabs as t}
       {@const active = t === tab}
@@ -142,6 +146,8 @@
       Show inactive
     </label>
   </div>
+
+  <TierLegend />
 
   <div class="scroll">
     <table>
@@ -251,6 +257,7 @@
             </path>
           </a>
         {/each}
+        <TierRing tier={row.tier ?? "none"} diameter={pz.radius * 2} />
       </svg>
     </td>
     <td class="muted">{EM_DASH}</td>

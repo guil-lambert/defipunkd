@@ -9,6 +9,8 @@ import { primaryChain } from "../lib/format";
 import { buildNodes, chainTvlFromNodes, tabCountsFromNodes, type LandingRow } from "../lib/landing";
 import { verifiabilityGrade } from "../lib/verifiability";
 import { autonomyGrade } from "../lib/autonomy";
+import { deriveTier, type TierInput } from "../lib/tier";
+import type { PizzaSliceId } from "../lib/pizza";
 
 const protocols = listProtocols();
 const assessments = getAssessments();
@@ -25,6 +27,18 @@ const rows: LandingRow[] = protocols.map((p) => {
         ]),
       )
     : undefined;
+  let tierInput: TierInput | undefined;
+  if (bySlice) {
+    tierInput = {};
+    for (const [sliceId, a] of bySlice.entries()) {
+      tierInput[sliceId as PizzaSliceId] = {
+        models: a.models,
+        merged_at: a.merged_at,
+        human_signoff: a.human_signoff ?? null,
+      };
+    }
+  }
+  const tier = deriveTier(tierInput);
   return {
     slug: p.slug,
     name: p.name,
@@ -41,6 +55,7 @@ const rows: LandingRow[] = protocols.map((p) => {
     verifiability_grade: verifiabilityGrade(!!(p.github && p.github.length > 0), p.audit_count ?? 0),
     autonomy_grade: autonomyGrade(p.category, p.forked_from),
     assessment_grades,
+    tier,
   };
 });
 
