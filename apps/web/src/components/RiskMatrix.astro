@@ -1,0 +1,125 @@
+---
+import type { SliceAssessment } from "../lib/rationale";
+
+interface Props {
+  slices: SliceAssessment[];
+  variant?: "hero" | "full";
+}
+const { slices, variant = "full" } = Astro.props;
+
+const SEVERITY_ORDER: Record<string, number> = { red: 0, orange: 1, green: 2, gray: 3 };
+const sorted = [...slices].sort(
+  (a, b) => (SEVERITY_ORDER[a.grade] ?? 9) - (SEVERITY_ORDER[b.grade] ?? 9),
+);
+
+function truncate(s: string, n = 100): string {
+  if (!s) return "";
+  return s.length <= n ? s : s.slice(0, n - 1).trimEnd() + "…";
+}
+
+function chipLabel(grade: string): string {
+  return grade === "gray" ? "unknown" : grade;
+}
+---
+<ul class:list={["risk-matrix", `variant-${variant}`]}>
+  {sorted.map((s) => (
+    <li class:list={["row", `grade-${s.grade}`]} data-slice-row={s.id}>
+      <a href={`#${s.id}`} class="row-link">
+        <span class="swatch" aria-hidden="true"></span>
+        <span class="dim">{s.label}</span>
+        <span class="chip">{chipLabel(s.grade)}</span>
+        <span class="headline" title={s.headline}>{truncate(s.headline, 100)}</span>
+      </a>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .risk-matrix {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .row + .row { border-top: 1px solid var(--surface-raised); }
+  .row-link {
+    display: grid;
+    grid-template-columns: 0.35rem minmax(8rem, auto) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0 0.9rem;
+    padding: 0.75rem 1rem 0.75rem 0;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 120ms ease;
+  }
+  .row-link:hover { background: color-mix(in oklab, var(--surface-raised) 50%, transparent); }
+  .swatch { display: block; height: 100%; min-height: 1.6rem; }
+  .row.grade-red    .swatch { background: var(--grade-red,    oklch(0.52 0.170 22)); }
+  .row.grade-orange .swatch { background: var(--grade-orange, oklch(0.65 0.120 75)); }
+  .row.grade-green  .swatch { background: var(--grade-green,  oklch(0.60 0.130 150)); }
+  .row.grade-gray   .swatch { background: oklch(0.55 0.015 235); }
+
+  .dim {
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .chip {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    color: #111;
+  }
+  .grade-red    .chip { background: oklch(0.62 0.170 22);  color: #fff; }
+  .grade-orange .chip { background: oklch(0.78 0.140 75);  color: #1a1208; }
+  .grade-green  .chip { background: oklch(0.74 0.140 150); color: #081610; }
+  .grade-gray   .chip { background: oklch(0.72 0.015 235); color: #0d1114; }
+
+  .headline {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.3;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .variant-hero .row-link { padding: 0.55rem 0.75rem 0.55rem 0; }
+  .variant-hero .dim { font-size: 0.72rem; }
+  .variant-hero .headline { font-size: 0.82rem; }
+
+  @media (max-width: 720px) {
+    .row-link {
+      grid-template-columns: 0.35rem minmax(0, 1fr) auto;
+      grid-template-rows: auto auto;
+      row-gap: 0.2rem;
+      padding: 0.7rem 0.9rem 0.7rem 0;
+    }
+    .dim { grid-column: 2; grid-row: 1; }
+    .chip { grid-column: 3; grid-row: 1; justify-self: end; }
+    .headline {
+      grid-column: 2 / -1;
+      grid-row: 2;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .swatch { grid-row: 1 / 3; }
+  }
+</style>
