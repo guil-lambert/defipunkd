@@ -1,4 +1,4 @@
-export const accessBody = `### Slice: ACCESS
+export const accessBody = `### Slice: OPEN-ACCESS
 
 Evaluate who is allowed to use the protocol and whether any of that permission is granted off-chain.
 

@@ -11,7 +11,7 @@ export const SLICE_IDS = [
   "control",
   "ability-to-exit",
   "autonomy",
-  "access",
+  "open-access",
   "verifiability",
 ] as const;
 
@@ -34,7 +34,7 @@ const BODIES: Record<SliceId, string> = {
   control: controlBody,
   "ability-to-exit": abilityToExitBody,
   autonomy: autonomyBody,
-  access: accessBody,
+  "open-access": accessBody,
   verifiability: verifiabilityBody,
 };
 

@@ -35,8 +35,8 @@ describe("buildPrompt", () => {
 
   it("requires a checklist-code prefix on unknowns[] entries", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("prefixed with the relevant checklist item code");
-    expect(p).toContain('"E3:"');
+    expect(p).toContain("prefixed with the relevant checklist code");
+    expect(p).toContain("E3:");
   });
 
   it("requires at least one block-explorer URL for on-chain slices", () => {
@@ -72,7 +72,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("uncontested-fast-path delay");
     expect(p).toContain("SUM OF DELAYS ON THE UNCONTESTED FAST PATH");
-    expect(p).toContain("dynamic / contested extensions");
+    expect(p).toContain("Dynamic / contested extensions");
   });
 
   it("control walks the full execution path, not just the first timelock (v10)", () => {

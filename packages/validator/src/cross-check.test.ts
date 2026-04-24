@@ -65,10 +65,10 @@ describe("crossCheck", () => {
     expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(true);
   });
 
-  it("does not require explorer URL on the access slice", () => {
+  it("does not require explorer URL on the open access slice", () => {
     const issues = crossCheck(
-      sub({ slice: "access", evidence: [{ url: "https://lido.fi/terms", shows: "y" }], grade: "green", headline: "permissionless", rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "y" } }),
-      ctx({ filePath: "data/submissions/lido/access/x.json" }),
+      sub({ slice: "open-access", evidence: [{ url: "https://lido.fi/terms", shows: "y" }], grade: "green", headline: "permissionless", rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "y" } }),
+      ctx({ filePath: "data/submissions/lido/open-access/x.json" }),
     );
     expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(false);
   });

@@ -5,7 +5,7 @@ export const SLICES = [
   "control",
   "ability-to-exit",
   "autonomy",
-  "access",
+  "open-access",
   "verifiability",
 ] as const;
 
@@ -101,7 +101,7 @@ const base = z
     unknowns: z.array(z.string().min(1)),
     protocol_metadata: ProtocolMetadataSchema.optional(),
   })
-  .passthrough();
+  .strict();
 
 export const SubmissionSchema = base.superRefine((val, ctx) => {
   if (val.grade === "unknown") {
