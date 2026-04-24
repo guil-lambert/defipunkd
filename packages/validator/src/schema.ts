@@ -95,6 +95,7 @@ const base = z
     chat_url: z.string().url().nullable().optional(),
     grade: z.enum(GRADES),
     headline: z.string().min(1),
+    short_headline: z.string().min(1).max(80).optional(),
     rationale: RationaleSchema,
     evidence: z.array(EvidenceSchema),
     unknowns: z.array(z.string().min(1)),

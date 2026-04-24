@@ -16,6 +16,7 @@ export type Assessment = {
   snapshot_generated_at: string;
   consensus_grade: Submission["grade"];
   consensus_strength: "strong" | "weak";
+  short_headline?: string;
   merged_at: string;
   primary_submission_path: string;
   merged_from: Array<{
@@ -147,9 +148,13 @@ export function computeQuorum(
   const weak = !strong && share >= 0.5 && topCount >= 2;
 
   if (strong || weak) {
-    const primary = scored
+    const agreeing = scored
       .filter((s) => s.submission.grade === topGrade)
-      .sort((a, b) => b.weight - a.weight)[0]!;
+      .sort((a, b) => b.weight - a.weight);
+    const primary = agreeing[0]!;
+    const short_headline = agreeing
+      .map((s) => s.submission.short_headline)
+      .find((v): v is string => typeof v === "string" && v.trim().length > 0);
     const metadata = mergeProtocolMetadata(scored);
     const assessment: Assessment = {
       schema_version: 3,
@@ -158,6 +163,7 @@ export function computeQuorum(
       snapshot_generated_at: primary.submission.snapshot_generated_at,
       consensus_grade: topGrade!,
       consensus_strength: strong ? "strong" : "weak",
+      ...(short_headline ? { short_headline } : {}),
       merged_at: ctx.now,
       primary_submission_path: primary.sourcePath,
       merged_from,
