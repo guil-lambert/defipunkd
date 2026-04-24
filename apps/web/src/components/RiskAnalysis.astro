@@ -126,23 +126,25 @@ const TOP_EVIDENCE = 2;
   <ol class="cards">
     {gradedSlices.map((s) => (
       <li id={s.id} class:list={["card", `grade-${s.grade}`]}>
-        <div class="stripe" aria-hidden="true"></div>
-        <div class="body">
-          <div class="meta">
-            <span class="label">{s.label}</span>
-            <span class:list={["chip", `grade-${s.grade}`]}>{chipLabel(s.grade)}</span>
-            {s.models && s.models.length > 0 && (
-              <span
-                class:list={["consensus", s.models.length >= 2 ? "consensus-agree" : "consensus-single"]}
-                title={s.strength ? `${s.strength} consensus` : undefined}
-              >
-                {s.models.length >= 2
-                  ? `${s.models.length}/${s.models.length} models agree`
-                  : "1 model"}
-              </span>
-            )}
-          </div>
-          <div class="headline">{s.headline}</div>
+        <details class="body card-details">
+          <summary class="card-summary">
+            <div class="meta">
+              <span class="label">{s.label}</span>
+              <span class:list={["chip", `grade-${s.grade}`]}>{chipLabel(s.grade)}</span>
+              {s.models && s.models.length > 0 && (
+                <span
+                  class:list={["consensus", s.models.length >= 2 ? "consensus-agree" : "consensus-single"]}
+                  title={s.strength ? `${s.strength} consensus` : undefined}
+                >
+                  {s.models.length >= 2
+                    ? `${s.models.length}/${s.models.length} models agree`
+                    : "1 model"}
+                </span>
+              )}
+              <span class="card-toggle" aria-hidden="true">▸</span>
+            </div>
+            <div class="headline">{s.headline}</div>
+          </summary>
           {s.structured ? (
             <div class="structured">
               {s.structured.steelman && s.structured.steelman[s.grade as "red" | "orange" | "green"] && (
@@ -199,7 +201,7 @@ const TOP_EVIDENCE = 2;
               <a class="sources-link" href={`https://github.com/guil-lambert/defipunkd/tree/main/data/submissions/${protocol.slug}/${s.id}`} rel="noreferrer" target="_blank">View raw submissions ↗</a>
             </div>
           )}
-        </div>
+        </details>
       </li>
     ))}
   </ol>
@@ -216,7 +218,6 @@ const TOP_EVIDENCE = 2;
           const sliceId = s.id as SliceId;
           return (
           <li id={s.id} class="card grade-gray">
-            <div class="stripe" aria-hidden="true"></div>
             <div class="body">
               <div class="meta">
                 <span class="label">{s.label}</span>
@@ -279,39 +280,49 @@ const TOP_EVIDENCE = 2;
     margin: 1rem 0 1.5rem 0;
     background: var(--surface);
     border: 1px solid var(--surface-raised);
-    border-left: 10px solid var(--accent-link);
-    border-radius: 4px;
-    padding: 0.65rem 0.9rem 0.65rem 1rem;
+    border-radius: 6px;
+    padding: 1rem 1.25rem 1.15rem 1.25rem;
+    background: linear-gradient(to right, var(--accent-link) 10px, var(--surface) 10px);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.35);
+    overflow: hidden;
   }
-  .audit-top[open] { padding-bottom: 0.9rem; }
   .audit-top > summary {
     list-style: none;
     cursor: pointer;
-    padding: 0.25rem 0;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    margin: -1rem -1.25rem 0 -1.25rem;
+    padding: 1rem 1.25rem 1rem calc(1.25rem + 10px);
+  }
+  .audit-top:not([open]) > summary {
+    margin-bottom: -1.15rem;
+    padding-bottom: 1.15rem;
   }
   .audit-top > summary::-webkit-details-marker { display: none; }
   .audit-top-title {
     color: var(--accent-link);
-    font-size: 0.92rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
   }
   .audit-top-title::after {
-    content: " ▸";
+    content: "▸";
+    margin-left: auto;
     color: var(--text-muted);
-    font-size: 0.7rem;
-    margin-left: 0.35rem;
+    font-size: 0.85rem;
     transition: transform 150ms ease;
     display: inline-block;
   }
   .audit-top[open] .audit-top-title::after { transform: rotate(90deg); }
   .audit-top-tagline {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    line-height: 1.5;
-    font-weight: 400;
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
   }
   .audit-top-body { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
   .audit-top-body p {
@@ -363,9 +374,7 @@ const TOP_EVIDENCE = 2;
   }
   .card {
     position: relative;
-    display: grid;
-    grid-template-columns: 10px 1fr;
-    background: var(--surface);
+    background: linear-gradient(to right, var(--grade-gray) 10px, var(--surface) 10px);
     border: 1px solid var(--surface-raised);
     border-radius: 6px;
     overflow: hidden;
@@ -381,16 +390,39 @@ const TOP_EVIDENCE = 2;
     opacity: 0.08;
     color: var(--grade-gray);
   }
+  .card.grade-green { background: linear-gradient(to right, var(--grade-green) 10px, var(--surface) 10px); }
+  .card.grade-orange { background: linear-gradient(to right, var(--grade-orange) 10px, var(--surface) 10px); }
+  .card.grade-red { background: linear-gradient(to right, var(--grade-red) 10px, var(--surface) 10px); }
+  .card.grade-gray { background: linear-gradient(to right, var(--grade-gray) 10px, var(--surface) 10px); }
   .card.grade-green::before { color: var(--grade-green); }
   .card.grade-orange::before { color: var(--grade-orange); }
   .card.grade-red::before { color: var(--grade-red); }
   .card.grade-gray::before { color: var(--grade-gray); }
-  .stripe { width: 10px; background: var(--grade-gray); }
-  .card.grade-green .stripe { background: var(--grade-green); }
-  .card.grade-orange .stripe { background: var(--grade-orange); }
-  .card.grade-red .stripe { background: var(--grade-red); }
-  .card.grade-gray .stripe { background: var(--grade-gray); }
   .body { position: relative; padding: 1rem 1.25rem 1.15rem 1.25rem; }
+  .card-details { display: flex; flex-direction: column; gap: 0.7rem; }
+  .card-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: -1rem -1.25rem 0 -1.25rem;
+    padding: 1rem 1.25rem 1rem calc(1.25rem + 10px);
+  }
+  .card-details:not([open]) .card-summary {
+    margin-bottom: -1.15rem;
+    padding-bottom: 1.15rem;
+  }
+  .card-summary::-webkit-details-marker { display: none; }
+  .card-summary .headline { margin-bottom: 0; }
+  .card-toggle {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    transition: transform 150ms ease;
+    display: inline-block;
+  }
+  .card-details[open] .card-toggle { transform: rotate(90deg); }
   .meta {
     display: flex;
     align-items: center;
