@@ -2,10 +2,8 @@
 import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
-import { verifiabilityGrade } from "../lib/verifiability";
-import { dependenciesGrade } from "../lib/dependencies";
-import { pizzaGradesFor, GRADE_FILL } from "../lib/pizza";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
+import RiskMatrix from "./RiskMatrix.astro";
 
 interface Props {
   protocol: Protocol;
@@ -13,43 +11,7 @@ interface Props {
 }
 const { protocol, assessments } = Astro.props;
 
-const grades = pizzaGradesFor(
-  protocol.category,
-  verifiabilityGrade(!!(protocol.github && protocol.github.length > 0), protocol.audit_count ?? 0),
-  dependenciesGrade(protocol.category, protocol.forked_from),
-);
-
 const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
-const PZ_VIEW = 360;
-const PZ_CENTER = PZ_VIEW / 2;
-const PZ_RADIUS = 105;
-const PZ_LABEL_RADIUS = 152;
-const SHORT_LABEL: Record<string, string> = {
-  control: "Control",
-  "ability-to-exit": "Exit",
-  dependencies: "Deps",
-  access: "Access",
-  verifiability: "Verify",
-};
-const headerSlicePaths = headerSlices.map((s, i) => {
-  const a = (2 * Math.PI) / headerSlices.length;
-  const a0 = -Math.PI / 2 + i * a;
-  const a1 = a0 + a;
-  const aMid = a0 + a / 2;
-  const x0 = PZ_CENTER + PZ_RADIUS * Math.cos(a0);
-  const y0 = PZ_CENTER + PZ_RADIUS * Math.sin(a0);
-  const x1 = PZ_CENTER + PZ_RADIUS * Math.cos(a1);
-  const y1 = PZ_CENTER + PZ_RADIUS * Math.sin(a1);
-  const labelX = PZ_CENTER + PZ_LABEL_RADIUS * Math.cos(aMid);
-  const labelY = PZ_CENTER + PZ_LABEL_RADIUS * Math.sin(aMid);
-  return {
-    assessment: s,
-    d: `M${PZ_CENTER},${PZ_CENTER} L${x0},${y0} A${PZ_RADIUS},${PZ_RADIUS} 0 0,1 ${x1},${y1} Z`,
-    labelLeftPct: (labelX / PZ_VIEW) * 100,
-    labelTopPct: (labelY / PZ_VIEW) * 100,
-    shortLabel: SHORT_LABEL[s.id] ?? s.label,
-  };
-});
 
 const primary = primaryChain(protocol.tvl_by_chain) ?? protocol.chains[0] ?? null;
 const CHAIN_LIMIT = 5;
@@ -119,23 +81,8 @@ const aboutUnknown = !curatedAbout;
       </div>
     </div>
 
-    <div class="cell pizza-cell">
-      <div class="hdr-rosette">
-        <svg viewBox={`0 0 ${PZ_VIEW} ${PZ_VIEW}`} role="img" aria-label="Risk pizza" preserveAspectRatio="xMidYMid meet">
-          {headerSlicePaths.map(({ assessment, d }) => (
-            <a href={`#${assessment.id}`} data-hdr-slice={assessment.id} class="hdr-slice">
-              <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
-                <title>{`${assessment.label} \u2014 ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
-              </path>
-            </a>
-          ))}
-        </svg>
-        {headerSlicePaths.map(({ assessment, labelLeftPct, labelTopPct, shortLabel }) => (
-          <span class="hdr-rlabel" data-hdr-rlabel={assessment.id} style={`left:${labelLeftPct}%;top:${labelTopPct}%`}>
-            {shortLabel}
-          </span>
-        ))}
-      </div>
+    <div class="cell matrix-cell">
+      <RiskMatrix slices={headerSlices} variant="hero" />
     </div>
 
     <div class="cell">
@@ -223,49 +170,14 @@ const aboutUnknown = !curatedAbout;
     align-items: start;
   }
   .cell { min-width: 0; }
-  .pizza-cell {
+  .matrix-cell {
     grid-column: 4;
     grid-row: 1 / 3;
+    align-self: stretch;
     display: flex;
     align-items: center;
-    justify-content: center;
   }
-  .hdr-rosette {
-    position: relative;
-    width: 100%;
-    max-width: 220px;
-    aspect-ratio: 1 / 1;
-  }
-  .hdr-rosette svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .hdr-slice { cursor: pointer; }
-  .hdr-slice path { transition: opacity 150ms ease; }
-  .hdr-rosette:has(.hdr-slice:hover) .hdr-slice:not(:hover) path { opacity: 0.25; }
-
-  .hdr-rlabel {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    width: 4rem;
-    text-align: center;
-    font-size: 0.62rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 600;
-    color: var(--text-muted);
-    line-height: 1.2;
-    pointer-events: none;
-    transition: color 150ms ease;
-  }
-  .hdr-rosette:has([data-hdr-slice="control"]:hover) [data-hdr-rlabel="control"] { color: var(--text); }
-  .hdr-rosette:has([data-hdr-slice="ability-to-exit"]:hover) [data-hdr-rlabel="ability-to-exit"] { color: var(--text); }
-  .hdr-rosette:has([data-hdr-slice="dependencies"]:hover) [data-hdr-rlabel="dependencies"] { color: var(--text); }
-  .hdr-rosette:has([data-hdr-slice="access"]:hover) [data-hdr-rlabel="access"] { color: var(--text); }
-  .hdr-rosette:has([data-hdr-slice="verifiability"]:hover) [data-hdr-rlabel="verifiability"] { color: var(--text); }
+  .matrix-cell > :global(.risk-matrix) { width: 100%; }
   .wide.control {
     grid-column: 1 / 3;
     grid-row: 3;
@@ -355,7 +267,7 @@ const aboutUnknown = !curatedAbout;
       gap: 1rem 1.25rem;
       padding: 1rem;
     }
-    .pizza-cell { grid-column: 1 / -1; grid-row: auto; }
+    .matrix-cell { grid-column: 1 / -1; grid-row: auto; }
     .wide.control, .wide.about {
       grid-column: 1 / -1;
       grid-row: auto;

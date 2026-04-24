@@ -1,8 +1,8 @@
 ---
 import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding } from "@defipunkd/registry";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
-import { GRADE_FILL } from "../lib/pizza";
 import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
+import RiskMatrix from "./RiskMatrix.astro";
 
 interface Props {
   protocol: Protocol;
@@ -78,36 +78,6 @@ const promptsBySlice = Object.fromEntries(
     .map((s) => [s.id, promptFor(s.id as SliceId)]),
 ) as Record<SliceId, string>;
 
-const VIEW = 360;
-const CENTER = VIEW / 2;
-const RADIUS = 110;
-const LABEL_RADIUS = 150;
-
-type SlicePath = {
-  assessment: SliceAssessment;
-  d: string;
-  labelLeftPct: number;
-  labelTopPct: number;
-};
-
-const slicePaths: SlicePath[] = slices.map((s, i) => {
-  const angle = (2 * Math.PI) / slices.length;
-  const a0 = -Math.PI / 2 + i * angle;
-  const a1 = a0 + angle;
-  const x0 = CENTER + RADIUS * Math.cos(a0);
-  const y0 = CENTER + RADIUS * Math.sin(a0);
-  const x1 = CENTER + RADIUS * Math.cos(a1);
-  const y1 = CENTER + RADIUS * Math.sin(a1);
-  const aMid = a0 + angle / 2;
-  const labelX = CENTER + LABEL_RADIUS * Math.cos(aMid);
-  const labelY = CENTER + LABEL_RADIUS * Math.sin(aMid);
-  return {
-    assessment: s,
-    d: `M${CENTER},${CENTER} L${x0},${y0} A${RADIUS},${RADIUS} 0 0,1 ${x1},${y1} Z`,
-    labelLeftPct: (labelX / VIEW) * 100,
-    labelTopPct: (labelY / VIEW) * 100,
-  };
-});
 ---
 <section class="risk-analysis" id="risk-analysis">
   <h2>Risk analysis</h2>
@@ -115,40 +85,7 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
     One card per dimension. At Phase 0 most cards read <em>not yet assessed</em>; only Verifiability and Dependencies carry automated signals. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
   </p>
 
-  <div class="rosette-wrap">
-    <div class="rosette">
-      <svg viewBox={`0 0 ${VIEW} ${VIEW}`} role="img" aria-label="Risk rosette" preserveAspectRatio="xMidYMid meet">
-        {slicePaths.map(({ assessment, d }) => (
-          <a href={`#${assessment.id}`} data-slice={assessment.id} class="slice">
-            <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--bg)" stroke-width="8" stroke-linejoin="round">
-              <title>{`${assessment.label} \u2014 ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
-            </path>
-          </a>
-        ))}
-      </svg>
-      {slicePaths.map(({ assessment, labelLeftPct, labelTopPct }) => (
-        <span class="rlabel" data-rlabel={assessment.id} style={`left:${labelLeftPct}%;top:${labelTopPct}%`}>
-          {assessment.label}
-        </span>
-      ))}
-    </div>
-
-    <div class="tip-slot">
-      <div class="tip-default">
-        <span>Hover a slice to see the rationale · click to jump to the card below.</span>
-      </div>
-      {slices.map((s) => (
-        <div class:list={["tip", `grade-${s.grade}`]} data-tip={s.id}>
-          <div class="tip-meta">
-            <span class="tip-label">{s.label}</span>
-            <span class="tip-grade">{s.grade === "gray" ? "unknown" : s.grade}</span>
-            {s.strength && <span class:list={["strength", `strength-${s.strength}`]}>{s.strength}</span>}
-          </div>
-          <div class="tip-headline">{s.headline}</div>
-        </div>
-      ))}
-    </div>
-  </div>
+  <RiskMatrix slices={slices} variant="full" />
 
   <ol class="cards">
     {slices.map((s) => (
@@ -271,132 +208,6 @@ const slicePaths: SlicePath[] = slices.map((s, i) => {
   h2 { margin: 0 0 0.25rem 0; color: var(--text); font-size: 2.25rem; }
   .lede { color: var(--text-muted); margin: 0 0 1.25rem 0; font-size: 0.9rem; }
   .link { color: var(--accent-link); }
-
-  .rosette-wrap {
-    display: grid;
-    grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
-    align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  @media (max-width: 720px) {
-    .rosette-wrap {
-      grid-template-columns: 1fr;
-      justify-items: center;
-    }
-  }
-
-  .rosette {
-    position: relative;
-    width: 100%;
-    max-width: 360px;
-    aspect-ratio: 1 / 1;
-  }
-  .rosette svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .slice { cursor: pointer; }
-  .slice path { transition: opacity 150ms ease; }
-  .rosette:has(.slice:hover) .slice:not(:hover) path { opacity: 0.25; }
-
-  .rlabel {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    text-align: center;
-    width: 6rem;
-    font-weight: 600;
-    pointer-events: none;
-    transition: color 150ms ease;
-    line-height: 1.2;
-  }
-
-  .tip-slot {
-    display: grid;
-    width: min(420px, 100%);
-  }
-  .tip,
-  .tip-default {
-    grid-area: 1 / 1;
-    background: var(--surface);
-    border: 1px solid var(--surface-raised);
-    border-left-width: 3px;
-    border-radius: 4px;
-    padding: 0.75rem 1rem;
-    transition: opacity 150ms ease;
-  }
-  .tip { opacity: 0; pointer-events: none; }
-  .tip-default {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    font-style: italic;
-    text-align: center;
-    border-left-color: var(--surface-raised);
-  }
-  .rosette-wrap:has(.slice:hover) .tip-default { opacity: 0; }
-
-  .tip.grade-gray { border-left-color: var(--grade-gray); }
-  .tip.grade-green { border-left-color: var(--grade-green); }
-  .tip.grade-orange { border-left-color: var(--grade-orange); }
-  .tip.grade-red { border-left-color: var(--grade-red); }
-
-  .tip-meta {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
-  }
-  .tip-label {
-    color: var(--text-muted);
-    font-size: 0.66rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 600;
-  }
-  .tip-grade {
-    font-size: 0.66rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .tip.grade-green .tip-grade { color: var(--grade-green); }
-  .tip.grade-orange .tip-grade { color: var(--grade-orange); }
-  .tip.grade-red .tip-grade { color: var(--grade-red); }
-  .tip-headline {
-    color: var(--text);
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin-bottom: 0.35rem;
-  }
-  .tip-rationale {
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    line-height: 1.45;
-    margin: 0;
-  }
-
-  /* Hover-to-highlight wiring — one :has() pair per slice */
-  .rosette-wrap:has([data-slice="control"]:hover) [data-rlabel="control"] { color: var(--text); }
-  .rosette-wrap:has([data-slice="control"]:hover) [data-tip="control"] { opacity: 1; }
-  .rosette-wrap:has([data-slice="ability-to-exit"]:hover) [data-rlabel="ability-to-exit"] { color: var(--text); }
-  .rosette-wrap:has([data-slice="ability-to-exit"]:hover) [data-tip="ability-to-exit"] { opacity: 1; }
-  .rosette-wrap:has([data-slice="dependencies"]:hover) [data-rlabel="dependencies"] { color: var(--text); }
-  .rosette-wrap:has([data-slice="dependencies"]:hover) [data-tip="dependencies"] { opacity: 1; }
-  .rosette-wrap:has([data-slice="access"]:hover) [data-rlabel="access"] { color: var(--text); }
-  .rosette-wrap:has([data-slice="access"]:hover) [data-tip="access"] { opacity: 1; }
-  .rosette-wrap:has([data-slice="verifiability"]:hover) [data-rlabel="verifiability"] { color: var(--text); }
-  .rosette-wrap:has([data-slice="verifiability"]:hover) [data-tip="verifiability"] { opacity: 1; }
 
   .cards {
     list-style: none;
