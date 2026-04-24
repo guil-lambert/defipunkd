@@ -5,204 +5,261 @@
   "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
   "prompt_version": 6,
   "analysis_date": "2026-04-24",
-  "model": "GPT-5.5 Thinking",
+  "model": "gpt-5.5-thinking",
   "chat_url": null,
-  "grade": "orange",
-  "headline": "Core stETH mint, transfer, and withdrawal flows are contract-permissionless, but the official interface imposes sanctions and jurisdiction restrictions.",
+  "grade": "green",
+  "headline": "Core stETH staking and finalized withdrawal claims are contract-accessible without user allowlists or KYC; frontend restrictions found were passive ToS only.",
   "rationale": {
     "findings": [
       {
         "code": "A1",
-        "text": "The primary Ethereum staking entry point, Lido.submit(address), is external payable and mints stETH to msg.sender without an allowlist/KYC modifier; staking can be paused or rate-limited by privileged roles. The primary withdrawal request functions requestWithdrawals, requestWithdrawalsWstETH, and permit variants are public/external and only check that the withdrawal queue is resumed plus amount/ownership conditions; role gates are used for pause/resume/finalize/admin metadata functions, not for ordinary request placement or finalized-claim execution."
+        "text": "User-facing stETH entry via submit(address) is external payable and mints to msg.sender without a whitelist/KYC modifier; staking can be globally paused or rate-limited by governance roles, but the inspected entry point does not gate by user identity."
+      },
+      {
+        "code": "A1",
+        "text": "Withdrawal request placement functions requestWithdrawals, requestWithdrawalsWstETH, and permit variants are public/external and check the global resumed state and amount constraints, not an address allowlist; pause/resume roles affect global availability rather than per-user admission."
+      },
+      {
+        "code": "A1",
+        "text": "Withdrawal claim functions claimWithdrawalsTo, claimWithdrawals, and claimWithdrawal require the caller to own the relevant request and require finalization, but do not require a whitelist, KYC status, or privileged operator approval to claim already-finalized requests."
       },
       {
         "code": "A2",
-        "text": "Lido relies on off-chain/on-chain operator systems for full protocol liveness: the AccountingOracle committee gathers accounting reports, reports drive rebases and withdrawal finalization, and the DepositSecurityModule guards validator deposits. If the oracle process does not report, new staking and token transfers may still exist, but rebases and direct withdrawal finalization do not progress through the normal documented path."
+        "text": "Deposit/mint admission is unconditional at the user submit layer when staking is not globally paused and capacity is available; downstream validator deposits are performed asynchronously by the DepositSecurityModule, which is a liveness/operation dependency rather than an operator approval needed to admit the user's mint."
       },
       {
-        "code": "A3",
-        "text": "The official interface terms impose eligibility restrictions: users must not be residents/citizens/entities of Crimea, Cuba, Donetsk, Iran, Luhansk, North Korea, Syria, or other embargoed/sanctioned territories, must not be sanctions-listed persons, and for Lido GGV must not access from or be citizens/residents of the United States, the United Kingdom, or unlawful jurisdictions."
+        "code": "A2",
+        "text": "Withdrawal request placement is admitted directly through WithdrawalQueueERC721; finalization is performed as part of the AccountingOracle/Lido accounting process, but claim of finalized requests remains user-callable by the request owner."
+      },
+      {
+        "code": "A3-passive",
+        "text": "The official Terms of Use include passive eligibility, restricted-territory, sanctions-list, and VPN/circumvention clauses, including the verbatim clause: \"Use of a virtual private network (e.g., a VPN) or other means by ineligible persons to access or use the Interface is prohibited\"."
+      },
+      {
+        "code": "A3-active",
+        "text": "A static fetch of https://stake.lido.fi/ rendered the staking interface content and links without a visible block banner, KYC wall, wallet-screening rejection, HTTP 451, or named sanctions-screening provider in the fetched page content."
+      },
+      {
+        "code": "A3b-i",
+        "text": "The stake interface exposes an IPFS/version link, but the Terms define the Interface broadly and prohibit ineligible access and VPN/circumvention, so official redistributions are not treated as independent access paths."
+      },
+      {
+        "code": "A3b-ii",
+        "text": "Lido's Terms and official interface documentation explicitly state that users can interact without the Interface by using blockchain systems, wallets, validator nodes, block explorers, code repositories, or direct smart-contract interaction; the official staking FAQ also says stETH can be obtained by interacting with the smart contract directly and through other integrations."
       },
       {
         "code": "A4",
-        "text": "No on-chain OFAC/sanctions blocklist was identified in the primary stETH submit/transfer/withdrawal queue paths reviewed; however, the interface terms state the interface may collect and temporarily store blockchain addresses or IP addresses for identifying prohibited jurisdictions, sanctioned persons, or prohibited uses."
+        "text": "In the inspected core stETH submit and WithdrawalQueue user paths, no onchain sanctions/blocklist check was identified; the visible restrictions are ToS-level representations rather than contract-level OFAC/blocklist enforcement."
       },
       {
         "code": "A5",
-        "text": "Read access is public through view functions and public block explorers; write access differs by function class: ordinary stETH submit/transfer/wrap/withdrawal request/claim flows are callable by users subject to pause/state/ownership checks, while administrative actions such as staking pause/control, withdrawal pause/resume/finalization, oracle reporting, and upgrades are role/governance controlled."
+        "text": "Read access is permissionless through public view functions and block explorers; write access for user deposit, withdrawal request placement, transfer, and finalized claim is not identity-gated, although some protocol operations such as pausing, resuming, validator deposits, oracle reports, and finalization are privileged or committee/governance-operated."
       },
       {
         "code": "A6",
-        "text": "The official Terms of Use are published at lido.fi/terms-of-use and state that direct use of blockchain middleware does not require the interface, while interface use is restricted by the eligibility, sanctions, and jurisdiction clauses quoted in A3."
+        "text": "The ToS eligibility section states verbatim that users represent they are not residents/citizens/entities of Crimea, Cuba, Donetsk, Iran, Luhansk, North Korea, Syria, or other embargoed/sanctioned territories, are not sanctions-listed persons, have not received assets from sanctions-listed blockchain addresses, and do not intend to transact with restricted territories or sanctions-listed persons."
       }
     ],
     "steelman": {
-      "red": "A red grade could be argued because direct withdrawal finalization and rebases depend on an authorized oracle/finalization path, and privileged roles can pause new staking or withdrawal request placement.",
-      "orange": "An orange grade fits because the audited user-facing contract paths are broadly permissionless for deposits, transfers, withdrawal requests, and finalized claims, but the official interface imposes sanctions and jurisdiction restrictions and full withdrawal/rebase liveness depends on an oracle committee.",
-      "green": "A green grade could be argued for the contract layer because ordinary stETH minting, transfer, wrapping, withdrawal request placement, and finalized-claim execution do not require KYC or an allowlist in the reviewed primary contracts."
+      "red": "The strongest red argument is that staking and withdrawal placement can be globally paused by privileged roles and withdrawal finalization depends on oracle/accounting actors, but these are global control/liveness powers rather than per-user admission gates or address blocklists.",
+      "orange": "The strongest orange argument is that the official Interface imposes passive sanctions, restricted-territory, and VPN prohibitions in its ToS, and active runtime screening could not be exhaustively disproven from all jurisdictions or wallet states.",
+      "green": "The strongest green argument is that the deployed stETH and WithdrawalQueue user-facing functions admit deposits, withdrawal requests, transfers, and finalized claims without allowlists, KYC, per-address sanctions checks, or operator pre-approval, and the only verified frontend restrictions are passive ToS clauses with documented direct-contract alternatives."
     },
-    "verdict": "Choosing orange because the strongest contract-layer evidence supports permissionless ordinary write access, but the official frontend/legal layer restricts sanctioned and certain jurisdictional users, and the protocol has committee-operated oracle/finalization dependencies rather than being fully operator-free."
+    "verdict": "Choosing green because the evidence supports permissionless contract-level admission for the core user flows and documents independent/direct contract access, while the only verified access restriction is passive ToS language and no A3-active frontend enforcement was observed in the fetched official interface."
   },
   "evidence": [
     {
-      "url": "https://github.com/lidofinance/core/blob/v3.0.1/contracts/0.4.24/Lido.sol",
-      "shows": "Lido.submit(address) is external payable and calls _submit(_referral); fallback also calls _submit(0). The same file shows pauseStaking/resumeStaking/setStakingLimit are role-gated via _auth, so ordinary submit is not allowlist-gated but can be paused/rate-limited by privileged roles.",
-      "commit": "9673839",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://etherscan.io/address/0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      "shows": "Block explorer page for the deployed Ethereum Lido/stETH token contract assessed for the user staking/minting entry point.",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://github.com/lidofinance/core/blob/v3.0.1/contracts/0.8.9/WithdrawalQueue.sol",
-      "shows": "WithdrawalQueue defines PAUSE_ROLE, RESUME_ROLE, FINALIZE_ROLE, and ORACLE_ROLE. requestWithdrawals and requestWithdrawalsWstETH are public, call _checkResumed, default owner to msg.sender when zero, validate amounts, and create withdrawal requests. Permit variants call permit then route to the public request functions. Claim functions require valid finalized ownership conditions, not an allowlist.",
-      "commit": "9673839",
-      "fetched_at": "2026-04-24T00:30:00Z"
-    },
-    {
-      "url": "https://github.com/lidofinance/core/blob/v3.0.1/contracts/0.8.9/WithdrawalQueueERC721.sol",
-      "shows": "WithdrawalQueueERC721.finalize is payable and checks FINALIZE_ROLE before finalizing requests; setBaseURI and setNFTDescriptorAddress are role-gated metadata functions. No allowlist/KYC gate was found in the ERC721 wrapper's ordinary transfer/approval paths reviewed.",
-      "commit": "9673839",
-      "fetched_at": "2026-04-24T00:30:00Z"
-    },
-    {
-      "url": "https://docs.lido.fi/contracts/lido/",
-      "shows": "Official docs identify Lido as the main entry point for stakers, describe submit as sending ETH and minting stETH to msg.sender, identify AccountingOracle as the oracle committee gathering reports, and state that oracle reports drive rebases and withdrawal fulfillment.",
-      "fetched_at": "2026-04-24T00:30:00Z"
-    },
-    {
-      "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-      "shows": "Official docs describe WithdrawalQueueERC721 as the main direct stETH-to-ETH exit path. Withdrawal request placement requires token approval or permit and calling requestWithdrawals* methods. Claim is available to the current owner once the request is finalized. Finalization is performed as part of an AccountingOracle report.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://etherscan.io/address/0x889edc2edab5f40e902b864ad4d7ade8e412f9b1",
+      "shows": "Block explorer page for the deployed Ethereum WithdrawalQueueERC721 contract assessed for withdrawal request and claim access.",
+      "chain": "Ethereum",
+      "address": "0x889edc2edab5f40e902b864ad4d7ade8e412f9b1",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
       "url": "https://docs.lido.fi/deployed-contracts/",
-      "shows": "Official mainnet deployment page lists active Ethereum mainnet contract addresses, including stETH/Lido proxy 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84, Withdrawal Queue proxy 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1, AccountingOracle proxy 0x852deD011285fe67063a08005c71a85690503Cee, DAO/voting contracts, LDO token, Dual Governance, and emergency committee contracts. The page shows a mixed proxy/non-proxy deployment.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "shows": "Canonical Lido deployment index lists Ethereum mainnet production contracts including Lido/stETH token at 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 and marks it as a proxy; also links Lido Locator, Accounting, and other core deployment addresses.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
-      "shows": "Etherscan page for the deployed Ethereum mainnet Lido/stETH token proxy contract assessed for user staking/token access.",
-      "chain": "Ethereum",
-      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://github.com/lidofinance/core/blob/master/contracts/0.4.24/Lido.sol",
+      "shows": "Lido.sol shows fallback payable calls _submit(0), submit(address) external payable returns _submit(_referral), pauseStaking/resumeStaking are role-controlled global controls, and deposit() is restricted to the DepositSecurityModule for downstream validator deposits.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
-      "shows": "Etherscan page for the deployed Ethereum mainnet Withdrawal Queue proxy contract assessed for direct protocol exits.",
-      "chain": "Ethereum",
-      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://github.com/lidofinance/core/blob/master/contracts/0.8.9/WithdrawalQueue.sol",
+      "shows": "WithdrawalQueue.sol defines PAUSE_ROLE, RESUME_ROLE, FINALIZE_ROLE, and ORACLE_ROLE; requestWithdrawals and requestWithdrawalsWstETH are public, check _checkResumed and amount constraints, and assign owner; permit variants call the public request functions.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core/blob/master/contracts/0.8.9/WithdrawalQueue.sol",
+      "shows": "WithdrawalQueue.sol claim functions claimWithdrawalsTo, claimWithdrawals, and claimWithdrawal are external, require finalized/unclaimed requests and msg.sender ownership, and do not show whitelist/KYC/blocklist admission modifiers.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/lido/",
+      "shows": "Lido docs state the Lido contract is the main entry point for stakers, users send ETH to the contract and receive stETH, withdrawals use WithdrawalQueueERC721 or secondary-market swaps, and deposits to validators happen asynchronously via DepositSecurityModule.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+      "shows": "WithdrawalQueueERC721 docs state it is the main entry point to exchange stETH for underlying ether, manages withdrawal requests, stores stETH before finalization and ether after finalization, and transfers reserved ether to the user upon claim; to request, a user approves stETH/wstETH or signs permit and calls the requestWithdrawals method.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://stake.lido.fi/",
+      "shows": "Official staking interface fetch rendered Stake/Wrap/Withdrawals/Rewards content, FAQ text, direct smart-contract/integration access language, Terms links, and a version/IPFS-style link without an observed block banner, KYC wall, wallet-screening rejection, or named sanctions-screening provider in the fetched static content.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
       "url": "https://lido.fi/terms-of-use",
-      "shows": "Official Terms of Use state that using blockchain middleware does not require the interface; anyone can connect directly to middleware/blockchains without the interface. Eligibility excludes residents/citizens/entities of Crimea, Cuba, Donetsk, Iran, Luhansk, North Korea, Syria, or other sanctioned/embargoed territories, sanctions-listed persons, and, for Lido GGV, users accessing from or resident/citizen of the United States, the United Kingdom, or unlawful jurisdictions. The privacy section states the interface may collect/store blockchain addresses or IP addresses to identify prohibited jurisdictions, sanctioned persons, or prohibited uses.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "shows": "ToS states: \"If you do not meet the eligibility requirements set forth in Section 7 of the Terms or are otherwise not in strict compliance with these Terms, you are expressly prohibited from using, accessing, or deriving any benefit from the Interface\" and \"Use of a virtual private network (e.g., a VPN) or other means by ineligible persons to access or use the Interface is prohibited\".",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://help.lido.fi/en/articles/5231797-why-can-t-i-stake-through-lido-from-my-country",
-      "shows": "Lido help article states that Lido may not be available to certain countries due to regulatory uncertainty and suggests acquiring stETH through exchanges as an alternative.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://lido.fi/terms-of-use",
+      "shows": "ToS eligibility states users represent they are of legal age, have technical knowledge, comply with applicable laws, are not residents/citizens/entities of Restricted Territories including Crimea, Cuba, Donetsk, Iran, Luhansk, North Korea, and Syria, are not sanctions-listed persons, have not received assets from sanctions-listed blockchain addresses, and do not intend to transact with restricted territories or sanctions-listed persons.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://lido.fi/bug-bounty",
-      "shows": "Official bug bounty page states that Lido uses Immunefi and covers smart contracts and applications, focusing on loss of user funds, denial of service, governance hijacks, data breaches, and data leaks.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://lido.fi/terms-of-use",
+      "shows": "ToS states that using blockchain systems, third-party wallets, validator nodes, or Middleware does not require the Interface, anyone with an internet connection can connect directly to Middleware or blockchain, and users may review smart contracts on compatible block explorers and code repositories.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://github.com/lidofinance/core/security",
-      "shows": "GitHub security page for the core repo instructs reporters to use the Lido Bug Bounty program on Immunefi for security issues.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://lido.fi/",
+      "shows": "Official Lido site links to GitHub, Docs, Smart contracts, Audits, Bug bounty, Research forum, Snapshot/off-chain votes, Aragon/on-chain votes, Dual Governance, and ecosystem integrations including MetaMask, Safe, Cow Swap, Curve, Aave, 1inch, Ledger, Balancer, Uniswap, and Sky.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/lido-dao/",
+      "shows": "Lido DAO docs state that Lido DAO manages liquid staking protocols through LDO-holder voting power, list the LDO contract address as 0x5a98fcbea516cf06857215779fd812ca3bef1b32, link the governance forum, and state the DAO uses Aragon.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://lido.fi/governance",
+      "shows": "Governance page identifies the Research Forum, Snapshot off-chain voting, Aragon on-chain voting, Dual Governance, and Easy Track; it states proposals require LDO thresholds and that Easy Track motions are initiated by authorized addresses, typically committee multisigs, and pass after 72 hours unless 0.5% of LDO supply objects.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/guides/protocol-levers/",
+      "shows": "Protocol levers page lists concrete governance structure addresses: Aragon Voting 0x2e59A20f205bB85a89C53f1936454680651E618e, Aragon Agent 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c, Aragon ACL 0x9895f0f17cc1d1891b6f18ee0b483b6f221b37bb, and Easy Track 0xF0211b7660680B49De1A7E9f25C65660F0a13Fea.",
+      "fetched_at": "2026-04-24T02:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core",
+      "shows": "Canonical Lido core repository describes Lido on Ethereum as a liquid-staking protocol allowing anyone to earn staking rewards without locking ether or maintaining infrastructure, lists key features including no minimum deposit amount, in-protocol automated withdrawals, and DAO governance, and links documentation, addresses, protocol levers, audits, and bug bounty.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
       "url": "https://github.com/lidofinance/audits",
-      "shows": "Official audits repository lists Lido audit reports, including Certora Lido V3 Audit Report 12-2025, Certora Lido V3 Formal Verification Report 12-2025, Consensys Diligence Lido V3 Security Audit 11-2025, and MixBytes Lido V3 Security Audit 12-2025 / 03-2026.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "shows": "Canonical Lido audits repository lists Lido Protocol Audits including Sigma Prime, Quantstamp, MixBytes, Oxorio, ChainSecurity, Hexens, Statemind, OpenZeppelin, Runtime Verification, and other reports.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://research.lido.fi/",
-      "shows": "Primary Lido governance forum used for public proposal discussion and governance research.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://immunefi.com/bug-bounty/lido/",
+      "shows": "Immunefi page identifies the Lido bug bounty, live since 2021-05-22, last updated 2026-03-26, with smart-contract and web/app bounty scopes and maximum smart-contract bounty of $2,000,000.",
+      "fetched_at": "2026-04-24T02:00:00Z"
     },
     {
-      "url": "https://github.com/lidofinance/core/releases",
-      "shows": "GitHub releases page identifies v3.0.1 and short commit 9673839 for the core contracts release used as the pinned source reference.",
-      "fetched_at": "2026-04-24T00:30:00Z"
+      "url": "https://etherscan.io/token/0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "shows": "Etherscan token page for LDO, described as an ERC20 token granting governance rights in the Lido DAO.",
+      "chain": "Ethereum",
+      "address": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "fetched_at": "2026-04-24T02:00:00Z"
     }
   ],
-  "unknowns": [],
+  "unknowns": [
+    "A3-active: I did not test the official frontend from every restricted jurisdiction, with a sanctioned wallet, or through a browser-executed wallet-connection flow, so runtime IP geoblocking or wallet screening cannot be exhaustively excluded from the static fetch alone.",
+    "A4: I did not perform a full repository-wide code clone/grep at a pinned commit SHA during this run; the no-onchain-blocklist finding is limited to the inspected deployed core stETH and WithdrawalQueue user-facing paths plus public source pages."
+  ],
   "protocol_metadata": {
     "github": [
       "https://github.com/lidofinance/core",
-      "https://github.com/lidofinance/docs",
       "https://github.com/lidofinance/audits"
     ],
     "docs_url": "https://docs.lido.fi/",
     "audits": [
       {
-        "firm": "Certora",
-        "url": "https://github.com/lidofinance/audits/blob/main/Certora%20Lido%20V3%20Audit%20Report%20-%2012-2025.pdf",
-        "date": "2025-12"
+        "firm": "Sigma Prime",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2020-12"
       },
       {
-        "firm": "Consensys Diligence",
-        "url": "https://github.com/lidofinance/audits/blob/main/Consensys%20Diligence%20Lido%20V3%20Security%20Audit%20-%2011-2025.pdf",
-        "date": "2025-11"
+        "firm": "Quantstamp",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2020-12"
       },
       {
         "firm": "MixBytes",
-        "url": "https://github.com/lidofinance/audits/blob/main/MixBytes%20Lido%20V3%20Security%20Audit%20Report%20-%2012-2025.pdf",
-        "date": "2025-12"
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2021-04"
+      },
+      {
+        "firm": "Oxorio",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2022-05"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2022-08"
+      },
+      {
+        "firm": "Hexens",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2023-04"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2024-11"
+      },
+      {
+        "firm": "Runtime Verification",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2025-02"
       }
     ],
     "governance_forum": "https://research.lido.fi/",
     "voting_token": {
       "chain": "Ethereum",
-      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "address": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
       "symbol": "LDO"
     },
-    "bug_bounty_url": "https://lido.fi/bug-bounty",
-    "security_contact": "https://github.com/lidofinance/core/security",
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/lido/",
+    "security_contact": null,
     "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
     "admin_addresses": [
       {
         "chain": "Ethereum",
-        "address": "0xb8FFC3Cd6e7Cf5a098A1c92F48009765B24088Dc",
-        "role": "Lido DAO Kernel",
-        "actor_class": "governance"
-      },
-      {
-        "chain": "Ethereum",
         "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
-        "role": "Aragon Voting",
+        "role": "Aragon Voting for LDO token governance",
         "actor_class": "governance"
       },
       {
         "chain": "Ethereum",
         "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
-        "role": "Aragon Agent",
+        "role": "Aragon DAO execution agent",
         "actor_class": "governance"
       },
       {
         "chain": "Ethereum",
-        "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
-        "role": "Emergency Protected Timelock",
-        "actor_class": "timelock"
-      },
-      {
-        "chain": "Ethereum",
-        "address": "0xC1db28B3301331277e307FDCfF8DE28242A4486E",
-        "role": "Dual Governance",
+        "address": "0x9895f0f17cc1d1891b6f18ee0b483b6f221b37bb",
+        "role": "Aragon permission registry for AragonApp roles",
         "actor_class": "governance"
       },
       {
         "chain": "Ethereum",
-        "address": "0x8B7854488Fde088d686Ea672B6ba1A5242515f45",
-        "role": "Emergency activation committee",
-        "actor_class": "multisig"
-      },
-      {
-        "chain": "Ethereum",
-        "address": "0xC7792b3F2B399bB0EdF53fECDceCeB97FBEB18AF",
-        "role": "Emergency execution committee",
-        "actor_class": "multisig"
+        "address": "0xF0211b7660680B49De1A7E9f25C65660F0a13Fea",
+        "role": "Easy Track optimistic governance for routine operations",
+        "actor_class": "governance"
       }
     ],
     "upgradeability": "mixed"
