@@ -71,13 +71,16 @@ const upgradeabilityLabel: Record<string, string> = {
   unknown: "Unknown",
 };
 
-const about = (() => {
+const curatedAbout = metadata?.about?.trim() || null;
+const aboutFallback = (() => {
   const cat = protocol.category ? protocol.category.toLowerCase() : "protocol";
   const where = primary
     ? ` on ${primary}${extraChains > 0 ? ` and ${extraChains} other chain${extraChains === 1 ? "" : "s"}` : ""}`
     : "";
   return `${protocol.name} is a ${cat} ${protocol.category ? "protocol" : ""}${where}.`.replace(/\s+/g, " ").trim();
 })();
+const about = curatedAbout ?? aboutFallback;
+const aboutUnknown = !curatedAbout;
 ---
 <section class="summary">
   <div class="grid">
@@ -106,7 +109,7 @@ const about = (() => {
           <svg viewBox={`0 0 ${PZ_VIEW} ${PZ_VIEW}`} role="img" aria-label="Risk pizza" preserveAspectRatio="xMidYMid meet">
             {headerSlicePaths.map(({ assessment, d }) => (
               <a href={`#${assessment.id}`} data-hdr-slice={assessment.id} class="hdr-slice">
-                <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--surface)" stroke-width="2">
+                <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
                   <title>{`${assessment.label} \u2014 ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
                 </path>
               </a>
@@ -193,8 +196,8 @@ const about = (() => {
     </div>
 
     <div class="cell wide about">
-      <div class="k">About</div>
-      <div class="v body">{about}</div>
+      <div class="k">About{aboutUnknown && <span class="about-placeholder"> &middot; awaiting DEFI@home description</span>}</div>
+      <div class:list={["v", "body", { muted: aboutUnknown }]}>{about}</div>
     </div>
   </div>
 </section>
@@ -312,7 +315,9 @@ const about = (() => {
     word-break: break-word;
     overflow-wrap: anywhere;
   }
-  .v.body { font-size: 0.88rem; font-weight: 400; color: var(--text-muted); line-height: 1.5; }
+  .v.body { font-size: 0.88rem; font-weight: 400; color: var(--text); line-height: 1.5; }
+  .v.body.muted { color: var(--text-muted); font-style: italic; }
+  .about-placeholder { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.7rem; opacity: 0.7; }
   .muted { color: var(--text-muted); }
   .sub {
     display: inline-block;

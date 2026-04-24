@@ -33,6 +33,7 @@ export type ProtocolMetadata = {
   deployed_contracts_doc?: string | null;
   admin_addresses?: AdminAddress[];
   upgradeability?: Upgradeability;
+  about?: string | null;
 };
 
 export type LoadedAssessment = {
@@ -194,6 +195,8 @@ export function aggregateProtocolMetadata(
   if (deployed_contracts_doc !== null) out.deployed_contracts_doc = deployed_contracts_doc;
   const upgradeability = firstNonNull((m) => m.upgradeability);
   if (upgradeability !== null) out.upgradeability = upgradeability;
+  const about = firstNonNull((m) => m.about);
+  if (about !== null) out.about = about;
 
   return Object.keys(out).length > 0 ? out : undefined;
 }
