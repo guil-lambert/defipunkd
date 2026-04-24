@@ -133,8 +133,8 @@
   <div class="controls">
     <input
       type="search"
-      aria-label="Search protocols by name, slug, or category"
-      placeholder="Search name, slug, category"
+      aria-label="Search protocols by name or category"
+      placeholder="Search name or category"
       bind:value={query}
     />
     <label class="checkbox">
@@ -280,19 +280,25 @@
   .tabs::-webkit-scrollbar { display: none; }
   .tabs button { flex-shrink: 0; }
   .tabs.chains { margin-top: -0.5rem; }
-  .tabs.chains button { background: transparent; border: 1px solid var(--surface-raised); }
-  .tabs.chains button.active { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
+  .tabs.chains button { background: transparent; }
   .tabs button {
     min-height: 44px;
     padding: 0 0.9rem;
     border: none;
-    border-radius: 4px;
-    background: var(--surface-raised);
-    color: var(--text);
+    border-radius: 4px 4px 0 0;
+    background: var(--surface);
+    color: var(--text-muted);
     cursor: pointer;
     font-size: 0.85rem;
+    box-shadow: inset 0 -2px 0 0 transparent;
+    transition: color 120ms ease-out, background-color 120ms ease-out, box-shadow 120ms ease-out;
   }
-  .tabs button.active { background: var(--accent-link); color: var(--bg); }
+  .tabs button:hover { color: var(--text); }
+  .tabs button.active {
+    background: var(--surface-raised);
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 0 var(--brand-oxblood);
+  }
   .count { opacity: 0.6; margin-left: 4px; }
   .controls {
     display: flex;

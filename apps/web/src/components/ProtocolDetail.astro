@@ -1,9 +1,8 @@
 ---
 import type { Protocol, ProvenanceTag, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
 import { getProtocolMetadata } from "@defipunkd/registry";
-import { auditorDomain, EM_DASH, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
+import { auditorDomain, EM_DASH, formatUtc, parseHallmarks } from "../lib/format";
 import ProtocolLogo from "./ProtocolLogo.astro";
-import ChainTabs from "./ChainTabs.astro";
 import ChildrenTable from "./ChildrenTable.astro";
 import RiskAnalysis from "./RiskAnalysis.astro";
 import StagePreview from "./StagePreview.astro";
@@ -56,6 +55,44 @@ const updatedAt = latestQuorumAt && latestQuorumAt > snapshotGeneratedAt
 const updatedSource: "defi@home" | "defillama" = updatedAt === latestQuorumAt ? "defi@home" : "defillama";
 
 ---
+<script>
+  const nav = document.querySelector<HTMLElement>(".side-nav");
+  if (nav) {
+    const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>("a[href^='#']"));
+    const entries = links
+      .map((a) => {
+        const id = a.getAttribute("href")!.slice(1);
+        const target = document.getElementById(id);
+        return target ? { a, target } : null;
+      })
+      .filter((x): x is { a: HTMLAnchorElement; target: HTMLElement } => x !== null);
+
+    // #top is the page's main element; treat it as the "before any section" state,
+    // not as a section to scroll-spy on.
+    const topLink = entries.find((e) => e.target.id === "top")?.a ?? null;
+    const sections = entries.filter((e) => e.target.id !== "top");
+
+    const setActive = () => {
+      const line = window.innerHeight * 0.25;
+      let chosen: HTMLAnchorElement | null = null;
+      for (const { a, target } of sections) {
+        if (target.getBoundingClientRect().top <= line) chosen = a;
+      }
+      if (!chosen) chosen = topLink;
+      for (const { a } of entries) a.classList.toggle("active", a === chosen);
+    };
+
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; setActive(); });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    setActive();
+  }
+</script>
 <aside class="side-nav" aria-label="Page sections">
   <a href="#top">Top</a>
   <a href="#summary">Summary</a>
@@ -87,33 +124,8 @@ const updatedSource: "defi@home" | "defillama" = updatedAt === latestQuorumAt ? 
 
   <ProtocolSummary protocol={protocol} assessments={assessments} />
 
-  {protocol.chains.length > 0 && (
-    <section class="chains">
-      <ChainTabs chains={protocol.chains} tvlByChain={protocol.tvl_by_chain} />
-    </section>
-  )}
-
   <section id="summary" class="summary-section">
     <h2>Summary</h2>
-
-    <div class="tvl-strip">
-      <div class="strip-cell">
-        <div class="strip-k">TVL</div>
-        <div class="strip-v mono tabular">{formatTvl(protocol.tvl)}</div>
-        <div class="strip-prov">
-          {protocol.tvl != null && prov.tvl ? (<ProvTag tag={prov.tvl} slug={protocol.slug} />) : (<span class="muted">{EM_DASH}</span>)}
-        </div>
-      </div>
-      <div class="strip-cell">
-        <div class="strip-k">Chain{protocol.chains.length === 1 ? "" : "s"}</div>
-        <div class="strip-v">
-          {protocol.chains.length > 0 ? protocol.chains.join(", ") : <span class="muted">unknown</span>}
-        </div>
-        <div class="strip-prov">
-          {protocol.chains.length > 0 && prov.chains ? (<ProvTag tag={prov.chains} slug={protocol.slug} />) : (<span class="muted">{EM_DASH}</span>)}
-        </div>
-      </div>
-    </div>
 
     <dl class="fields two-col">
       <div class="field">
@@ -261,12 +273,17 @@ const updatedSource: "defi@home" | "defillama" = updatedAt === latestQuorumAt ? 
 
 <style>
   .detail { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; color: var(--text); scroll-margin-top: 1rem; }
-  .summary-section { margin-top: 2rem; }
+  .summary-section {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--brand-oxblood);
+  }
   .summary-section > h2 { margin: 0 0 0.5rem 0; color: var(--text); font-size: 1.25rem; scroll-margin-top: 1rem; }
   .side-nav {
     position: fixed;
     top: 5rem;
-    left: 1rem;
+    left: max(1rem, calc(50% - 550px - 1in - 140px));
+    width: 140px;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -281,8 +298,16 @@ const updatedSource: "defi@home" | "defillama" = updatedAt === latestQuorumAt ? 
     text-decoration: none;
     font-size: 0.8rem;
     letter-spacing: 0.02em;
+    padding: 0.1rem 0 0.1rem 0.55rem;
+    margin-left: -0.55rem;
+    box-shadow: inset 2px 0 0 0 transparent;
+    transition: color 120ms ease-out, box-shadow 120ms ease-out;
   }
-  .side-nav a:hover { color: var(--accent-link); }
+  .side-nav a:hover { color: var(--text); }
+  .side-nav a.active {
+    color: var(--text);
+    box-shadow: inset 2px 0 0 0 var(--brand-oxblood);
+  }
   @media (max-width: 1280px) { .side-nav { display: none; } }
   .back { margin-bottom: 1rem; }
   .back a { color: var(--accent-link); font-size: 0.85rem; text-decoration: none; }
@@ -290,44 +315,6 @@ const updatedSource: "defi@home" | "defillama" = updatedAt === latestQuorumAt ? 
   .title { display: flex; gap: 0.75rem; align-items: center; }
   h1 { margin: 0; color: var(--text); font-size: 1.75rem; }
   .subtitle { color: var(--text-muted); margin: 0.25rem 0 0 0; }
-  .chains { margin-top: 1.5rem; }
-
-  .tvl-strip {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-    gap: 1rem 2rem;
-    align-items: baseline;
-    padding: 0.9rem 1rem;
-    margin: 0.5rem 0 1rem 0;
-    background: var(--surface);
-    border: 1px solid var(--surface-raised);
-    border-radius: 4px;
-  }
-  .strip-cell {
-    display: grid;
-    grid-template-columns: max-content 1fr max-content;
-    gap: 0.75rem;
-    align-items: baseline;
-    min-width: 0;
-  }
-  .strip-k {
-    color: var(--text-muted);
-    font-size: 0.68rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-weight: 600;
-  }
-  .strip-v {
-    color: var(--text);
-    font-size: 1.05rem;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-  .strip-prov { text-align: right; }
-  @media (max-width: 720px) {
-    .tvl-strip { grid-template-columns: 1fr; }
-  }
-
   .fields.two-col {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
