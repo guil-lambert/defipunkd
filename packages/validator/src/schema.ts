@@ -22,7 +22,7 @@ const EvidenceSchema = z
 
 const FindingSchema = z
   .object({
-    code: z.string().regex(/^[A-Z][A-Z0-9-]{0,15}$/, { message: "finding code must look like E1, C2-emergency, V4a, etc." }),
+    code: z.string().regex(/^[A-Z][A-Za-z0-9-]{0,15}$/, { message: "finding code must look like E1, C2-emergency, V4a, etc." }),
     text: z.string().min(1),
   })
   .strict();
