@@ -13,6 +13,43 @@ const { protocol, assessments } = Astro.props;
 
 const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
 
+const GRADE_FILL: Record<string, string> = {
+  gray: "oklch(0.55 0.015 235)",
+  green: "oklch(0.60 0.130 150)",
+  orange: "oklch(0.65 0.120 75)",
+  red: "oklch(0.52 0.170 22)",
+};
+const PIZZA_VIEW = 360;
+const PIZZA_CENTER = PIZZA_VIEW / 2;
+const PIZZA_RADIUS = 140;
+const PIZZA_LABEL_RADIUS = 165;
+const SHORT_LABEL: Record<string, string> = {
+  control: "Control",
+  "ability-to-exit": "Exit",
+  dependencies: "Deps",
+  access: "Access",
+  verifiability: "Verify",
+};
+const pizzaSlices = headerSlices.map((s, i) => {
+  const a = (2 * Math.PI) / headerSlices.length;
+  const a0 = -Math.PI / 2 + i * a;
+  const a1 = a0 + a;
+  const aMid = a0 + a / 2;
+  const x0 = PIZZA_CENTER + PIZZA_RADIUS * Math.cos(a0);
+  const y0 = PIZZA_CENTER + PIZZA_RADIUS * Math.sin(a0);
+  const x1 = PIZZA_CENTER + PIZZA_RADIUS * Math.cos(a1);
+  const y1 = PIZZA_CENTER + PIZZA_RADIUS * Math.sin(a1);
+  const labelX = PIZZA_CENTER + PIZZA_LABEL_RADIUS * Math.cos(aMid);
+  const labelY = PIZZA_CENTER + PIZZA_LABEL_RADIUS * Math.sin(aMid);
+  return {
+    assessment: s,
+    d: `M${PIZZA_CENTER},${PIZZA_CENTER} L${x0},${y0} A${PIZZA_RADIUS},${PIZZA_RADIUS} 0 0,1 ${x1},${y1} Z`,
+    labelLeftPct: (labelX / PIZZA_VIEW) * 100,
+    labelTopPct: (labelY / PIZZA_VIEW) * 100,
+    shortLabel: SHORT_LABEL[s.id] ?? s.label,
+  };
+});
+
 const primary = primaryChain(protocol.tvl_by_chain) ?? protocol.chains[0] ?? null;
 const CHAIN_LIMIT = 5;
 const shownChains = protocol.chains.slice(0, CHAIN_LIMIT);
@@ -77,7 +114,25 @@ const aboutUnknown = !curatedAbout;
       </div>
     </div>
 
-    <RiskMatrix slices={headerSlices} variant="full" />
+    <div class="risk-row">
+      <div class="pizza" aria-hidden="false">
+        <svg viewBox={`0 0 ${PIZZA_VIEW} ${PIZZA_VIEW}`} role="img" aria-label="Risk pizza" preserveAspectRatio="xMidYMid meet">
+          {pizzaSlices.map(({ assessment, d }) => (
+            <a href={`#${assessment.id}`} data-pizza-slice={assessment.id} class="pizza-slice">
+              <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
+                <title>{`${assessment.label} — ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
+              </path>
+            </a>
+          ))}
+        </svg>
+        {pizzaSlices.map(({ assessment, labelLeftPct, labelTopPct, shortLabel }) => (
+          <span class="pizza-label" data-pizza-label={assessment.id} style={`left:${labelLeftPct}%;top:${labelTopPct}%`}>
+            {shortLabel}
+          </span>
+        ))}
+      </div>
+      <RiskMatrix slices={headerSlices} variant="full" />
+    </div>
 
     <div class="about-row">
       <div class="control">
@@ -164,6 +219,60 @@ const aboutUnknown = !curatedAbout;
   .top-item.chains .v { word-break: break-word; }
   .sep { color: var(--text-muted); opacity: 0.5; }
 
+  .risk-row {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: 1.25rem 1.75rem;
+    align-items: center;
+  }
+  .pizza {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+  }
+  .pizza svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .pizza-slice { cursor: pointer; }
+  .pizza-slice path { transition: opacity 150ms ease, transform 150ms ease; transform-origin: 50% 50%; transform-box: fill-box; }
+  .pizza:has(.pizza-slice:hover) .pizza-slice:not(:hover) path { opacity: 0.3; }
+  .pizza-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 5rem;
+    text-align: center;
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    line-height: 1.2;
+    pointer-events: none;
+    transition: color 150ms ease;
+  }
+  .pizza:has([data-pizza-slice="control"]:hover) [data-pizza-label="control"],
+  .pizza:has([data-pizza-slice="ability-to-exit"]:hover) [data-pizza-label="ability-to-exit"],
+  .pizza:has([data-pizza-slice="dependencies"]:hover) [data-pizza-label="dependencies"],
+  .pizza:has([data-pizza-slice="access"]:hover) [data-pizza-label="access"],
+  .pizza:has([data-pizza-slice="verifiability"]:hover) [data-pizza-label="verifiability"] {
+    color: var(--text);
+  }
+  /* Slice hover highlights the matching matrix row */
+  .risk-row:has([data-pizza-slice="control"]:hover) :global([data-slice-row="control"]),
+  .risk-row:has([data-pizza-slice="ability-to-exit"]:hover) :global([data-slice-row="ability-to-exit"]),
+  .risk-row:has([data-pizza-slice="dependencies"]:hover) :global([data-slice-row="dependencies"]),
+  .risk-row:has([data-pizza-slice="access"]:hover) :global([data-slice-row="access"]),
+  .risk-row:has([data-pizza-slice="verifiability"]:hover) :global([data-slice-row="verifiability"]) {
+    background: color-mix(in oklab, var(--accent-link) 15%, transparent);
+    outline: 1px solid color-mix(in oklab, var(--accent-link) 45%, transparent);
+  }
+
   .about-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
@@ -226,6 +335,10 @@ const aboutUnknown = !curatedAbout;
   }
   .pill-link:hover { text-decoration: underline; }
 
+  @media (max-width: 860px) {
+    .risk-row { grid-template-columns: 1fr; }
+    .pizza { max-width: 260px; }
+  }
   @media (max-width: 720px) {
     .hero { padding: 1rem; gap: 1rem; }
     .about-row { grid-template-columns: 1fr; }
