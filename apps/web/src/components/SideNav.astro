@@ -1,0 +1,122 @@
+---
+interface NavLink {
+  href: string;
+  label: string;
+}
+interface Props {
+  links: NavLink[];
+  contentMaxWidth?: number; // px — used to float the nav ~1in left of the centred content column
+}
+const { links, contentMaxWidth = 1100 } = Astro.props;
+const halfContent = Math.round(contentMaxWidth / 2);
+---
+<aside class="side-nav" aria-label="Page sections" style={`--half-content:${halfContent}px`}>
+  <a href="/" class="brand" aria-label="DeFiPunkd — back to index">
+    <svg class="brand-logo" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M3 3h4v2h-2v6h2v2h-4zM13 3h-4v2h2v6h-2v2h4zM7 6h2v2h-2zM7 9h2v2h-2z" fill="currentColor"/>
+    </svg>
+    <span class="brand-word">DeFiPunk<span class="brand-mark">d</span></span>
+  </a>
+  <div class="nav-links">
+    {links.map((l) => <a href={l.href}>{l.label}</a>)}
+  </div>
+</aside>
+
+<script>
+  const nav = document.querySelector<HTMLElement>(".side-nav");
+  if (nav) {
+    const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>("a[href^='#']"));
+    const entries = links
+      .map((a) => {
+        const id = a.getAttribute("href")!.slice(1);
+        const target = document.getElementById(id);
+        return target ? { a, target } : null;
+      })
+      .filter((x): x is { a: HTMLAnchorElement; target: HTMLElement } => x !== null);
+
+    const topLink = entries.find((e) => e.target.id === "top")?.a ?? null;
+    const sections = entries.filter((e) => e.target.id !== "top");
+
+    const setActive = () => {
+      const line = window.innerHeight * 0.25;
+      let chosen: HTMLAnchorElement | null = null;
+      for (const { a, target } of sections) {
+        if (target.getBoundingClientRect().top <= line) chosen = a;
+      }
+      if (!chosen) chosen = topLink;
+      for (const { a } of entries) a.classList.toggle("active", a === chosen);
+    };
+
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; setActive(); });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    setActive();
+  }
+</script>
+
+<style>
+  .side-nav {
+    position: fixed;
+    top: 5rem;
+    left: max(1rem, calc(50% - var(--half-content) - 1in - 140px));
+    width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    z-index: 10;
+  }
+  @media (max-width: 1280px) { .side-nav { display: none; } }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.015em;
+  }
+  .brand:hover { color: var(--text); }
+  .brand-logo {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    color: var(--brand-oxblood);
+  }
+  .brand-mark { color: var(--brand-oxblood); }
+
+  .nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--surface-raised);
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0 0.1rem 0.55rem;
+    margin-left: -0.55rem;
+    box-shadow: inset 2px 0 0 0 transparent;
+    transition: color 120ms ease-out, box-shadow 120ms ease-out;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active {
+    color: var(--text);
+    box-shadow: inset 2px 0 0 0 var(--brand-oxblood);
+  }
+</style>
