@@ -1,0 +1,115 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 9,
+  "analysis_date": "2026-04-24",
+  "model": "gemini-3.1-pro",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Impacted TVS: ~100% frozen yield / delayed withdrawals, 0% principal loss. On-chain bounds mitigate oracle centralization.",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Core contracts primarily interact with the canonical Ethereum Deposit Contract (0x00000000219ab540356cBB839Cbe05303d7705Fa), which serves as the substrate. The core LST issuance mechanics do not rely on external non-owned smart contracts like AMMs or lending pools for execution."
+      },
+      {
+        "code": "A2",
+        "text": "Lido relies on a 9-member off-chain oracle committee (AccountingOracle at 0x852deD011285fe67063a08005c71a85690503Cee) to report consensus layer balances back to the execution layer. A 5/9 quorum is required. Misreporting could artificially alter rebases or disrupt the withdrawal process."
+      },
+      {
+        "code": "A3",
+        "text": "Material TVL of wstETH exists on Layer 2s such as Arbitrum and Optimism via their respective canonical L1-L2 bridges. The core protocol on L1 does not rely on these bridges for liveness or solvency, but L2 wstETH holders inherit canonical bridge trust models."
+      },
+      {
+        "code": "A4",
+        "text": "Lido is a base-layer Liquid Staking Token (LST) and does not nest other receipt tokens or collateral sets. Restaking/collateral depth is 0."
+      },
+      {
+        "code": "A5",
+        "text": "Lido is an original codebase; there is no fork lineage to report."
+      },
+      {
+        "code": "A6",
+        "text": "The AccountingOracle enforces strict, LIVE on-chain sanity checks (e.g., maximum daily APR, maximum balance drop limits). If 5/9 oracles collude to report a massive loss or fake yield, the transaction reverts. Mass slashing events trigger a LIVE 'Bunker Mode' which pauses or slows withdrawal processing to socialize losses, preventing a bank run."
+      },
+      {
+        "code": "A7",
+        "text": "Core protocol operates directly on Ethereum L1, presenting no extra sequencer liveness dependency. wstETH bridged deployments rely on their respective L2 centralized sequencers for local liveness."
+      },
+      {
+        "code": "A8",
+        "text": "Permissioned keeper bots/daemons run by oracle operators are required to submit daily consensus reports. If these bots go offline or fail to reach quorum, rebases and withdrawal finalizations halt (yield freezes and positions go stale), but underlying principal remains secure on the consensus layer."
+      },
+      {
+        "code": "A9",
+        "text": "The Lido DAO Governance Agent (0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c) can upgrade oracle addresses or add new staking modules (StakingRouter), allowing the introduction of new dependencies. This is protected by the Aragon voting process and a standard DAO timelock."
+      }
+    ],
+    "steelman": {
+      "red": "A 5-of-9 oracle quorum failure or governance upgrade could theoretically bypass safeguards or alter the staking router, potentially exposing user funds to newly introduced malicious modules.",
+      "orange": "The protocol requires an off-chain oracle committee to function daily, meaning an oracle stall freezes rebases and withdrawal finalization, but strict on-chain sanity checks ensure an active oracle failure cannot steal principal.",
+      "green": "Lido has zero reliance on external AMMs or untrusted yield protocols; all required off-chain inputs are heavily bounded by immutable on-chain parameters, effectively making user principal immune to external dependency failure."
+    },
+    "verdict": "Choosing orange because while an off-chain oracle committee (at 0x852deD011285fe67063a08005c71a85690503Cee) is fundamentally required to process daily yield rebases and withdrawal finalizations, strict on-chain sanity checks (A6) natively cap the impact of malicious reporting, limiting worst-case external failures to paused withdrawals and frozen yield rather than loss of user principal."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "shows": "Deployed stETH proxy contract confirming L1 location and lack of direct external DeFi protocol dependencies for core mechanics.",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "fetched_at": "2026-04-24T12:21:59Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x852deD011285fe67063a08005c71a85690503Cee",
+      "shows": "Lido AccountingOracle deployed contract, exposing the on-chain sanity bounds and reporting logic for the 9-member committee.",
+      "chain": "Ethereum",
+      "address": "0x852deD011285fe67063a08005c71a85690503Cee",
+      "fetched_at": "2026-04-24T12:21:59Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+      "shows": "Lido DAO Aragon Agent contract representing governance control over the protocol.",
+      "chain": "Ethereum",
+      "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+      "fetched_at": "2026-04-24T12:21:59Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/accounting-oracle/",
+      "shows": "Documentation detailing the oracle committee quorum, sanity checks, and daily reporting mechanisms.",
+      "fetched_at": "2026-04-24T12:21:59Z"
+    }
+  ],
+  "unknowns": [
+    "A3: Moonbeam, Moonriver, Terra, and Solana deployments from the pinned input list are sunset/deprecated and were omitted from the active dependency evaluation."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/lido-dao"
+    ],
+    "docs_url": "https://docs.lido.fi/",
+    "audits": [],
+    "governance_forum": "https://research.lido.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/lido/",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+        "role": "Lido DAO Agent",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Lido is a decentralized liquid staking protocol built primarily on Ethereum. Users deposit ETH to mint stETH, a rebasing receipt token that represents their initial deposit plus daily accumulated consensus-layer yield. It utilizes a DAO-governed staking router and a curated set of node operators to efficiently allocate staked capital across the network."
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 9,
+  "analysis_date": "2026-04-24",
+  "model": "grok-beta",
+  "chat_url": "https://grok.com/share/c2hhcmQtNQ_bb7d4274-144d-4a8f-bd1e-9fb17a6d2bd9",
+  "grade": "orange",
+  "headline": "Oracle committee liveness can delay withdrawals/rebases (~100% TVS processing impact) but principal protected by sanity checks & dual-governance exit windows; no other material external deps",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Core contracts (Lido 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84, AccountingOracle 0x852deD011285fe67063a08005c71a85690503Cee) interact only with internal Lido contracts (via LidoLocator 0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb: Accounting, StakingRouter 0xFdDf38947aFB03C621C71b06C9C70bce73f12999, WithdrawalQueue 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1, Burner, etc.) and the Ethereum Deposit Contract (substrate, per guardrails). No external price feeds (Chainlink/Pyth/Redstone), AMMs, or third-party lending pools called in core logic. Source: https://docs.lido.fi/contracts/accounting-oracle/ and Etherscan verified bytecode at AccountingOracle proxy."
+      },
+      {
+        "code": "A2",
+        "text": "Off-chain oracle committee (managed by HashConsensus 0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288 for AccountingOracle and 0x7FaDB6358950c5fAA66Cb5EB8eE5147De3df355a for ValidatorsExitBusOracle) submits reports on validator balances, vault funds, exits, and withdrawal finalization. Committee is permissioned/DAO-managed with quorum (>50% of members); mis-reporting or liveness failure stalls reports (emits WarnProcessingMissed, skips frames) causing delayed rebases and withdrawal finalizations but reverts on invalid data via OracleReportSanityChecker 0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129 (daily exit limits, extra-data bounds live/enforcing). Node operator set (via StakingRouter modules + CSM) is diversified (100+ independent operators); validator slashing is base-chain substrate (not counted per guardrails). No principal loss possible. Evidence: https://docs.lido.fi/contracts/accounting-oracle/, https://etherscan.io/address/0x852deD011285fe67063a08005c71a85690503Cee, recent oracle audits (Certora 12-2025, MixBytes 03-2026)."
+      },
+      {
+        "code": "A3",
+        "text": "No material bridge/cross-chain messaging dependencies for core user flows or TVS. Non-primary chains (Solana, Moonbeam, Moonriver, Terra) show negligible TVL (<0.02% combined; Solana ~$4M residual post-2023 exit, others <$50k) per 2026 data; wstETH on L2s is user-initiated bridging without protocol trust assumption or core contract calls. Core staking/withdrawals remain Ethereum-native. Retired/sunset deployments omitted. Evidence: https://docs.lido.fi/deployed-contracts/ (Ethereum-only detailed), DeFiLlama TVL breakdown cross-checked via search."
+      },
+      {
+        "code": "A4",
+        "text": "No nested collateral/restaking chains in core design. Lido performs direct staking to Ethereum Beacon Chain via Deposit Contract; stETH/wstETH receipt tokens are base-layer LSTs. No LRT-of-LRT or multi-level slashing propagation in protocol contracts. Downstream restaking (e.g., EigenLayer on stETH) is not trusted or called by Lido. Evidence: https://docs.lido.fi/contracts/lido/ and AccountingOracle source interactions (no restaking primitives)."
+      },
+      {
+        "code": "A5",
+        "text": "No fork lineage. Lido is the original liquid staking protocol (launched 2020); DeFiLlama forkedFrom empty. Evidence: protocol history in https://docs.lido.fi/ and GitHub lidofinance/core (no fork references in v3.0.2 structure)."
+      },
+      {
+        "code": "A6",
+        "text": "Live fallbacks/circuit breakers: OracleReportSanityChecker enforces rebase/exit bounds and reverts bad reports; bunker mode flag in reports for adverse conditions; missed reports skip frames with warnings (no invalid state applied); quorum on HashConsensus prevents single-oracle dominance. All (i) LIVE and enforcing on-chain today (proxies active per Etherscan, recent reports processed). These mitigate A2 oracle risks to stall-only (no principal loss or unmitigated mispricing). No (ii)/(iii) unactivated paths cited for grade. Evidence: https://docs.lido.fi/contracts/accounting-oracle/ (sanity checks, bunker, simulateOracleReport), OracleReportSanityChecker address 0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129 on Etherscan."
+      },
+      {
+        "code": "A7",
+        "text": "No sequencer/L1-liveness dependency beyond Ethereum base-chain substrate. All core contracts (Lido, oracles, router) deployed on Ethereum L1; no L2 sequencer trust or DA committee for primary flows. L2 wstETH deployments are peripheral/user-facing. Evidence: https://docs.lido.fi/deployed-contracts/ (Ethereum Mainnet focus) and Etherscan addresses for all listed proxies."
+      },
+      {
+        "code": "A8",
+        "text": "No critical permissionless keeper/relayer bots required for core functions. Oracle reports submitted by DAO-managed committee; validator duties performed by diversified node operators (StakingRouter + CSM, 100+ operators with bonding/slashing). No auto-compound, liquidation, or deposit-relayer liveness failure mode that causes insolvency or stale positions. Failure degrades gracefully to manual/queued processing. Evidence: https://docs.lido.fi/guides/oracle-operator-manual/, StakingRouter 0xFdDf38947aFB03C621C71b06C9C70bce73f12999 on Etherscan."
+      },
+      {
+        "code": "A9",
+        "text": "Lido DAO (Aragon Kernel + Dual Governance) can mutate oracle members (HashConsensus), add/register staking modules, or alter dependencies, but all executions subject to minimum 3-day timelock + dynamic veto signaling (1-10%+ stETH in escrow extends delay 5-45+ days, enabling user exits via withdrawal queue). Provides explicit exit window; no hot-swap or silent introduction. Dual Governance live/enforcing. Evidence: https://docs.lido.fi/guides/dg-guide (3-day timelock, veto mechanics), Lido DAO Agent 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c on Etherscan, recent governance proposals."
+      }
+    ],
+    "steelman": {
+      "red": "The permissioned oracle committee (A2) is a single external point whose coordinated liveness failure or quorum-captured misreport could indefinitely stall all rebases and withdrawal finalizations across 100% TVS with only delay-based mitigations, and DAO control over modules/oracles (A9) carries governance risk even with timelocks, warranting red for material external dependency exposure.",
+      "orange": "Oracle committee liveness failure or disagreement (A2) can materially pause expected performance by delaying withdrawal finalizations and rebase application for the entire TVS, and while sanity checks (A6) and dual-governance exit windows (A9, 3d+ veto) prevent principal loss or silent changes, the absence of a live permissionless fallback that fully preserves timely access makes orange the accurate classification over green.",
+      "green": "Diversified node operators, on-chain quorum-enforced oracle consensus with live sanity limits and bunker mode (A6), complete independence from non-substrate externals (A1,A3,A4,A7,A8), and strong dual-governance protections providing multi-day user exit windows for any DAO mutation (A9) ensure external failures cause only temporary recoverable delays with zero permanent principal or yield loss, qualifying the protocol as green autonomy."
+    },
+    "verdict": "Choosing orange because the concrete A2 oracle committee (HashConsensus 0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288, quorum-based, DAO-managed) plus A6 live sanity checker can cause temporary but material performance degradation (paused finalizations, delayed rebases) across ~100% TVS without a fully live alternative preserving expected timely access (distinguishing from green), yet on-chain reverts, base-chain substrate, and dual-governance 3-day+ veto/exit windows (A9, stETH-holder signaling) eliminate principal loss or unmitigated governance risk (stronger steelman than red); all backed by Etherscan proxies (Lido 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84, AccountingOracle 0x852deD011285fe67063a08005c71a85690503Cee), https://docs.lido.fi/contracts/accounting-oracle/, https://docs.lido.fi/deployed-contracts/, and https://docs.lido.fi/guides/dg-guide."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "shows": "Deployed Lido/stETH proxy and verified implementation; confirms on-chain state for core staking logic and interactions.",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "fetched_at": "2026-04-24T15:40:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x852deD011285fe67063a08005c71a85690503Cee",
+      "shows": "AccountingOracle proxy (receives oracle reports, applies via Accounting); live sanity checks and report processing visible in verified source and recent txs.",
+      "chain": "Ethereum",
+      "address": "0x852deD011285fe67063a08005c71a85690503Cee",
+      "fetched_at": "2026-04-24T15:40:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288",
+      "shows": "HashConsensus for AccountingOracle (manages oracle committee, quorum, report hashing); on-chain evidence of A2 committee mechanism.",
+      "chain": "Ethereum",
+      "address": "0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288",
+      "fetched_at": "2026-04-24T15:40:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/deployed-contracts/",
+      "shows": "Canonical list of all production addresses (LidoLocator, StakingRouter, oracles, WithdrawalQueue, etc.) confirming Ethereum-primary deployment and no material non-Eth bridges in core.",
+      "fetched_at": "2026-04-24T15:35:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/accounting-oracle/",
+      "shows": "Detailed architecture of oracle reporting, sanity checks (OracleReportSanityChecker), bunker mode, quorum process, missed-report handling, and internal contract calls only.",
+      "fetched_at": "2026-04-24T15:35:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/audits",
+      "shows": "Recent audits (Certora Lido V3 Oracle V7 12-2025, MixBytes 03-2026, Ackee CSM/StakingRouter 09-2025) confirming oracle and core components with findings fixed/acknowledged; no unmitigated criticals.",
+      "fetched_at": "2026-04-24T15:50:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/guides/dg-guide",
+      "shows": "Dual Governance mechanics: 3-day minimum timelock + dynamic veto signaling (stETH escrow) providing exit window for governance actions (A9).",
+      "fetched_at": "2026-04-24T15:50:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bug-bounty/lido/information/",
+      "shows": "Active public bug bounty program (up to $2M) for smart contracts and apps.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A2: exact current oracle member count and quorum threshold value on HashConsensus 0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288 (readContract dynamic data not retrievable via available tools; historical ~5-9 with >50% quorum from docs)"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core",
+      "https://github.com/lidofinance/lido-oracle",
+      "https://github.com/lidofinance/docs"
+    ],
+    "docs_url": "https://docs.lido.fi/",
+    "audits": [
+      {
+        "firm": "Certora",
+        "url": "https://github.com/lidofinance/audits/blob/main/Certora%20Lido%20V3%20Oracle%20V7%20Audit%20Report%20-%2012-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://github.com/lidofinance/audits/blob/main/MixBytes%20Lido%20V3%20Security%20Audit%20Report%20-%2012-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "Ackee Blockchain",
+        "url": "https://github.com/lidofinance/audits/blob/main/Ackee%20Blockchain%20Community%20Staking%20Module%20v2%20Audit%20Report%2009-2025.pdf",
+        "date": "2025-09"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://github.com/lidofinance/audits/blob/main/MixBytes%20Lido%20v3%20Security%20Audit%20Report%2003-26.pdf",
+        "date": "2026-03"
+      }
+    ],
+    "governance_forum": "https://research.lido.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/lido/information/",
+    "security_contact": "safeharbor@lido.fi",
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+        "role": "Aragon Agent / DAO proposal executor",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Lido enables users to stake ETH on Ethereum and receive stETH (rebasing liquid staking token) or wstETH (wrapped non-rebasing variant) that accrues Beacon Chain rewards. It routes deposits through a diversified set of node operators via the StakingRouter, uses an on-chain oracle committee (HashConsensus + AccountingOracle) for validator balance/exit reporting and withdrawal finalization, and supports broad DeFi composability as collateral while maintaining user exit rights via a withdrawal queue."
+  }
+}
