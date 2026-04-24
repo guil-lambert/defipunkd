@@ -10,7 +10,14 @@ interface Props {
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
 }
 const { protocol, snapshotGeneratedAt, assessments } = Astro.props;
-const slices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
+const rawSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
+
+const SEVERITY_ORDER: Record<string, number> = { red: 0, orange: 1, green: 2, gray: 3 };
+const slices = [...rawSlices].sort(
+  (a, b) => (SEVERITY_ORDER[a.grade] ?? 9) - (SEVERITY_ORDER[b.grade] ?? 9),
+);
+const gradedSlices = slices.filter((s) => s.grade !== "gray");
+const graySlices = slices.filter((s) => s.grade === "gray");
 
 const ANALYSIS_DATE = new Date().toISOString().slice(0, 10);
 const REPO = "guil-lambert/defipunkd";
@@ -43,11 +50,7 @@ function stubFor(sliceId: SliceId): string {
       chat_url: null,
       grade: "",
       headline: "",
-      rationale: {
-        findings: [],
-        steelman: { red: "", orange: "", green: "" },
-        verdict: "",
-      },
+      rationale: { findings: [], steelman: { red: "", orange: "", green: "" }, verdict: "" },
       evidence: [],
       unknowns: [],
     },
@@ -64,64 +67,104 @@ function submitUrl(sliceId: SliceId): string {
   return `https://github.com/${REPO}/new/main?${params.toString()}`;
 }
 
-function suggestedCommit(sliceId: SliceId): string {
-  return `[DEFI@home] ${protocol.slug} / ${sliceId} submission`;
+const auditSlices = slices.map((s) => ({
+  id: s.id as SliceId,
+  label: s.label,
+  prompt: promptFor(s.id as SliceId),
+  submitUrl: submitUrl(s.id as SliceId),
+}));
+
+const TAXONOMY_LABEL: Record<string, string> = {
+  red: "Steel-man argument",
+  orange: "Steel-man argument",
+  green: "Steel-man argument",
+};
+
+function chipLabel(grade: string): string {
+  return grade === "gray" ? "unknown" : grade;
 }
 
-function suggestedBranch(sliceId: SliceId): string {
-  return `defi-at-home/${protocol.slug}-${sliceId}`;
-}
-
-const promptsBySlice = Object.fromEntries(
-  slices
-    .filter((s): s is SliceAssessment & { id: SliceId } => s.id !== undefined)
-    .map((s) => [s.id, promptFor(s.id as SliceId)]),
-) as Record<SliceId, string>;
-
+const TOP_EVIDENCE = 2;
 ---
 <section class="risk-analysis" id="risk-analysis">
   <h2>Risk analysis</h2>
   <p class="lede">
-    One card per dimension. At Phase 0 most cards read <em>not yet assessed</em>; only Verifiability and Dependencies carry automated signals. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
+    One card per dimension, sorted by severity. Only <em>Verifiability</em> and <em>Dependencies</em> carry automated signals in Phase 0. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
   </p>
 
   <RiskMatrix slices={slices} variant="full" />
 
+  <details class="audit-top">
+    <summary><span class="audit-top-title">Audit a dimension yourself · DEFI@home</span></summary>
+    <div class="audit-top-body">
+      <p>
+        Paste a slice prompt into Claude, ChatGPT, Gemini, or any LLM with browsing. Your JSON output becomes a pull request; the quorum bot merges it once ≥3 independent runs agree. <a href="/contribute" class="link">How it works →</a>
+      </p>
+      <ul class="audit-list">
+        {auditSlices.map((a) => (
+          <li>
+            <span class="audit-list-label">{a.label}</span>
+            <button type="button" class="copy-btn" data-copy-target={`#prompt-${a.id}`}>Copy prompt</button>
+            <a href={a.submitUrl} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
+            <pre id={`prompt-${a.id}`} class="prompt-hidden" hidden>{a.prompt}</pre>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </details>
+
   <ol class="cards">
-    {slices.map((s) => (
+    {gradedSlices.map((s) => (
       <li id={s.id} class:list={["card", `grade-${s.grade}`]}>
         <div class="stripe" aria-hidden="true"></div>
         <div class="body">
           <div class="meta">
             <span class="label">{s.label}</span>
-            <span class="grade">{s.grade === "gray" ? "unknown" : s.grade}</span>
+            <span class:list={["chip", `grade-${s.grade}`]}>{chipLabel(s.grade)}</span>
             {s.strength && <span class:list={["strength", `strength-${s.strength}`]}>{s.strength} consensus</span>}
           </div>
           <div class="headline">{s.headline}</div>
           {s.structured ? (
             <div class="structured">
-              {s.structured.steelman && s.grade !== "gray" && (
+              {s.structured.steelman && s.structured.steelman[s.grade as "red" | "orange" | "green"] && (
                 <div class:list={["steelman-chosen", `grade-${s.grade}`]}>
-                  <span class="steelman-label">Steel-man {s.grade}</span>
+                  <span class="steelman-label">{TAXONOMY_LABEL[s.grade] ?? "Argument"}</span>
                   <span class="steelman-text">{s.structured.steelman[s.grade as "red" | "orange" | "green"]}</span>
                 </div>
               )}
-              <details class="drawer">
-                <summary>Verdict</summary>
-                <p class="verdict">{s.structured.verdict}</p>
-              </details>
-              {s.structured.findings.length > 0 && (
+              {s.structured.verdict && s.structured.verdict.trim().length > 0 && (
                 <details class="drawer">
-                  <summary>Evidence ({s.structured.findings.length})</summary>
+                  <summary>Verdict</summary>
+                  <p class="verdict">{s.structured.verdict}</p>
+                </details>
+              )}
+              {s.structured.findings.length > 0 && (
+                <div class="evidence">
+                  <div class="evidence-head">
+                    Evidence ({s.structured.findings.length})
+                  </div>
                   <dl class="findings">
-                    {s.structured.findings.map((f: Finding) => (
+                    {s.structured.findings.slice(0, TOP_EVIDENCE).map((f: Finding) => (
                       <div class="finding">
                         <dt>{f.code}</dt>
                         <dd>{f.text}</dd>
                       </div>
                     ))}
                   </dl>
-                </details>
+                  {s.structured.findings.length > TOP_EVIDENCE && (
+                    <details class="more-evidence">
+                      <summary>Show all {s.structured.findings.length} ▸</summary>
+                      <dl class="findings">
+                        {s.structured.findings.slice(TOP_EVIDENCE).map((f: Finding) => (
+                          <div class="finding">
+                            <dt>{f.code}</dt>
+                            <dd>{f.text}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </details>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -137,45 +180,35 @@ const promptsBySlice = Object.fromEntries(
               <a class="sources-link" href={`https://github.com/guil-lambert/defipunkd/tree/main/data/submissions/${protocol.slug}/${s.id}`} rel="noreferrer" target="_blank">View raw submissions ↗</a>
             </div>
           )}
-
-          <details class="audit-panel">
-            <summary>Audit this slice yourself · DEFI@home</summary>
-            <div class="audit-body">
-              <p class="audit-intro">
-                Paste the prompt below into Claude, ChatGPT, Gemini, or any LLM with browsing. Your JSON output becomes a pull request; the quorum bot merges it once ≥3 independent runs agree. <a href="/contribute" class="link">How it works →</a>
-              </p>
-              <p class="audit-intro audit-share">
-                <strong>Before submitting:</strong> enable <em>Share publicly</em> on your chat session and paste the resulting URL into the <code>chat_url</code> field. Submissions with a verifiable public transcript get extra weight from the quorum bot. <a href="/contribute#sharing-your-chat" class="link">Per-platform instructions →</a>
-              </p>
-              <p class="audit-intro audit-branch">
-                <strong>On the GitHub commit page</strong> (URL params only prefill file content, not the commit form):
-              </p>
-              <ul class="audit-hints">
-                <li>
-                  Commit message: <code>{suggestedCommit(s.id as SliceId)}</code>
-                  <button type="button" class="mini-copy" data-copy-text={suggestedCommit(s.id as SliceId)} aria-label="Copy commit message">copy</button>
-                </li>
-                <li>Radio: pick <em>"Create a new branch for this commit and start a pull request"</em></li>
-                <li>
-                  Branch name: <code>{suggestedBranch(s.id as SliceId)}</code>
-                  <button type="button" class="mini-copy" data-copy-text={suggestedBranch(s.id as SliceId)} aria-label="Copy branch name">copy</button>
-                </li>
-              </ul>
-              <div class="audit-toolbar">
-                <button type="button" class="copy-btn" data-copy-target={`#prompt-${s.id}`}>
-                  Copy prompt
-                </button>
-                <a href={submitUrl(s.id as SliceId)} rel="noreferrer" target="_blank" class="submit-btn">
-                  Submit your run ↗
-                </a>
-              </div>
-              <pre id={`prompt-${s.id}`} class="prompt">{promptsBySlice[s.id as SliceId]}</pre>
-            </div>
-          </details>
         </div>
       </li>
     ))}
   </ol>
+
+  {graySlices.length > 0 && (
+    <details class="unknowns">
+      <summary>
+        <span class="unknowns-summary">
+          {graySlices.length} dimension{graySlices.length === 1 ? "" : "s"} not yet assessed ({graySlices.map((s) => s.label).join(", ")})
+        </span>
+      </summary>
+      <ol class="cards unknowns-list">
+        {graySlices.map((s) => (
+          <li id={s.id} class="card grade-gray">
+            <div class="stripe" aria-hidden="true"></div>
+            <div class="body">
+              <div class="meta">
+                <span class="label">{s.label}</span>
+                <span class="chip grade-gray">unknown</span>
+              </div>
+              <div class="headline">{s.headline}</div>
+              <p class="rationale">{s.rationale}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </details>
+  )}
 </section>
 
 <script>
@@ -208,6 +241,59 @@ const promptsBySlice = Object.fromEntries(
   h2 { margin: 0 0 0.25rem 0; color: var(--text); font-size: 2.25rem; }
   .lede { color: var(--text-muted); margin: 0 0 1.25rem 0; font-size: 0.9rem; }
   .link { color: var(--accent-link); }
+
+  .audit-top {
+    margin: 1rem 0 1.5rem 0;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+    padding: 0.5rem 0.9rem;
+  }
+  .audit-top[open] { padding-bottom: 0.9rem; }
+  .audit-top > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.25rem 0;
+  }
+  .audit-top > summary::-webkit-details-marker { display: none; }
+  .audit-top-title {
+    color: var(--accent-link);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+  .audit-top > summary::after {
+    content: " ▸";
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    transition: transform 150ms ease;
+    display: inline-block;
+  }
+  .audit-top[open] > summary::after { transform: rotate(90deg); }
+  .audit-top-body { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
+  .audit-top-body p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .audit-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .audit-list li {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) auto auto;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .audit-list-label {
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
 
   .cards {
     list-style: none;
@@ -248,9 +334,10 @@ const promptsBySlice = Object.fromEntries(
   .body { position: relative; padding: 1rem 1.25rem 1.15rem 1.25rem; }
   .meta {
     display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    margin-bottom: 0.2rem;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem 0.75rem;
+    margin-bottom: 0.25rem;
   }
   .label {
     color: var(--text);
@@ -262,16 +349,18 @@ const promptsBySlice = Object.fromEntries(
   .card.grade-green .label { color: var(--grade-green); }
   .card.grade-orange .label { color: var(--grade-orange); }
   .card.grade-red .label { color: var(--grade-red); }
-  .grade {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    letter-spacing: 0.05em;
+  .chip {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     font-weight: 700;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
   }
-  .card.grade-green .grade { color: var(--grade-green); }
-  .card.grade-orange .grade { color: var(--grade-orange); }
-  .card.grade-red .grade { color: var(--grade-red); }
+  .chip.grade-red    { background: oklch(0.62 0.170 22);  color: #fff; }
+  .chip.grade-orange { background: oklch(0.75 0.120 75);  color: #1a1208; }
+  .chip.grade-green  { background: oklch(0.70 0.130 150); color: #0a1a10; }
+  .chip.grade-gray   { background: oklch(0.60 0.015 235); color: #0d1114; }
   .strength {
     font-size: 0.62rem;
     letter-spacing: 0.06em;
@@ -288,7 +377,7 @@ const promptsBySlice = Object.fromEntries(
     color: var(--text);
     font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.5rem;
   }
   .rationale {
     color: var(--text-muted);
@@ -296,31 +385,25 @@ const promptsBySlice = Object.fromEntries(
     line-height: 1.5;
     margin: 0;
   }
-  .structured { display: flex; flex-direction: column; gap: 0.6rem; }
+  .structured { display: flex; flex-direction: column; gap: 0.7rem; }
   .steelman-chosen {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 0.6rem;
-    padding: 0.6rem 0.8rem;
+    padding: 0.7rem 0.9rem;
     background: var(--surface-raised);
     border-radius: 4px;
-    font-size: 0.85rem;
-    line-height: 1.5;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text);
   }
   .steelman-label {
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-muted);
-    align-self: start;
-    padding-top: 0.15rem;
-    white-space: nowrap;
+    margin-bottom: 0.3rem;
   }
-  .steelman-chosen.grade-red .steelman-label { color: var(--grade-red); }
-  .steelman-chosen.grade-orange .steelman-label { color: var(--grade-orange); }
-  .steelman-chosen.grade-green .steelman-label { color: var(--grade-green); }
-  .steelman-text { color: var(--text-muted); }
+  .steelman-text { color: var(--text); }
 
   .drawer {
     border: 1px solid var(--surface-raised);
@@ -331,11 +414,11 @@ const promptsBySlice = Object.fromEntries(
   .drawer > summary {
     list-style: none;
     cursor: pointer;
-    padding: 0.35rem 0.8rem;
+    padding: 0.4rem 0.85rem;
     color: var(--text-muted);
     font-size: 0.75rem;
     letter-spacing: 0.04em;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
   }
   .drawer > summary::-webkit-details-marker { display: none; }
@@ -348,19 +431,28 @@ const promptsBySlice = Object.fromEntries(
   }
   .drawer[open] > summary::after { transform: rotate(90deg); }
   .verdict {
-    margin: 0.1rem 0.8rem 0.3rem 0.8rem;
+    margin: 0.1rem 0.85rem 0.35rem 0.85rem;
     color: var(--text);
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     font-weight: 500;
     line-height: 1.5;
   }
+
+  .evidence { display: flex; flex-direction: column; gap: 0.35rem; }
+  .evidence-head {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
   .findings {
-    margin: 0.1rem 0.8rem 0.3rem 0.8rem;
+    margin: 0;
     padding: 0;
     display: grid;
     grid-template-columns: min-content 1fr;
-    gap: 0.35rem 0.75rem;
-    font-size: 0.85rem;
+    gap: 0.4rem 0.75rem;
+    font-size: 0.88rem;
     line-height: 1.5;
   }
   .finding { display: contents; }
@@ -375,14 +467,24 @@ const promptsBySlice = Object.fromEntries(
     white-space: nowrap;
     font-weight: 600;
   }
-  .findings dd { margin: 0; color: var(--text-muted); }
+  .findings dd { margin: 0; color: var(--text); }
+  .more-evidence > summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--accent-link);
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.15rem 0;
+  }
+  .more-evidence > summary::-webkit-details-marker { display: none; }
+  .more-evidence > .findings { margin-top: 0.35rem; }
 
   .sources {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    margin-top: 0.5rem;
+    margin-top: 0.6rem;
     font-size: 0.75rem;
   }
   .sources-label {
@@ -411,111 +513,62 @@ const promptsBySlice = Object.fromEntries(
   }
   .sources-link:hover { text-decoration: underline; }
 
-  .audit-panel {
-    margin-top: 0.75rem;
-    background: var(--surface-raised);
+  .unknowns {
+    margin-top: 1.5rem;
+    border: 1px solid var(--surface-raised);
     border-radius: 4px;
-    padding: 0.5rem 0.85rem;
+    padding: 0.5rem 0.9rem;
+    background: var(--surface);
   }
-  .audit-panel[open] { padding-bottom: 0.85rem; }
-  .audit-panel > summary {
+  .unknowns[open] { padding-bottom: 1rem; }
+  .unknowns > summary {
     list-style: none;
     cursor: pointer;
-    color: var(--accent-link);
-    font-size: 0.78rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    padding: 0.2rem 0;
-  }
-  .audit-panel > summary::-webkit-details-marker { display: none; }
-  .audit-panel > summary::after {
-    content: " ▸";
+    padding: 0.3rem 0;
     color: var(--text-muted);
-    font-size: 0.7rem;
-    transition: transform 150ms ease;
+  }
+  .unknowns > summary::-webkit-details-marker { display: none; }
+  .unknowns > summary::before {
+    content: "▸ ";
+    color: var(--text-muted);
     display: inline-block;
+    transition: transform 150ms ease;
   }
-  .audit-panel[open] > summary::after { transform: rotate(90deg); }
-
-  .audit-body {
-    margin-top: 0.6rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-  }
-  .audit-intro {
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
-    margin: 0;
-  }
-  .audit-hints {
-    margin: 0;
-    padding-left: 1.1rem;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    line-height: 1.6;
-  }
-  .audit-hints li { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
-  .mini-copy {
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 0.1rem 0.45rem;
-    border-radius: 3px;
-    border: 1px solid var(--surface-raised);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-weight: 600;
-  }
-  .mini-copy:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
-  .audit-hints code {
+  .unknowns[open] > summary::before { transform: rotate(90deg); }
+  .unknowns-summary {
+    font-size: 0.88rem;
     color: var(--text);
-    background: var(--bg);
-    padding: 0 0.3rem;
-    border-radius: 3px;
-    border: 1px solid var(--surface-raised);
-    font-size: 0.75rem;
+    font-weight: 500;
   }
-  .audit-toolbar {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
+  .unknowns-list { margin-top: 0.75rem; gap: 1rem; }
+
   .copy-btn,
   .submit-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.4rem 0.85rem;
+    padding: 0.35rem 0.75rem;
     border-radius: 4px;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 500;
     text-decoration: none;
     cursor: pointer;
     border: 1px solid var(--surface-raised);
     background: var(--surface-raised);
     color: var(--text);
-    min-height: 32px;
+    min-height: 28px;
+    white-space: nowrap;
   }
   .submit-btn { color: var(--accent-link); background: transparent; }
-  .copy-btn:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
+  .copy-btn:hover,
   .submit-btn:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
 
-  .prompt {
-    background: var(--bg);
-    border: 1px solid var(--surface-raised);
-    border-radius: 4px;
-    padding: 0.75rem 0.9rem;
-    margin: 0;
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-size: 0.78rem;
-    line-height: 1.5;
-    color: var(--text-muted);
-    max-height: 22rem;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
+  .prompt-hidden { display: none; }
+
+  @media (max-width: 720px) {
+    .audit-list li {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
   }
 </style>
