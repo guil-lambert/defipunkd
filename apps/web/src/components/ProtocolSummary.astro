@@ -26,13 +26,8 @@ function safeHost(url: string | null): string | null {
     return url;
   }
 }
-const websiteHost = safeHost(protocol.website);
 
 const metadata = getProtocolMetadata(protocol.slug);
-const refreshedGithub = metadata?.github && metadata.github.length > 0 ? metadata.github : null;
-const githubUrls = refreshedGithub ?? protocol.github ?? [];
-const firstGithub = githubUrls.length > 0 ? githubUrls[0]! : null;
-const githubShort = firstGithub ? firstGithub.replace(/^https?:\/\/(www\.)?github\.com\//, "") : null;
 
 const upgradeability = metadata?.upgradeability ?? null;
 const bugBountyUrl = metadata?.bug_bounty_url ?? null;
@@ -49,178 +44,148 @@ const upgradeabilityLabel: Record<string, string> = {
   unknown: "Unknown",
 };
 
-const curatedAbout = metadata?.about?.trim() || null;
+const rawAbout = metadata?.about?.trim() || "";
+const isPlaceholderAbout = /^awaiting\s+defi@home\s+description/i.test(rawAbout);
+const curatedAbout = rawAbout && !isPlaceholderAbout ? rawAbout : null;
 const aboutFallback = (() => {
   const cat = protocol.category ? protocol.category.toLowerCase() : "protocol";
-  const where = primary
-    ? ` on ${primary}${extraChains > 0 ? ` and ${extraChains} other chain${extraChains === 1 ? "" : "s"}` : ""}`
-    : "";
+  const where = primary ? ` on ${primary}` : "";
   return `${protocol.name} is a ${cat} ${protocol.category ? "protocol" : ""}${where}.`.replace(/\s+/g, " ").trim();
 })();
 const about = curatedAbout ?? aboutFallback;
 const aboutUnknown = !curatedAbout;
 ---
-<section class="summary">
-  <div class="grid">
-    <div class="cell">
-      <div class="k">Total value locked</div>
-      <div class="v mono tabular">{formatTvl(protocol.tvl)}</div>
-    </div>
-
-    <div class="cell">
-      <div class="k">Stage</div>
-      <div class="v muted">{EM_DASH}</div>
-      <a href="#stage" class="sub">not yet assessed</a>
-    </div>
-
-    <div class="cell">
-      <div class="k">Chain{protocol.chains.length === 1 ? "" : "s"}</div>
-      <div class="v">
-        {shownChains.length > 0 ? shownChains.join(", ") : EM_DASH}
-        {extraChains > 0 && <span class="chip">+{extraChains}</span>}
+<section class="summary" id="overview">
+  <div class="hero">
+    <div class="top-strip">
+      <div class="top-item tvl">
+        <span class="k">TVL</span>
+        <span class="v mono tabular">{formatTvl(protocol.tvl)}</span>
       </div>
-    </div>
-
-    <div class="cell matrix-cell">
-      <RiskMatrix slices={headerSlices} variant="hero" />
-    </div>
-
-    <div class="cell">
-      <div class="k">Type</div>
-      <div class="v">{protocol.category || EM_DASH}</div>
-    </div>
-
-    <div class="cell">
-      <div class="k">Website</div>
-      <div class="v">
-        {protocol.website ? (
-          <a href={protocol.website} class="link" rel="noreferrer" target="_blank">{websiteHost ?? protocol.website}</a>
-        ) : (
-          <span class="muted">{EM_DASH}</span>
-        )}
+      <span class="sep" aria-hidden="true">·</span>
+      <div class="top-item">
+        <span class="k">Type</span>
+        <span class="v">{protocol.category || EM_DASH}</span>
       </div>
-    </div>
-
-    <div class="cell">
-      <div class="k">GitHub</div>
-      <div class="v">
-        {firstGithub ? (
-          <a href={firstGithub} class="link" rel="noreferrer" target="_blank">{githubShort}</a>
-        ) : (
-          <span class="muted">{EM_DASH}</span>
-        )}
-      </div>
-    </div>
-
-    <div class="cell wide control">
-      <div class="k">Control criteria</div>
-      <div class="pills">
-        <span class="pill">
-          Upgradeability
-          {upgradeability ? (
-            <span class={`pill-val grade-${upgradeability}`}>{upgradeabilityLabel[upgradeability]}</span>
-          ) : (
-            <span class="pill-dash">{EM_DASH}</span>
-          )}
-        </span>
-        <span class="pill">
-          Bug bounty
-          {bugBountyUrl ? (
-            <a href={bugBountyUrl} class="pill-link" rel="noreferrer" target="_blank">{bugBountyHost}</a>
-          ) : (
-            <span class="pill-dash">{EM_DASH}</span>
-          )}
-        </span>
-        <span class="pill">
-          Governance forum
-          {governanceForum ? (
-            <a href={governanceForum} class="pill-link" rel="noreferrer" target="_blank">{governanceHost}</a>
-          ) : (
-            <span class="pill-dash">{EM_DASH}</span>
-          )}
-        </span>
-        <span class="pill">
-          Docs
-          {docsUrl ? (
-            <a href={docsUrl} class="pill-link" rel="noreferrer" target="_blank">{docsHost}</a>
-          ) : (
-            <span class="pill-dash">{EM_DASH}</span>
-          )}
+      <span class="sep" aria-hidden="true">·</span>
+      <div class="top-item chains">
+        <span class="k">Chain{protocol.chains.length === 1 ? "" : "s"}</span>
+        <span class="v">
+          {shownChains.length > 0 ? shownChains.join(", ") : EM_DASH}
+          {extraChains > 0 && <span class="chip">+{extraChains}</span>}
         </span>
       </div>
     </div>
 
-    <div class="cell wide about">
-      <div class="k">About</div>
-      <div class:list={["v", "body", { muted: aboutUnknown }]}>{about}</div>
+    <RiskMatrix slices={headerSlices} variant="full" />
+
+    <div class="about-row">
+      <div class="control">
+        <div class="k">Control criteria</div>
+        <div class="pills">
+          <span class="pill">
+            Upgradeability
+            {upgradeability ? (
+              <span class={`pill-val grade-${upgradeability}`}>{upgradeabilityLabel[upgradeability]}</span>
+            ) : (
+              <span class="pill-dash">{EM_DASH}</span>
+            )}
+          </span>
+          <span class="pill">
+            Bug bounty
+            {bugBountyUrl ? (
+              <a href={bugBountyUrl} class="pill-link" rel="noreferrer" target="_blank">{bugBountyHost}</a>
+            ) : (
+              <span class="pill-dash">{EM_DASH}</span>
+            )}
+          </span>
+          <span class="pill">
+            Governance forum
+            {governanceForum ? (
+              <a href={governanceForum} class="pill-link" rel="noreferrer" target="_blank">{governanceHost}</a>
+            ) : (
+              <span class="pill-dash">{EM_DASH}</span>
+            )}
+          </span>
+          <span class="pill">
+            Docs
+            {docsUrl ? (
+              <a href={docsUrl} class="pill-link" rel="noreferrer" target="_blank">{docsHost}</a>
+            ) : (
+              <span class="pill-dash">{EM_DASH}</span>
+            )}
+          </span>
+        </div>
+      </div>
+
+      <div class="about">
+        <div class="k">About</div>
+        <p class:list={["body", { muted: aboutUnknown }]}>{about}</p>
+      </div>
     </div>
   </div>
 </section>
 
 <style>
   .summary { margin-top: 1rem; }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1.25rem 1.5rem;
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
     padding: 1.25rem 1.5rem;
     background: var(--surface);
     border: 1px solid var(--surface-raised);
     border-radius: 4px;
-    align-items: start;
-  }
-  .cell { min-width: 0; }
-  .matrix-cell {
-    grid-column: 4;
-    grid-row: 1 / 3;
-    align-self: stretch;
-    display: flex;
-    align-items: center;
-  }
-  .matrix-cell > :global(.risk-matrix) { width: 100%; }
-  .wide.control {
-    grid-column: 1 / 3;
-    grid-row: 3;
-    padding-top: 1rem;
-    border-top: 1px solid var(--surface-raised);
-  }
-  .wide.about {
-    grid-column: 3 / 5;
-    grid-row: 3;
-    padding-top: 1rem;
-    border-top: 1px solid var(--surface-raised);
   }
 
+  .top-strip {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--surface-raised);
+  }
+  .top-item { display: inline-flex; align-items: baseline; gap: 0.5rem; min-width: 0; }
+  .top-item .k {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .top-item .v {
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .top-item.tvl .v { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+  .top-item.chains .v { word-break: break-word; }
+  .sep { color: var(--text-muted); opacity: 0.5; }
+
+  .about-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 1.25rem 1.5rem;
+    padding-top: 0.5rem;
+  }
   .k {
     color: var(--text-muted);
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-weight: 600;
-    margin-bottom: 0.3rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
   }
-  .v {
+  .body {
+    margin: 0;
     color: var(--text);
-    font-size: 1.1rem;
-    font-weight: 600;
-    line-height: 1.3;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
-  .v.body { font-size: 0.88rem; font-weight: 400; color: var(--text); line-height: 1.5; }
-  .v.body.muted { color: var(--text-muted); font-style: italic; }
-  .about-placeholder { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.7rem; opacity: 0.7; }
-  .muted { color: var(--text-muted); }
-  .sub {
-    display: inline-block;
-    margin-top: 0.2rem;
-    font-size: 0.72rem;
-    color: var(--accent-link);
-    text-decoration: none;
-    letter-spacing: 0.02em;
-  }
-  .sub:hover { text-decoration: underline; }
-  .link { color: var(--accent-link); font-size: 0.95rem; font-weight: 500; }
+  .body.muted { color: var(--text-muted); font-style: italic; }
+
   .chip {
     margin-left: 0.4rem;
     padding: 0 0.4rem;
@@ -262,16 +227,8 @@ const aboutUnknown = !curatedAbout;
   .pill-link:hover { text-decoration: underline; }
 
   @media (max-width: 720px) {
-    .grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem 1.25rem;
-      padding: 1rem;
-    }
-    .matrix-cell { grid-column: 1 / -1; grid-row: auto; }
-    .wide.control, .wide.about {
-      grid-column: 1 / -1;
-      grid-row: auto;
-      padding-top: 1rem;
-    }
+    .hero { padding: 1rem; gap: 1rem; }
+    .about-row { grid-template-columns: 1fr; }
+    .top-item.tvl .v { font-size: 1.4rem; }
   }
 </style>
