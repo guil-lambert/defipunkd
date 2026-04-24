@@ -1,18 +1,18 @@
 <script lang="ts">
-  import TierRing from "./TierRing.svelte";
+  import TierMedal from "./TierMedal.svelte";
   import type { Tier } from "../lib/tier";
 
   const items: { tier: Exclude<Tier, "none">; label: string }[] = [
-    { tier: "bronze", label: "Bronze — AI consensus on at least one dimension" },
-    { tier: "silver", label: "Silver — AI consensus on all dimensions" },
-    { tier: "gold", label: "Gold — Verified by human committee" },
+    { tier: "bronze", label: "AI consensus on at least one dimension" },
+    { tier: "silver", label: "AI consensus on all dimensions" },
+    { tier: "gold", label: "Verified by human committee" },
   ];
 </script>
 
 <div class="tier-legend" aria-label="Tier legend">
   {#each items as item}
     <span class="item">
-      <TierRing tier={item.tier} diameter={16} standalone />
+      <TierMedal tier={item.tier} size={16} />
       <span class="label">{item.label}</span>
     </span>
   {/each}

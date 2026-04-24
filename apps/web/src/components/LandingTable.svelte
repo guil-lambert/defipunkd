@@ -10,7 +10,7 @@
   import { PIZZA_SLICES, GRADE_FILL, GRADE_TOOLTIP, pizzaGradesFor, type PizzaGrades, type PizzaSize } from "../lib/pizza";
   import { EM_DASH, formatTvl } from "../lib/format";
   import TierGradients from "./TierGradients.svelte";
-  import TierRing from "./TierRing.svelte";
+  import TierMedal from "./TierMedal.svelte";
   import TierLegend from "./TierLegend.svelte";
 
   const DEFAULT_PAGE = 200;
@@ -77,24 +77,30 @@
 
   function pizzaPaths(grades: PizzaGrades, size: PizzaSize) {
     const radius = size === "sm" ? 18 : 72;
-    const stroke = size === "sm" ? 1 : 2;
+    const stroke = size === "sm" ? 2 : 3;
+    const cr = size === "sm" ? 1.5 : 5;
     const cx = radius, cy = radius;
     const angle = (2 * Math.PI) / PIZZA_SLICES.length;
+    const da = Math.min(cr / radius, angle / 2 - 0.01);
     return {
       radius,
       stroke,
       paths: PIZZA_SLICES.map((slice, i) => {
         const a0 = -Math.PI / 2 + i * angle;
         const a1 = a0 + angle;
-        const x0 = cx + radius * Math.cos(a0);
-        const y0 = cy + radius * Math.sin(a0);
-        const x1 = cx + radius * Math.cos(a1);
-        const y1 = cy + radius * Math.sin(a1);
+        const Ax = cx + (radius - cr) * Math.cos(a0);
+        const Ay = cy + (radius - cr) * Math.sin(a0);
+        const Bx = cx + radius * Math.cos(a0 + da);
+        const By = cy + radius * Math.sin(a0 + da);
+        const Cx = cx + radius * Math.cos(a1 - da);
+        const Cy = cy + radius * Math.sin(a1 - da);
+        const Dx = cx + (radius - cr) * Math.cos(a1);
+        const Dy = cy + (radius - cr) * Math.sin(a1);
         const grade = grades[slice.id] ?? "gray";
         return {
           id: slice.id,
           label: slice.label,
-          d: `M${cx},${cy} L${x0},${y0} A${radius},${radius} 0 0,1 ${x1},${y1} Z`,
+          d: `M${cx},${cy} L${Ax.toFixed(2)},${Ay.toFixed(2)} A${cr},${cr} 0 0 1 ${Bx.toFixed(2)},${By.toFixed(2)} A${radius},${radius} 0 0 1 ${Cx.toFixed(2)},${Cy.toFixed(2)} A${cr},${cr} 0 0 1 ${Dx.toFixed(2)},${Dy.toFixed(2)} Z`,
           fill: GRADE_FILL[grade],
           tooltip: GRADE_TOOLTIP[grade],
         };
@@ -219,6 +225,7 @@
   {@const grades = { ...pizzaGradesFor(row.category, row.verifiability_grade, row.autonomy_grade), ...(row.assessment_grades ?? {}) }}
   {@const pz = pizzaPaths(grades, "sm")}
   {@const initial = row.name.charAt(0).toUpperCase()}
+  {@const tier = row.tier ?? "none"}
   <tr class:child={isChild}>
     <td class="name-cell" class:child-cell={isChild}>
       <div class="name-inner">
@@ -249,16 +256,30 @@
       </div>
     </td>
     <td class="pizza-cell">
-      <svg width={pz.radius * 2} height={pz.radius * 2} viewBox={`0 0 ${pz.radius * 2} ${pz.radius * 2}`} role="img" aria-label="risk pizza (all unknown)">
-        {#each pz.paths as p}
-          <a href={`/protocol/${row.slug}`}>
-            <path d={p.d} fill={p.fill} stroke="#08090c" stroke-width={pz.stroke}>
-              <title>{`${p.label} \u2014 ${p.tooltip}`}</title>
-            </path>
-          </a>
-        {/each}
-        <TierRing tier={row.tier ?? "none"} diameter={pz.radius * 2} />
-      </svg>
+      <div class="pizza-wrap">
+        <svg width={pz.radius * 2} height={pz.radius * 2} viewBox={`0 0 ${pz.radius * 2} ${pz.radius * 2}`} role="img" aria-label="risk pizza (all unknown)">
+          {#each pz.paths as p}
+            <a href={`/protocol/${row.slug}`}>
+              <path d={p.d} fill={p.fill} stroke="#08090c" stroke-width={pz.stroke} stroke-linejoin="round">
+                <title>{`${p.label} \u2014 ${p.tooltip}`}</title>
+              </path>
+            </a>
+          {/each}
+          <circle
+            cx={pz.radius}
+            cy={pz.radius}
+            r={pz.radius}
+            fill="url(#pie-ao)"
+            style="mix-blend-mode: multiply"
+            pointer-events="none"
+          />
+        </svg>
+        {#if tier !== "none"}
+          <span class="medal-slot">
+            <TierMedal tier={tier} size={16} />
+          </span>
+        {/if}
+      </div>
     </td>
     <td class="muted">{EM_DASH}</td>
     <td>
@@ -450,6 +471,18 @@
     font-size: 0.7rem;
   }
   .pizza-cell { padding: 0.2rem 0.6rem; }
+  .pizza-wrap {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+  .medal-slot {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    line-height: 0;
+    pointer-events: auto;
+  }
   .tvl {
     text-align: right;
     font-family: var(--font-mono), ui-monospace, monospace;

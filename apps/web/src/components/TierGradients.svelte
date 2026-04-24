@@ -12,6 +12,11 @@
         {/each}
       </linearGradient>
     {/each}
+    <radialGradient id="pie-ao" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.35" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
   </defs>
 </svg>
 

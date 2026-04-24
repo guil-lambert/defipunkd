@@ -63,10 +63,18 @@ export const TIER_STOPS: Record<Exclude<Tier, "none">, GradientStop[]> = {
   ],
 };
 
-export const TIER_FALLBACK: Record<Exclude<Tier, "none">, string> = {
-  bronze: "#B8763E",
-  silver: "#A8A8B0",
-  gold: "#D4A84A",
+/** Rim stroke color = darkest (shadow) stop of the tier gradient. */
+export const TIER_RIM_COLOR: Record<Exclude<Tier, "none">, string> = {
+  bronze: "#7A4A1E",
+  silver: "#6C6C74",
+  gold: "#8A6A1E",
+};
+
+/** Check-glyph color = midtone stop of the tier gradient. */
+export const TIER_CHECK_COLOR: Record<Exclude<Tier, "none">, string> = {
+  bronze: "#5A3715",
+  silver: "#4A4A52",
+  gold: "#5A4410",
 };
 
 export const TIER_LABEL: Record<Exclude<Tier, "none">, string> = {
@@ -75,18 +83,5 @@ export const TIER_LABEL: Record<Exclude<Tier, "none">, string> = {
   gold: "Gold tier · Verified by human committee",
 };
 
-export const TIER_SHORT_LABEL: Record<Exclude<Tier, "none">, string> = {
-  bronze: "Bronze",
-  silver: "Silver",
-  gold: "Gold",
-};
-
-export const SMALL_RING_THRESHOLD = 20;
-
-export function ringStroke(tier: Exclude<Tier, "none">, diameter: number): string {
-  return diameter < SMALL_RING_THRESHOLD ? TIER_FALLBACK[tier] : `url(#tier-${tier})`;
-}
-
-export function ringStrokeWidth(diameter: number): number {
-  return diameter >= 32 ? 2.5 : 2;
-}
+/** Below this size the checkmark is dropped — disc/rim/gradient only. */
+export const MEDAL_CHECK_MIN_SIZE = 12;

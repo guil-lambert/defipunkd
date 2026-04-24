@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveTier, maxTier, ringStroke, ringStrokeWidth, type TierInput } from "./tier";
+import { deriveTier, maxTier, type TierInput } from "./tier";
 
 const models = (n: number) => Array.from({ length: n }, (_, i) => `m${i}`);
 
@@ -46,14 +46,3 @@ describe("maxTier", () => {
   });
 });
 
-describe("ring helpers", () => {
-  it("uses gradient above threshold, solid below", () => {
-    expect(ringStroke("silver", 24)).toBe("url(#tier-silver)");
-    expect(ringStroke("silver", 16)).toBe("#A8A8B0");
-  });
-
-  it("scales stroke width at 32px+", () => {
-    expect(ringStrokeWidth(36)).toBe(2.5);
-    expect(ringStrokeWidth(24)).toBe(2);
-  });
-});

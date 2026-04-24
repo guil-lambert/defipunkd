@@ -1,11 +1,24 @@
 ---
 import type { SliceAssessment } from "../lib/rationale";
+import { TIER_RIM_COLOR, TIER_STOPS, type Tier } from "../lib/tier";
 
 interface Props {
   slices: SliceAssessment[];
   variant?: "hero" | "full";
+  tier?: Tier;
 }
-const { slices, variant = "full" } = Astro.props;
+const { slices, variant = "full", tier = "none" } = Astro.props;
+
+const TIER_ROW_LABEL: Record<Exclude<Tier, "none">, string> = {
+  bronze: "AI consensus on at least one dimension",
+  silver: "AI consensus on all dimensions",
+  gold: "Verified by human committee",
+};
+const TIER_CHIP_TEXT: Record<Exclude<Tier, "none">, string> = {
+  bronze: "bronze",
+  silver: "silver",
+  gold: "gold",
+};
 
 const SEVERITY_ORDER: Record<string, number> = { red: 0, orange: 1, green: 2, gray: 3 };
 const sorted = [...slices].sort(
@@ -22,6 +35,16 @@ function chipLabel(grade: string): string {
 }
 ---
 <ul class:list={["risk-matrix", `variant-${variant}`]}>
+  {tier !== "none" && (
+    <li class:list={["row", "tier-row", `tier-${tier}`]} data-tier-row={tier}>
+      <div class="row-link" role="presentation">
+        <span class="swatch tier-swatch" aria-hidden="true" style={`background: linear-gradient(135deg, ${TIER_STOPS[tier][0].color} 0%, ${TIER_STOPS[tier][1].color} 50%, ${TIER_STOPS[tier][2].color} 100%);`}></span>
+        <span class="dim">Tier</span>
+        <span class="chip tier-chip" style={`background: linear-gradient(135deg, ${TIER_STOPS[tier][0].color} 0%, ${TIER_STOPS[tier][1].color} 50%, ${TIER_STOPS[tier][2].color} 100%); border: 1px solid ${TIER_RIM_COLOR[tier]}`}>{TIER_CHIP_TEXT[tier]}</span>
+        <span class="headline">{TIER_ROW_LABEL[tier]}</span>
+      </div>
+    </li>
+  )}
   {sorted.map((s) => (
     <li class:list={["row", `grade-${s.grade}`]} data-slice-row={s.id}>
       <a href={`#${s.id}`} class="row-link">
@@ -47,6 +70,7 @@ function chipLabel(grade: string): string {
     overflow: hidden;
     background: var(--surface);
   }
+  .row { position: relative; }
   .row + .row { border-top: 1px solid var(--surface-raised); }
   .row-link {
     display: grid;
@@ -59,7 +83,17 @@ function chipLabel(grade: string): string {
     transition: background 120ms ease;
   }
   .row-link:hover { background: color-mix(in oklab, var(--surface-raised) 50%, transparent); }
-  .swatch { display: block; height: 100%; min-height: 1.6rem; }
+  .swatch {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0.35rem;
+    display: block;
+  }
+  .row-link > .dim { grid-column: 2; }
+  .row-link > .chip { grid-column: 3; }
+  .row-link > .headline { grid-column: 4; }
   .row.grade-red    .swatch { background: var(--grade-red,    oklch(0.52 0.170 22)); }
   .row.grade-orange .swatch { background: var(--grade-orange, oklch(0.65 0.120 75)); }
   .row.grade-green  .swatch { background: var(--grade-green,  oklch(0.60 0.130 150)); }
@@ -88,6 +122,8 @@ function chipLabel(grade: string): string {
   .grade-green  .chip { background: oklch(0.74 0.140 150); color: #081610; }
   .grade-gray   .chip { background: oklch(0.72 0.015 235); color: #0d1114; }
 
+  .tier-chip { color: #1a1208; }
+
   .headline {
     color: var(--text-muted);
     font-size: 0.9rem;
@@ -109,8 +145,8 @@ function chipLabel(grade: string): string {
       row-gap: 0.2rem;
       padding: 0.7rem 0.9rem 0.7rem 0;
     }
-    .dim { grid-column: 2; grid-row: 1; }
-    .chip { grid-column: 3; grid-row: 1; justify-self: end; }
+    .row-link > .dim { grid-column: 2; grid-row: 1; }
+    .row-link > .chip { grid-column: 3; grid-row: 1; justify-self: end; }
     .headline {
       grid-column: 2 / -1;
       grid-row: 2;
