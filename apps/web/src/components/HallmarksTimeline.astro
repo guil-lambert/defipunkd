@@ -1,0 +1,80 @@
+---
+import type { Hallmark } from "../lib/format";
+
+interface Props {
+  hallmarks: Hallmark[];
+}
+const { hallmarks } = Astro.props;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function compactDate(unixTs: number): string {
+  const d = new Date(unixTs * 1000);
+  const m = MONTHS[d.getUTCMonth()];
+  const y = String(d.getUTCFullYear()).slice(2);
+  return `${m} '${y}`;
+}
+const items = hallmarks.map((h) => ({
+  compact: compactDate(h.unixTs),
+  description: h.description,
+}));
+---
+{items.length > 0 && (
+  <section class="hallmarks" id="hallmarks">
+    <h2>Hallmarks</h2>
+    <ol class="timeline">
+      {items.map((h) => (
+        <li class="item">
+          <span class="date">{h.compact}</span>
+          <span class="desc">{h.description}</span>
+        </li>
+      ))}
+    </ol>
+  </section>
+)}
+
+<style>
+  .hallmarks {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--brand-oxblood);
+    scroll-margin-top: 1rem;
+  }
+  h2 { margin: 0 0 0.75rem 0; color: var(--text); font-size: 2.25rem; scroll-margin-top: 1rem; }
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+  }
+  .item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-left: 3px solid var(--brand-oxblood);
+    border-radius: 3px;
+  }
+  .date {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .desc {
+    color: var(--text);
+    font-size: 0.88rem;
+    line-height: 1.35;
+  }
+
+  @media (max-width: 720px) {
+    .timeline { flex-direction: column; }
+    .item { width: 100%; }
+  }
+</style>
