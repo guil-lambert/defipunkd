@@ -4,21 +4,23 @@ import { verifiabilityGrade } from "./verifiability";
 import { autonomyGrade } from "./autonomy";
 
 export type SliceAssessment = {
-  id: "control" | "ability-to-exit" | "autonomy" | "access" | "verifiability";
+  id: "control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability";
   label: string;
   grade: GradeColor;
   headline: string;
+  short_headline?: string;
   rationale: string;
   structured?: Rationale;
   strength?: "strong" | "weak";
   models?: string[];
 };
 
-function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "rationale" | "structured" | "strength" | "models"> {
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
   return {
     grade,
     headline: a.headline,
+    short_headline: a.short_headline,
     rationale: a.rationale.verdict,
     structured: a.rationale,
     strength: a.strength,
@@ -150,8 +152,8 @@ export function assessProtocol(
       rationale: d.rationale,
     },
     {
-      id: "access",
-      label: "Access",
+      id: "open-access",
+      label: "Open Access",
       grade: "gray",
       headline: "Not yet assessed",
       rationale:
@@ -180,7 +182,7 @@ export function cexAssessment(): SliceAssessment[] {
     { id: "control", label: "Control", grade: "red", headline: "Operator-controlled", rationale: r },
     { id: "ability-to-exit", label: "Ability to exit", grade: "red", headline: "Withdrawals can be halted", rationale: r },
     { id: "autonomy", label: "Autonomy", grade: "red", headline: "Off-chain counterparty", rationale: r },
-    { id: "access", label: "Access", grade: "red", headline: "Permissioned by design", rationale: r },
+    { id: "open-access", label: "Open Access", grade: "red", headline: "Permissioned by design", rationale: r },
     { id: "verifiability", label: "Verifiability", grade: "red", headline: "Closed codebase", rationale: r },
   ];
 }

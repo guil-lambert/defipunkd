@@ -1,0 +1,202 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 11,
+  "analysis_date": "2026-04-24",
+  "model": "claude-sonnet-4-6",
+  "chat_url": "https://claude.ai/share/a22a6eb6-00d0-47f7-aa32-a1959d352c75",
+  "grade": "orange",
+  "headline": "DualGovernance adds 9-day normal path, but a time-limited insider-heavy Emergency Committee can collapse DG back to a 5-day Aragon-only path",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Core protocol contracts (stETH, WithdrawalQueue, StakingRouter, etc.) are proxies whose admin/owner is the Aragon Agent (0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c). Since DG activation via Vote #189 (~July 4, 2025), the Agent's RUN_SCRIPT_ROLE and EXECUTE_ROLE from Aragon Voting were revoked and re-routed through the DualGovernance Executor, so only DG-submitted proposals can call Agent.forward. The LidoLocator (0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb) is the on-chain address book; each proxy points to an OssifiableProxy with the Agent/DAO as admin. wstETH (0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0) is non-upgradeable. The EmergencyProtectedTimelock (0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316) is the current final arbiter for proposal execution."
+      },
+      {
+        "code": "C2",
+        "text": "Core contracts use the OssifiableProxy (ERC-1967 style) pattern. The proxy admin for protocol proxies is the Aragon Agent (0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c). Upgrades must flow through Aragon Voting → DualGovernance Executor → Aragon Agent → proxy upgrade call. Implementation contracts are immutable; only proxies are upgradeable. wstETH is fully immutable."
+      },
+      {
+        "code": "C3",
+        "text": "Normal upgrade execution path (uncontested): (1) Aragon Voting (0x2e59A20f205bB85a89C53f1936454680651E618e): 5 days total (72h main phase + 48h objection phase, confirmed from lido.fi/governance and blog.lido.fi). Vote requires >5% of LDO supply quorum + simple majority. (2) DualGovernance / EmergencyProtectedTimelock (0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316): minimum 3-day pending delay then 24h schedule-to-execute window before proposal can be called = ~4 days. (3) Aragon Agent (0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c): executes the forwarded call. Total uncontested fast path: ~9 days. DG Emergency path: if the 4/7 Emergency Activation multisig enables Emergency Mode, proposals can then be executed by the 5/7 Emergency Execution multisig, and Emergency Reset can be triggered, which disables DG and hands governance back to a TimelockedGovernance backed by Aragon Voting. After reset, the path is just Aragon Voting (5 days) with no additional DG timelock — below the 7-day green threshold. On-chain delay constants (AFTER_SUBMIT_DELAY = 3 days, AFTER_SCHEDULE_DELAY = 24h) were cited from lido.fi/governance and blog.lido.fi; on-chain read-contract values not directly fetched this run — see unknowns."
+      },
+      {
+        "code": "C4",
+        "text": "Multisigs with reachable control: (a) GateSeal Committee (0x8772E3a2D86B9347A2688f9bc1808A6d8917760C, 3/6): can trigger GateSeal pause on WithdrawalQueue, ValidatorExitBus, VaultHub, PredepositGuarantee for limited periods; single-use per GateSeal contract; signers are ajbeal, eboadom, michwill, thedzhon, George, kadmil — all Lido community/ecosystem contributors. (b) Emergency Brakes Ethereum (0x73b047fe6337183A454c5217241D780a932777bD, 3/5): can pause Easy Track pipeline and disable L2 bridge deposits/withdrawals; does not affect core protocol upgrades. (c) DG Emergency Activation multisig (4/7): can activate DG Emergency Mode blocking permissionless execution; signers include Alexandr T (Lido DAO Tech — insider), Kirill M (Lido ValSet — insider), Yuri T (Lido stETH — insider), Dmitry Zaharov (MixBytes), Isaac Patka (SEAL), Josef (Ackee Blockchain), Shelly (Certora) — 3/7 are Lido-affiliated insiders, 4/7 are auditors/security researchers. (d) DG Emergency Execution multisig (5/7, same signers): can execute DG proposals in Emergency Mode and trigger Emergency Reset. (e) Tiebreaker: 'multisig of multisigs' with Ethereum Ecosystem (3/5), Builders (3/5), Node Operators (5/7) subcommittees; requires ≥2 subcommittees — last-resort only after governance paralysis. The DG Emergency Committee is a temporary failsafe for the first year post-deploy (expires ~July 2026)."
+      },
+      {
+        "code": "C5",
+        "text": "Aragon Voting (0x2e59A20f205bB85a89C53f1936454680651E618e, LDO token 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32): voting period 5 days (72h main + 48h objection, confirmed from lido.fi/governance and blog.lido.fi); quorum: >5% of total LDO supply must vote yes; support: simple majority of votes cast. These values (voteTime, minAcceptQuorumPct, supportRequiredPct) were sourced from lido.fi/governance and blog.lido.fi rather than a direct on-chain Read Contract call this run — see unknowns. DG adds a minimum 3-day pending + 24h schedule delay on top of the Aragon vote for all protocol upgrade proposals (except Easy Track operations)."
+      },
+      {
+        "code": "C6",
+        "text": "Emergency powers: (1) GateSeal Committee (3/6) can pause WithdrawalQueue and other contracts for up to 6 days per GateSeal; this is a fast, single-use emergency pause with no timelock. (2) Emergency Brakes multisig (3/5) can pause L2 bridges and Easy Track instantly with no delay. (3) DG Emergency Activation Committee (4/7) can activate DG Emergency Mode instantly, blocking permissionless proposal execution — time-limited to 1 year post-deploy (~July 2026). (4) DG Emergency Execution Committee (5/7) can then execute or trigger Emergency Reset. None of these powers allow arbitrary contract upgrades: GateSeal and Emergency Brakes are pause-only; the DG Emergency multisigs affect the governance layer only. After Emergency Reset, governance reverts to Aragon Voting (5-day cycle)."
+      }
+    ],
+    "steelman": {
+      "red": "The DG Emergency Execution multisig (5/7, including 3 Lido insiders) can trigger Emergency Reset, which disables DualGovernance entirely and leaves Aragon Voting as the sole upgrade authority; if Aragon Voting is then captured (only 5% quorum needed), an attacker could execute protocol changes within 5 days with no additional safeguard.",
+      "orange": "The DG Emergency Committee (a time-limited 4/7 insider-heavy multisig) can collapse DualGovernance, reducing the effective uncontested fast path to just 5 days of Aragon Voting — below the 7-day threshold — and the 5% LDO quorum is low enough that a concentrated holder could drive harmful votes through once DG protection is removed.",
+      "green": "The normal governance path is 9+ days (5-day Aragon vote + 4-day DG minimum delay), exceeding the 7-day bar; DualGovernance adds a rage-quit mechanism giving stETH holders exit rights against hostile LDO proposals; the DG Emergency Committee is temporary (expires ~July 2026) and requires 4-of-7 insiders + auditors to activate, making unilateral bypass extremely difficult in practice."
+    },
+    "verdict": "Choosing orange because the DG Emergency Committee (4/7 activation, active until ~July 2026) can collapse DualGovernance, creating an uncontested path of only 5 days (Aragon Voting alone) — below the 7-day green threshold. The normal 9-day path would merit green, and the temporary nature of the Emergency Committee is a meaningful mitigant, but grading on the fast path per the rubric requires acknowledging the sub-7-day route that currently exists. Additionally, the 5% LDO quorum is low by DAO standards. The DG Emergency path is further constrained: it requires 4/7 activation first, then 5/7 execution — a meaningful barrier in practice, but not a hard time-delay in the smart-contract sense."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.lido.fi/deployed-contracts/",
+      "shows": "Canonical list of all Lido mainnet contract addresses including Lido/stETH proxy (0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84), Aragon Agent (0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c), Aragon Voting (0x2e59A20f205bB85a89C53f1936454680651E618e), and LDO token (0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32)",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+      "shows": "Lido EmergencyProtectedTimelock contract deployed on Ethereum mainnet — the final execution stage for DualGovernance proposals",
+      "chain": "Ethereum",
+      "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x2e59A20f205bB85a89C53f1936454680651E618e",
+      "shows": "Lido Aragon Voting contract on Ethereum mainnet — primary LDO governance voting contract",
+      "chain": "Ethereum",
+      "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+      "shows": "Aragon Agent — proxy admin and execution target for all protocol upgrade calls",
+      "chain": "Ethereum",
+      "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "shows": "Lido/stETH proxy contract (OssifiableProxy pattern) — main entry point for stakers",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://lido.fi/governance",
+      "shows": "Lido DAO governance page confirming: 5-day voting (72h main + 48h objection), 5% LDO quorum, simple majority support; and DG minimum 3-day pending delay + 24h schedule delay",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://blog.lido.fi/dual-governance-101-explainer/",
+      "shows": "Detailed DG mechanics: Normal state = 4-day pending before execution; Veto Signaling = 5-45 day dynamic extension; 1% stETH = first seal, 10% stETH = rage quit; Emergency Committee structure (4/7 activation, 5/7 execution)",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/multisigs/emergency-brakes",
+      "shows": "GateSeal Committee (0x8772E3a2D86B9347A2688f9bc1808A6d8917760C, 3/6) and Emergency Brakes ETH (0x73b047fe6337183A454c5217241D780a932777bD, 3/5) multisig details, signers, and roles",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://research.lido.fi/t/lido-dual-governance-emergency-committee/10049",
+      "shows": "DG Emergency Committee composition: 4/7 activation and 5/7 execution multisigs with same 7 signers — 3 Lido insiders (Alexandr T/Lido DAO Tech, Kirill M/Lido ValSet, Yuri T/Lido stETH) and 4 auditors/security researchers (MixBytes, SEAL, Ackee, Certora)",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://research.lido.fi/t/dual-governance-rollout-plan/10232",
+      "shows": "DG Vote #189 was scheduled for June 25, 2025; rollout plan including role transitions, emergency smoke test, and committee setup; confirms Aragon Agent.forward role moved to DG Executor",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://blog.lido.fi/moving-to-two-phase-voting/",
+      "shows": "Two-phase voting: 72h main phase + 48h objection phase = 5 days total; quorum >5% LDO supply, >50% support required",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/dual-governance/blob/develop/docs/specification.md",
+      "shows": "DG specification: EmergencyProtectedTimelock mechanics; Emergency Activation/Execution Committee roles; Emergency Reset flow (disables DG, falls back to TimelockedGovernance/Aragon Voting)"
+    },
+    {
+      "url": "https://docs.lido.fi/security/audits",
+      "shows": "Lido audits page listing multiple third-party audit reports including DG audits from Certora, Statemind, OpenZeppelin, Runtime Verification",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C3: AFTER_SUBMIT_DELAY and AFTER_SCHEDULE_DELAY constants on the EmergencyProtectedTimelock (0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316) were not read directly via Etherscan Read Contract during this run; values sourced from lido.fi/governance and blog.lido.fi documentation (3 days + 24h) rather than on-chain call",
+    "C5: Aragon Voting contract voteTime, minAcceptQuorumPct, and supportRequiredPct were not read directly via Etherscan Read Contract (Read as Proxy tab) during this run; values sourced from lido.fi/governance and blog.lido.fi (5 days total, 5% quorum, simple majority)",
+    "C4: Exact addresses of the DG Emergency Activation multisig and DG Emergency Execution multisig Safe contracts were not confirmed on-chain this run; the signer list was sourced from research.lido.fi forum post but the Safe contract addresses for these two multisigs were not fetched from Etherscan",
+    "C4: Tiebreaker committee subcommittee Safe addresses and their signer identities were not enumerated in this run; only high-level structure (3-subcommittee multisig-of-multisigs) was confirmed from docs"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core",
+      "https://github.com/lidofinance/dual-governance",
+      "https://github.com/lidofinance/lido-dao"
+    ],
+    "docs_url": "https://docs.lido.fi",
+    "audits": [
+      {
+        "firm": "Certora",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2025-02"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2024-11"
+      },
+      {
+        "firm": "Statemind",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2024-10"
+      },
+      {
+        "firm": "Runtime Verification",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2025-02"
+      }
+    ],
+    "governance_forum": "https://research.lido.fi",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/lido",
+    "security_contact": "https://github.com/lidofinance/audits",
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+        "role": "Aragon Agent — proxy admin and executor for all protocol upgrade calls",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+        "role": "EmergencyProtectedTimelock — DualGovernance execution layer and timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
+        "role": "Aragon Voting — LDO token-weighted on-chain governance",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8772E3a2D86B9347A2688f9bc1808A6d8917760C",
+        "role": "GateSeal Committee (3/6 multisig) — emergency protocol pause",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x73b047fe6337183A454c5217241D780a932777bD",
+        "role": "Emergency Brakes Ethereum (3/5 multisig) — L2 bridge and Easy Track pause",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Lido is Ethereum's largest liquid staking protocol, allowing users to stake any amount of ETH and receive stETH (a rebasing ERC-20) or wstETH (a non-rebasing wrapper) in return, while a curated set of professional node operators runs the underlying validators. The DAO-governed protocol distributes stake across multiple validator operators, collects execution and consensus layer rewards, and distributes them to stETH holders without requiring users to lock funds or operate infrastructure. With Lido V3, the protocol introduced stVaults — user-defined, non-custodial staking setups enabling institutional and protocol-level customization on shared infrastructure. Governance is conducted via LDO token voting on the Aragon framework, now guarded by DualGovernance which gives stETH holders veto and rage-quit rights over DAO decisions."
+  }
+}

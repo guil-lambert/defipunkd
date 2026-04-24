@@ -5,7 +5,7 @@ export const SLICES = [
   "control",
   "ability-to-exit",
   "autonomy",
-  "access",
+  "open-access",
   "verifiability",
 ] as const;
 
@@ -95,12 +95,13 @@ const base = z
     chat_url: z.string().url().nullable().optional(),
     grade: z.enum(GRADES),
     headline: z.string().min(1),
+    short_headline: z.string().min(1).max(80).optional(),
     rationale: RationaleSchema,
     evidence: z.array(EvidenceSchema),
     unknowns: z.array(z.string().min(1)),
     protocol_metadata: ProtocolMetadataSchema.optional(),
   })
-  .passthrough();
+  .strict();
 
 export const SubmissionSchema = base.superRefine((val, ctx) => {
   if (val.grade === "unknown") {

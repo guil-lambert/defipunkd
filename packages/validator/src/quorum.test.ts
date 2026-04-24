@@ -111,6 +111,56 @@ describe("computeQuorum", () => {
     }
   });
 
+  it("rewards evidence entries with fetched_at timestamps (signals actual browsing)", () => {
+    const r = computeQuorum(
+      [
+        withPath(
+          mkSub({
+            model: "fetched",
+            evidence: [
+              { url: "https://etherscan.io/address/0x1", shows: "y", fetched_at: "2026-04-23T10:00:00Z" },
+              { url: "https://etherscan.io/address/0x2", shows: "y", fetched_at: "2026-04-23T10:01:00Z" },
+              { url: "https://etherscan.io/address/0x3", shows: "y", fetched_at: "2026-04-23T10:02:00Z" },
+            ],
+          }),
+          "a.json",
+        ),
+        withPath(
+          mkSub({
+            model: "no-fetch",
+            evidence: [
+              { url: "https://etherscan.io/address/0x1", shows: "y" },
+              { url: "https://etherscan.io/address/0x2", shows: "y" },
+              { url: "https://etherscan.io/address/0x3", shows: "y" },
+            ],
+          }),
+          "b.json",
+        ),
+      ],
+      ctx,
+    );
+    if (r.kind === "assessment") {
+      const fetched = r.assessment.merged_from.find((m) => m.model === "fetched")!;
+      const noFetch = r.assessment.merged_from.find((m) => m.model === "no-fetch")!;
+      expect(fetched.weight).toBeGreaterThan(noFetch.weight);
+    }
+  });
+
+  it("rewards non-empty unknowns[] as a self-awareness signal (when grade is not 'unknown')", () => {
+    const r = computeQuorum(
+      [
+        withPath(mkSub({ model: "with-unknowns", unknowns: ["C3: did not read minDelay on-chain"] }), "a.json"),
+        withPath(mkSub({ model: "claims-omniscient", unknowns: [] }), "b.json"),
+      ],
+      ctx,
+    );
+    if (r.kind === "assessment") {
+      const selfAware = r.assessment.merged_from.find((m) => m.model === "with-unknowns")!;
+      const silent = r.assessment.merged_from.find((m) => m.model === "claims-omniscient")!;
+      expect(selfAware.weight).toBeGreaterThan(silent.weight);
+    }
+  });
+
   it("penalizes older prompt_version", () => {
     const r = computeQuorum(
       [

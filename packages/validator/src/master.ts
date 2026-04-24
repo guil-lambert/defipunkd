@@ -66,7 +66,7 @@ export const MasterSchema = z
       control: SliceConsensusSchema,
       "ability-to-exit": SliceConsensusSchema,
       autonomy: SliceConsensusSchema,
-      access: SliceConsensusSchema,
+      "open-access": SliceConsensusSchema,
       verifiability: SliceConsensusSchema,
     }),
     protocol_metadata: ProtocolMetadataSchema,

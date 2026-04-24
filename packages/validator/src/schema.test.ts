@@ -166,7 +166,7 @@ describe("SubmissionSchema", () => {
       "control",
       "ability-to-exit",
       "autonomy",
-      "access",
+      "open-access",
       "verifiability",
     ]);
     expect(jsonSchema.properties.grade.enum).toEqual(["green", "orange", "red", "unknown"]);
