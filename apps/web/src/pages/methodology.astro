@@ -2,6 +2,7 @@
 export const prerender = true;
 import Base from "../layouts/Base.astro";
 import PizzaChart from "../components/PizzaChart.astro";
+import SideNav from "../components/SideNav.astro";
 import { PIZZA_SLICES } from "../lib/pizza";
 
 const SLICE_DESCRIPTIONS: Record<string, string> = {
@@ -18,14 +19,20 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
 };
 ---
 <Base title="Methodology · defipunkd">
+  <SideNav contentMaxWidth={800} links={[
+    { href: "#data-source", label: "Data source" },
+    { href: "#risk-pizza", label: "Risk pizza" },
+    { href: "#what-is-graded-today", label: "Graded today" },
+    { href: "#audits", label: "Audits" },
+    { href: "#defi-at-home", label: "DEFI@home" },
+    { href: "#stages", label: "Stages" },
+    { href: "#corrections", label: "Corrections" },
+  ]} />
   <main class="page">
-    <div class="back">
-      <a href="/">← back to index</a>
-    </div>
     <h1>Methodology</h1>
     <p class="lede">defipunkd is a registry, not a rating. No protocol on this site has been reviewed.</p>
 
-    <h2>Where the data comes from</h2>
+    <h2 id="data-source">Where the data comes from</h2>
     <p>
       Every protocol is seeded from <a href="https://defillama.com/" rel="noreferrer" target="_blank">DeFiLlama</a> via <code>pnpm sync</code>, which writes the full list into a committed JSON snapshot. Human curators can override individual fields by dropping a JSON file into <code>data/overlays/</code> and opening a PR.
     </p>
@@ -34,7 +41,7 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
     </p>
     <p>defipunkd mirrors DeFiLlama: if DeFiLlama delists a protocol, defipunkd delists it after a 14-day grace window.</p>
 
-    <h2>The 5-slice risk pizza</h2>
+    <h2 id="risk-pizza">The 5-slice risk pizza</h2>
     <p>
       defipunkd uses the five assessment dimensions from{" "}
       <a href="https://github.com/deficollective/defiscan-v2" rel="noreferrer" target="_blank">DeFiScan v2</a>: <strong>Control</strong>, <strong>Ability to exit</strong>, <strong>Dependencies</strong>, <strong>Access</strong>, and <strong>Verifiability</strong>. At Phase 0 every slice is gray — nothing has been reviewed. The slices exist now so the shape of future assessments is already visible.
@@ -75,12 +82,12 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
       <strong>Control</strong>, <strong>Ability to exit</strong>, and <strong>Access</strong> all render gray — no automated heuristic grades them yet. In particular, <strong>Access</strong> (whether the protocol is permissioned, uses whitelists, geo-restricts users, or depends on off-chain operators to function) is not a signal DeFiLlama carries in a usable form, so at Phase 0 we simply surface it as unknown and will populate it when crawler workers read the project's own docs and frontend (Phase 1) and when onchain discovery flags whitelist-gated entry points (Phase 2).
     </p>
 
-    <h2>Audits and source code feed Verifiability</h2>
+    <h2 id="audits">Audits and source code feed Verifiability</h2>
     <p>
       Each protocol detail page shows the raw audit count, expandable list of audit links, and the project's GitHub repositories. These feed the Verifiability slice, not a slice of their own: an audit count is a famously weak signal in isolation — auditor quality, report scope, and whether post-audit changes were reviewed matter far more than the integer. GitHub is surfaced so you can check whether the deployed addresses match the published source. At Phase 0 the data is raw and the slice stays gray; a future phase will grade auditor reputation and source-to-bytecode correspondence as part of the Verifiability assessment.
     </p>
 
-    <h2>DEFI@home — distributed assessment</h2>
+    <h2 id="defi-at-home">DEFI@home — distributed assessment</h2>
     <p>
       defipunkd does not run crawlers and does not hand-curate every protocol. The slice grades that aren't produced by the deterministic heuristics above are filled in by <strong>DEFI@home</strong>: a distributed, BOINC-style process where any number of independent auditors run a pinned prompt through the LLM of their choice (Claude, ChatGPT, Gemini, …) and submit the JSON output as a pull request.
     </p>
@@ -91,12 +98,12 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
       Determinism comes from <strong>consensus across independent re-runs</strong>, not from any single LLM output. A quorum bot merges an assessment into <code>data/assessments/</code> once ≥3 contributors (using different models or accounts) agree on grade and overlapping evidence; disagreements open a per-(slug, slice) aggregation issue. A scheduled GitHub Action also runs the prompts via the Anthropic SDK as a "third voice" so coverage doesn't depend on volunteer traffic alone. See <a href="/contribute">/contribute</a> for the full flow.
     </p>
 
-    <h2>Stages</h2>
+    <h2 id="stages">Stages</h2>
     <p>
       Stage badges arrive with Phase 3 of the project, at which point defipunkd adopts <a href="https://docs.defiscan.info/" rel="noreferrer" target="_blank">DeFiScan v2's stage framework</a> verbatim. Until then, every protocol shows an em-dash in the Stage column.
     </p>
 
-    <h2>Corrections</h2>
+    <h2 id="corrections">Corrections</h2>
     <p>
       Spotted a wrong field? Open an issue or a PR on <a href="https://github.com/guil-lambert/defipunkd" rel="noreferrer" target="_blank">github.com/guil-lambert/defipunkd</a>.
     </p>
@@ -111,8 +118,6 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
     color: var(--text);
     line-height: 1.6;
   }
-  .back { margin-bottom: 1rem; }
-  .back a { color: var(--accent-link); font-size: 0.85rem; text-decoration: none; }
   h1 { margin-bottom: 0.5rem; }
   .lede { color: var(--text-muted); margin-top: 0; }
   h2 {

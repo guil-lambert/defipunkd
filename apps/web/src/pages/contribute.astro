@@ -1,18 +1,24 @@
 ---
 export const prerender = true;
 import Base from "../layouts/Base.astro";
+import SideNav from "../components/SideNav.astro";
 ---
 <Base title="Contribute · defipunkd" description="DEFI@home — help defipunkd assess DeFi protocols by running a pinned prompt in an LLM of your choice.">
+  <SideNav contentMaxWidth={800} links={[
+    { href: "#the-flow", label: "The flow" },
+    { href: "#pinned-prompt", label: "Pinned prompt" },
+    { href: "#evidence", label: "Evidence" },
+    { href: "#unknown", label: "Saying unknown" },
+    { href: "#sharing-your-chat", label: "Sharing chat" },
+    { href: "#quorum", label: "Quorum" },
+  ]} />
   <main class="page">
-    <div class="back">
-      <a href="/">← back to index</a>
-    </div>
     <h1>DEFI@home — contribute an assessment</h1>
     <p class="lede">
       defipunkd does not run crawlers. Instead, contributors assess protocols by running a pinned prompt through an LLM of their choice (Claude, ChatGPT, Gemini, etc.) and submitting the JSON output as a pull request. A quorum bot merges your submission once ≥3 independent runs agree.
     </p>
 
-    <h2>The flow</h2>
+    <h2 id="the-flow">The flow</h2>
     <ol>
       <li>Open any protocol's page and click <strong>Audit this slice yourself</strong> under one of the 5 Risk analysis cards.</li>
       <li>Copy the generated prompt — it includes the snapshot timestamp, the protocol's chains, GitHub repos, and audit links already pinned in. Paste it into Claude, ChatGPT, Gemini, or any LLM with browsing / tool use.</li>
@@ -21,7 +27,7 @@ import Base from "../layouts/Base.astro";
       <li>CI validates your JSON against the schema. The quorum bot compares it against other submissions; overlapping grades + citations land an accepted assessment into <code>data/assessments/</code>, which the site reads on next build.</li>
     </ol>
 
-    <h2>Why the prompt is pinned</h2>
+    <h2 id="pinned-prompt">Why the prompt is pinned</h2>
     <p>
       The prompt you see on the protocol page has the DeFiLlama snapshot timestamp, analysis date, and prompt version baked in. That means a contributor running the same prompt a week from now operates on the same inputs — the determinism of the workflow comes from consensus across re-runs, not from the LLM being deterministic.
     </p>
@@ -29,7 +35,7 @@ import Base from "../layouts/Base.astro";
       Every submission records the model used (<code>claude-opus-4-7</code>, <code>gpt-5</code>, etc.) and the commit SHA of any repo it cites. Reviewers can re-open the same PR two months later and re-verify every citation.
     </p>
 
-    <h2>What counts as evidence</h2>
+    <h2 id="evidence">What counts as evidence</h2>
     <ul>
       <li>Public block explorers (Etherscan, Basescan, Arbiscan, etc.) for addresses in the protocol's contract set.</li>
       <li>Commits in the protocol's linked GitHub repositories.</li>
@@ -40,7 +46,7 @@ import Base from "../layouts/Base.astro";
       Anything outside that list (Twitter threads, Medium posts, Discord screenshots) does not count. The review is a PR against a git repo; if a reviewer can't independently re-fetch the URL later, the evidence isn't evidence.
     </p>
 
-    <h2>When to say <code>unknown</code></h2>
+    <h2 id="unknown">When to say <code>unknown</code></h2>
     <p>
       If you cannot find a signal after checking the sources above, submit <code>grade: "unknown"</code> with at least one entry in <code>unknowns[]</code> describing what you looked for. "I couldn't find the timelock delay" is useful to the next contributor; a guessed grade is a defect.
     </p>
@@ -62,7 +68,7 @@ import Base from "../layouts/Base.astro";
       Paste the public URL into the <code>chat_url</code> field of your JSON before opening the PR. The prompt explicitly tells the LLM to leave this field as <code>null</code> — only you can produce a public-share URL, since it requires a user-side toggle the LLM cannot perform.
     </p>
 
-    <h2>Quorum and autorun</h2>
+    <h2 id="quorum">Quorum and autorun</h2>
     <p>
       Three GitHub Actions run the semi-automated pipeline:
     </p>
@@ -85,8 +91,6 @@ import Base from "../layouts/Base.astro";
     color: var(--text);
     line-height: 1.6;
   }
-  .back { margin-bottom: 1rem; }
-  .back a { color: var(--accent-link); font-size: 0.85rem; text-decoration: none; }
   h1 { margin-bottom: 0.5rem; }
   .lede { color: var(--text-muted); margin-top: 0; }
   h2 {

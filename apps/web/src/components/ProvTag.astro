@@ -1,0 +1,54 @@
+---
+import { formatProvTag } from "../lib/format";
+import Tooltip from "./Tooltip.astro";
+
+interface Props {
+  tag: string;
+  slug?: string;
+}
+const { tag, slug } = Astro.props;
+
+const titles: Record<string, string> = {
+  "defi@home": "Source: DEFI@home quorum",
+  defillama: "Source: DeFiLlama",
+  "defillama-parent": "Source: DeFiLlama (inherited from parent protocol)",
+  curated: "Source: curated human overlay",
+};
+const title = titles[tag] ?? `Source: ${tag}`;
+const isDefillama = (tag === "defillama" || tag === "defillama-parent") && !!slug;
+const isDefiAtHome = tag === "defi@home";
+const tagClass = isDefiAtHome ? "tag tag-mark" : "tag";
+---
+<Tooltip text={title}>
+  {isDefillama ? (
+    <a
+      class="tag tag-link"
+      href={`https://defillama.com/protocol/${slug}`}
+      rel="noreferrer"
+      target="_blank"
+    >{formatProvTag(tag)}</a>
+  ) : (
+    <span class={tagClass}>{formatProvTag(tag)}</span>
+  )}
+</Tooltip>
+
+<style>
+  .tag {
+    color: var(--text-muted);
+    font-size: 0.8em;
+  }
+  .tag.tag-mark {
+    color: var(--brand-oxblood);
+    font-size: 1em;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  a.tag-link {
+    text-decoration: none;
+    cursor: pointer;
+  }
+  a.tag-link:hover {
+    color: var(--accent-link);
+    text-decoration: underline;
+  }
+</style>

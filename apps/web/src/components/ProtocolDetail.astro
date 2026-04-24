@@ -1,13 +1,14 @@
 ---
 import type { Protocol, ProvenanceTag, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
 import { getProtocolMetadata } from "@defipunkd/registry";
-import { auditorDomain, EM_DASH, formatProvTag, formatTvl, formatUtc, parseHallmarks } from "../lib/format";
+import { auditorDomain, EM_DASH, formatUtc, parseHallmarks } from "../lib/format";
 import ProtocolLogo from "./ProtocolLogo.astro";
-import ChainTabs from "./ChainTabs.astro";
+import SideNav from "./SideNav.astro";
 import ChildrenTable from "./ChildrenTable.astro";
 import RiskAnalysis from "./RiskAnalysis.astro";
 import StagePreview from "./StagePreview.astro";
 import ProtocolSummary from "./ProtocolSummary.astro";
+import ProvTag from "./ProvTag.astro";
 
 interface Props {
   protocol: Protocol;
@@ -39,18 +40,30 @@ const upgradeabilityLabel: Record<string, string> = {
   unknown: "Unknown",
 };
 
+// "Updated" row reflects whichever is more recent: the DeFiLlama snapshot
+// or the latest quorum-merged assessment for this protocol.
+let latestQuorumAt: string | null = null;
+if (assessments) {
+  for (const a of assessments.values()) {
+    if (a.merged_at && (!latestQuorumAt || a.merged_at > latestQuorumAt)) {
+      latestQuorumAt = a.merged_at;
+    }
+  }
+}
+const updatedAt = latestQuorumAt && latestQuorumAt > snapshotGeneratedAt
+  ? latestQuorumAt
+  : snapshotGeneratedAt;
+const updatedSource: "defi@home" | "defillama" = updatedAt === latestQuorumAt ? "defi@home" : "defillama";
+
 ---
-<aside class="side-nav" aria-label="Page sections">
-  <a href="#top">Top</a>
-  <a href="#summary">Summary</a>
-  <a href="#risk-analysis">Risk analysis</a>
-  <a href="#stage">Stage</a>
-  {hasFamily && <a href="#family">Family members</a>}
-</aside>
+<SideNav links={[
+  { href: "#top", label: "Top" },
+  { href: "#summary", label: "Summary" },
+  { href: "#risk-analysis", label: "Risk analysis" },
+  { href: "#stage", label: "Stage" },
+  ...(hasFamily ? [{ href: "#family", label: "Family members" }] : []),
+]} contentMaxWidth={1100} />
 <main class="detail" id="top">
-  <div class="back">
-    <a href="/">← back to index</a>
-  </div>
   <header class="head">
     <div class="title">
       <ProtocolLogo src={protocol.logo} name={protocol.name} size={40} />
@@ -71,150 +84,144 @@ const upgradeabilityLabel: Record<string, string> = {
 
   <ProtocolSummary protocol={protocol} assessments={assessments} />
 
-  {protocol.chains.length > 0 && (
-    <section class="chains">
-      <ChainTabs chains={protocol.chains} tvlByChain={protocol.tvl_by_chain} />
-    </section>
-  )}
-
   <section id="summary" class="summary-section">
     <h2>Summary</h2>
-  <div class="scroll">
-    <table class="fields">
-      <tbody>
-        <tr>
-          <th scope="row">TVL</th>
-          <td><span class="mono tabular">{formatTvl(protocol.tvl)}</span></td>
-          <td class="prov">{protocol.tvl != null && prov.tvl ? <span class="tag">{formatProvTag(prov.tvl)}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Chains</th>
-          <td>{protocol.chains.length > 0 ? protocol.chains.join(", ") : <span class="muted">unknown</span>}</td>
-          <td class="prov">{protocol.chains.length > 0 && prov.chains ? <span class="tag">{formatProvTag(prov.chains)}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Website</th>
-          <td>{protocol.website ? <a href={protocol.website} class="link" rel="noreferrer" target="_blank">{protocol.website}</a> : <span class="muted">unknown</span>}</td>
-          <td class="prov">{protocol.website && prov.website ? <span class="tag">{formatProvTag(prov.website)}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Twitter</th>
-          <td>{protocol.twitter ? <a href={`https://twitter.com/${protocol.twitter}`} class="link" rel="noreferrer" target="_blank">@{protocol.twitter}</a> : <span class="muted">unknown</span>}</td>
-          <td class="prov">{protocol.twitter && prov.twitter ? <span class="tag">{formatProvTag(prov.twitter)}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr id="verifiability">
-          <th scope="row">GitHub</th>
-          <td>
-            {githubUrls.length > 0 ? (
-              <ul class="bare">
-                {githubUrls.map((g) => (<li><a href={g} class="link" rel="noreferrer" target="_blank">{g}</a></li>))}
-              </ul>
-            ) : (<span class="muted">unknown</span>)}
-          </td>
-          <td class="prov">{githubUrls.length > 0 && githubProvTag ? <span class="tag">{formatProvTag(githubProvTag)}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Audits</th>
-          <td>
-            {useMetaAudits ? (
-              <details>
-                <summary class="clickable">{metadata!.audits!.length} audit{metadata!.audits!.length === 1 ? "" : "s"}</summary>
-                <ul class="bare audits">
-                  {metadata!.audits!.map((a) => (
-                    <li>
-                      <a href={a.url} class="link" rel="noreferrer" target="_blank">{a.firm}</a>
-                      {a.date && <span class="muted"> {EM_DASH} {a.date}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ) : protocol.audit_count === 0 && protocol.audit_links.length === 0 ? (
-              <span class="muted">unknown</span>
-            ) : (
-              <details>
-                <summary class="clickable">{protocol.audit_count} audit{protocol.audit_count === 1 ? "" : "s"}</summary>
-                <ul class="bare audits">
-                  {protocol.audit_links.map((l) => (
-                    <li><a href={l} class="link" rel="noreferrer" target="_blank">{auditorDomain(l) ?? l}</a></li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </td>
-          <td class="prov">{auditsProvTag ? <span class="tag">{formatProvTag(auditsProvTag)}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Docs</th>
-          <td>{metadata?.docs_url ? <a href={metadata.docs_url} class="link" rel="noreferrer" target="_blank">{metadata.docs_url}</a> : <span class="muted">unknown</span>}</td>
-          <td class="prov">{metadata?.docs_url ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Governance forum</th>
-          <td>{metadata?.governance_forum ? <a href={metadata.governance_forum} class="link" rel="noreferrer" target="_blank">{metadata.governance_forum}</a> : <span class="muted">unknown</span>}</td>
-          <td class="prov">{metadata?.governance_forum ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Voting token</th>
-          <td>
-            {metadata?.voting_token ? (
-              <>
-                {metadata.voting_token.symbol && <span class="mono">{metadata.voting_token.symbol} </span>}
-                <span class="mono muted">{metadata.voting_token.chain}:</span>
-                <span class="mono">{metadata.voting_token.address}</span>
-              </>
-            ) : <span class="muted">unknown</span>}
-          </td>
-          <td class="prov">{metadata?.voting_token ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Bug bounty</th>
-          <td>{metadata?.bug_bounty_url ? <a href={metadata.bug_bounty_url} class="link" rel="noreferrer" target="_blank">{metadata.bug_bounty_url}</a> : <span class="muted">unknown</span>}</td>
-          <td class="prov">{metadata?.bug_bounty_url ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Security contact</th>
-          <td>{metadata?.security_contact ? <span class="mono">{metadata.security_contact}</span> : <span class="muted">unknown</span>}</td>
-          <td class="prov">{metadata?.security_contact ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Deployed contracts</th>
-          <td>{metadata?.deployed_contracts_doc ? <a href={metadata.deployed_contracts_doc} class="link" rel="noreferrer" target="_blank">{metadata.deployed_contracts_doc}</a> : <span class="muted">unknown</span>}</td>
-          <td class="prov">{metadata?.deployed_contracts_doc ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Upgradeability</th>
-          <td>{metadata?.upgradeability ? upgradeabilityLabel[metadata.upgradeability] : <span class="muted">unknown</span>}</td>
-          <td class="prov">{metadata?.upgradeability ? <span class="tag">{formatProvTag("defi@home")}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Review status</th>
-          <td><span class="muted">listed</span></td>
-          <td class="prov"><span class="tag">[defillama]</span></td>
-        </tr>
-        <tr>
-          <th scope="row">Hallmarks</th>
-          <td>
-            {hallmarks.length === 0 ? (<span class="muted">unknown</span>) : (
-              <ul class="bare">
-                {hallmarks.map((h) => (
-                  <li class="hallmark">
-                    <span class="muted ts">{formatUtc(new Date(h.unixTs * 1000).toISOString())}</span>
-                    {h.description}
+
+    <dl class="fields two-col">
+      <div class="field">
+        <dt>Website</dt>
+        <dd>{protocol.website ? <a href={protocol.website} class="link" rel="noreferrer" target="_blank">{protocol.website}</a> : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{protocol.website && prov.website ? (<ProvTag tag={prov.website} slug={protocol.slug} />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Twitter</dt>
+        <dd>{protocol.twitter ? <a href={`https://twitter.com/${protocol.twitter}`} class="link" rel="noreferrer" target="_blank">@{protocol.twitter}</a> : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{protocol.twitter && prov.twitter ? (<ProvTag tag={prov.twitter} slug={protocol.slug} />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>GitHub</dt>
+        <dd>
+          {githubUrls.length > 0 ? (
+            <ul class="bare">
+              {githubUrls.map((g) => (<li><a href={g} class="link" rel="noreferrer" target="_blank">{g}</a></li>))}
+            </ul>
+          ) : (<span class="muted">unknown</span>)}
+        </dd>
+        <dd class="prov">{githubUrls.length > 0 && githubProvTag ? (<ProvTag tag={githubProvTag} slug={protocol.slug} />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Audits</dt>
+        <dd>
+          {useMetaAudits ? (
+            <details>
+              <summary class="clickable">{metadata!.audits!.length} audit{metadata!.audits!.length === 1 ? "" : "s"}</summary>
+              <ul class="bare audits">
+                {metadata!.audits!.map((a) => (
+                  <li>
+                    <a href={a.url} class="link" rel="noreferrer" target="_blank">{a.firm}</a>
+                    {a.date && <span class="muted"> {EM_DASH} {a.date}</span>}
                   </li>
                 ))}
               </ul>
-            )}
-          </td>
-          <td class="prov">{hallmarks.length > 0 && prov.hallmarks ? <span class="tag">{formatProvTag(prov.hallmarks)}</span> : <span class="muted">{EM_DASH}</span>}</td>
-        </tr>
-        <tr>
-          <th scope="row">Updated</th>
-          <td>{formatUtc(snapshotGeneratedAt)}</td>
-          <td class="prov"><span class="tag">[defillama]</span></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+            </details>
+          ) : protocol.audit_count === 0 && protocol.audit_links.length === 0 ? (
+            <span class="muted">unknown</span>
+          ) : (
+            <details>
+              <summary class="clickable">{protocol.audit_count} audit{protocol.audit_count === 1 ? "" : "s"}</summary>
+              <ul class="bare audits">
+                {protocol.audit_links.map((l) => (
+                  <li><a href={l} class="link" rel="noreferrer" target="_blank">{auditorDomain(l) ?? l}</a></li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </dd>
+        <dd class="prov">{auditsProvTag ? (<ProvTag tag={auditsProvTag} slug={protocol.slug} />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Docs</dt>
+        <dd>{metadata?.docs_url ? <a href={metadata.docs_url} class="link" rel="noreferrer" target="_blank">{metadata.docs_url}</a> : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{metadata?.docs_url ? (<ProvTag tag="defi@home" />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Governance forum</dt>
+        <dd>{metadata?.governance_forum ? <a href={metadata.governance_forum} class="link" rel="noreferrer" target="_blank">{metadata.governance_forum}</a> : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{metadata?.governance_forum ? (<ProvTag tag="defi@home" />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Voting token</dt>
+        <dd>
+          {metadata?.voting_token ? (
+            <>
+              {metadata.voting_token.symbol && <span class="mono">{metadata.voting_token.symbol} </span>}
+              <span class="mono muted">{metadata.voting_token.chain}:</span>
+              <span class="mono">{metadata.voting_token.address}</span>
+            </>
+          ) : <span class="muted">unknown</span>}
+        </dd>
+        <dd class="prov">{metadata?.voting_token ? (<ProvTag tag="defi@home" />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Bug bounty</dt>
+        <dd>{metadata?.bug_bounty_url ? <a href={metadata.bug_bounty_url} class="link" rel="noreferrer" target="_blank">{metadata.bug_bounty_url}</a> : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{metadata?.bug_bounty_url ? (<ProvTag tag="defi@home" />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Security contact</dt>
+        <dd>{metadata?.security_contact ? <span class="mono">{metadata.security_contact}</span> : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{metadata?.security_contact ? (<ProvTag tag="defi@home" />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Deployed contracts</dt>
+        <dd>{metadata?.deployed_contracts_doc ? <a href={metadata.deployed_contracts_doc} class="link" rel="noreferrer" target="_blank">{metadata.deployed_contracts_doc}</a> : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{metadata?.deployed_contracts_doc ? (<ProvTag tag="defi@home" />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Upgradeability</dt>
+        <dd>{metadata?.upgradeability ? upgradeabilityLabel[metadata.upgradeability] : <span class="muted">unknown</span>}</dd>
+        <dd class="prov">{metadata?.upgradeability ? (<ProvTag tag="defi@home" />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Review status</dt>
+        <dd><span class="muted">listed</span></dd>
+        <dd class="prov"><ProvTag tag="defillama" slug={protocol.slug} /></dd>
+      </div>
+
+      <div class="field wide">
+        <dt>Hallmarks</dt>
+        <dd>
+          {hallmarks.length === 0 ? (<span class="muted">unknown</span>) : (
+            <ul class="bare">
+              {hallmarks.map((h) => (
+                <li class="hallmark">
+                  <span class="muted ts">{formatUtc(new Date(h.unixTs * 1000).toISOString())}</span>
+                  {h.description}
+                </li>
+              ))}
+            </ul>
+          )}
+        </dd>
+        <dd class="prov">{hallmarks.length > 0 && prov.hallmarks ? (<ProvTag tag={prov.hallmarks} slug={protocol.slug} />) : (<span class="muted">{EM_DASH}</span>)}</dd>
+      </div>
+
+      <div class="field">
+        <dt>Updated</dt>
+        <dd>{formatUtc(updatedAt)}</dd>
+        <dd class="prov"><ProvTag tag={updatedSource} slug={protocol.slug} /></dd>
+      </div>
+    </dl>
   </section>
 
   <RiskAnalysis protocol={protocol} snapshotGeneratedAt={snapshotGeneratedAt} assessments={assessments} />
@@ -226,55 +233,50 @@ const upgradeabilityLabel: Record<string, string> = {
 
 <style>
   .detail { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; color: var(--text); scroll-margin-top: 1rem; }
-  .summary-section { margin-top: 2rem; }
+  .summary-section {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--brand-oxblood);
+  }
   .summary-section > h2 { margin: 0 0 0.5rem 0; color: var(--text); font-size: 1.25rem; scroll-margin-top: 1rem; }
-  .side-nav {
-    position: fixed;
-    top: 5rem;
-    left: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem 0.9rem;
-    background: var(--surface);
-    border: 1px solid var(--surface-raised);
-    border-radius: 4px;
-    z-index: 10;
-  }
-  .side-nav a {
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 0.8rem;
-    letter-spacing: 0.02em;
-  }
-  .side-nav a:hover { color: var(--accent-link); }
-  @media (max-width: 1280px) { .side-nav { display: none; } }
-  .back { margin-bottom: 1rem; }
-  .back a { color: var(--accent-link); font-size: 0.85rem; text-decoration: none; }
   .head { display: flex; gap: 1.5rem; align-items: flex-start; }
   .title { display: flex; gap: 0.75rem; align-items: center; }
   h1 { margin: 0; color: var(--text); font-size: 1.75rem; }
   .subtitle { color: var(--text-muted); margin: 0.25rem 0 0 0; }
-  .chains { margin-top: 1.5rem; }
-  .scroll { overflow-x: auto; }
-  .fields { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin-top: 0.5rem; }
-  .fields th {
-    text-align: left;
-    padding: 0.6rem 1rem;
+  .fields.two-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1.75rem;
+    margin: 0.25rem 0 0 0;
+    padding: 0;
+    font-size: 0.95rem;
+  }
+  @media (max-width: 720px) {
+    .fields.two-col { grid-template-columns: 1fr; }
+  }
+  .field {
+    display: grid;
+    grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr) max-content;
+    gap: 0 1rem;
+    align-items: baseline;
+    padding: 0.55rem 0;
     border-bottom: 1px solid var(--surface-raised);
+  }
+  .field.wide { grid-column: 1 / -1; }
+  .field dt {
     color: var(--text-muted);
     font-weight: 500;
-    width: 18rem;
-    vertical-align: top;
+    margin: 0;
   }
-  .fields td {
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid var(--surface-raised);
+  .field dd {
     color: var(--text);
+    margin: 0;
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
-  .fields td.prov { width: 8rem; text-align: right; }
+  .field dd.prov { text-align: right; }
   .muted { color: var(--text-muted); }
-  .tag { color: var(--text-muted); font-size: 0.8em; }
   .link { color: var(--accent-link); }
   .bare { margin: 0; padding: 0; list-style: none; }
   .audits { padding-top: 0.5rem; }
