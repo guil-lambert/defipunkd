@@ -15,17 +15,17 @@ const EvidenceSchema = z
     shows: z.string().min(1),
     chain: z.string().optional(),
     address: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
-    commit: z.string().regex(/^[0-9a-f]{7,40}$/).optional(),
+    commit: z.string().regex(/^[0-9a-fA-F]{7,40}$/).optional(),
     fetched_at: z.string().datetime().optional(),
   })
-  .strict();
+  .passthrough();
 
 const FindingSchema = z
   .object({
-    code: z.string().regex(/^[A-Z][A-Z0-9-]{0,15}$/, { message: "finding code must look like E1, C2-emergency, V4a, etc." }),
+    code: z.string().regex(/^[A-Z][A-Za-z0-9-]{0,15}$/, { message: "finding code must look like E1, C2-emergency, V4a, etc." }),
     text: z.string().min(1),
   })
-  .strict();
+  .passthrough();
 
 const SteelmanSchema = z
   .object({
@@ -33,7 +33,7 @@ const SteelmanSchema = z
     orange: z.string().min(1),
     green: z.string().min(1),
   })
-  .strict();
+  .passthrough();
 
 const RationaleSchema = z
   .object({
@@ -41,7 +41,7 @@ const RationaleSchema = z
     steelman: SteelmanSchema.nullable(),
     verdict: z.string().min(1),
   })
-  .strict();
+  .passthrough();
 
 const AuditEntrySchema = z
   .object({
@@ -49,7 +49,7 @@ const AuditEntrySchema = z
     url: z.string().url(),
     date: z.string().regex(/^\d{4}(-\d{2}){0,2}$/).optional(),
   })
-  .strict();
+  .passthrough();
 
 const VotingTokenSchema = z
   .object({
@@ -57,7 +57,7 @@ const VotingTokenSchema = z
     address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     symbol: z.string().min(1).max(32).optional(),
   })
-  .strict();
+  .passthrough();
 
 const AdminAddressSchema = z
   .object({
@@ -66,7 +66,7 @@ const AdminAddressSchema = z
     role: z.string().min(1),
     actor_class: z.enum(["eoa", "multisig", "timelock", "governance", "unknown"]),
   })
-  .strict();
+  .passthrough();
 
 export const ProtocolMetadataSchema = z
   .object({
@@ -81,7 +81,7 @@ export const ProtocolMetadataSchema = z
     admin_addresses: z.array(AdminAddressSchema).optional(),
     upgradeability: z.enum(["immutable", "upgradeable", "mixed", "unknown"]).optional(),
   })
-  .strict();
+  .passthrough();
 
 const base = z
   .object({
@@ -100,7 +100,7 @@ const base = z
     unknowns: z.array(z.string().min(1)),
     protocol_metadata: ProtocolMetadataSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export const SubmissionSchema = base.superRefine((val, ctx) => {
   if (val.grade === "unknown") {

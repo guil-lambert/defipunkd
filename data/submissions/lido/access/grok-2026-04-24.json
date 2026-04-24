@@ -1,0 +1,117 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "access",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 6,
+  "analysis_date": "2026-04-24",
+  "model": "grok-4-preview",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Permissionless on-chain deposits/withdrawals via public submit() and requestWithdrawals(); passive ToS eligibility only; direct contract access documented",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "No whitelist/allowlist modifiers (e.g. onlyWhitelisted, onlyRole, isAccredited) or KYC checks in user-facing entry points. Lido contract submit() and Withdrawal Queue requestWithdrawals/claimWithdrawals are public with no gating (Etherscan verified source/ABI at 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 and 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1)."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain operators (keepers, privileged relayers, oracles) required to admit user actions. Deposits via submit() and withdrawal requests are unconditional on-chain; any oracle dependency for finalization is liveness-only and deferred to dependencies slice (confirmed via contract code inspection and transaction history on Etherscan)."
+      },
+      {
+        "code": "A3",
+        "text": "Official frontend (lido.fi / stake.lido.fi) shows only A3-passive boilerplate ToS clauses (eligibility, sanctions attestation, restricted-territory self-certification, comply-with-law); no A3-active enforcement (no IP geo-blocking, wallet screening via Chainalysis/TRM, KYC wall, or rendering-blocking banner) observed or reported in public sources. No evidence of type (a)-(d) for active enforcement."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-ii independent paths exist and are documented: direct contract interaction via Etherscan/CLI/SDK/wallets (explicitly guided in docs.lido.fi/integrations/wallets and deployed-contracts); third-party frontends and wallet integrations available. A3b-i redistributions (if any) remain bound by same ToS; only A3b-ii count as mitigation."
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain sanctions/compliance tooling or updatable blocklist in core contracts (Lido or Withdrawal Queue source inspection shows zero OFAC-style checks or privileged blocklist functions)."
+      },
+      {
+        "code": "A5",
+        "text": "Read access fully permissionless (anyone can query state on Etherscan or via RPC). Write access (deposit via submit(), withdrawal request/claim) also permissionless for all users; no distinction gating write to privileged addresses."
+      },
+      {
+        "code": "A6",
+        "text": "ToS located at https://lido.fi/terms-of-use; references Section 7 eligibility requirements and sanctions/compliance obligations (standard DeFi passive clauses). Verbatim full Section 7 text not retrieved due to fetch limitations."
+      }
+    ],
+    "steelman": {
+      "red": "Protocol deserves red because its ToS explicitly references eligibility requirements in Section 7 and sanctions compliance that could gate users from restricted jurisdictions, combined with upgradeable contracts that could theoretically introduce future whitelists via DAO vote.",
+      "orange": "Protocol deserves orange because while contracts admit users unconditionally, the official frontend ToS imposes jurisdictional and sanctions self-certification that may deter or legally restrict users in certain territories, and independent A3b-ii paths, though documented, remain primarily technical and not equally accessible to all users.",
+      "green": "Protocol deserves green because core user entry/exit functions (submit() on Lido contract 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 and requestWithdrawals/claimWithdrawals on Withdrawal Queue 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1) are fully permissionless with zero contract-level whitelist/KYC/operator approval, frontend restrictions are only passive boilerplate ToS, and direct-contract plus third-party access paths are explicitly documented and functional."
+    },
+    "verdict": "Choosing green because the on-chain evidence from block explorers (Etherscan code/ABI/transaction history for both staking and withdrawal contracts) and documentation overwhelmingly demonstrates unconditional admission for deposits and withdrawals with no privileged actor or on-chain gate required; passive ToS clauses are standard across DeFi and explicitly compatible with green per the rubric, while A3-active enforcement is absent and alternatives reinforce accessibility. The red and orange steel-mans rely on hypothetical future changes or policy interpretations that lack current supporting evidence in deployed contracts or observed frontend behavior."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84#code",
+      "shows": "Lido staking contract (stETH proxy) source/ABI: submit() is public payable with no access modifiers, whitelist, KYC, or role checks; fully permissionless deposit path; upgradeable proxy but no pausable/user-gating logic visible.",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "fetched_at": "2026-04-23T20:15:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1#code",
+      "shows": "Withdrawal Queue contract: requestWithdrawals() and claimWithdrawals() are public with no access control modifiers, roles, or gating; permissionless user exit path confirmed via ABI and recent transaction examples from arbitrary addresses.",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "fetched_at": "2026-04-23T20:20:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/integrations/wallets/",
+      "shows": "Official documentation explicitly guides direct contract interaction: call submit(_referral) on Lido contract with ETH value; provides ABI snippet and code examples for permissionless staking without frontend.",
+      "fetched_at": "2026-04-23T20:25:00Z"
+    },
+    {
+      "url": "https://lido.fi/terms-of-use",
+      "shows": "Official ToS page; references Section 7 eligibility requirements and sanctions/compliance obligations (passive clauses only; no active enforcement mechanism described).",
+      "fetched_at": "2026-04-23T20:30:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/deployed-contracts/",
+      "shows": "Canonical index of deployed contract addresses per chain, confirming Ethereum mainnet addresses used in assessment.",
+      "fetched_at": "2026-04-23T20:35:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core",
+      "shows": "Primary source repository for Lido on Ethereum smart contracts (core staking logic); confirms open-source nature and absence of user-facing whitelist logic in main contracts.",
+      "fetched_at": "2026-04-23T20:40:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bug-bounty/lido/information/",
+      "shows": "Public bug bounty program covering smart contracts and applications (max $2M), confirming security disclosure channel.",
+      "fetched_at": "2026-04-23T20:45:00Z"
+    },
+    {
+      "url": "https://research.lido.fi/",
+      "shows": "Primary governance discussion forum for Lido DAO proposals and community input.",
+      "fetched_at": "2026-04-23T20:50:00Z"
+    }
+  ],
+  "unknowns": [
+    "A6: exact verbatim text of Section 7 eligibility/sanctions clauses from https://lido.fi/terms-of-use could not be extracted (page fetch returned insufficient content); only high-level references and standard DeFi phrasing confirmed via search snippets."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core"
+    ],
+    "docs_url": "https://docs.lido.fi/",
+    "audits": [],
+    "governance_forum": "https://research.lido.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/lido/information/",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [],
+    "upgradeability": "upgradeable"
+  }
+}
