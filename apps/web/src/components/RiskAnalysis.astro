@@ -66,11 +66,14 @@ function submitUrl(sliceId: SliceId): string {
   return `https://github.com/${REPO}/new/main?${params.toString()}`;
 }
 
+const QUORUM_MIN = 3;
 const auditSlices = slices.map((s) => ({
   id: s.id as SliceId,
   label: s.label,
   prompt: promptFor(s.id as SliceId),
   submitUrl: submitUrl(s.id as SliceId),
+  modelCount: s.models?.length ?? 0,
+  hasQuorum: (s.models?.length ?? 0) >= QUORUM_MIN,
 }));
 
 const TAXONOMY_LABEL: Record<string, string> = {
@@ -103,7 +106,14 @@ const TOP_EVIDENCE = 2;
       <ul class="audit-list">
         {auditSlices.map((a) => (
           <li>
-            <span class="audit-list-label">{a.label}</span>
+            <span class="audit-list-label">
+              {a.label}
+              {a.hasQuorum && (
+                <span class="audit-quorum" title={`${a.modelCount} independent runs agreed — quorum reached`}>
+                  ✓ {a.modelCount}/{a.modelCount} models agree
+                </span>
+              )}
+            </span>
             <button type="button" class="copy-btn" data-copy-target={`#prompt-${a.id}`}>Copy prompt</button>
             <a href={a.submitUrl} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
             <pre id={`prompt-${a.id}`} class="prompt-hidden" hidden>{a.prompt}</pre>
@@ -327,6 +337,21 @@ const TOP_EVIDENCE = 2;
     color: var(--text);
     font-size: 0.85rem;
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .audit-quorum {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    color: var(--grade-green);
+    border: 1px solid color-mix(in oklab, var(--grade-green) 40%, var(--surface-raised));
+    background: color-mix(in oklab, var(--grade-green) 8%, transparent);
+    white-space: nowrap;
   }
 
   .cards {

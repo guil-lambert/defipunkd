@@ -42,6 +42,7 @@ export type LoadedAssessment = {
   grade: AssessmentGrade;
   strength: AssessmentStrength;
   headline: string;
+  short_headline?: string;
   rationale: Rationale;
   models: string[];
   merged_at?: string;
@@ -54,6 +55,7 @@ type RawAssessment = {
   slice: SliceId;
   consensus_grade: AssessmentGrade;
   consensus_strength: AssessmentStrength;
+  short_headline?: string;
   merged_at?: string;
   primary_submission_path: string;
   merged_from?: Array<{ model: string }>;
@@ -132,6 +134,7 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         grade: raw.consensus_grade,
         strength: raw.consensus_strength,
         headline: sub.headline,
+        short_headline: raw.short_headline,
         rationale: sub.rationale,
         models,
         merged_at: raw.merged_at,
