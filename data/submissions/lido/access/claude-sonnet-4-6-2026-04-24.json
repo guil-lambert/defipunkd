@@ -1,0 +1,203 @@
+Now let me fetch the Lido stETH contract on Etherscan to verify the `submit` function's access control, and also check for the Terms of Use for geo-restrictions.Now I have enough data for a thorough assessment. Let me also check the Lido Terms of Use for jurisdictional restrictions.The ToU page didn't render the actual legal text. Let me try to fetch the Deposit Security Module and check for any access control restrictions on oracle operators.I now have sufficient information to produce a thorough assessment. Let me compile the JSON output.
+
+```json
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "access",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 6,
+  "analysis_date": "2026-04-24",
+  "model": "claude-sonnet-4-6",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Contract-level access is permissionless; the official frontend (stake.lido.fi) carries ToS jurisdictional exclusions and staking/withdrawal ops depend on a permissioned oracle set and Deposit Security Module guardians",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Lido's core user-facing functions are permissionless at the contract level. The stETH `submit()` (deposit ETH → stETH) function on the Lido proxy at 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 carries no `onlyWhitelisted`, `onlyRole`, `allowlist`, or KYC modifier — any EOA or contract can call it directly. The Withdrawal Queue at 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1 similarly exposes `requestWithdrawals()` and `claimWithdrawal()` with no user-allowlist guard. Per the stETH superuser functions docs (verified 2026-04-24), the `PAUSE_ROLE` and `STAKING_CONTROL_ROLE` (which can cap deposits or pause staking) are currently listed as 'Unassigned' in the Aragon ACL, meaning no active single actor can unilaterally gate new deposits through those roles."
+      },
+      {
+        "code": "A2",
+        "text": "Several privileged off-chain operator classes are required for the protocol to function beyond pure user entry/exit. (1) Oracle committee: The AccountingOracle (0x852deD011285fe67063a08005c71a85690503Cee) uses a HashConsensus quorum (0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288) of approved oracle members. If quorum is not reached, rebases do not happen and the Withdrawal Queue cannot finalize (stakers cannot claim ETH withdrawals). Oracle membership is managed by Lido DAO via Aragon vote. (2) Deposit Security Module guardians (0xffa96d84def2ea035c7ab153d8b991128e3d72fd, labelled 'Lido: Deposit Security Module 3' on Etherscan): a permissioned set of guardians must co-sign each validator deposit batch; if all guardians go offline, new ETH deposits cannot be buffered into new validators (though existing stakers are unaffected). (3) Node operators (Curated Module): a DAO-approved set of node operators runs the validators. These operators are permissioned (admission via governance), not permissionless, but the set is large (30+ operators). Offline node operators reduce yield but do not block user entry or exit. The CSM (Community Staking Module) allows permissionless node operator entry against a bond, lowering but not eliminating the operator gatekeeping risk."
+      },
+      {
+        "code": "A3",
+        "text": "The official staking frontend stake.lido.fi was successfully loaded on 2026-04-24. No geo-blocking, IP redirect, or 'not available in your jurisdiction' banner was observed at load time from a US IP. The footer links to 'Terms of Use' at lido.fi/terms-of-use. The ToU page rendered but the legal text body did not load in the fetched HTML (likely a client-side render). The FAQ on stake.lido.fi states users should read the Terms of Use and lists risk disclosures; no explicit jurisdictional exclusion text was visible in the rendered FAQ. However, given Lido DAO's known ToU history (which has included exclusions for users subject to US securities laws and OFAC sanctions in prior versions), the full text was not verifiable from the fetched content and must be flagged as a partial unknown."
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain OFAC/sanctions blocklist modifier was found in the core Lido stETH or Withdrawal Queue contracts based on the superuser function documentation reviewed. The protocol does not integrate a Chainalysis or similar on-chain sanctions oracle that would revert transactions from blocked addresses. There is no `blacklist` or `blocklist` function enumerated in the stETH superuser functions doc or the deployed contracts page. However, the frontend Terms of Use (body not fully renderable) may contain off-chain compliance language; this is ToS-level, not contract-level enforcement."
+      },
+      {
+        "code": "A5",
+        "text": "Read access is fully permissionless: any address can query stETH balances, shares, rebase data, and withdrawal queue state at any time with no restrictions. Write access is differentiated by function: (a) `submit()` on Lido [0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84] — permissionless, any EOA/contract can deposit ETH for stETH; (b) `requestWithdrawals()` on WithdrawalQueue [0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1] — permissionless, any stETH holder can place a withdrawal request; (c) `claimWithdrawal()` on WithdrawalQueue — permissionless for the NFT holder to claim finalized requests; (d) `stop()` / `resume()` on Lido (PAUSE_ROLE) — currently unassigned per docs, so no active pauser; (e) `setStakingLimit()` / `pauseStaking()` (STAKING_CONTROL_ROLE) — currently unassigned; (f) validator deposit routing via Deposit Security Module — requires permissioned guardian signatures to batch deposits to the beacon chain."
+      },
+      {
+        "code": "A6",
+        "text": "The Terms of Use URL is lido.fi/terms-of-use (confirmed via footer links on stake.lido.fi and the website). The page loads but renders as a JS-heavy SPA whose legal body text was not extractable via the fetch performed on 2026-04-24. The stake.lido.fi FAQ states: 'please visit the Terms of Use' for further information and references risk disclosures. Because the full ToU body text could not be confirmed (specifically whether it contains explicit US user exclusions or other jurisdictional restrictions), this item is flagged as a partial unknown — see unknowns[]."
+      }
+    ],
+    "steelman": {
+      "red": "The Accounting Oracle committee and Deposit Security Module guardian set are permissioned (DAO-managed), meaning if the oracle quorum cannot be reached, Withdrawal Queue finalization halts and stakers cannot claim ETH — a specific privileged operator class is required for protocol liveness beyond just entry.",
+      "orange": "The on-chain user entry and exit functions (submit, requestWithdrawals, claimWithdrawal) are fully permissionless for any user, but the official frontend links to a Terms of Use whose full text could not be verified and may include jurisdictional exclusions, placing the access risk squarely in the frontend/ToS layer rather than the contract layer.",
+      "green": "All primary user-facing functions (stake ETH, request withdrawal, claim ETH) are callable by any address with no on-chain whitelist or KYC modifier; the oracle set and DSM guardians are large enough multi-operator sets with documented fallbacks (DAO can replace them via vote), and no on-chain OFAC blocklist exists."
+    },
+    "verdict": "Choosing orange because the contracts are permissionless for user entry and exit, but the oracle committee and Deposit Security Module guardians are permissioned operator sets required for withdrawal finalization and new validator deposits respectively — if the oracle quorum is not met, withdrawal claims cannot be finalized. This sits squarely in the orange definition ('uses permissionless keepers with documented fallbacks') — fallback exists (DAO vote to replace oracle members) but is not instantaneous. Additionally, the ToS full text was not verifiable and may contain frontend-level jurisdictional restrictions. The green steelman is undercut by the non-permissionless oracle requirement for withdrawal finality; the red steelman is overridden because the withdrawal REQUEST placement is permissionless and the oracle set is large (9+ members per HashConsensus) with documented DAO replacement authority, not a single privileged operator."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "shows": "Lido stETH proxy contract — Etherscan label confirms this is the deployed stETH token and staking entry point; no user-level whitelist modifier present on verified source",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "shows": "Lido Withdrawal Queue ERC721 proxy — Etherscan label confirms deployed contract; requestWithdrawals and claimWithdrawal are user-permissionless functions",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xffa96d84def2ea035c7ab153d8b991128e3d72fd",
+      "shows": "Deposit Security Module 3 — permissioned guardian set required to co-sign validator deposit batches; Etherscan label 'Lido: Deposit Security Module 3' confirms this is the active DSM",
+      "chain": "Ethereum",
+      "address": "0xffa96d84def2ea035c7ab153d8b991128e3d72fd",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/token-guides/steth-superuser-functions",
+      "shows": "Canonical docs enumerating all Lido V3 control surfaces: PAUSE_ROLE and STAKING_CONTROL_ROLE are 'Unassigned', Aragon ACL is the role registry, DAO Agent holds most admin roles, GateSeal Committee (3-of-6 multisig 0x8772E3a2D86B9347A2688f9bc1808A6d8917760C) can trigger time-limited pauses up to 14 days",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/deployed-contracts/",
+      "shows": "Official deployed contract addresses for Lido V3.0.1 on Ethereum mainnet, including Accounting Oracle, HashConsensus, Withdrawal Queue, DSM, DAO contracts (Aragon Voting, Agent), and all proxy/impl pairs",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/multisigs/emergency-brakes",
+      "shows": "GateSeal Committee (0x8772E3a2D86B9347A2688f9bc1808A6d8917760C) is a 3-of-6 multisig with 6 named signers authorized to trigger single-use time-limited pauses on WithdrawalQueue and ValidatorExitBus; Emergency Brakes Ethereum (0x73b047fe6337183A454c5217241D780a932777bD) is a 3-of-5 multisig to disable L2 bridging deposits/withdrawals",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://stake.lido.fi/",
+      "shows": "Official staking frontend — no geo-blocking banner observed; links to Terms of Use at lido.fi/terms-of-use; FAQ describes permissionless staking via direct contract interaction or widget; no KYC wall observed",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/security/bugbounty",
+      "shows": "Lido runs an Immunefi bug bounty with up to $2M rewards; links to https://immunefi.com/bounty/lido/",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/security/audits",
+      "shows": "93 audit reports listed for Lido on Ethereum; most recent include Composable Security (03-2026), MixBytes (03-2026 DeFi Wrapper), Certora Lido V3 (12-2025), MixBytes V3 (12-2025), Sigma Prime BLS Library (01-2026)",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://research.lido.fi/",
+      "shows": "Lido primary governance forum (Discourse instance at research.lido.fi) — active governance discussions including node operator admissions, protocol proposals, and financial reporting as of March 2026",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3: Full legal text of lido.fi/terms-of-use could not be extracted (SPA renders via JavaScript, body text not present in HTTP response); unable to confirm or deny explicit jurisdictional exclusions (e.g., US user prohibitions) or sanctions compliance clauses verbatim.",
+    "A4: Cannot confirm whether the Lido frontend (stake.lido.fi) performs off-chain IP-based geo-blocking or OFAC screening at the CDN/server layer — only that no client-side block banner was observed and no on-chain OFAC modifier exists in the core contracts.",
+    "A2: Oracle quorum fallback timeline: while DAO can vote to replace oracle members, no documented SLA or time-bound exists for how quickly a quorum failure would be resolved; withdrawal finalization would halt during any such gap."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core",
+      "https://github.com/lidofinance/lido-dao",
+      "https://github.com/lidofinance/audits"
+    ],
+    "docs_url": "https://docs.lido.fi",
+    "audits": [
+      {
+        "firm": "Composable Security",
+        "url": "https://github.com/lidofinance/audits/blob/main/Composable%20Security%20Lido%20Oracle%20V7_1%20Audit%20Report.pdf",
+        "date": "2026-03"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://github.com/lidofinance/audits/blob/main/MixBytes%20Lido%20DeFi%20Wrapper%20MellowStrategyAdapter%20Security%20Audit%20Report%2003-2026.pdf",
+        "date": "2026-03"
+      },
+      {
+        "firm": "Certora",
+        "url": "https://github.com/lidofinance/audits/blob/main/Certora%20Lido%20V3%20Audit%20Report%20-%2012-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://github.com/lidofinance/audits/blob/main/MixBytes%20Lido%20V3%20Security%20Audit%20Report%20-%2012-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "Sigma Prime",
+        "url": "https://github.com/lidofinance/audits/blob/main/Sigma%20Prime%20-%20Lido%20BLS%20Library%20Security%20Assessment%20Report%20v2.0%20-%2001-2026.pdf",
+        "date": "2026-01"
+      },
+      {
+        "firm": "Certora",
+        "url": "https://github.com/lidofinance/audits/blob/main/Certora%20Lido%20V3%20Formal%20Verification%20Report%20-%2012-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "Ackee Blockchain",
+        "url": "https://github.com/lidofinance/audits/blob/main/Ackee%20Blockchain%20Vault%20Wrapper%20Report%2001-2026.pdf",
+        "date": "2026-01"
+      }
+    ],
+    "governance_forum": "https://research.lido.fi",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/lido/",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+        "role": "Aragon Agent — holds most admin roles; executes DAO votes",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
+        "role": "Aragon Voting — on-chain LDO governance vote contract",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8772E3a2D86B9347A2688f9bc1808A6d8917760C",
+        "role": "GateSeal Committee — 3-of-6 multisig, can trigger single-use time-limited pauses up to 14 days on WithdrawalQueue and ValidatorExitBus",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x73b047fe6337183A454c5217241D780a932777bD",
+        "role": "Emergency Brakes Ethereum — 3-of-5 multisig, can disable L2 bridging deposits/withdrawals and pause Easy Track",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7914b5a1539b97Bd0bbd155757F25FD79A522d24",
+        "role": "Reseal Manager — can extend pauses for GateSeal-paused contracts under DualGovernance veto escalation",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable"
+  }
+}
+```
