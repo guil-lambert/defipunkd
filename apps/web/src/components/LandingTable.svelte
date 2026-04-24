@@ -215,30 +215,32 @@
   {@const initial = row.name.charAt(0).toUpperCase()}
   <tr class:child={isChild}>
     <td class="name-cell" class:child-cell={isChild}>
-      {#if isFamilyHead}
-        <button
-          type="button"
-          onclick={() => { expanded = { ...expanded, [row.slug]: !expanded[row.slug] }; }}
-          aria-expanded={isExpanded}
-          aria-label={isExpanded ? "Collapse family" : "Expand family"}
-          class="toggle"
-        >{isExpanded ? "\u25BE" : "\u25B8"}</button>
-      {:else if !isChild}
-        <span class="toggle-placeholder" aria-hidden="true"></span>
-      {/if}
-      <span class="logo" aria-hidden="true" style="width:20px;height:20px;font-size:11px">
-        {initial}
-        {#if row.logo}
-          <img src={row.logo} alt="" loading="lazy" decoding="async" width="20" height="20" />
+      <div class="name-inner">
+        {#if isFamilyHead}
+          <button
+            type="button"
+            onclick={() => { expanded = { ...expanded, [row.slug]: !expanded[row.slug] }; }}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? "Collapse family" : "Expand family"}
+            class="toggle"
+          >{isExpanded ? "\u25BE" : "\u25B8"}</button>
+        {:else if !isChild}
+          <span class="toggle-placeholder" aria-hidden="true"></span>
         {/if}
-      </span>
-      <a href={`/protocol/${row.slug}`} class="name-link">{row.name}</a>
-      {#if isFamilyHead}
-        <span class="muted small-pad">({row.children?.length ?? 0})</span>
-      {/if}
-      {#if row.is_dead}
-        <span class="muted small-pad">(inactive)</span>
-      {/if}
+        <span class="logo" aria-hidden="true" style="width:20px;height:20px;font-size:11px">
+          {initial}
+          {#if row.logo}
+            <img src={row.logo} alt="" loading="lazy" decoding="async" width="20" height="20" />
+          {/if}
+        </span>
+        <a href={`/protocol/${row.slug}`} class="name-link" title={row.name}>{row.name}</a>
+        {#if isFamilyHead}
+          <span class="muted small-pad">({row.children?.length ?? 0})</span>
+        {/if}
+        {#if row.is_dead}
+          <span class="muted small-pad">(inactive)</span>
+        {/if}
+      </div>
     </td>
     <td class="pizza-cell">
       <svg width={pz.radius * 2} height={pz.radius * 2} viewBox={`0 0 ${pz.radius * 2} ${pz.radius * 2}`} role="img" aria-label="risk pizza (all unknown)">
@@ -343,11 +345,12 @@
       margin-left: -1.5rem;
       margin-right: -1.5rem;
     }
-    table { table-layout: auto; min-width: 760px; width: max-content; }
+    table { table-layout: auto; min-width: 710px; width: max-content; }
     th, td { white-space: nowrap; }
     th:first-child, td:first-child { padding-left: 1.5rem; }
     th:last-child, td:last-child { padding-right: 1.5rem; }
-    col.c-name { width: 18rem; }
+    col.c-name { width: 15rem; }
+    td.name-cell { max-width: 15rem; }
   }
   thead tr { text-align: left; color: var(--text-muted); font-size: 0.8rem; }
   th { padding: 0.45rem 0.6rem; font-weight: 500; }
@@ -418,7 +421,17 @@
     height: 100%;
     object-fit: cover;
   }
-  .name-link { text-decoration: none; margin-left: 8px; color: var(--accent-link); }
+  .name-cell > .name-inner { display: flex; align-items: center; min-width: 0; }
+  .name-link {
+    text-decoration: none;
+    margin-left: 8px;
+    color: var(--accent-link);
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .muted { color: var(--text-muted); }
   .small-pad { margin-left: 6px; font-size: 0.75rem; }
   .extra-chains {
