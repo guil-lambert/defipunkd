@@ -42,7 +42,7 @@ describe("buildPrompt", () => {
   it("requires at least one block-explorer URL for on-chain slices", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("AT LEAST ONE block-explorer URL");
-    expect(p).toContain("control, ability-to-exit, dependencies, verifiability");
+    expect(p).toContain("control, ability-to-exit, autonomy, verifiability");
   });
 
   it("instructs the LLM to leave chat_url null and explains why", () => {

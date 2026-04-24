@@ -71,7 +71,7 @@ describe("buildDraftMaster", () => {
       assessmentsBySlice: assessmentsBySlice as unknown as Map<Submission["slice"], ReturnType<typeof computeQuorum> extends { kind: "assessment"; assessment: infer A } ? A : never>,
     });
     expect(master.flags.some((f) => f.includes("ability-to-exit") && f.includes("no submissions"))).toBe(true);
-    expect(master.slices.dependencies.grade).toBe("unknown");
+    expect(master.slices.autonomy.grade).toBe("unknown");
   });
 
   it("merges protocol_metadata across all slices", () => {

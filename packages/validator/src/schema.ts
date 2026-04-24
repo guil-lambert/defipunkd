@@ -4,7 +4,7 @@ export const GRADES = ["green", "orange", "red", "unknown"] as const;
 export const SLICES = [
   "control",
   "ability-to-exit",
-  "dependencies",
+  "autonomy",
   "access",
   "verifiability",
 ] as const;
