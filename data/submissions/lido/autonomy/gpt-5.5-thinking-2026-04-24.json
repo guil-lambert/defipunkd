@@ -1,0 +1,271 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 9,
+  "analysis_date": "2026-04-24",
+  "model": "GPT-5.5 Thinking",
+  "chat_url": "https://chatgpt.com/share/69eb9bcd-09ac-83ea-b6b3-2fd46199fc48",
+  "grade": "orange",
+  "headline": "~100% TVS depends on Lido oracle/reporting liveness, but on-chain sanity checks bound misreports and principal-loss paths were not shown",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The verified mainnet deployment lists Lido/stETH, Accounting, StakingRouter, DepositSecurityModule, vaults, WithdrawalQueue, AccountingOracle, ValidatorsExitBusOracle, HashConsensus, OracleReportSanityChecker, LazyOracle, and staking-module registries; the core user path does not show a third-party price oracle such as Chainlink/Pyth/Redstone, while AccountingOracle reports off-chain observed execution/consensus-layer state into Lido-managed contracts."
+      },
+      {
+        "code": "A2",
+        "text": "Lido's AccountingOracle is an off-chain reporter committee dependency: the docs state that oracle daemons collect execution-layer and consensus-layer data, submit hashes to HashConsensus, and once quorum is reached, currently described as 5 of 9 oracle committee members, a report triggers token rebase, node-operator reward distribution, withdrawal-request finalization, and bunker-mode decisions."
+      },
+      {
+        "code": "A2",
+        "text": "The live Accounting Oracle HashConsensus contract at 0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288 has recent Submit Report transactions on 2026-04-24, supporting that this committee path is active on mainnet."
+      },
+      {
+        "code": "A2",
+        "text": "Validator/operator failure risk appears mitigated rather than a small-committee dependency: Lido reported in March 2026 that validator allocation was distributed across 36 Curated Node Operators with no consensus client above 33% across the Lido validator set, although the exact full operator set and bonding/slashing-insurance state were not exhaustively reconstructed here."
+      },
+      {
+        "code": "A3",
+        "text": "Lido recognizes bridged stETH/wstETH deployments; its help center says currently recognized stETH/wstETH bridges use lock-and-mint, and the deployed-contracts page lists DataBus contracts on Gnosis, Base, Optimism, and Polygon PoS, but the Ethereum core staking, rebase, and withdrawal path is not itself dependent on a bridge."
+      },
+      {
+        "code": "A4",
+        "text": "The assessed core pool is an ETH liquid-staking receipt-token system rather than a restaking or receipt-of-receipt stack; Lido V3 adds stVaults/user-defined validator setups, but no nested collateral or external slashing layer was verified as part of the core stETH principal chain."
+      },
+      {
+        "code": "A6",
+        "text": "A live on-chain mitigation exists for oracle-report risk: OracleReportSanityChecker is listed at 0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129, and the docs state that AccountingOracle and ValidatorsExitBusOracle reports pass on-chain sanity checks, including checks against actual vault balances, annual balance increase bounds, simulated share-rate deviation bounds, max positive rebase, withdrawal timestamp margin, and slashing/penalty assumptions."
+      },
+      {
+        "code": "A6",
+        "text": "The AccountingOracle report-processing flow applies Accounting._sanityChecks via OracleReportSanityChecker before StakingRouter updates, Lido consensus-layer state updates, withdrawal processing, fee minting, and rebase notification, so this fallback is LIVE and enforcing in the core report path, not merely proposed."
+      },
+      {
+        "code": "A7",
+        "text": "The core assessed contracts are deployed on Ethereum mainnet, so there is no additional sequencer or DA committee liveness dependency beyond the Ethereum substrate for core stETH staking and withdrawal flows; bridged token representations on L2s do inherit bridge/L2 liveness for those secondary-chain holders."
+      },
+      {
+        "code": "A8",
+        "text": "Lido requires oracle daemon/keeper liveness for daily rebases and withdrawal finalization; the docs explicitly warn that oracle daemons stopping for extended periods would result in no oracle reports and no stETH rebases for that period, which is a performance/exit-delay failure rather than an immediate principal-theft path."
+      },
+      {
+        "code": "A9",
+        "text": "The dependency surface is governance-mutable: Lido docs state that all protocol proxy admins are set to the Lido DAO Agent and upgrades require a successful DAO vote; protocol levers also show governance-controlled roles for oracle membership/quorum, report processors, sanity-check limits, second-opinion oracle configuration, staking modules, and proxy upgrades."
+      },
+      {
+        "code": "A9",
+        "text": "The public governance process describes a regular path with Research forum discussion, off-chain vote, on-chain vote, and Dual Governance delay, which gives more process than a hot multisig but still means LDO governance can introduce or modify dependencies through contract upgrades or role changes."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red case is that a 5-of-9 off-chain oracle committee feeds the values that drive rebases and withdrawal finalization for essentially all stETH TVS, and if sanity limits or governance-mutated parameters are insufficient, malicious reports could dilute holders or finalize withdrawals at the wrong share rate.",
+      "orange": "The strongest orange case is that Lido has real external/off-chain liveness and correctness dependencies in its oracle reporters and bridged token deployments, but core reports are routed through deployed HashConsensus and OracleReportSanityChecker bounds, so the evidenced failure mode is paused or degraded rebases/withdrawals rather than unbounded principal theft.",
+      "green": "The strongest green case is that the core contracts do not rely on a single third-party price oracle or non-canonical bridge for Ethereum staking, validator operators are diversified, and oracle reports are subject to on-chain quorum plus sanity checks before affecting supply, fees, or withdrawals."
+    },
+    "verdict": "Choosing orange because Lido's core Ethereum pool materially depends on off-chain oracle committee liveness/correctness for rebases and withdrawal finalization, affecting roughly all core stETH TVS, but the verified mainnet deployment includes HashConsensus and OracleReportSanityChecker controls that bound report effects and I did not verify an unmitigated external dependency that can directly steal or destroy principal."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.lido.fi/deployed-contracts/",
+      "shows": "Production Ethereum mainnet deployment list for Lido V3, including core protocol, oracle contracts, DAO contracts, staking modules, DataBus contracts, and addresses.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "shows": "Block-explorer page for the deployed Lido/stETH token proxy on Ethereum mainnet.",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288",
+      "shows": "Block-explorer page for the deployed AccountingOracle HashConsensus contract, including recent Submit Report transactions on 2026-04-24.",
+      "chain": "Ethereum",
+      "address": "0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x7FaDB6358950c5fAA66Cb5EB8eE5147De3df355a",
+      "shows": "Block-explorer page for the deployed ValidatorsExitBusOracle HashConsensus contract.",
+      "chain": "Ethereum",
+      "address": "0x7FaDB6358950c5fAA66Cb5EB8eE5147De3df355a",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129",
+      "shows": "Block-explorer page for the deployed OracleReportSanityChecker contract on Ethereum mainnet.",
+      "chain": "Ethereum",
+      "address": "0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/accounting-oracle/",
+      "shows": "AccountingOracle collects off-chain reports about validators, vault balances, exited validators, withdrawable requests, and triggers core state updates including rebases, rewards, withdrawal finalization, and bunker-mode decision.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/hash-consensus/",
+      "shows": "HashConsensus manages oracle committee members and quorum, provides getMembers/getQuorum, and gates report submission to members with more-than-half quorum constraints.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/oracle-report-sanity-checker/",
+      "shows": "OracleReportSanityChecker validates vital oracle reports and defines limits for vault balances, validator counts, balance increases, share-rate deviation, positive rebase, withdrawal timing, and second-opinion oracle parameters.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+      "shows": "WithdrawalQueueERC721 is the main direct stETH-to-ETH exit queue; requests are queued, finalized as part of AccountingOracle reports, and claimable ETH is transferred after finalization.",
+      "chain": "Ethereum",
+      "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/guides/protocol-levers/",
+      "shows": "Protocol levers page lists Lido governance structure, Aragon Voting, Aragon Agent, Easy Track, GateSeal Committee, proxy-admin ownership by the DAO Agent, and upgradeable core/oracle/staking-module proxies.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://lido.fi/governance",
+      "shows": "Lido governance process includes Research forum discussion, off-chain voting, on-chain voting, Dual Governance, and enactment stages.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://help.lido.fi/en/articles/11481402-bridging-steth-wsteth-a-guide-to-risks-best-practices",
+      "shows": "Lido help article describes recognized stETH/wstETH bridges as using lock-and-mint and frames bridge risk for users moving tokens to other networks.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://blog.lido.fi/lido-validator-and-node-operator-metrics-q4-2025/",
+      "shows": "Lido reported Curated Set allocation across 36 Curated Node Operators and no consensus client above 33% across the Lido validator set.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core",
+      "shows": "Canonical Lido core smart-contract repository; README describes Lido on Ethereum core, stETH, automated withdrawals, DAO governance, docs, addresses, audits, and bug bounty links.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/audits",
+      "shows": "Canonical Lido audits repository with protocol audit reports, including Ethereum, V2, V3, and component audits.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/audits/blob/main/Certora%20Lido%20V3%20Audit%20Report%20-%2012-2025.pdf",
+      "shows": "Certora Lido V3 audit report dated 12-2025.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/audits/blob/main/MixBytes%20Lido%20V3%20Security%20Audit%20Report%20-%2012-2025.pdf",
+      "shows": "MixBytes Lido V3 security audit report dated 12-2025.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bug-bounty/lido/information/",
+      "shows": "Lido Immunefi bug bounty page covering smart contracts and applications, focused on loss of user funds, denial of service, governance hijacks, and data leaks.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://lido.fi/bug-bounty",
+      "shows": "Official Lido bug bounty page stating the program uses Immunefi and covers smart contracts and applications with maximum reward amounts.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/lido-dao/",
+      "shows": "Lido DAO documentation describing LDO-holder governance over protocol parameters such as fees, node operators, oracles, and upgrades.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/token/0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "shows": "Block-explorer token page for LDO, described as the ERC-20 governance token for Lido DAO.",
+      "chain": "Ethereum",
+      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    },
+    {
+      "url": "https://research.lido.fi/",
+      "shows": "Lido Governance forum used for DAO discussions and proposals.",
+      "fetched_at": "2026-04-24T16:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: I did not complete an exhaustive source-code grep over every currently deployed implementation at a pinned commit, so a complete call graph of every internal/external call from every V3 implementation is not fully reconstructed.",
+    "A3: I did not verify the current fraction of total Lido TVS represented by bridged stETH/wstETH on each non-Ethereum chain as of 2026-04-24.",
+    "A5: DeFiLlama forkedFrom was not present in the pinned inputs and was not separately verified from an allowed source during this run.",
+    "A6: I did not verify the current live value/address of the second-opinion oracle parameter inside OracleReportSanityChecker, only that the deployed checker supports and documents that parameter.",
+    "A8: I did not verify whether every oracle daemon implementation/operator has an independent fallback operator path beyond the documented HashConsensus member quorum and report-submission flow.",
+    "A9: I did not verify the exact current Dual Governance activation status and veto delay parameters from deployed contracts, only the public governance process and proxy-admin ownership documentation."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core",
+      "https://github.com/lidofinance/audits"
+    ],
+    "docs_url": "https://docs.lido.fi/",
+    "audits": [
+      {
+        "firm": "Certora",
+        "url": "https://github.com/lidofinance/audits/blob/main/Certora%20Lido%20V3%20Audit%20Report%20-%2012-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://github.com/lidofinance/audits/blob/main/MixBytes%20Lido%20V3%20Security%20Audit%20Report%20-%2012-2025.pdf",
+        "date": "2025-12"
+      }
+    ],
+    "governance_forum": "https://research.lido.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/lido/information/",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
+        "role": "Aragon Voting for LDO token governance",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+        "role": "Aragon DAO execution agent and proxy admin",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9895f0f17cc1d1891b6f18ee0b483b6f221b37bb",
+        "role": "Aragon ACL permission registry",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xF0211b7660680B49De1A7E9f25C65660F0a13Fea",
+        "role": "Easy Track optimistic governance",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8772E3a2D86B9347A2688f9bc1808A6d8917760C",
+        "role": "GateSeal emergency pause signer",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7914b5a1539b97Bd0bbd155757F25FD79A522d24",
+        "role": "Reseal Manager pause extension authority",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Lido lets users stake ETH and receive stETH, a liquid staking receipt token that tracks pooled validator principal plus rewards through share accounting. Users can hold or wrap stETH as wstETH, use it across DeFi, and exit through an in-protocol FIFO withdrawal queue whose finalization depends on Lido oracle reports. The distinctive mechanism is a DAO-governed pooled validator set with off-chain oracle reporting, on-chain sanity checks, and modular staking infrastructure."
+  }
+}

@@ -1,10 +1,10 @@
 import type { Protocol, LoadedAssessment, AssessmentSliceId, Rationale } from "@defipunkd/registry";
 import type { GradeColor } from "./verifiability";
 import { verifiabilityGrade } from "./verifiability";
-import { dependenciesGrade } from "./dependencies";
+import { autonomyGrade } from "./autonomy";
 
 export type SliceAssessment = {
-  id: "control" | "ability-to-exit" | "dependencies" | "access" | "verifiability";
+  id: "control" | "ability-to-exit" | "autonomy" | "access" | "verifiability";
   label: string;
   grade: GradeColor;
   headline: string;
@@ -65,42 +65,42 @@ function verifiabilityRationale(p: Protocol): { grade: GradeColor; headline: str
     grade: "red",
     headline: "No public repo or audits",
     rationale:
-      "Neither a GitHub repository nor any audit is recorded. At Phase 0 this is the most conservative verifiability signal defipunkd can assign.",
+      "Neither a GitHub repository nor any audit is recorded. At Phase 0 this is the most conservative verifiability signal DeFiPunk'd can assign.",
   };
 }
 
-function dependenciesRationale(p: Protocol): { grade: GradeColor; headline: string; rationale: string } {
-  const grade = dependenciesGrade(p.category, p.forked_from);
+function autonomyRationale(p: Protocol): { grade: GradeColor; headline: string; rationale: string } {
+  const grade = autonomyGrade(p.category, p.forked_from);
   const cat = p.category ?? "";
   if (grade === "red") {
     if (cat === "Liquid Staking" || cat === "Liquid Restaking") {
       return {
         grade,
-        headline: "Liquid staking depends on validators",
+        headline: "Validator set reduces autonomy",
         rationale:
-          "Liquid staking and restaking protocols rely on an external validator set and slashing dynamics they do not control. This is a category-level structural dependency, not a per-protocol finding.",
+          "Liquid staking and restaking protocols hand solvency to an external validator set with slashing dynamics they do not control. At Phase 0 this is a category-level heuristic; a real Autonomy assessment (oracles, fallbacks, governance-mutable dependencies) arrives with onchain review.",
       };
     }
     if (cat === "RWA Lending" || cat === "RWA") {
       return {
         grade,
-        headline: "RWA lending depends on legal counterparties",
+        headline: "Off-chain counterparties reduce autonomy",
         rationale:
-          "Real-world-asset lending introduces off-chain legal counterparties, custodians, and enforcement regimes as dependencies. These cannot be verified onchain.",
+          "Real-world-asset lending introduces off-chain legal counterparties, custodians, and enforcement regimes whose failure cannot be caught onchain. At Phase 0 this is a category-level heuristic.",
       };
     }
     if (BRIDGE_CATS.has(cat)) {
       return {
         grade,
-        headline: "Bridge depends on external message validators",
+        headline: "External message validators reduce autonomy",
         rationale:
-          "Bridges rely on an external validator set, guardian signatures, or light-client proofs. This is a category-level structural dependency independent of any specific implementation.",
+          "Bridges rely on an external validator set, guardian signatures, or light-client proofs — a category-level autonomy risk independent of any specific implementation.",
       };
     }
     return {
       grade,
-      headline: `${cat || "Category"} carries category-level dependency risk`,
-      rationale: "Protocol belongs to a category flagged red by the Phase-0 dependency heuristic.",
+      headline: `${cat || "Category"} carries category-level autonomy risk`,
+      rationale: "Protocol belongs to a category flagged red by the Phase-0 autonomy heuristic.",
     };
   }
   if (grade === "orange") {
@@ -108,14 +108,14 @@ function dependenciesRationale(p: Protocol): { grade: GradeColor; headline: stri
       grade,
       headline: "Forked from another protocol",
       rationale:
-        "DeFiLlama records a non-empty forkedFrom lineage — the contracts inherit base logic from another codebase. Real fork detection is Phase-2 work; this is only an opportunistic first-pass signal.",
+        "DeFiLlama records a non-empty forkedFrom lineage — the contracts inherit base logic from another codebase, which is a weak autonomy signal. Real fork detection is Phase-2 work; this is only an opportunistic first-pass flag.",
     };
   }
   return {
     grade: "gray",
-    headline: "No Phase-0 dependency signal",
+    headline: "No Phase-0 autonomy signal",
     rationale:
-      "Neither the category heuristic nor the forkedFrom signal fires for this protocol. A real dependency graph (oracles, bridges, yield wrappers, collateral) arrives with Phase-2 onchain discovery.",
+      "Neither the category heuristic nor the forkedFrom signal fires for this protocol. A real autonomy graph (oracles, bridges, fallbacks, governance-mutable dependencies) arrives with Phase-2 onchain discovery.",
   };
 }
 
@@ -124,7 +124,7 @@ export function assessProtocol(
   assessments?: Map<AssessmentSliceId, LoadedAssessment>,
 ): SliceAssessment[] {
   const v = verifiabilityRationale(p);
-  const d = dependenciesRationale(p);
+  const d = autonomyRationale(p);
   const base: SliceAssessment[] = [
     {
       id: "control",
@@ -143,8 +143,8 @@ export function assessProtocol(
         "Whether users can exit on their own terms if the team disappears or acts adversarially. Requires per-protocol review; not available at Phase 0.",
     },
     {
-      id: "dependencies",
-      label: "Dependencies",
+      id: "autonomy",
+      label: "Autonomy",
       grade: d.grade,
       headline: d.headline,
       rationale: d.rationale,
@@ -179,7 +179,7 @@ export function cexAssessment(): SliceAssessment[] {
   return [
     { id: "control", label: "Control", grade: "red", headline: "Operator-controlled", rationale: r },
     { id: "ability-to-exit", label: "Ability to exit", grade: "red", headline: "Withdrawals can be halted", rationale: r },
-    { id: "dependencies", label: "Dependencies", grade: "red", headline: "Off-chain counterparty", rationale: r },
+    { id: "autonomy", label: "Autonomy", grade: "red", headline: "Off-chain counterparty", rationale: r },
     { id: "access", label: "Access", grade: "red", headline: "Permissioned by design", rationale: r },
     { id: "verifiability", label: "Verifiability", grade: "red", headline: "Closed codebase", rationale: r },
   ];

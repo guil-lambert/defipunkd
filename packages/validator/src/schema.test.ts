@@ -165,7 +165,7 @@ describe("SubmissionSchema", () => {
     expect(jsonSchema.properties.slice.enum).toEqual([
       "control",
       "ability-to-exit",
-      "dependencies",
+      "autonomy",
       "access",
       "verifiability",
     ]);

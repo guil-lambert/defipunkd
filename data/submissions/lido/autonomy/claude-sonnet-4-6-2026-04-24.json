@@ -1,0 +1,244 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 9,
+  "analysis_date": "2026-04-24",
+  "model": "claude-sonnet-4-6",
+  "chat_url": "https://claude.ai/share/2a372f33-642a-442c-8138-b58fd7e2c1a8",
+  "grade": "orange",
+  "headline": "~0% principal loss risk under oracle failure; oracle committee (5-of-9) with onchain sanity limits mitigates most attack vectors, but full ZK second opinion not yet live and canonical-bridge wstETH on L2s introduces bounded yield/access risk (~2-3% TVL) | impacted TVS under worst unmitigated scenario: ~2-5%",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Lido's core contracts on Ethereum mainnet call no external price oracles (no Chainlink, Pyth, or Redstone feeds). The AccountingOracle reads Beacon Chain validator balances as reported by the oracle committee and enforces them through OracleReportSanityChecker (0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129). The only EVM-external call path is the Ethereum Deposit Contract (0x00000000219ab540356cBB839Cbe05303d7705Fa), which is the base-chain substrate. No AMM pool, lending pool, or external feed is called in the happy-path staking/withdrawal flow. The Chainlink CCIP integration introduced in Oct 2024 is for cross-chain staking UX (deposit from L2 and receive wstETH) — it is not called in the core stETH accounting or withdrawal path on L1."
+      },
+      {
+        "code": "A2",
+        "text": "The AccountingOracle and ValidatorsExitBusOracle rely on a 9-member off-chain oracle committee with a 5-of-9 quorum (HashConsensus at 0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288 for Accounting and 0x7FaDB6358950c5fAA66Cb5EB8eE5147De3df355a for Exit Bus). Members are known professional entities (including Chorus One, Stakefish, P2P, etc.) selected by DAO vote. A single compromised key (Chorus One, May 2025) caused no user impact because 8 of 9 oracles kept reporting. The OracleReportSanityChecker (LIVE on-chain) enforces hard limits: max ~0.19% TVL per-day negative rebase (post LIP-23), max 10% annual balance increase, and a withdrawal vault balance cross-check. Even a 5-of-9 malicious coalition is limited by these bounds to a <5% per-report loss (further bounded by Dual Governance timelock). The DepositSecurityModule guardian committee (initially ~6 known node operators + Lido dev team) guards against deposit front-running; a single guardian can pause deposits unilaterally. Node operator set for the Curated Module has 36 independent operators with ~1% soft cap each and growing DVT/CSM participation (~5% of stake via Community Staking Module as of early 2026). Validator slashing risk is well-mitigated by diversification."
+      },
+      {
+        "code": "A3",
+        "text": "Lido on Solana was sunset in Oct 2023 (frontend ended Feb 2024). Lido on Terra was wound down after the Terra collapse. Lido on Moonbeam and Moonriver are retired. Active cross-chain exposure today: wstETH is bridged to Arbitrum, Optimism, Base, and other L2s via DAO-recognized canonical bridges (OP Stack canonical bridge for Optimism/Base at 0x76943c0d61395d8f2edf9060e1533529cae05de6, Arbitrum canonical gateway). BNB Chain uses a Wormhole+Axelar joint bridge. These bridges carry wstETH representing approximately 2-5% of total Lido TVL (L1 stETH represents ~95%+ of TVL). Canonical OP/Arbitrum bridges inherit Ethereum security; BNB Chain wstETH via Wormhole+Axelar introduces a third-party trust model. Failure of the Wormhole+Axelar bridge could freeze BNB-wstETH but cannot affect L1 principal. DataBus contracts (Gnosis Chain, Base, Optimism, Polygon) are used as a communication layer by oracle daemons but do not hold TVL."
+      },
+      {
+        "code": "A4",
+        "text": "Not applicable. Lido is not a restaking or LRT protocol and does not nest collateral from other protocols. stETH represents direct Ethereum validator stake. No collateral chain beyond depth-1 (ETH → Lido validators)."
+      },
+      {
+        "code": "A6",
+        "text": "Multiple fallback and circuit-breaker mechanisms are LIVE on-chain: (1) OracleReportSanityChecker (0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129) enforces max annual balance increase, one-off CL balance decrease cap (~0.19%/day post LIP-23), and withdrawal vault balance cross-check — LIVE and enforcing. (2) GateSeal contracts (0xA6BC802fAa064414AA62117B4a53D27fFfF741F1 for VEB+TWG; 0x8A854C4E750CDf24f138f34A9061b2f556066912 for Withdrawal Queue; 0x881dAd714679A6FeaA636446A0499101375A365c for VaultHub/PredepositGuarantee) allow emergency one-shot pauses — LIVE. (3) Dual Governance with dynamic timelock (EmergencyProtectedTimelock 0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316) — LIVE since July 2025, provides minimum 3-day + up to 45-day delay for contested governance actions, including oracle address swaps. (4) LIP-23 second opinion oracle interface exists in OracleReportSanityChecker code and was adopted in V2.1 (2024), but the ZK second opinion oracle is NOT YET wired/activated on mainnet as of April 2026: per the Lido governance forum (April 2026), integration is paused pending 0x02 migration and Ethereum hardfork stabilization. This is state (ii) — DEPLOYED interface, not yet activated. Positive token rebase is also capped per PositiveTokenRebaseLimiter. Bunker Mode activates if excess slashing is detected, limiting withdrawals to prevent first-mover advantage."
+      },
+      {
+        "code": "A7",
+        "text": "Lido's core protocol is deployed on Ethereum L1. No sequencer, DA committee, or L2-specific liveness dependency exists for the primary staking, rebase, or withdrawal flow. wstETH liquidity on L2s is subject to OP/Arbitrum sequencer liveness, but this affects only users who hold L2 wstETH — it does not affect L1 principal or yield accrual."
+      },
+      {
+        "code": "A8",
+        "text": "Oracle daemons (9 known entities) are permissioned and not truly permissionless. If all 9 oracle operators stop running, stETH rebases stop and the withdrawal queue cannot be finalized (no new exit requests triggered), degrading yield accrual and liquidity. This is a recoverable liveness failure (principal stays intact; governance could add new oracle members via Dual Governance), not a catastrophic principal loss. DepositSecurityModule guardian bots (Deposit Security Committee) must attest each deposit batch; if all guardians stop running, new deposits halt but existing stakers are unaffected. No liquidation-bot-style dependency exists (Lido has no borrowing market)."
+      },
+      {
+        "code": "A9",
+        "text": "The DAO (via Aragon Voting + Dual Governance) can: add new staking modules to StakingRouter (potentially calling untrusted external contracts), change oracle committee members, change OracleDaemonConfig parameters, and update OracleReportSanityChecker limits. All such actions now route through the EmergencyProtectedTimelock (0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316) with Dual Governance, giving stETH holders a minimum 3-day observation window and up to 45-day veto delay if >1% stETH is escrowed in dissent. A rage-quit blocking execution until all dissenting stakers exit ETH is triggered at 10% stETH in the veto-signaling escrow. This is a meaningful exit window given that the Ethereum withdrawal queue for Lido at current scale takes days to weeks. The dependency surface is governance-mutable but now protected by a live timelock with a credible user-exit path."
+      }
+    ],
+    "steelman": {
+      "red": "Despite the 5-of-9 oracle quorum and sanity checks, the second opinion ZK oracle (the key mitigation for a malicious oracle supermajority scenario) is NOT yet live on mainnet as of April 2026, leaving a coordinated 5-of-9 oracle attack able to force a ~0.19%/day negative rebase continuously over multiple days before governance can respond — which, compounded over the Dual Governance minimum 3-day delay, could represent a meaningful but bounded loss of yield (not principal), and the oracle committee members are hot-key EOAs whose key management practices vary by operator.",
+      "orange": "Lido's oracle committee (5-of-9 quorum) is the primary off-chain dependency, and while the OracleReportSanityChecker strictly bounds per-report harm to ~0.19% TVL per day, a sustained oracle failure or compromise could degrade yield and delay withdrawals over multiple reporting cycles without triggering principal theft; the ZK second opinion oracle that would harden this is not yet wired on mainnet; and wstETH on BNB Chain via Wormhole+Axelar (~small fraction of TVL) introduces a third-party bridge trust assumption that could freeze cross-chain wstETH but not L1 principal.",
+      "green": "Lido's core L1 contracts call zero external price oracles, the oracle committee operates under hard onchain sanity limits that cap per-report loss to ~0.19% TVL, the 5-of-9 quorum survived a real key compromise (May 2025) with zero user impact, Dual Governance's dynamic timelock (live since July 2025) gives stETH holders a credible exit window before any governance-mutable dependency change takes effect, and the highly diversified validator set (36 curated operators + permissionless CSM) makes coordinated validator failure effectively impossible."
+    },
+    "verdict": "Choosing orange because the primary unmitigated risk is oracle committee failure (liveness or limited collusion), which cannot cause principal theft under current sanity limits but can materially degrade yield accrual and delay withdrawals over multiple reporting cycles — the ZK second opinion oracle that would close this gap is not yet activated on mainnet (confirmed April 2026 governance forum post). Additionally, wstETH on BNB Chain via Wormhole+Axelar represents a non-canonical bridge trust assumption for a small fraction of TVL. These factors fit Stage 1: external dependency failures are bounded and recoverable (no principal loss) but the full mitigation stack is incomplete. The green steel-man is close — Dual Governance is live, sanity checks are strict, and oracle resilience was demonstrated in practice — but the absent ZK second opinion means the protocol has not yet achieved the 'all critical dependencies have documented active fallbacks' bar for green."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.lido.fi/deployed-contracts/",
+      "shows": "Canonical deployed contract addresses for Lido v3.0.1 on Ethereum mainnet, including AccountingOracle, HashConsensus, OracleReportSanityChecker, GateSeal contracts, EmergencyProtectedTimelock (Dual Governance), StakingRouter, and VaultHub (stVaults)",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129",
+      "shows": "OracleReportSanityChecker deployed contract — enforces hard per-report limits on balance changes, annual increase cap, and withdrawal vault balance cross-check",
+      "chain": "Ethereum",
+      "address": "0xf1647c86E6D7959f638DD9CE1d90e2F3C9503129"
+    },
+    {
+      "url": "https://etherscan.io/address/0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288",
+      "shows": "HashConsensus for AccountingOracle — 9-member oracle committee with 5-of-9 quorum for balance reporting",
+      "chain": "Ethereum",
+      "address": "0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288"
+    },
+    {
+      "url": "https://etherscan.io/address/0x852deD011285fe67063a08005c71a85690503Cee",
+      "shows": "AccountingOracle proxy — processes daily rebase reports triggering stETH balance updates, withdrawal request finalization, and bunker mode decisions",
+      "chain": "Ethereum",
+      "address": "0x852deD011285fe67063a08005c71a85690503Cee"
+    },
+    {
+      "url": "https://etherscan.io/address/0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+      "shows": "EmergencyProtectedTimelock — Dual Governance contract live since July 2025, providing dynamic 3-45 day delay for governance actions affecting core protocol",
+      "chain": "Ethereum",
+      "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316"
+    },
+    {
+      "url": "https://etherscan.io/address/0xA6BC802fAa064414AA62117B4a53D27fFfF741F1",
+      "shows": "GateSeal for ValidatorsExitBusOracle and TriggeredWithdrawalsGateway — emergency pause capability",
+      "chain": "Ethereum",
+      "address": "0xA6BC802fAa064414AA62117B4a53D27fFfF741F1"
+    },
+    {
+      "url": "https://etherscan.io/address/0x76943c0d61395d8f2edf9060e1533529cae05de6",
+      "shows": "Lido Optimism L1 ERC20 token bridge holding ~23,090 wstETH — canonical OP bridge for L2 cross-chain wstETH",
+      "chain": "Ethereum",
+      "address": "0x76943c0d61395d8f2edf9060e1533529cae05de6"
+    },
+    {
+      "url": "https://docs.lido.fi/guides/oracle-operator-manual/",
+      "shows": "Oracle operator manual confirming 9-member committee, 5-of-9 quorum, and permissioned oracle daemon architecture",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lido.fi/contracts/accounting-oracle/",
+      "shows": "AccountingOracle documentation detailing 5-of-9 HashConsensus quorum, OracleReportSanityChecker validation, bunker mode, and withdrawal finalization mechanics",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-23.md",
+      "shows": "LIP-23 specification for negative rebase sanity check with second opinion oracle — adopted in V2.1 (2024), interface deployed but ZK second opinion oracle not yet wired on mainnet",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://research.lido.fi/t/proposal-for-a-lido-accounting-oracle-second-opinion/9534/9",
+      "shows": "Lido governance forum post (April 2026) confirming ZK second opinion oracle integration is paused pending 0x02 migration and Ethereum hardfork stabilization — not yet wired to mainnet protocol",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://www.coindesk.com/tech/2025/05/12/ethereum-staking-giant-lido-loses-just-14-eth-in-hacking-attempt",
+      "shows": "Confirmed real-world test of oracle resilience: single Chorus One oracle key compromised May 2025, 1.46 ETH drained, zero user principal impact, 5/9 quorum maintained, key rotated via emergency DAO vote",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://www.theblock.co/post/360212/lido-dao-votes-to-enable-dual-governance-giving-stakers-veto-power",
+      "shows": "Dual Governance approved June 2025: stETH holders can delay governance actions 5-45 days at 1% dissent threshold, rage-quit freezes execution until all dissenting stakers exit at 10%",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://blog.lido.fi/lido-validator-and-node-operator-metrics-q4-2025/",
+      "shows": "Q4 2025 VaNOM report: 36 Curated Node Operators with evenly distributed stake (~1% soft cap each), CSM/SDVT representing ~2.2% of total Ethereum stake as of Jan 1 2026, growing DVT adoption",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://blog.lido.fi/sunset-lido-on-solana/",
+      "shows": "Lido on Solana sunset confirmed: staking discontinued Oct 2023, frontend ended Feb 2024. Not an active deployment.",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core",
+      "shows": "Primary Lido on Ethereum smart contract repository (lidofinance/core)",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core/blob/master/contracts/0.8.9/sanity_checks/OracleReportSanityChecker.sol",
+      "shows": "OracleReportSanityChecker source code confirming second opinion oracle interface (zero address = disabled), balance increase limits, negative rebase per-day caps, and all_limits_manager_role access control",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://lido.fi/lido-multichain",
+      "shows": "Active cross-chain deployments: wstETH on Arbitrum (canonical), Optimism (canonical), Base (canonical), BNB Chain (Wormhole+Axelar), and multiple other L2s via DAO-endorsed bridges",
+      "fetched_at": "2026-04-24T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "shows": "stETH token contract (proxy) — EIP-897 DelegateProxy, implementation at 0x6ca84080381E43938476814be61B779A8bB6a600",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+    },
+    {
+      "url": "https://etherscan.io/address/0xFdDf38947aFB03C621C71b06C9C70bce73f12999",
+      "shows": "StakingRouter proxy — manages staking modules (Curated, SimpleDVT, CSM), distributes stake; governance-mutable but gated by Dual Governance timelock",
+      "chain": "Ethereum",
+      "address": "0xFdDf38947aFB03C621C71b06C9C70bce73f12999"
+    },
+    {
+      "url": "https://etherscan.io/address/0xffa96d84def2ea035c7ab153d8b991128e3d72fd",
+      "shows": "DepositSecurityModule — permissioned guardian committee controls deposit batching and can pause deposits with single-guardian signature",
+      "chain": "Ethereum",
+      "address": "0xffa96d84def2ea035c7ab153d8b991128e3d72fd"
+    }
+  ],
+  "unknowns": [
+    "A2: Exact current composition (all 9 named oracle committee members as of April 2026) and whether the Chorus One replacement address is confirmed live could not be verified from block explorer reads in this run — only the committee structure (9 members, 5-of-9 quorum) and the fact of rotation are documented in public sources.",
+    "A6: Activation status of the second opinion oracle slot in OracleReportSanityChecker (whether _secondOpinionOracle is set to a non-zero address on mainnet) could not be verified by direct contract read in this run; governance forum (April 2026) confirms ZK oracle integration is paused, strongly implying the address remains zero, but this was not independently confirmed via etherscan readContract call."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core",
+      "https://github.com/lidofinance/lido-oracle",
+      "https://github.com/lidofinance/lido-l2"
+    ],
+    "docs_url": "https://docs.lido.fi/",
+    "audits": [
+      {
+        "firm": "MixBytes",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2024-10"
+      },
+      {
+        "firm": "Ackee Blockchain",
+        "url": "https://github.com/lidofinance/audits",
+        "date": "2024-10"
+      }
+    ],
+    "governance_forum": "https://research.lido.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/lido/",
+    "security_contact": "https://github.com/lidofinance/core/blob/master/SECURITY.md",
+    "deployed_contracts_doc": "https://docs.lido.fi/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
+        "role": "Aragon Voting — primary DAO governance module for LDO tokenholders",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+        "role": "EmergencyProtectedTimelock — Dual Governance enforced timelock between DAO votes and execution",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+        "role": "Aragon Agent — executor holding protocol-level admin permissions",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8B7854488Fde088d686Ea672B6ba1A5242515f45",
+        "role": "Dual Governance emergency activation committee",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xC7792b3F2B399bB0EdF53fECDceCeB97FBEB18AF",
+        "role": "Dual Governance emergency execution committee",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xFFe21561251c49AdccFad065C94Fb4931dF49081",
+        "role": "Reseal committee — can re-seal GateSeal-paused contracts",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Lido is the largest Ethereum liquid staking protocol, allowing users to stake any amount of ETH and receive stETH — a rebasing ERC-20 that accrues staking rewards daily. Deposited ETH is pooled and delegated to a curated set of professional node operators (plus permissionless modules like the Community Staking Module), with the Ethereum Deposit Contract handling validator onboarding. Users can redeem stETH for ETH via the WithdrawalQueueERC721 contract or swap on secondary markets. In January 2026 Lido launched stVaults (V3), allowing institutions and L2s to create custom validator setups that can optionally mint stETH while plugging into Lido's liquidity infrastructure."
+  }
+}

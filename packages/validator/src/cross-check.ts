@@ -17,7 +17,7 @@ export type CrossCheckIssue = {
 const ONCHAIN_SLICES = new Set<Submission["slice"]>([
   "control",
   "ability-to-exit",
-  "dependencies",
+  "autonomy",
   "verifiability",
 ]);
 

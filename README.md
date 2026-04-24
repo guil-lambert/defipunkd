@@ -4,11 +4,11 @@ Live, evidence-based transparency registry for DeFi protocols. An L2BEAT-for-DeF
 
 DeFiPunkd is **not** a risk-rating system. It is a protocol registry and evidence intake layer with deterministic data collection today and human-reviewed publication later. Phase 0 displays raw DeFiLlama fields with missingness visible; grades for specific dimensions are filled in by human review over time.
 
-Audience: DeFi power users, researchers, and auditors who want dense evidence on proxies, multisigs, timelocks, upgradeability, and dependencies — without marketing polish. See [`spec.md`](./spec.md) for the full product framing and phase plan.
+Audience: DeFi power users, researchers, and auditors who want dense evidence on proxies, multisigs, timelocks, upgradeability, and autonomy — without marketing polish. See [`spec.md`](./spec.md) for the full product framing and phase plan.
 
 ## Not quite a "*beat"
 
-Unlike L2BEAT, WalletBeat, and the other "beat" projects, **DeFiPunkd is not human-curated**. It is tool-assisted first, with an optional human curation layer that is deliberately minimal and not strictly required. There are thousands of DeFi protocols — hand-curating each one does not scale. The registry starts from DeFiLlama, layers deterministic signals (verifiability, dependencies), and defers judgment calls to a distributed `DEFI@home` process where any number of independent auditors submit graded assessments and a quorum decides.
+Unlike L2BEAT, WalletBeat, and the other "beat" projects, **DeFiPunkd is not human-curated**. It is tool-assisted first, with an optional human curation layer that is deliberately minimal and not strictly required. There are thousands of DeFi protocols — hand-curating each one does not scale. The registry starts from DeFiLlama, layers deterministic signals (verifiability, autonomy), and defers judgment calls to a distributed `DEFI@home` process where any number of independent auditors submit graded assessments and a quorum decides.
 
 ## DEFI@home — distributed protocol assessment
 

@@ -3,7 +3,7 @@ import type { GradeColor } from "./verifiability";
 export const PIZZA_SLICES = [
   { id: "control", label: "Control" },
   { id: "ability-to-exit", label: "Ability to exit" },
-  { id: "dependencies", label: "Dependencies" },
+  { id: "autonomy", label: "Autonomy" },
   { id: "access", label: "Access" },
   { id: "verifiability", label: "Verifiability" },
 ] as const;
@@ -30,16 +30,16 @@ export type PizzaGrades = Partial<Record<PizzaSliceId, GradeColor>>;
 export function pizzaGradesFor(
   category: string | null | undefined,
   verifiability: GradeColor,
-  dependencies: GradeColor,
+  autonomy: GradeColor,
 ): PizzaGrades {
   if (category === "CEX") {
     return {
       control: "red",
       "ability-to-exit": "red",
-      dependencies: "red",
+      autonomy: "red",
       access: "red",
       verifiability: "red",
     };
   }
-  return { verifiability, dependencies };
+  return { verifiability, autonomy };
 }

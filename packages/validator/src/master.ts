@@ -65,7 +65,7 @@ export const MasterSchema = z
     slices: z.object({
       control: SliceConsensusSchema,
       "ability-to-exit": SliceConsensusSchema,
-      dependencies: SliceConsensusSchema,
+      autonomy: SliceConsensusSchema,
       access: SliceConsensusSchema,
       verifiability: SliceConsensusSchema,
     }),
