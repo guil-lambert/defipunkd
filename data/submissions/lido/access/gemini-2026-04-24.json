@@ -1,0 +1,136 @@
+{
+  "schema_version": 3,
+  "slug": "lido",
+  "slice": "access",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 6,
+  "analysis_date": "2026-04-24",
+  "model": "gemini-3.1-pro",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Permissionless user deposits but relies on privileged off-chain node and oracle operators to function.",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The core user-facing entry points for deposits and standard token transfers in the stETH contract lack whitelist or KYC modifiers, while administrative and operator functions use AccessControl modifiers like 'onlyRole'."
+      },
+      {
+        "code": "A2",
+        "text": "The protocol requires permissioned off-chain operators: DAO-vetted Node Operators run the validators, and a whitelisted set of Oracle Operators must submit daily consensus layer reports to the Accounting Oracle (0xd624b...0b288). If the oracles stop reporting, the protocol's rebasing mechanism halts."
+      },
+      {
+        "code": "A3",
+        "text": "The frontend enforces access restrictions, with the Terms of Use explicitly stating they 'govern access to and the use of the Interface by each individual, entity, group, or association' to enforce jurisdictional exclusions."
+      },
+      {
+        "code": "A4",
+        "text": "There is no on-chain sanctions tooling or OFAC blocklist implemented within the core stETH or LDO token contracts; on-chain transfers remain fundamentally permissionless."
+      },
+      {
+        "code": "A5",
+        "text": "Read access to the protocol's state is completely permissionless. Write access is bifurcated: user actions like deposits and withdrawals are permissionless, whereas operational updates (rebasing, node operator management) require specific governance-granted roles."
+      },
+      {
+        "code": "A6",
+        "text": "The Terms of Use are publicly available at https://lido.fi/terms-of-use, which mandate that users assume the risks of using the interface and comply with relevant legal restrictions."
+      }
+    ],
+    "steelman": {
+      "red": "The protocol fundamentally relies on a permissioned set of DAO-vetted Oracle Operators and Node Operators, meaning the protocol breaks or halts if these specific privileged entities disappear.",
+      "orange": "While the core contracts are permissionless for users to deposit and withdraw, the official frontend enforces strict Terms of Use and jurisdictional restrictions.",
+      "green": "Any user globally can directly interact with the smart contracts to deposit ETH or withdraw stETH without requiring any KYC or whitelisting at the blockchain level."
+    },
+    "verdict": "Choosing red because although the entry points for users are open, the protocol's core mechanics (rebasing and maintaining the staking position) require specific, privileged Oracle and Node Operators to function at all; if they go offline, the protocol halts."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      "shows": "The core stETH proxy contract, where user-facing entry points for deposits and transfers lack whitelist modifiers.",
+      "chain": "Ethereum",
+      "address": "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
+      "shows": "The Accounting Oracle contract, which receives reports from permissioned Oracle Operators via the submitReport function.",
+      "chain": "Ethereum",
+      "address": "0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://lido.fi/terms-of-use",
+      "shows": "The Lido Terms of Use explicitly govern access to the Interface and mandate users adhere to jurisdictional restrictions.",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "shows": "The LDO governance token contract, proving standard ERC20 transfers without an OFAC blocklist.",
+      "chain": "Ethereum",
+      "address": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
+      "shows": "The Aragon App Proxy operating as the Lido DAO Agent.",
+      "chain": "Ethereum",
+      "address": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+      "shows": "The Emergency Protected Timelock contract, illustrating the use of timelocked governance actions.",
+      "chain": "Ethereum",
+      "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://github.com/lidofinance/core",
+      "shows": "The primary repository for Lido's smart contracts, validating access control patterns.",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://lido.fi/institutional",
+      "shows": "Mentions Lido's extensive Immunefi bug bounty program and risks associated with smart contracts.",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    },
+    {
+      "url": "https://lido.fi/privacy-notice",
+      "shows": "Lists info@lido.fi as the point of contact for the protocol's operating entities.",
+      "fetched_at": "2026-04-23T20:25:11Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lidofinance/core",
+      "https://github.com/lidofinance/lido-dao"
+    ],
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "symbol": "LDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/lido/",
+    "security_contact": "info@lido.fi",
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
+        "role": "DAO Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+        "role": "Emergency Protected Timelock",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "upgradeable"
+  }
+}
