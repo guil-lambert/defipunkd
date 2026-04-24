@@ -4,6 +4,8 @@ import { getProtocolMetadata } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
 import RiskMatrix from "./RiskMatrix.astro";
+import { deriveTier, type TierInput } from "../lib/tier";
+import type { PizzaSliceId } from "../lib/pizza";
 
 interface Props {
   protocol: Protocol;
@@ -12,6 +14,19 @@ interface Props {
 const { protocol, assessments } = Astro.props;
 
 const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
+
+let tierInput: TierInput | undefined;
+if (assessments && assessments.size > 0) {
+  tierInput = {};
+  for (const [sliceId, a] of assessments.entries()) {
+    tierInput[sliceId as PizzaSliceId] = {
+      models: a.models,
+      merged_at: a.merged_at,
+      human_signoff: a.human_signoff ?? null,
+    };
+  }
+}
+const protocolTier = deriveTier(tierInput);
 
 const GRADE_FILL: Record<string, string> = {
   gray: "oklch(0.55 0.015 235)",
@@ -30,20 +45,31 @@ const SHORT_LABEL: Record<string, string> = {
   access: "Open Access",
   verifiability: "Verify",
 };
+const PIZZA_CR = 12;
+const PIZZA_TIP_R = 8;
 const pizzaSlices = headerSlices.map((s, i) => {
   const a = (2 * Math.PI) / headerSlices.length;
   const a0 = -Math.PI / 2 + i * a;
   const a1 = a0 + a;
   const aMid = a0 + a / 2;
-  const x0 = PIZZA_CENTER + PIZZA_RADIUS * Math.cos(a0);
-  const y0 = PIZZA_CENTER + PIZZA_RADIUS * Math.sin(a0);
-  const x1 = PIZZA_CENTER + PIZZA_RADIUS * Math.cos(a1);
-  const y1 = PIZZA_CENTER + PIZZA_RADIUS * Math.sin(a1);
+  const da = Math.min(PIZZA_CR / PIZZA_RADIUS, a / 2 - 0.01);
+  const Ax = PIZZA_CENTER + (PIZZA_RADIUS - PIZZA_CR) * Math.cos(a0);
+  const Ay = PIZZA_CENTER + (PIZZA_RADIUS - PIZZA_CR) * Math.sin(a0);
+  const Bx = PIZZA_CENTER + PIZZA_RADIUS * Math.cos(a0 + da);
+  const By = PIZZA_CENTER + PIZZA_RADIUS * Math.sin(a0 + da);
+  const Cx = PIZZA_CENTER + PIZZA_RADIUS * Math.cos(a1 - da);
+  const Cy = PIZZA_CENTER + PIZZA_RADIUS * Math.sin(a1 - da);
+  const Dx = PIZZA_CENTER + (PIZZA_RADIUS - PIZZA_CR) * Math.cos(a1);
+  const Dy = PIZZA_CENTER + (PIZZA_RADIUS - PIZZA_CR) * Math.sin(a1);
+  const Tx0 = PIZZA_CENTER + PIZZA_TIP_R * Math.cos(a0);
+  const Ty0 = PIZZA_CENTER + PIZZA_TIP_R * Math.sin(a0);
+  const Tx1 = PIZZA_CENTER + PIZZA_TIP_R * Math.cos(a1);
+  const Ty1 = PIZZA_CENTER + PIZZA_TIP_R * Math.sin(a1);
   const labelX = PIZZA_CENTER + PIZZA_LABEL_RADIUS * Math.cos(aMid);
   const labelY = PIZZA_CENTER + PIZZA_LABEL_RADIUS * Math.sin(aMid);
   return {
     assessment: s,
-    d: `M${PIZZA_CENTER},${PIZZA_CENTER} L${x0},${y0} A${PIZZA_RADIUS},${PIZZA_RADIUS} 0 0,1 ${x1},${y1} Z`,
+    d: `M${Tx0.toFixed(2)},${Ty0.toFixed(2)} L${Ax.toFixed(2)},${Ay.toFixed(2)} A${PIZZA_CR},${PIZZA_CR} 0 0 1 ${Bx.toFixed(2)},${By.toFixed(2)} A${PIZZA_RADIUS},${PIZZA_RADIUS} 0 0 1 ${Cx.toFixed(2)},${Cy.toFixed(2)} A${PIZZA_CR},${PIZZA_CR} 0 0 1 ${Dx.toFixed(2)},${Dy.toFixed(2)} L${Tx1.toFixed(2)},${Ty1.toFixed(2)} A${PIZZA_TIP_R},${PIZZA_TIP_R} 0 0 1 ${Tx0.toFixed(2)},${Ty0.toFixed(2)} Z`,
     labelLeftPct: (labelX / PIZZA_VIEW) * 100,
     labelTopPct: (labelY / PIZZA_VIEW) * 100,
     shortLabel: SHORT_LABEL[s.id] ?? s.label,
@@ -117,6 +143,13 @@ const aboutUnknown = !curatedAbout;
     <div class="risk-row">
       <div class="pizza" aria-hidden="false">
         <svg viewBox={`0 0 ${PIZZA_VIEW} ${PIZZA_VIEW}`} role="img" aria-label="Risk pizza" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <radialGradient id="pie-ao" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#000000" stop-opacity="0.35" />
+              <stop offset="55%" stop-color="#000000" stop-opacity="0.12" />
+              <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+            </radialGradient>
+          </defs>
           {pizzaSlices.map(({ assessment, d }) => (
             <a href={`#${assessment.id}`} data-pizza-slice={assessment.id} class="pizza-slice">
               <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
@@ -124,6 +157,7 @@ const aboutUnknown = !curatedAbout;
               </path>
             </a>
           ))}
+          <circle cx={PIZZA_CENTER} cy={PIZZA_CENTER} r={PIZZA_RADIUS} fill="url(#pie-ao)" style="mix-blend-mode: multiply" pointer-events="none" />
         </svg>
         {pizzaSlices.map(({ assessment, labelLeftPct, labelTopPct, shortLabel }) => (
           <span class="pizza-label" data-pizza-label={assessment.id} style={`left:${labelLeftPct}%;top:${labelTopPct}%`}>
@@ -131,7 +165,7 @@ const aboutUnknown = !curatedAbout;
           </span>
         ))}
       </div>
-      <RiskMatrix slices={headerSlices} variant="full" />
+      <RiskMatrix slices={headerSlices} variant="full" tier={protocolTier} />
     </div>
 
     <div class="about-row">

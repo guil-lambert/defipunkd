@@ -36,6 +36,11 @@ export type ProtocolMetadata = {
   about?: string | null;
 };
 
+export type HumanSignoff = {
+  signed_at: string;
+  signers?: string[];
+};
+
 export type LoadedAssessment = {
   slug: string;
   slice: SliceId;
@@ -46,6 +51,7 @@ export type LoadedAssessment = {
   rationale: Rationale;
   models: string[];
   merged_at?: string;
+  human_signoff?: HumanSignoff | null;
   protocol_metadata?: ProtocolMetadata;
 };
 
@@ -57,6 +63,7 @@ type RawAssessment = {
   consensus_strength: AssessmentStrength;
   short_headline?: string;
   merged_at?: string;
+  human_signoff?: HumanSignoff | null;
   primary_submission_path: string;
   merged_from?: Array<{ model: string }>;
   protocol_metadata?: ProtocolMetadata;
@@ -138,6 +145,7 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         rationale: sub.rationale,
         models,
         merged_at: raw.merged_at,
+        human_signoff: raw.human_signoff ?? null,
         protocol_metadata: raw.protocol_metadata,
       });
     }

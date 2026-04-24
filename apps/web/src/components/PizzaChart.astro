@@ -8,24 +8,30 @@ interface Props {
 
 const { size = "lg", grades } = Astro.props;
 const radius = size === "sm" ? 18 : 72;
-const stroke = size === "sm" ? 1 : 2;
+const stroke = size === "sm" ? 2 : 3;
+const cr = size === "sm" ? 1.5 : 6;
 const cx = radius;
 const cy = radius;
 const slices = PIZZA_SLICES.length;
 const angle = (2 * Math.PI) / slices;
+const da = Math.min(cr / radius, angle / 2 - 0.01);
 
 const paths = PIZZA_SLICES.map((slice, i) => {
   const a0 = -Math.PI / 2 + i * angle;
   const a1 = a0 + angle;
-  const x0 = cx + radius * Math.cos(a0);
-  const y0 = cy + radius * Math.sin(a0);
-  const x1 = cx + radius * Math.cos(a1);
-  const y1 = cy + radius * Math.sin(a1);
+  const Ax = cx + (radius - cr) * Math.cos(a0);
+  const Ay = cy + (radius - cr) * Math.sin(a0);
+  const Bx = cx + radius * Math.cos(a0 + da);
+  const By = cy + radius * Math.sin(a0 + da);
+  const Cx = cx + radius * Math.cos(a1 - da);
+  const Cy = cy + radius * Math.sin(a1 - da);
+  const Dx = cx + (radius - cr) * Math.cos(a1);
+  const Dy = cy + (radius - cr) * Math.sin(a1);
   const grade = grades?.[slice.id] ?? "gray";
   return {
     id: slice.id,
     label: slice.label,
-    d: `M${cx},${cy} L${x0},${y0} A${radius},${radius} 0 0,1 ${x1},${y1} Z`,
+    d: `M${cx},${cy} L${Ax.toFixed(2)},${Ay.toFixed(2)} A${cr},${cr} 0 0 1 ${Bx.toFixed(2)},${By.toFixed(2)} A${radius},${radius} 0 0 1 ${Cx.toFixed(2)},${Cy.toFixed(2)} A${cr},${cr} 0 0 1 ${Dx.toFixed(2)},${Dy.toFixed(2)} Z`,
     fill: GRADE_FILL[grade],
     tooltip: GRADE_TOOLTIP[grade],
   };
@@ -38,11 +44,19 @@ const paths = PIZZA_SLICES.map((slice, i) => {
   role="img"
   aria-label="risk pizza (all unknown)"
 >
+  <defs>
+    <radialGradient id="pie-ao" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.35" />
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+  </defs>
   {paths.map((p) => (
     <a href="/methodology#what-is-graded-today">
-      <path d={p.d} fill={p.fill} stroke="#08090c" stroke-width={stroke}>
+      <path d={p.d} fill={p.fill} stroke="#08090c" stroke-width={stroke} stroke-linejoin="round">
         <title>{`${p.label} \u2014 ${p.tooltip}`}</title>
       </path>
     </a>
   ))}
+  <circle cx={cx} cy={cy} r={radius} fill="url(#pie-ao)" style="mix-blend-mode: multiply" pointer-events="none" />
 </svg>
