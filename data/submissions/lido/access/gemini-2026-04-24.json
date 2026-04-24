@@ -7,130 +7,84 @@
   "analysis_date": "2026-04-24",
   "model": "gemini-3.1-pro",
   "chat_url": null,
-  "grade": "red",
-  "headline": "Permissionless user deposits but relies on privileged off-chain node and oracle operators to function.",
+  "grade": "green",
+  "headline": "Core contracts are permissionless for deposits and withdrawals, with no active admission gates.",
   "rationale": {
     "findings": [
       {
         "code": "A1",
-        "text": "The core user-facing entry points for deposits and standard token transfers in the stETH contract lack whitelist or KYC modifiers, while administrative and operator functions use AccessControl modifiers like 'onlyRole'."
+        "text": "The Lido smart contracts, including the main `submit` function for deposits and the `requestWithdrawals` / `claimWithdrawals` functions, do not enforce any whitelist, allowlist, or KYC modifiers."
       },
       {
         "code": "A2",
-        "text": "The protocol requires permissioned off-chain operators: DAO-vetted Node Operators run the validators, and a whitelisted set of Oracle Operators must submit daily consensus layer reports to the Accounting Oracle (0xd624b...0b288). If the oracles stop reporting, the protocol's rebasing mechanism halts."
+        "text": "No off-chain operators gate admission. Deposits (`submit`) and token transfers admit users unconditionally. Withdrawal requests (`requestWithdrawals`) are placed unconditionally. While `claimWithdrawals` relies on downstream settlement via Node Operator exits and oracle reports, the placement of the claim is unconditional once funds are finalized."
       },
       {
         "code": "A3",
-        "text": "The frontend enforces access restrictions, with the Terms of Use explicitly stating they 'govern access to and the use of the Interface by each individual, entity, group, or association' to enforce jurisdictional exclusions."
+        "text": "The official frontend includes passive Terms of Service clauses, asserting the interface is for informational use and requiring users to comply with jurisdictional laws."
+      },
+      {
+        "code": "A3b",
+        "text": "Independent alternative access paths (A3b-ii) exist, such as direct contract interactions via documented ABIs, the Lido Ethereum SDK, and third-party integrations like OKX and wallet frontends."
       },
       {
         "code": "A4",
-        "text": "There is no on-chain sanctions tooling or OFAC blocklist implemented within the core stETH or LDO token contracts; on-chain transfers remain fundamentally permissionless."
+        "text": "The protocol does not use or enforce any on-chain sanctions tooling or OFAC blocklists for user interactions."
       },
       {
         "code": "A5",
-        "text": "Read access to the protocol's state is completely permissionless. Write access is bifurcated: user actions like deposits and withdrawals are permissionless, whereas operational updates (rebasing, node operator management) require specific governance-granted roles."
+        "text": "The protocol is entirely permissionless for both read access (viewing contract state) and write access (depositing ETH, placing withdrawal requests, and claiming finalized withdrawals)."
       },
       {
         "code": "A6",
-        "text": "The Terms of Use are publicly available at https://lido.fi/terms-of-use, which mandate that users assume the risks of using the interface and comply with relevant legal restrictions."
+        "text": "The Terms of Use located at lido.fi/terms-of-use passively state: \"These Terms of Use... govern access to and the use of the Interface by each individual, entity, group, or association\"."
       }
     ],
     "steelman": {
-      "red": "The protocol fundamentally relies on a permissioned set of DAO-vetted Oracle Operators and Node Operators, meaning the protocol breaks or halts if these specific privileged entities disappear.",
-      "orange": "While the core contracts are permissionless for users to deposit and withdraw, the official frontend enforces strict Terms of Use and jurisdictional restrictions.",
-      "green": "Any user globally can directly interact with the smart contracts to deposit ETH or withdraw stETH without requiring any KYC or whitelisting at the blockchain level."
+      "red": "The reliance on Node Operators to process validator exits creates a hidden operator-dependency for completing withdrawals, giving a permissioned committee indirect control over user exit.",
+      "orange": "The official Lido frontend and its legal ToS imply jurisdictional exclusions that may be actively enforced against users from sanctioned countries, effectively filtering normal access.",
+      "green": "Lido contracts natively lack whitelists and operator-approval gates for admission, and no active frontend censorship could be verified, meaning the protocol is fully accessible permissionlessly on-chain."
     },
-    "verdict": "Choosing red because although the entry points for users are open, the protocol's core mechanics (rebasing and maintaining the staking position) require specific, privileged Oracle and Node Operators to function at all; if they go offline, the protocol halts."
+    "verdict": "Choosing green because the core on-chain contracts (deposit and withdrawal queues) are strictly permissionless and have no whitelists, and while downstream liveness delays in claiming withdrawals depend on validators, they do not constitute an admission gate, and no active frontend censorship (A3-active) was verified."
   },
   "evidence": [
     {
-      "url": "https://etherscan.io/address/0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
-      "shows": "The core stETH proxy contract, where user-facing entry points for deposits and transfers lack whitelist modifiers.",
-      "chain": "Ethereum",
-      "address": "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
-      "fetched_at": "2026-04-23T20:25:11Z"
+      "url": "https://docs.lido.fi/contracts/lido/",
+      "shows": "Documentation for the Lido core contract showing the submit function is the main entry point and allows any user to send ETH unconditionally.",
+      "fetched_at": "2026-04-23T21:43:11Z"
     },
     {
-      "url": "https://etherscan.io/address/0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
-      "shows": "The Accounting Oracle contract, which receives reports from permissioned Oracle Operators via the submitReport function.",
+      "url": "https://etherscan.io/token/0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      "shows": "The deployed Lido stETH proxy contract on Ethereum Mainnet, confirming it is an AppProxyUpgradeable contract and allowing permissionless read/write interactions.",
       "chain": "Ethereum",
-      "address": "0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
-      "fetched_at": "2026-04-23T20:25:11Z"
+      "address": "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      "fetched_at": "2026-04-23T21:43:11Z"
     },
     {
       "url": "https://lido.fi/terms-of-use",
-      "shows": "The Lido Terms of Use explicitly govern access to the Interface and mandate users adhere to jurisdictional restrictions.",
-      "fetched_at": "2026-04-23T20:25:11Z"
+      "shows": "Lido DAO Terms of Use, establishing the passive legal constraints for using the Interface.",
+      "fetched_at": "2026-04-23T21:43:11Z"
     },
     {
-      "url": "https://etherscan.io/address/0x5a98fcbea516cf06857215779fd812ca3bef1b32",
-      "shows": "The LDO governance token contract, proving standard ERC20 transfers without an OFAC blocklist.",
-      "chain": "Ethereum",
-      "address": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
-      "fetched_at": "2026-04-23T20:25:11Z"
+      "url": "https://research.lido.fi/",
+      "shows": "The official Lido governance and research forum.",
+      "fetched_at": "2026-04-23T21:43:11Z"
     },
     {
-      "url": "https://etherscan.io/address/0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
-      "shows": "The Aragon App Proxy operating as the Lido DAO Agent.",
-      "chain": "Ethereum",
-      "address": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
-      "fetched_at": "2026-04-23T20:25:11Z"
-    },
-    {
-      "url": "https://etherscan.io/address/0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
-      "shows": "The Emergency Protected Timelock contract, illustrating the use of timelocked governance actions.",
-      "chain": "Ethereum",
-      "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
-      "fetched_at": "2026-04-23T20:25:11Z"
-    },
-    {
-      "url": "https://github.com/lidofinance/core",
-      "shows": "The primary repository for Lido's smart contracts, validating access control patterns.",
-      "fetched_at": "2026-04-23T20:25:11Z"
-    },
-    {
-      "url": "https://lido.fi/institutional",
-      "shows": "Mentions Lido's extensive Immunefi bug bounty program and risks associated with smart contracts.",
-      "fetched_at": "2026-04-23T20:25:11Z"
-    },
-    {
-      "url": "https://lido.fi/privacy-notice",
-      "shows": "Lists info@lido.fi as the point of contact for the protocol's operating entities.",
-      "fetched_at": "2026-04-23T20:25:11Z"
+      "url": "https://www.okx.com/learn/what-is-lido-dao",
+      "shows": "Documentation of third-party integration access paths (A3b-ii) where users can acquire and interact with stETH outside the official Lido frontend.",
+      "fetched_at": "2026-04-23T21:43:11Z"
     }
   ],
-  "unknowns": [],
+  "unknowns": [
+    "A3-active: Could not verify the presence or absence of active IP-based geo-blocking, jurisdiction rendering-blocking banners, or wallet screening on the official frontend from a static fetch."
+  ],
   "protocol_metadata": {
     "github": [
-      "https://github.com/lidofinance/core",
-      "https://github.com/lidofinance/lido-dao"
+      "https://github.com/lidofinance"
     ],
-    "docs_url": null,
-    "audits": [],
-    "governance_forum": null,
-    "voting_token": {
-      "chain": "Ethereum",
-      "address": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
-      "symbol": "LDO"
-    },
-    "bug_bounty_url": "https://immunefi.com/bounty/lido/",
-    "security_contact": "info@lido.fi",
-    "deployed_contracts_doc": null,
-    "admin_addresses": [
-      {
-        "chain": "Ethereum",
-        "address": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
-        "role": "DAO Agent",
-        "actor_class": "governance"
-      },
-      {
-        "chain": "Ethereum",
-        "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
-        "role": "Emergency Protected Timelock",
-        "actor_class": "timelock"
-      }
-    ],
+    "docs_url": "https://docs.lido.fi/",
+    "governance_forum": "https://research.lido.fi/",
     "upgradeability": "upgradeable"
   }
 }
