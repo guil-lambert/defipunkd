@@ -5,7 +5,7 @@ import { dependenciesBody } from "./slices/dependencies";
 import { accessBody } from "./slices/access";
 import { verifiabilityBody } from "./slices/verifiability";
 
-export const PROMPT_VERSION = 7;
+export const PROMPT_VERSION = 8;
 
 export const SLICE_IDS = [
   "control",
