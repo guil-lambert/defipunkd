@@ -1,15 +1,19 @@
 # defipunkd — DeFi Transparency Registry MVP Spec
 
-> **Pivot — DEFI@home (2026-04-23).** This spec was originally written around a three-phase enrichment pipeline (Phase 1 crawlers, Phase 2 `@l2beat/discovery`-based onchain workers, Phase 3 LLM classification). **That plan is superseded.** Risk-slice grading now happens via **DEFI@home**: contributors run a pinned prompt through an LLM of their choice, submit JSON output as a pull request against `data/submissions/<slug>/<slice>/`, and a quorum bot merges to `data/assessments/` once ≥3 independent runs agree on grade and overlapping evidence. See `README.md` (top section), `packages/prompts/` (prompt source), and `data/schema/slice-assessment.v1.json` (output contract).
+> **Pivot — DEFI@home (2026-04-23, factual update 2026-04-25).** This spec was originally written around a three-phase enrichment pipeline (Phase 1 crawlers, Phase 2 `@l2beat/discovery`-based onchain workers, Phase 3 LLM classification) on a Next.js codebase forked from l2beat/l2beat. **That plan is superseded.** Risk-slice grading happens via **DEFI@home**: contributors run a pinned prompt through an LLM of their choice, submit JSON output as a pull request against `data/submissions/<slug>/<slice>/`, and a quorum bot merges to `data/assessments/` once ≥3 independent runs agree on grade and overlapping evidence. See `README.md` (top section), `packages/prompts/` (prompt source, `PROMPT_VERSION = 12`), `packages/validator/` (schema/quorum/reconcile CLIs), and `data/schema/slice-assessment.v2.json` (output contract).
 >
 > Specifically superseded:
+> - **Next.js + l2beat fork lineage** — the shipped app is **Astro 5** with one **Svelte 5** island (`LandingTable.svelte`). It is not a fork of l2beat/l2beat; `@l2beat/discovery` is not in the workspace. Visual lineage from L2BEAT is preserved at the design level only.
+> - **7-slice pizza** — shipped pizza has **5 slices**: `control`, `ability-to-exit`, `autonomy`, `open-access`, `verifiability`. Defined once in `apps/web/src/lib/pizza.ts` and `packages/prompts/src/index.ts` (`SLICE_IDS`).
 > - **Phase 1 crawlers / artifact extraction** — replaced by DEFI@home submissions citing block explorers, pinned GitHub commits, and audit PDFs. No `data/artifacts/` directory; no crawler workers; no robots.txt / UA / rate-limit policy needed.
 > - **Phase 2 onchain workers** (`@l2beat/discovery` integration, SQLite cache, contract / discovery tables) — DEFI@home contributors and the autorun GitHub Action read onchain state via block explorers and cite the URLs as evidence. The "Phase 2 may introduce a DB" provision lapses; the project stays git-native indefinitely.
 > - **Phase 3 LLM classification** (machine-generated claims with hash + substring citation enforcement) — replaced by DEFI@home's per-submission JSON schema, which already enforces evidence URLs and the conditional "grade=unknown ⇒ unknowns[] non-empty, else evidence[] non-empty" rule.
+> - **Full-SSG rendering** — landing, methodology, and contribute pages are still prerendered, but `/protocol/[slug]` is server-rendered with Vercel ISR (60s expiration). See `apps/web/astro.config.mjs`.
+> - **Defiscan stages at launch** — what ships today is a **tier system** (`none` / `bronze` / `silver` / `gold`) computed from quorum count + human signoff. Defiscan stages remain the planned grading model once human review formalizes; tiers are the data-readiness signal that gates publication. See `apps/web/src/lib/tier.ts`.
 >
-> What carries over unchanged: the DeFiLlama seed (`pnpm sync` → `data/defillama-snapshot.json`), the `packages/registry` merge of snapshot + overlays, the read-only / git-native operating model, the radiographic visual design, and the `[defillama]` / `[curated]` provenance tagging. Phase 0 (the static-rendered MVP) shipped as described and is the production codebase today.
+> What carries over unchanged: the DeFiLlama seed (`pnpm sync` → `data/defillama-snapshot.json`), the `packages/registry` merge of snapshot + overlays, the read-only / git-native operating model, the radiographic visual design, and the `[defillama]` / `[curated]` provenance tagging. Phase 0 shipped with broader scope than originally planned and is the production codebase today.
 >
-> The provenance system gains one new tag class: `[assessment]` for fields populated from `data/assessments/<slug>/<slice>.json`, replacing the planned `[crawler]` / `[onchain]` / `[llm_inference]` classes. The Defiscan stage adoption (originally Phase 3) becomes the next milestone after the quorum bot lands.
+> The provenance system gains one new tag class: `[assessment]` for fields populated from `data/assessments/<slug>/<slice>.json`, replacing the planned `[crawler]` / `[onchain]` / `[llm_inference]` classes. Live GitHub Actions: `validate-submission.yml` (per-PR schema check), `quorum.yml` (merge-on-quorum), `reconcile.yml` (assessments → master), `autorun.yml` (Anthropic SDK runs as third voice), `sync.yml` (weekly DeFiLlama refresh). Defiscan stage adoption is the next milestone after master reconciliation stabilizes.
 
 ## Goal
 
@@ -33,17 +37,11 @@ This avoids rebuilding the protocol master list from scratch and gets an MVP liv
 
 ## Origin / codebase
 
-This project starts as a **fork of [l2beat/l2beat](https://github.com/l2beat/l2beat)** (MIT). Inherited pieces to keep:
+Built fresh as a pnpm workspace: `apps/web` (Astro 5 + one Svelte 5 island) plus `packages/{registry, sync, prompts, validator}`. **Not a fork** of any upstream codebase — the earlier plan to fork l2beat/l2beat was dropped during scaffolding. Visual and information-density inspiration from L2BEAT is preserved at the design level (one dense table per protocol, evidence-first density, monospace TVL).
 
-- monorepo structure (pnpm workspaces retained; **pruned aggressively on Day 1** — delete rollup packages immediately, keep `@l2beat/discovery` + the UI package)
-- `@l2beat/discovery` onchain worker toolchain (Phase 2)
-- **L2BEAT-identical dense table component** for protocol detail pages — port near-verbatim; inherit their layout mechanics, but swap the palette (see "Visual design")
+The rubric is adapted from **[Defiscan's framework](https://www.defiscan.info/framework)**. Adoption of Defiscan stages verbatim is planned once human review formalizes; the live grading surface today is the tier system (see "Rubric" below).
 
-Rip out L2 rollup-specific code: rollup stages tied to DA/sequencer concerns, data-availability modules, sequencer/proposer modeling, and any logic that only makes sense for a rollup rather than a DeFi app.
-
-The rubric is adapted from **[Defiscan's framework](https://www.defiscan.info/framework)**. Adopt Defiscan stages verbatim at launch; revisit as real review cases expose gaps.
-
-**License**: MIT, inherited from L2BEAT upstream.
+**License**: MIT.
 
 ## Product framing
 
@@ -109,7 +107,7 @@ Provides: protocol name, slug, category, chains, TVL, website, audit count, audi
 
 ### Delisting
 
-Mirror DeFiLlama: if DeFiLlama delists, we delist. **Soft-delete**: the entry stays in the snapshot with a `delisted_at` field set by the sync script (14-day absence rule — see §"Interview decisions"). `/protocol/{slug}` returns **HTTP 410 Gone** via a route handler.
+Mirror DeFiLlama: if DeFiLlama delists, we delist. **Soft-delete**: the entry stays in the snapshot with a `delisted_at` field set by the sync script (14-day absence rule — see §"Interview decisions"). `/protocol/{slug}` continues to render — a `<meta name="robots" content="noindex">` page preserving the last-known name, `delisted_at`, and a DeFiLlama link. (The originally-planned HTTP 410 route handler was dropped to keep static-output behavior consistent.)
 
 ### What ships in the MVP
 
@@ -161,9 +159,17 @@ Three planes, git-native at Phase 0:
 data/
   defillama-snapshot.json     # one big normalized JSON blob, regenerated by pnpm sync
   overlays/
-    <slug>.json               # human-curated per-field overrides (Wikipedia-style); starts empty
-  artifacts/                  # (Phase 1+) SHA-256-addressed blobs
+    <slug>.json               # human-curated per-field overrides (Wikipedia-style)
+  schema/
+    slice-assessment.v2.json  # JSON schema for DEFI@home submissions
+  submissions/
+    <slug>/<slice>/*.json     # one file per LLM run (model + prompt_version + chat_url)
+  assessments/
+    <slug>/<slice>.json       # quorum bot output, one merged record per (slug, slice)
+  master/                     # reconciled master records from assessments
 ```
+
+The originally-planned `data/artifacts/` (Phase-1 SHA-256 blobs) is **not** created and not needed; DEFI@home submissions cite block-explorer URLs, pinned GitHub commits, and audit PDFs by URL.
 
 - **`data/defillama-snapshot.json`** — single file, rewritten whole on each sync. Not per-protocol files (avoids ~6k file changes per sync, keeps diffs legible, avoids filesystem pathology on Vercel build). Shape sketched below.
 - **`data/overlays/<slug>.json`** — per-protocol partials validated by a Zod schema in `packages/registry`. Schema is the source of truth; the TS `Overlay` type is derived via `z.infer`. Unknown keys and malformed values fail the build. Overlays override the snapshot on a per-field basis at merge time.
@@ -176,17 +182,18 @@ data/
 - `getProtocol(slug): Protocol | undefined`
 - `listChildren(parentSlug): Protocol[]`
 
-Merge happens once at module load (build time in Next.js server components). No DB, no async. Unknown slugs return `undefined`. Overlay handling: malformed overlays (Zod parse/validation failure, unknown keys) **fail the build**. Orphan overlays (valid schema, slug not in current snapshot) log a warning and are skipped — they do not resurrect the protocol.
+Merge happens once at module load — at build time for prerendered pages, on cold-start of the Vercel serverless function for ISR-cached `/protocol/[slug]`. No DB, no async. Unknown slugs return `undefined`. Overlay handling: malformed overlays (Zod parse/validation failure, unknown keys) **fail the build**. Orphan overlays (valid schema, slug not in current snapshot) log a warning and are skipped — they do not resurrect the protocol.
 
 ### Stack
 
-- **Frontend + API**: TypeScript + Next.js (App Router) on Vercel
-- **Rendering**: **full static generation** via `generateStaticParams` over all live slugs (~6k). No ISR needed — the site is a deterministic function of the commit. Delisted → `notFound()` (404) from the page; HTTP 410 achieved via a `route.ts` when feasible.
-- **Database**: none at Phase 0. Re-evaluated at Phase 2 kickoff for onchain tables only (contracts, contract_relationships, discovery output). SQLite is a strong candidate — `@l2beat/discovery` already uses `sqlite3` for caching.
-- **Object storage**: deferred; may not be needed at all if Phase 1 artifacts stay small enough to keep in-repo.
-- **Queue**: none at Phase 0. Phase 1+ workers run as local node scripts writing into `data/`.
-- **Seed trigger**: `pnpm sync` locally, or a GitHub Actions `workflow_dispatch` that runs the same script and opens a PR with the resulting diff. No Vercel API route, no shared secret.
-- **Observability**: GitHub Actions workflow logs + Vercel build logs. Nothing else at Phase 0.
+- **Frontend**: TypeScript + **Astro 5** with the Vercel adapter, plus exactly one **Svelte 5** island (`apps/web/src/components/LandingTable.svelte`, mounted `client:load` on `/`). Every other page and component is a zero-JS `.astro` component. Typography via `@fontsource-variable/ibm-plex-sans` and `@fontsource/ibm-plex-mono`.
+- **Rendering**: **hybrid** (`output: "server"`). Landing, `/methodology`, and `/contribute` are marked `prerender = true` and emit static HTML at build. `/protocol/[slug]` is server-rendered on demand with **Vercel ISR (60s expiration)** so master-file updates become visible without a redeploy. The static-output invariant for delisted slugs is a prerendered page with `<meta name="robots" content="noindex">` (no HTTP 410; the static page preserves last-known name + `delisted_at` + DeFiLlama link).
+- **Runtime data access**: data files live outside `apps/web` and are read at runtime by `@defipunkd/registry`. The Vercel adapter's `includeFiles` ships `data/defillama-snapshot.json`, `data/overlays/`, `data/assessments/`, `data/master/`, and `data/submissions/` into the serverless function bundle.
+- **Database**: none. The git repo is the source of truth; the earlier provision for a Phase-2 SQLite cache lapses.
+- **Object storage**: not used.
+- **Queue**: none. Workers (sync, validator/quorum CLIs, autorun) run as node scripts invoked by GitHub Actions.
+- **Seed trigger**: `pnpm sync` locally, or `.github/workflows/sync.yml` (weekly Monday 06:00 UTC) which runs the same script and opens a PR with the diff.
+- **Observability**: GitHub Actions workflow logs + Vercel build logs. Nothing else.
 
 ## Visual design
 
@@ -195,8 +202,8 @@ Merge happens once at module load (build time in Next.js server components). No 
 - Base: deep ink (`#08090c`) with a tinted surface hierarchy (`#10131a`, `#1e2330`).
 - Primary text `#d8e4ec`, muted text `#6b7785` (WCAG AA on base).
 - Single system accent: **cool blue `#7bb4cc`** — links, active tabs, selection. Used sparingly; accents are evidentiary, not decorative.
-- Pizza slice palette: green `#34ad70`, orange `#e28e28`, red `#d13b3b`, unknown/gray `#6b7785`. Each slice color carries a single meaning.
-- **CEX category short-circuits grading**: all five slices render red regardless of per-dimension signals. Custodial exchanges fail every transparency axis by construction.
+- Pizza slice palette (defined in `apps/web/src/lib/pizza.ts`): green `oklch(0.60 0.130 150)`, orange `oklch(0.65 0.120 75)`, red `oklch(0.52 0.170 22)`, unknown/gray `oklch(0.55 0.015 235)`. Each slice color carries a single meaning. The 5-slice list is exported as `PIZZA_SLICES`: control, ability-to-exit, autonomy, open-access, verifiability.
+- **CEX category short-circuits grading**: all five slices render red regardless of per-dimension signals. Implemented via a `category === "CEX"` guard in `pizzaGradesFor()`. Custodial exchanges fail every transparency axis by construction.
 - Typography: **IBM Plex Sans + IBM Plex Mono**, one-family carried hard. Mono + `tabular-nums` on every TVL display.
 - Dense table component inherited from L2BEAT near-verbatim; palette and type swapped.
 - Logos: `logo` URL from the DeFiLlama payload, rendered client-side with a letter-tile fallback for nulls and 404s.
@@ -220,6 +227,8 @@ Admin    unknown    —
 `[human_review]` and richer provenance classes (`crawler`, `onchain`, `llm_inference`) arrive with their owning phases. For Phase 0 curated content, git blame on the overlay file is the audit trail.
 
 ## Phase plan
+
+> **Superseded by DEFI@home (2026-04-23).** Phase 0 shipped with broader scope than originally drafted (it now includes the assessment pipeline that was originally Phase 3). The Phase 1 / 2 / 3 prose below is kept as historical record. For the live architecture see "Current architecture (2026-04)" immediately after the legacy phase list.
 
 ### Phase 0: read-only MVP (git-native)
 - scaffold Next.js + pnpm workspace; prune l2beat aggressively
@@ -254,6 +263,49 @@ Crawl-ethics policy (robots.txt, UA, rate-limit) decided at Phase 1 kickoff. Pub
 - human review: already PR-native; a dedicated reviewer UI may or may not be needed
 - published reviewed assessments using **Defiscan stages** with disclaimers
 - LLM provider decision deferred to this phase
+
+### Current architecture (2026-04)
+
+What actually ships, replacing the Phase 1/2/3 plan above:
+
+**Workspace layout**
+
+```
+apps/
+  web/                       Astro 5 site (output: server, ISR for /protocol/[slug])
+                             one Svelte 5 island: LandingTable.svelte
+data/
+  defillama-snapshot.json    Full DeFiLlama seed
+  overlays/<slug>.json       Curator overlays
+  schema/
+    slice-assessment.v2.json JSON schema for DEFI@home submissions
+  submissions/<slug>/<slice>/*.json
+                             Raw per-contributor LLM runs (one per run)
+  assessments/<slug>/<slice>.json
+                             Merged per-slice assessments (quorum bot output)
+  master/                    Reconciled master records (assessments → master pipeline)
+packages/
+  registry/                  Snapshot + overlay merge + typed access + getAssessments
+  sync/                      DeFiLlama fetcher / normalizer / 14-day delist logic
+  prompts/                   DEFI@home prompt generator (PROMPT_VERSION = 12,
+                             5 slice bodies in src/slices/*.ts)
+  validator/                 CLIs: defipunkd-validate, defipunkd-quorum,
+                             defipunkd-reconcile, defipunkd-priority-queue;
+                             schema/quorum/cross-check/master logic
+```
+
+**GitHub Actions** (`.github/workflows/`):
+- `validate-submission.yml` — schema-validates every PR touching `data/submissions/`.
+- `quorum.yml` — when ≥3 independent submissions agree on grade, opens a PR merging the consensus into `data/assessments/`.
+- `reconcile.yml` — promotes assessments into `data/master/` records.
+- `autorun.yml` — Anthropic SDK runs the pinned prompt as a "third voice" so quorum can be reached without waiting for human contributors on every slice.
+- `sync.yml` — weekly Monday 06:00 UTC, runs `pnpm sync` and opens a PR with the diff.
+
+**Slice set**: `control`, `ability-to-exit`, `autonomy`, `open-access`, `verifiability`. Single source of truth: `packages/prompts/src/index.ts` `SLICE_IDS` and `apps/web/src/lib/pizza.ts` `PIZZA_SLICES`.
+
+**Submission contract**: `data/schema/slice-assessment.v2.json`. Required fields: `grade` (green / orange / red / unknown), `headline`, `short_headline`, `rationale.{findings, steelman, verdict}`, `evidence[]`, `unknowns[]`, `protocol_metadata`. Conditional rule: `grade=unknown` ⇒ `unknowns[]` non-empty AND `steelman` is null; otherwise `evidence[]` non-empty AND `steelman` is `{red, orange, green}`.
+
+**Quorum**: `QUORUM_MIN = 3` independent models per (slug, slice). Submissions are weighted by public chat URL presence, count of block-explorer evidence, and `fetched_at` freshness. Consensus tags are `strong` (2+ grades match) / `weak` (split with majority) / `disagreement`. Logic in `packages/validator/src/quorum.ts`.
 
 ## Refresh cadence
 
@@ -378,7 +430,7 @@ At Phase 0 everything is `listed`.
 - Chain sub-nav: tabs across the top, one per chain (top-N by per-chain TVL + "more" dropdown, threshold ~7)
 - Breadcrumb collapsed when family == instance
 - `last_synced_at` from the snapshot: always visible
-- Delisted slugs: route handler returns HTTP 410, body preserves last-known name + `delisted_at` + DeFiLlama link
+- Delisted slugs: prerendered page with `<meta name="robots" content="noindex">`, body preserves last-known name + `delisted_at` + DeFiLlama link
 
 ### Chart / history
 
@@ -388,22 +440,43 @@ No in-app charts at MVP. TVL history → link out to DeFiLlama.
 
 Minimal: methodology link, GitHub issues/PRs link for corrections/takedowns, Defiscan credit.
 
-## Rubric (Phase 3)
+## Rubric
 
-Adopt **Defiscan stages verbatim** at first public publication. Publish a methodology page that links to Defiscan's framework and notes we inherit their stage definitions unchanged.
+### Tier system (live)
 
-## Immediate next steps (Phase 0)
+Each protocol receives one of four tiers, computed in `apps/web/src/lib/tier.ts` from the per-slice consensus state:
 
-1. Fork `l2beat/l2beat`; delete rollup-specific packages on Day 1; keep `@l2beat/discovery` + UI package in the pnpm workspace.
-2. Scaffold Next.js App Router app + `packages/registry` + `packages/sync`.
-3. Implement `pnpm sync`: pull DeFiLlama → normalize → write `data/defillama-snapshot.json`. Apply `parentProtocol` → `parent_slug`; derive `is_dead`; carry forward `first_seen_at` / `last_seen_at` / `delisted_at` (14-day rule).
-4. Implement `packages/registry` merge layer (snapshot + overlays → in-memory index with per-field provenance).
-5. Build `/protocol/{slug}` detail pages (dense table, chain tabs, breadcrumb, gray pizza, `noindex`, `generateStaticParams` over all live slugs). Delisted slugs → HTTP 410 via a `route.ts`.
-6. Build landing page (11 category tabs, summary table, top-200-by-TVL default, server search, filters).
-7. `/methodology` as static MDX.
-8. Footer with GitHub issues/PRs link.
-9. Commit an initial `data/defillama-snapshot.json` generated from a real fetch so deploys are reproducible from the repo alone.
-10. Add an optional `workflow_dispatch` GitHub Action that runs `pnpm sync` and opens a PR with the resulting diff.
+- `none` — no slice has reached quorum.
+- `bronze` — ≥1 slice has quorum (≥3 independent model submissions).
+- `silver` — all 5 slices have quorum.
+- `gold` — at least one slice carries a `human_signoff` record.
+
+`QUORUM_MIN = 3`. Tier rendering uses three-stop gradients (bronze: warm browns; silver: neutral grays; gold: warm yellows) defined in `TIER_STOPS`. Tier is a **data-readiness signal**, not a safety claim — a silver protocol has been independently graded by ≥3 models on every slice but has not been human-reviewed.
+
+### Defiscan stages (planned)
+
+Defiscan stages remain the planned grading model and will be layered over the tier system once human review formalizes (gold-tier protocols are the natural starting set). The methodology page links to the Defiscan framework today and will document the eventual stage attachment when it ships.
+
+## Status
+
+### Already shipped
+
+- Astro 5 + Svelte 5 web app (landing, methodology, contribute, protocol detail).
+- `pnpm sync` writes `data/defillama-snapshot.json` with 14-day delist rule + `last_seen_at` / `first_seen_at` carry-forward.
+- `packages/registry` merges snapshot + overlays + assessments and exports the in-memory API used by the web app.
+- `packages/prompts` (`PROMPT_VERSION = 12`) generates per-slice DEFI@home prompts with the protocol snapshot pre-pinned.
+- `packages/validator` provides `defipunkd-validate`, `defipunkd-quorum`, `defipunkd-reconcile`, and `defipunkd-priority-queue` CLIs.
+- `data/schema/slice-assessment.v2.json` enforces submission shape (and is the contract referenced by every prompt).
+- 5 protocols have at least one assessed slice: aave, lido, morpho, pendle, uniswap. Lido has all 5 slices assessed.
+- GitHub Actions: `validate-submission`, `quorum`, `reconcile`, `autorun`, `sync`.
+- Tier system live in landing UI; `/contribute` documents the submission flow.
+
+### Next
+
+- Master reconciliation pipeline (`data/master/` is wired but lightly populated).
+- More breadth: graduate more protocols past bronze toward silver.
+- Indexable flip rule: per-protocol `noindex` → indexable once a protocol reaches silver or gold.
+- Defiscan stage attachment for gold-tier protocols.
 
 ---
 
@@ -413,13 +486,12 @@ Addendum resolving spec ambiguities. Where this section conflicts with earlier p
 
 ### Pizza chart (L2BEAT-style risk summary)
 
-- **Axes**: Defiscan stage sub-dimensions. **7 slices**: chain/ownership, upgradeability, exit window, autonomy/accessibility, oracle dependency, external dependencies, **collateral risk**.
-  - Collateral risk applies to **every category**, not just credit markets.
+- **Axes (shipped)**: **5 slices** — `control`, `ability-to-exit`, `autonomy`, `open-access`, `verifiability`. (Earlier draft listed 7 axes split out finer; the 5-slice consolidation is what ships and what every prompt + schema + UI references.)
 - **Placement**: landing browse-all table row (tiny), protocol detail page header (large), and `/methodology` legend.
 - **Phase 0 empty state**: fully gray "unknown" pizza with em-dash tooltip.
 - **Color semantics**: narrow **green / orange / red** risk palette for slices, with a muted gray for unknown. The cool-blue `#7bb4cc` accent is reserved for links and active state — never a slice fill.
 - **CEX override**: if `category === "CEX"`, all five slices render red. Decided because custodial exchanges fail every transparency dimension by construction; applying the normal per-dimension rubric would misleadingly show unknowns as gray.
-- **Stage encoding**: overall Defiscan stage = **worst slice**.
+- **Stage encoding (deferred)**: overall Defiscan stage = **worst slice** (rule retained for when stages are attached on top of tiers).
 - **Multi-chain handling**: pizza reflects the **primary (highest-TVL) chain only**.
 - **Interaction**: clicking a slice **anchors/scrolls to the matching section of the detail dense table**.
 - **Landing filter**: per-slice filter chips on the browse-all table.
@@ -444,7 +516,7 @@ Addendum resolving spec ambiguities. Where this section conflicts with earlier p
 - **Family pages**: no separate `/family/{slug}` route. A parent's `/protocol/{parent_slug}` page gains a **children table**. If parent is not itself a slug, breadcrumb-only family signal.
 - **Chain tabs with many deployments**: top-N tabs by per-chain TVL + "more" dropdown. Threshold ~7 visible tabs.
 - **410 page content**: route handler returns 410; body preserves last-known protocol name, `delisted_at`, and a DeFiLlama link.
-- **noindex flip**: per-protocol. A page becomes indexable once it reaches **`machine_summarized`** (Phase 3).
+- **noindex flip**: per-protocol. Currently every `/protocol/*` page carries `noindex`. Planned flip: a page becomes indexable once the protocol reaches **silver** or **gold** tier (replaces the originally-planned `machine_summarized` trigger).
 
 ### Landing UX
 
@@ -490,8 +562,8 @@ Modeled on L2BEAT's landing, adapted to DeFi categories.
 - **`#`** — TVL rank within current tab and sort.
 - **`Name`** — links to `/protocol/{slug}`.
 - **`Chain`** — primary chain (highest TVL) + `+N` chip.
-- **`Risks`** — stage-colored pizza icon; hover/click expands. Phase 0: all gray.
-- **`Stage`** — Defiscan stage badge; Phase 0: all `—`.
+- **`Risks`** — pizza icon colored by per-slice grade (green / orange / red / unknown gray); hover/click expands. Unassessed slices render gray.
+- **`Stage`** — Defiscan stage badge; currently unused (`—` for everyone) pending stage attachment over the tier system. The landing table additionally surfaces the protocol's tier (none / bronze / silver / gold) via a tier filter.
 - **`Type`** — raw DeFiLlama category.
 - **`TVL`** — `$42.3M` format.
 
@@ -499,8 +571,8 @@ Modeled on L2BEAT's landing, adapted to DeFi categories.
 
 - **Default sort**: TVL desc.
 - **Sortable columns**: `#`, `Name`, `Chain`, `Stage`, `Type`, `TVL`.
-- **Risks column sort**: by Defiscan stage (worst-slice-wins), then count of red slices as tiebreaker.
-- **In-tab filters**: review-status + per-slice pizza chips.
+- **Risks column sort**: by worst-slice grade, then count of red slices as tiebreaker.
+- **In-tab filters**: tier chips (bronze / silver / gold) + per-slice pizza chips.
 - **Delisted + dead**: excluded by default. "Show inactive" re-includes dead; delisted stays 410.
 
 ### Row count default
@@ -571,7 +643,7 @@ Addendum resolving further Phase 0 ambiguities. Where this section conflicts wit
 
 ### Pizza chart at Phase 0
 
-- **Primary-chain flip policy**: N/A at Phase 0 (all pizzas gray). Decide at Phase 3 alongside stage attachment.
+- **Primary-chain flip policy**: TBD — assessments are currently per-protocol (not per-chain), so the pizza is the same across chain tabs. Decide alongside Defiscan-stage attachment.
 
 ### Detail page rendering
 
@@ -588,11 +660,11 @@ Addendum resolving further Phase 0 ambiguities. Where this section conflicts wit
 
 ### Bot / crawler policy
 
-- **`noindex` meta tag only** on `/protocol/*` pages at Phase 0. No `robots.txt` Disallow, no Vercel bot mitigation. `noindex` flip to indexable happens per-protocol at `machine_summarized` (Phase 3), unchanged from round 1.
+- **`noindex` meta tag only** on `/protocol/*` pages today. No `robots.txt` Disallow, no Vercel bot mitigation. The originally-planned `machine_summarized` trigger for the indexable flip is replaced by a tier trigger: silver or gold (see "URL & navigation" above).
 
 ### Build scaling
 
-- **Accept any build time** at Phase 0. Full SSG over all live slugs via `generateStaticParams` regardless of Vercel build cost. Revisit only if the 45-minute platform limit is approached.
+- **Hybrid rendering replaces full SSG.** The earlier intent to prerender all ~8000 protocol pages via `getStaticPaths()` was dropped in favor of `output: "server"` + Vercel ISR (60s) on `/protocol/[slug]`. Build time stays bounded; master-file updates surface within the ISR window without a redeploy.
 
 ### Family / children table
 
@@ -603,9 +675,37 @@ Addendum resolving further Phase 0 ambiguities. Where this section conflicts wit
 - **Minimal content + pizza legend** at Phase 0:
   - "Registry only, no ratings" framing
   - DeFiLlama seed + curated overlays explanation
-  - **7-slice pizza legend** (all gray at Phase 0) explaining each slice
+  - **5-slice pizza legend** explaining each slice (control, ability-to-exit, autonomy, open-access, verifiability)
   - Note that Defiscan stages arrive in Phase 3 with links out to Defiscan's framework
 
 ### Repo pruning from l2beat fork
 
-- **Single Day-1 nuke commit** deleting all rollup-specific packages. One big diff, legible `git log`, no per-package archaeology. `@l2beat/discovery` and the UI package retained, as per spec.
+- **Superseded.** The project was scaffolded fresh rather than forked from l2beat/l2beat, so there are no rollup packages to nuke. Visual lineage from L2BEAT is preserved at the design level only.
+
+---
+
+## State as of 2026-04 (post-DEFI@home pivot)
+
+One-page summary for cold readers, so you don't have to chase pivot notes.
+
+**What it is.** A live, evidence-based DeFi protocol registry. DeFiLlama seeds the universe; contributors grade specific risk dimensions ("slices") by running a pinned LLM prompt and submitting JSON via PR; a quorum bot merges once independent runs agree.
+
+**Stack.** Astro 5 (`output: "server"`) + one Svelte 5 island (`LandingTable.svelte`) + Vercel adapter with ISR (60s) for `/protocol/[slug]`. Landing, methodology, and contribute pages prerender. No database. Node 22, pnpm 9.
+
+**Data layout.**
+- `data/defillama-snapshot.json` — full DeFiLlama seed.
+- `data/overlays/<slug>.json` — curator overrides.
+- `data/submissions/<slug>/<slice>/*.json` — per-contributor LLM runs, one file per run.
+- `data/assessments/<slug>/<slice>.json` — quorum-merged consensus.
+- `data/master/` — reconciled master records.
+- `data/schema/slice-assessment.v2.json` — submission contract.
+
+**Slices (5).** `control`, `ability-to-exit`, `autonomy`, `open-access`, `verifiability`. Single source of truth in `packages/prompts/src/index.ts` and `apps/web/src/lib/pizza.ts`.
+
+**Tier system.** `none` / `bronze` (≥1 slice quorum) / `silver` (all 5 slices quorum) / `gold` (any human signoff). Quorum threshold = 3 independent models (`QUORUM_MIN`). Logic in `apps/web/src/lib/tier.ts`.
+
+**Defiscan stages.** Planned future layer over the tier system; not yet attached.
+
+**Workflows.** `validate-submission.yml` (per-PR schema), `quorum.yml` (auto-merge on consensus), `reconcile.yml` (assessments → master), `autorun.yml` (Anthropic SDK third voice), `sync.yml` (weekly DeFiLlama refresh).
+
+**Coverage as of writing.** 5 protocols with at least one assessed slice (aave, lido, morpho, pendle, uniswap). Lido has all 5 slices assessed.

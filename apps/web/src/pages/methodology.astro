@@ -3,17 +3,19 @@ export const prerender = true;
 import Base from "../layouts/Base.astro";
 import PizzaChart from "../components/PizzaChart.astro";
 import SideNav from "../components/SideNav.astro";
+import TierMedal from "../components/TierMedal.svelte";
+import TierGradients from "../components/TierGradients.svelte";
 import { PIZZA_SLICES } from "../lib/pizza";
 
 const SLICE_DESCRIPTIONS: Record<string, string> = {
   control:
-    "Who holds admin privileges, how contracts can be upgraded, and how quickly. Combines the old chain-ownership and upgradeability questions \u2014 a single assessment per protocol rather than per chain, since a one-chain-red / mainnet-green split is more misleading than useful.",
+    "Who holds admin privileges, how contracts can be upgraded, and how quickly. Combines the old chain-ownership and upgradeability questions — a single assessment per protocol rather than per chain, since a one-chain-red / mainnet-green split is more misleading than useful.",
   "ability-to-exit":
     "Whether users can exit on their own terms if the protocol team disappears or acts adversarially.",
   autonomy:
     "Whether a failure outside this protocol's own contracts (oracles, off-chain reporters, bridges, keepers, governance-mutable dependencies) can cause theft, loss of unclaimed yield, or materially change expected performance. Collateral counterparty risk lives here too.",
-  access:
-    "Whether the protocol depends on privileged operators, off-chain infrastructure, whitelists, or regional restrictions to function.",
+  "open-access":
+    "Whether the protocol is reachable by anyone without an allowlist, KYC, geofence, or off-chain operator standing between a user and the contracts. Permissioned markets, whitelisted relayers, and frontends that gate withdrawals all live here.",
   verifiability:
     "Whether anyone outside the team can independently verify what the code does: open-source status, audit quality and scope, bytecode-to-source correspondence at the deployed address, and whether post-audit changes were themselves reviewed.",
 };
@@ -22,29 +24,40 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
   <SideNav contentMaxWidth={800} links={[
     { href: "#data-source", label: "Data source" },
     { href: "#risk-pizza", label: "Risk pizza" },
-    { href: "#what-is-graded-today", label: "Graded today" },
-    { href: "#audits", label: "Audits" },
+    { href: "#how-slices-are-graded", label: "How slices are graded" },
+    { href: "#cex", label: "CEX special case" },
+    { href: "#tiers", label: "Tier badges" },
+    { href: "#families", label: "Family aggregation" },
     { href: "#defi-at-home", label: "DEFI@home" },
+    { href: "#metadata", label: "Curated metadata" },
+    { href: "#reconcile", label: "Reconcile / master" },
     { href: "#stages", label: "Stages" },
+    { href: "#delisting", label: "Inactive / delisted" },
     { href: "#corrections", label: "Corrections" },
   ]} />
   <main class="page">
     <h1>Methodology</h1>
-    <p class="lede">DeFiPunk'd is a registry, not a rating. No protocol on this site has been reviewed.</p>
+    <p class="lede">DeFiPunk'd is a registry. Most slice grades are still gray — only assessments with a published audit trail show a color. Where a color appears, you can trace it to either a deterministic heuristic on raw DeFiLlama signals or a DEFI@home quorum of independent LLM runs.</p>
 
     <h2 id="data-source">Where the data comes from</h2>
     <p>
       Every protocol is seeded from <a href="https://defillama.com/" rel="noreferrer" target="_blank">DeFiLlama</a> via <code>pnpm sync</code>, which writes the full list into a committed JSON snapshot. Human curators can override individual fields by dropping a JSON file into <code>data/overlays/</code> and opening a PR.
     </p>
     <p>
-      Every field displays a provenance tag so you always know where the value came from: <code>[defillama]</code> for the raw DeFiLlama value, <code>[curated]</code> for a human-authored overlay, <code>[defillama-parent]</code> when a child protocol inherits a field (github, twitter, website) from its parent protocol because DeFiLlama only records the value at the family level, and <code>[:]</code> — the DeFiPunk'd logo itself — for anything attested by the DEFI@home quorum. The glyph only appears where there is evidence behind it; an em-dash means unsourced.
+      Every field displays a provenance tag so you always know where the value came from:
     </p>
-    <p>DeFiPunk'd mirrors DeFiLlama: if DeFiLlama delists a protocol, DeFiPunk'd delists it after a 14-day grace window.</p>
+    <ul>
+      <li><code>[defillama]</code> — the raw DeFiLlama value.</li>
+      <li><code>[curated]</code> — a human-authored overlay in <code>data/overlays/</code>.</li>
+      <li><code>[defillama-parent]</code> — a child protocol inheriting a field (github, twitter, website) from its parent because DeFiLlama only records the value at the family level.</li>
+      <li><code>[:]</code> — the DeFiPunk'd glyph; sourced from the DEFI@home quorum (text tag <code>defi@home</code> in the underlying data).</li>
+    </ul>
+    <p>The glyph only appears where there is evidence behind it; an em-dash means unsourced.</p>
 
     <h2 id="risk-pizza">The 5-slice risk pizza</h2>
     <p>
       DeFiPunk'd uses the five assessment dimensions from{" "}
-      <a href="https://github.com/deficollective/defiscan-v2" rel="noreferrer" target="_blank">DeFiScan v2</a>: <strong>Control</strong>, <strong>Ability to exit</strong>, <strong>Autonomy</strong>, <strong>Open Access</strong>, and <strong>Verifiability</strong>. At Phase 0 every slice is gray — nothing has been reviewed. The slices exist now so the shape of future assessments is already visible.
+      <a href="https://github.com/deficollective/defiscan-v2" rel="noreferrer" target="_blank">DeFiScan v2</a>: <strong>Control</strong>, <strong>Ability to exit</strong>, <strong>Autonomy</strong>, <strong>Open Access</strong>, and <strong>Verifiability</strong>. A gray slice means nothing has produced a color for that dimension yet.
     </p>
     <div class="pizza-row">
       <PizzaChart size="lg" />
@@ -58,49 +71,99 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
       </ul>
     </div>
 
-    <h2 id="what-is-graded-today">What is graded today</h2>
+    <h2 id="how-slices-are-graded">How slices are graded today</h2>
     <p>
-      Only <strong>Verifiability</strong> currently carries a real color on the pizza. The rule is a deliberately coarse first-pass heuristic from raw DeFiLlama signals:
-    </p>
-    <ul>
-      <li><strong class="green">green</strong> — protocol has a GitHub repo <em>and</em> at least one audit</li>
-      <li><strong class="orange">orange</strong> — it has one but not the other</li>
-      <li><strong class="red">red</strong> — neither</li>
-    </ul>
-    <p>
-      For family rows (Uniswap, Aave, Morpho, …) the family's slice takes the grade of the highest-TVL child so a small outlier deployment doesn't drag a well-graded family down. A thorough Verifiability assessment in a later phase will replace this with auditor-reputation weighting, scope review, and source-to-bytecode correspondence.
-    </p>
-    <p>
-      <strong>Autonomy</strong> is graded with a simple category-based first pass plus an opportunistic <code>forkedFrom</code> check:
-    </p>
-    <ul>
-      <li><strong class="red">red</strong> — protocol category is <em>Liquid Staking</em>, <em>RWA Lending</em>, or one of the bridge categories (<em>Bridge</em>, <em>Canonical Bridge</em>, <em>Cross Chain Bridge</em>, <em>Bridge Aggregator</em>). These categories carry unavoidable external-protocol, validator, or counterparty risk by construction.</li>
-      <li><strong class="orange">orange</strong> — DeFiLlama records a non-empty <code>forkedFrom</code> lineage, i.e. the contracts inherit their base logic from another protocol's codebase. DeFiLlama's fork-lineage data is largely paywalled, so this signal currently covers only a handful of protocols — real fork detection is Phase-2 work.</li>
-      <li><strong class="gray">gray</strong> — neither signal fires. Most protocols sit here until deeper dependency analysis lands.</li>
-    </ul>
-    <p>
-      <strong>Control</strong>, <strong>Ability to exit</strong>, and <strong>Open Access</strong> all render gray — no automated heuristic grades them yet. In particular, <strong>Open Access</strong> (whether the protocol is permissioned, uses whitelists, geo-restricts users, or depends on off-chain operators to function) is not a signal DeFiLlama carries in a usable form, so at Phase 0 we simply surface it as unknown and will populate it when crawler workers read the project's own docs and frontend (Phase 1) and when onchain discovery flags whitelist-gated entry points (Phase 2).
+      A slice gets a color from one of three sources: a deterministic heuristic on DeFiLlama signals, the CEX special case, or a DEFI@home quorum. Heuristics run on every protocol on every build; DEFI@home grades land per (slug, slice) as contributors and the autorun bot submit them.
     </p>
 
-    <h2 id="audits">Audits and source code feed Verifiability</h2>
+    <h3>Heuristic-graded slices</h3>
+    <p><strong>Verifiability</strong> — coarse first-pass on raw DeFiLlama signals:</p>
+    <ul>
+      <li><strong class="green">green</strong> — protocol has a GitHub repo <em>and</em> at least one audit.</li>
+      <li><strong class="orange">orange</strong> — one but not the other.</li>
+      <li><strong class="red">red</strong> — neither.</li>
+    </ul>
+    <p>An audit count is a famously weak signal in isolation — auditor quality, report scope, and whether post-audit changes were reviewed matter far more than the integer. A thorough Verifiability assessment via DEFI@home overrides the heuristic when ≥3 model runs agree.</p>
+
+    <p><strong>Autonomy</strong> — category + opportunistic <code>forkedFrom</code>:</p>
+    <ul>
+      <li><strong class="red">red</strong> — protocol category is <em>Liquid Staking</em>, <em>RWA Lending</em>, or one of the bridge categories (<em>Bridge</em>, <em>Canonical Bridge</em>, <em>Cross Chain Bridge</em>, <em>Bridge Aggregator</em>). These categories carry unavoidable external-protocol, validator, or counterparty risk by construction.</li>
+      <li><strong class="orange">orange</strong> — DeFiLlama records a non-empty <code>forkedFrom</code> lineage. DeFiLlama's fork-lineage data is largely paywalled, so this signal currently covers only a handful of protocols.</li>
+      <li><strong class="gray">gray</strong> — neither signal fires.</li>
+    </ul>
+
+    <h3>Slices with no heuristic</h3>
     <p>
-      Each protocol detail page shows the raw audit count, expandable list of audit links, and the project's GitHub repositories. These feed the Verifiability slice, not a slice of their own: an audit count is a famously weak signal in isolation — auditor quality, report scope, and whether post-audit changes were reviewed matter far more than the integer. GitHub is surfaced so you can check whether the deployed addresses match the published source. At Phase 0 the data is raw and the slice stays gray; a future phase will grade auditor reputation and source-to-bytecode correspondence as part of the Verifiability assessment.
+      <strong>Control</strong>, <strong>Ability to exit</strong>, and <strong>Open Access</strong> have no automated heuristic. They render gray until a DEFI@home quorum lands a real grade. Open Access in particular is not a signal DeFiLlama carries in a usable form — it depends on reading the project's own docs and frontend, plus on-chain checks for whitelist-gated entry points.
+    </p>
+
+    <h2 id="cex">CEX special case</h2>
+    <p>
+      Protocols whose DeFiLlama category is exactly <code>CEX</code> are graded <strong class="red">red</strong> across all five slices automatically. The rationale: a centralized exchange is custodial off-chain infrastructure — the failure modes are the entire surface, and grading them per-slice would imply a level of separation that doesn't exist. The "DeFi" tab on the landing page filters CEX out by default.
+    </p>
+
+    <h2 id="tiers">Tier badges (bronze / silver / gold)</h2>
+    <p>
+      A medal next to a protocol's name signals how thoroughly the slice grades have been reviewed. Tier is computed from the assessments that have reached quorum, not from the grades themselves:
+    </p>
+    <ul class="tier-list">
+      <li><TierMedal tier="bronze" size={24} /><span><strong>Bronze</strong> — at least one slice has reached quorum (≥3 different models agreeing).</span></li>
+      <li><TierMedal tier="silver" size={24} /><span><strong>Silver</strong> — all five slices have reached quorum.</span></li>
+      <li><TierMedal tier="gold" size={24} /><span><strong>Gold</strong> — a human committee has signed off on the assessments.</span></li>
+      <li><span class="no-medal" aria-hidden="true"></span><span>No medal — fewer than three models have agreed on any slice yet.</span></li>
+    </ul>
+    <TierGradients />
+    <p>
+      Tier is a <em>review-depth</em> signal, not a <em>safety</em> signal: a silver-tier protocol can have five red slices. Tier and grade are independent axes.
+    </p>
+
+    <h2 id="families">Family aggregation</h2>
+    <p>
+      Protocols deployed as a family (Uniswap v2/v3/v4, Aave v2/v3, Morpho Blue/MetaMorpho, …) appear as a single expandable row on the landing table. The family summary takes the grade of the highest-TVL child for every slice — so a small outlier deployment doesn't drag a well-graded family down — and the maximum tier badge across children. Expanding the row reveals each child's individual pizza and tier.
     </p>
 
     <h2 id="defi-at-home">DEFI@home — distributed assessment</h2>
     <p>
-      DeFiPunk'd does not run crawlers and does not hand-curate every protocol. The slice grades that aren't produced by the deterministic heuristics above are filled in by <strong>DEFI@home</strong>: a distributed, BOINC-style process where any number of independent auditors run a pinned prompt through the LLM of their choice (Claude, ChatGPT, Gemini, …) and submit the JSON output as a pull request.
+      DeFiPunk'd does not run crawlers and does not hand-curate every protocol. The slice grades that aren't produced by the heuristics above are filled in by <strong>DEFI@home</strong>: a distributed, BOINC-style process where independent contributors run a pinned prompt through the LLM of their choice (Claude, ChatGPT, Gemini, …) and submit the JSON output as a pull request.
     </p>
     <p>
-      Each protocol page exposes an <strong>Audit this slice yourself</strong> button under every Risk-analysis card. The button copies a prompt with the snapshot timestamp, chains, GitHub repos, and audit links already pinned in, so re-runs remain verifiable against a fixed evidence set. Submissions must match <a href="https://github.com/guil-lambert/defipunkd/blob/main/data/schema/slice-assessment.v2.json" rel="noreferrer" target="_blank">slice-assessment.v2.json</a>: every claim cites a block explorer, a repo at a pinned commit SHA, or an audit PDF.
+      Each protocol page exposes an <strong>Audit a dimension yourself · DEFI@home</strong> section under the Risk analysis cards, with a <strong>Copy prompt</strong> button per slice and a <strong>Submit run ↗</strong> link that opens GitHub's new-file interface pre-pointed at <code>data/submissions/&lt;slug&gt;/&lt;slice&gt;/</code>. The prompt has the snapshot timestamp, prompt version, chains, GitHub repos, and audit links pinned in, so re-runs remain verifiable against a fixed evidence set.
     </p>
     <p>
-      Determinism comes from <strong>consensus across independent re-runs</strong>, not from any single LLM output. A quorum bot merges an assessment into <code>data/assessments/</code> once ≥3 contributors (using different models or accounts) agree on grade and overlapping evidence; disagreements open a per-(slug, slice) aggregation issue. A scheduled GitHub Action also runs the prompts via the Anthropic SDK as a "third voice" so coverage doesn't depend on volunteer traffic alone. See <a href="/contribute">/contribute</a> for the full flow.
+      Determinism comes from <strong>consensus across independent re-runs</strong>, not from any single LLM output. A quorum bot merges an assessment into <code>data/assessments/</code> once at least 3 contributors using different models agree on grade and overlapping evidence; disagreements are surfaced on a per-slug aggregation issue. A scheduled GitHub Action also runs the prompts via the Anthropic API as a "third voice" so coverage doesn't depend on volunteer traffic alone. See <a href="/contribute">/contribute</a> for the full flow.
+    </p>
+
+    <h2 id="metadata">Curated metadata from DEFI@home</h2>
+    <p>
+      The same DEFI@home submissions that produce slice grades also carry a <code>protocol_metadata</code> block. When a slice reaches quorum, fields from the highest-weight submission propagate to the protocol detail page with the <code>[:]</code> glyph:
+    </p>
+    <ul>
+      <li>Upgradeability label — <em>Immutable</em>, <em>Upgradeable</em>, <em>Mixed</em>, or <em>Unknown</em>.</li>
+      <li>Bug bounty URL.</li>
+      <li>Governance forum URL.</li>
+      <li>Docs URL.</li>
+      <li>Security contact (email or address).</li>
+      <li>Voting token (symbol, chain, contract address).</li>
+      <li>Deployed-contracts documentation link.</li>
+      <li>Hallmarks — chronological protocol milestones rendered as a timeline.</li>
+    </ul>
+    <p>
+      These fields are not graded — they're factual claims with citations in the underlying submission, and they're inferred from the assessment work the contributor already did rather than re-asked separately.
+    </p>
+
+    <h2 id="reconcile">Reconcile and the master file</h2>
+    <p>
+      After quorum lands the per-slice assessments, a scheduled reconciler runs Claude Sonnet over the merged assessments plus the raw submissions and writes a synthesized verdict to <code>data/master/&lt;slug&gt;.json</code>. The master file is what feeds the protocol detail page's narrative — findings, steel-man arguments, verdict, and noted dissent. It does not re-grade; it consolidates what the quorum already decided into prose a reader can scan.
     </p>
 
     <h2 id="stages">Stages</h2>
     <p>
-      Stage badges arrive with Phase 3 of the project, at which point DeFiPunk'd adopts <a href="https://docs.defiscan.info/" rel="noreferrer" target="_blank">DeFiScan v2's stage framework</a> verbatim. Until then, every protocol shows an em-dash in the Stage column.
+      The Stage column is reserved for a future adoption of <a href="https://docs.defiscan.info/" rel="noreferrer" target="_blank">DeFiScan v2's stage framework</a>. Today every protocol shows an em-dash there. The tier badge is the current "is this protocol reviewed?" signal — it answers a different question than a stage (review depth vs. decentralization milestone), so the two will coexist when stages land.
+    </p>
+
+    <h2 id="delisting">Inactive and delisted protocols</h2>
+    <p>
+      DeFiPunk'd mirrors DeFiLlama. Protocols flagged <code>is_dead</code> upstream show an "(inactive)" label on the landing table and are hidden by default behind a "Show inactive" toggle. If DeFiLlama removes a protocol entirely, DeFiPunk'd marks it <code>delisted_at</code> and serves a stub page explaining the removal for 14 days; after the grace window the protocol is dropped from the registry.
     </p>
 
     <h2 id="corrections">Corrections</h2>
@@ -126,7 +189,11 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
     padding-bottom: 0.5rem;
     margin-top: 2rem;
   }
-  h2#what-is-graded-today { scroll-margin-top: 1rem; }
+  h3 {
+    color: var(--text);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
   code, strong { color: var(--text); }
   a { color: var(--accent-link); }
   .pizza-row {
@@ -151,4 +218,24 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
   .orange { color: var(--grade-orange); }
   .red { color: var(--grade-red); }
   .gray { color: var(--grade-gray); }
+  .tier-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+  }
+  .tier-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+  }
+  .no-medal {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px dashed var(--text-muted);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
 </style>
