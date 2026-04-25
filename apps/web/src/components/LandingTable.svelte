@@ -12,7 +12,7 @@
   import TierGradients from "./TierGradients.svelte";
   import TierMedal from "./TierMedal.svelte";
   import TierLegend from "./TierLegend.svelte";
-  import type { Tier } from "../lib/tier";
+  import { TIER_LABEL, type Tier } from "../lib/tier";
 
   type ToggleableTier = Exclude<Tier, "none">;
 
@@ -287,14 +287,24 @@
             pointer-events="none"
           />
         </svg>
-        {#if tier !== "none"}
-          <span class="medal-slot">
-            <TierMedal tier={tier} size={16} />
-          </span>
-        {/if}
       </div>
     </td>
-    <td class="muted">{EM_DASH}</td>
+    <td class="stage-cell">
+      {#if tier !== "none"}
+        <span class="tt-wrap">
+          <TierMedal tier={tier} size={20} />
+          <span class="tt" role="tooltip">{TIER_LABEL[tier]}</span>
+        </span>
+      {:else}
+        <a class="tt-wrap audit-cta" href={`/protocol/${row.slug}#audit-yourself`} aria-label="Be the first to audit this protocol">
+          <svg class="audit-plus" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2" />
+            <path d="M10 6 L10 14 M6 10 L14 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+          <span class="tt" role="tooltip">Be the first to audit · copy a prompt</span>
+        </a>
+      {/if}
+    </td>
     <td>
       {row.primary_chain ?? EM_DASH}
       {#if extraChains > 0}
@@ -489,13 +499,61 @@
     display: inline-block;
     line-height: 0;
   }
-  .medal-slot {
-    position: absolute;
-    top: -4px;
-    right: -6px;
+  .stage-cell {
+    text-align: center;
     line-height: 0;
-    pointer-events: auto;
   }
+  .tt-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tt-wrap .tt {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    background: var(--surface-raised);
+    color: var(--text);
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    border: 1px solid var(--surface-raised);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 80ms ease-out, transform 80ms ease-out;
+    z-index: 100;
+  }
+  .tt-wrap .tt::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--surface-raised);
+  }
+  .tt-wrap:hover .tt,
+  .tt-wrap:focus-within .tt {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .audit-cta {
+    color: var(--text-muted);
+    opacity: 0.55;
+    transition: opacity 120ms ease-out, color 120ms ease-out;
+  }
+  .audit-cta:hover,
+  .audit-cta:focus-visible {
+    color: var(--accent-link);
+    opacity: 1;
+  }
+  .audit-plus { display: block; }
   .tvl {
     text-align: right;
     font-family: var(--font-mono), ui-monospace, monospace;
