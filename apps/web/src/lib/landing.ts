@@ -109,6 +109,7 @@ export type FilterOptions = {
   chainTab?: ChainTab | "All";
   query: string;
   showInactive: boolean;
+  tiers?: ReadonlySet<Tier>;
   sort?: { field: SortField; dir: SortDir };
 };
 
@@ -148,11 +149,15 @@ function includeInBrowse(r: LandingRow, opts: FilterOptions): boolean {
 }
 
 export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): LandingNode[] {
+  const tiers = opts.tiers && opts.tiers.size > 0 ? opts.tiers : null;
+  const matchesTier = (n: LandingNode | LandingRow): boolean =>
+    !tiers || tiers.has((n.tier ?? "none") as Tier);
   const query = opts.query.trim();
   if (query) {
     const pool: LandingNode[] = [];
     for (const n of nodes) {
       if (!includeInBrowse(n, opts)) continue;
+      if (!matchesTier(n)) continue;
       const parentMatches = rankMatch([n], query).length > 0;
       if (parentMatches) {
         pool.push(n);
@@ -161,6 +166,7 @@ export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): L
       if (n.children && n.children.length > 0) {
         for (const c of n.children) {
           if (!includeInBrowse(c, opts)) continue;
+          if (!matchesTier(c)) continue;
           if (rankMatch([c], query).length > 0) pool.push(c);
         }
       }
@@ -170,6 +176,7 @@ export function filterAndSortNodes(nodes: LandingNode[], opts: FilterOptions): L
 
   const visible = nodes.filter((n) => {
     if (!includeInBrowse(n, opts)) return false;
+    if (!matchesTier(n)) return false;
     if (opts.chainTab && opts.chainTab !== "All" && !n.chains.includes(opts.chainTab)) return false;
     if (opts.tab === "All") return true;
     if (opts.tab === "DeFi") return !isCexCategory(n.category);

@@ -12,6 +12,9 @@
   import TierGradients from "./TierGradients.svelte";
   import TierMedal from "./TierMedal.svelte";
   import TierLegend from "./TierLegend.svelte";
+  import type { Tier } from "../lib/tier";
+
+  type ToggleableTier = Exclude<Tier, "none">;
 
   const DEFAULT_PAGE = 200;
 
@@ -42,6 +45,15 @@
   let expanded = $state<Record<string, boolean>>({});
   let sortField = $state<SortField>("tvl");
   let sortDir = $state<SortDir>("desc");
+  let selectedTiers = $state<Set<ToggleableTier>>(new Set());
+
+  function toggleTier(tier: ToggleableTier) {
+    const next = new Set(selectedTiers);
+    if (next.has(tier)) next.delete(tier);
+    else next.add(tier);
+    selectedTiers = next;
+    showAll = false;
+  }
 
   const searching = $derived(query.trim().length > 0);
   const filtered = $derived(
@@ -50,6 +62,7 @@
       chainTab,
       query,
       showInactive,
+      tiers: selectedTiers,
       sort: { field: sortField, dir: sortDir },
     }),
   );
@@ -153,7 +166,7 @@
     </label>
   </div>
 
-  <TierLegend />
+  <TierLegend selected={selectedTiers} onToggle={toggleTier} />
 
   <div class="scroll">
     <table>
