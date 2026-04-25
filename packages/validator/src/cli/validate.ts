@@ -46,36 +46,43 @@ async function main(): Promise<number> {
       continue;
     }
 
-    const cleanupResult = cleanupSubmission(raw);
-    report.autoFixed.push(...cleanupResult.changes);
-    report.errors.push(...cleanupResult.errors);
+    const isArray = Array.isArray(raw);
+    const rawItems = isArray ? (raw as unknown[]) : [raw];
+    const cleanedItems: unknown[] = [];
+    let anyChanges = false;
 
-    if (shouldWrite && cleanupResult.changes.length > 0) {
-      writeFileSync(file, JSON.stringify(cleanupResult.cleaned, null, 2) + "\n");
+    for (let i = 0; i < rawItems.length; i++) {
+      const prefix = isArray ? `[#${i}] ` : "";
+      const cleanupResult = cleanupSubmission(rawItems[i]);
+      for (const c of cleanupResult.changes) report.autoFixed.push(`${prefix}${c}`);
+      for (const e of cleanupResult.errors) report.errors.push(`${prefix}${e}`);
+      if (cleanupResult.changes.length > 0) anyChanges = true;
+      cleanedItems.push(cleanupResult.cleaned);
+
+      const parsed = SubmissionSchema.safeParse(cleanupResult.cleaned);
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          report.errors.push(`${prefix}${issue.path.join(".") || "(root)"}: ${issue.message}`);
+        }
+        continue;
+      }
+
+      const crossIssues = crossCheck(parsed.data, {
+        currentPromptVersion: PROMPT_VERSION,
+        currentSnapshotGeneratedAt: snapshot.generated_at,
+        knownSlugs,
+        filePath: relative,
+      });
+      for (const ci of crossIssues) {
+        const msg = `${prefix}${ci.field}: ${ci.message}`;
+        if (ci.severity === "error") report.errors.push(msg);
+        else report.warnings.push(msg);
+      }
     }
 
-    const parsed = SubmissionSchema.safeParse(cleanupResult.cleaned);
-    if (!parsed.success) {
-      for (const issue of parsed.error.issues) {
-        report.errors.push(`${issue.path.join(".") || "(root)"}: ${issue.message}`);
-      }
-      reports.push(report);
-      hadError = true;
-      continue;
-    }
-
-    const crossIssues = crossCheck(parsed.data, {
-      currentPromptVersion: PROMPT_VERSION,
-      currentSnapshotGeneratedAt: snapshot.generated_at,
-      knownSlugs,
-      filePath: relative,
-    });
-    for (const ci of crossIssues) {
-      if (ci.severity === "error") {
-        report.errors.push(`${ci.field}: ${ci.message}`);
-      } else {
-        report.warnings.push(`${ci.field}: ${ci.message}`);
-      }
+    if (shouldWrite && anyChanges) {
+      const out = isArray ? cleanedItems : cleanedItems[0];
+      writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
     }
 
     if (report.errors.length > 0) hadError = true;

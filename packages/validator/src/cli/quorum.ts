@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 
 import { join, resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { PROMPT_VERSION, SLICE_IDS } from "@defipunkd/prompts";
-import { SubmissionSchema, type Submission } from "../schema";
+import { parseSubmissionsFromFileContent, type Submission } from "../schema";
 import { computeQuorum, type Assessment, type Disagreement } from "../quorum";
 import { findRepoRoot, loadSnapshot } from "../repo";
 import { buildShortHeadlinePrompt } from "../short-headline-prompt";
@@ -58,27 +58,29 @@ async function main(): Promise<number> {
       const files = readdirSync(sliceDir).filter((f) => f.endsWith(".json"));
       if (files.length === 0) continue;
 
-      const entries = files
-        .map((f) => {
-          const fullPath = join(sliceDir, f);
-          let raw: unknown;
-          try {
-            raw = JSON.parse(readFileSync(fullPath, "utf8"));
-          } catch (err) {
-            console.error(`skipping unparseable submission ${slug}/${sliceId}/${f}: ${(err as Error).message}`);
-            return null;
-          }
-          const parsed = SubmissionSchema.safeParse(raw);
-          if (!parsed.success) {
-            console.error(`skipping invalid submission ${slug}/${sliceId}/${f}`);
-            return null;
-          }
-          return {
-            submission: parsed.data,
-            sourcePath: `data/submissions/${slug}/${sliceId}/${f}`,
-          };
-        })
-        .filter((x): x is NonNullable<typeof x> => x !== null);
+      const entries: Array<{ submission: Submission; sourcePath: string }> = [];
+      for (const f of files) {
+        const fullPath = join(sliceDir, f);
+        let raw: unknown;
+        try {
+          raw = JSON.parse(readFileSync(fullPath, "utf8"));
+        } catch (err) {
+          console.error(`skipping unparseable submission ${slug}/${sliceId}/${f}: ${(err as Error).message}`);
+          continue;
+        }
+        const result = parseSubmissionsFromFileContent(raw);
+        if (!result.ok) {
+          console.error(`skipping invalid submission ${slug}/${sliceId}/${f}: ${result.error}`);
+          continue;
+        }
+        for (const { submission, index } of result.items) {
+          const suffix = index === null ? "" : `#${index}`;
+          entries.push({
+            submission,
+            sourcePath: `data/submissions/${slug}/${sliceId}/${f}${suffix}`,
+          });
+        }
+      }
 
       const result = computeQuorum(entries, {
         currentPromptVersion: PROMPT_VERSION,

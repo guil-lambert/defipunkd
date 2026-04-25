@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 
 import { join, resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { SLICE_IDS } from "@defipunkd/prompts";
-import { SubmissionSchema, type Submission } from "../schema";
+import { parseSubmissionsFromFileContent, type Submission } from "../schema";
 import type { Assessment } from "../quorum";
 import { buildDraftMaster, MasterSchema, type Master, type SubmissionBySlice } from "../master";
 import { buildReconcilerPrompt } from "../reconciler-prompt";
@@ -156,9 +156,12 @@ function loadSubmissions(root: string, slug: string): SubmissionBySlice {
       } catch {
         continue;
       }
-      const parsed = SubmissionSchema.safeParse(raw);
-      if (!parsed.success) continue;
-      entries.push({ submission: parsed.data, sourcePath: `data/submissions/${slug}/${sliceId}/${f}` });
+      const result = parseSubmissionsFromFileContent(raw);
+      if (!result.ok) continue;
+      for (const { submission, index } of result.items) {
+        const suffix = index === null ? "" : `#${index}`;
+        entries.push({ submission, sourcePath: `data/submissions/${slug}/${sliceId}/${f}${suffix}` });
+      }
     }
     if (entries.length > 0) out.set(sliceId, entries);
   }

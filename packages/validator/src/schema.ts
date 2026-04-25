@@ -131,3 +131,33 @@ export const SubmissionSchema = base.superRefine((val, ctx) => {
 });
 
 export type Submission = z.infer<typeof base>;
+
+/**
+ * Accept either a single Submission object or an array of Submission objects.
+ * Returns an array of { submission, index } — index is null for single-object
+ * files and 0-based for array files. Callers can embed the index into their
+ * sourcePath (e.g. `file.json#0`) so provenance stays unambiguous.
+ */
+export function parseSubmissionsFromFileContent(raw: unknown): {
+  ok: true;
+  items: Array<{ submission: Submission; index: number | null }>;
+} | {
+  ok: false;
+  error: string;
+} {
+  const values = Array.isArray(raw) ? raw : [raw];
+  const items: Array<{ submission: Submission; index: number | null }> = [];
+  for (let i = 0; i < values.length; i++) {
+    const parsed = SubmissionSchema.safeParse(values[i]);
+    if (!parsed.success) {
+      const prefix = Array.isArray(raw) ? `entry #${i}: ` : "";
+      const first = parsed.error.issues[0];
+      return {
+        ok: false,
+        error: `${prefix}${first ? `${first.path.join(".")}: ${first.message}` : "schema invalid"}`,
+      };
+    }
+    items.push({ submission: parsed.data, index: Array.isArray(raw) ? i : null });
+  }
+  return { ok: true, items };
+}
