@@ -1,0 +1,709 @@
+[
+{
+  "schema_version": 3,
+  "slug": "pendle",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-25",
+  "model": "gemini-3.1-pro",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Zero-delay upgrades allow silent swapping of external dependencies, risking ~100% of TVS",
+  "short_headline": "Zero-delay proxy upgrades",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Pendle Markets rely on external yield-generating protocols (e.g., Ether.fi for eETH, Ethena for sUSDe) integrated via Standardized Yield (SY) wrappers. If an underlying protocol halts, the corresponding Pendle market's minting and redemption functions freeze. Pendle's core AMM pricing uses internal mathematics rather than external oracle feeds, isolating third-party liveness risk during trading."
+      },
+      {
+        "code": "A2",
+        "text": "The vePENDLE cross-chain synchronization and cross-chain liquidations for Plasma OFTs rely on off-chain guardian committees and relayers connected to the bridging infrastructure."
+      },
+      {
+        "code": "A3",
+        "text": "Pendle utilizes the LayerZero protocol to bridge vePENDLE voting power and to support cross-chain Principal Tokens (PTs) via the OFT standard across networks like Arbitrum and Optimism."
+      },
+      {
+        "code": "A4",
+        "text": "Pendle's Liquid Restaking Token (LRT) markets (e.g., weETH, rsETH) introduce deeply nested collateral risk. For example, the weETH market depends on both Ether.fi and EigenLayer; a failure at either layer propagates directly to user principal in that specific Pendle market."
+      },
+      {
+        "code": "A6",
+        "text": "Pendle isolates underlying asset failures to individual markets as a structural fallback. Additionally, PT pricing is secured by a Deterministic Linear Discount Oracle and geometric TWAPs built into the V2/V3 AMMs (both LIVE and enforcing on-chain). These deterministic fallbacks eliminate reliance on manipulation-prone external price feeds."
+      },
+      {
+        "code": "A7",
+        "text": "For its deployments on Arbitrum, Optimism, Base, and Mantle, Pendle inherently depends on centralized L2 sequencers. A sequencer failure would freeze trading, yield updates, and maturity redemptions on that specific chain."
+      },
+      {
+        "code": "A8",
+        "text": "Flash-swapping Yield Tokens (YT) to SY relies on permissionless arbitrage and flash-swap algorithms. If flash-swap bots or AMM liquidity fail, users must manually execute the multi-step redemption process, degrading execution UX but not trapping principal."
+      },
+      {
+        "code": "A9",
+        "text": "The PendleGovernanceProxy contract lacks a timelock, allowing the 2-of-4 Admin multisig to execute upgrades instantly. Because newer SY contracts are deployed as upgradable proxies, this zero-delay upgrade path allows the admin to hot-swap the external vaults the SY interacts with, instantly altering the external dependency surface without an exit window for users."
+      }
+    ],
+    "steelman": {
+      "red": "A 2-of-4 admin multisig can instantly upgrade SY proxies without a timelock, allowing them to hot-swap external yield vaults and steal user principal.",
+      "orange": "The protocol robustly isolates underlying asset failures to individual markets, meaning a failure of one external protocol (like Ether.fi) only freezes that specific market without cross-contaminating the rest of the system.",
+      "green": "Core operations such as PT/YT pricing and AMM trading rely on built-in, deterministic mathematics that completely eliminate the need for live, external oracle feeds."
+    },
+    "verdict": "Choosing red because while Pendle effectively isolates per-market underlying asset risk and mitigates oracle liveness via deterministic internal feeds (A6), the absence of a timelock on the PendleGovernanceProxy allows the 2-of-4 admin multisig to instantly upgrade SY proxies. This zero-delay upgrade path enables the admin to silently swap external vault dependencies (A9), posing a critical risk of principal theft to ~100% of TVS."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.pendle.finance/cn/pendle-v2/Developers/HighLevelArchitecture",
+      "shows": "Documentation indicating that SY contracts are deployed as upgradable proxies and outlining the core PT/YT AMM architecture."
+    },
+    {
+      "url": "https://governance.aave.com/t/arfc-onboard-pendle-pt-tokens-to-aave-v3-core-instance/20541",
+      "shows": "LlamaRisk analysis from early 2025 detailing that the PendleGovernanceProxy has no timelock, allowing the 2-of-4 Admin multisig to instantly upgrade contracts."
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2-dev/Oracles/OracleOverview",
+      "shows": "Details on the LIVE Deterministic Linear Discount Oracle and built-in AMM TWAP, which serve as resilient fallbacks against external oracle failure."
+    }
+  ],
+  "unknowns": [
+    "A1: unable to exhaustively enumerate every individual external yield contract address across all multi-chain markets"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/pendle-finance/pendle-core-v2-public"
+    ],
+    "docs_url": "https://docs.pendle.finance/",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "upgradeable",
+    "about": "Pendle is a yield-trading protocol that wraps yield-bearing assets (such as LSTs, LRTs, and stablecoins) into Standardized Yield (SY) tokens, which are then split into Principal Tokens (PT) and Yield Tokens (YT). This isolation allows users to lock in fixed yields, provide liquidity, or speculate on future yield rate fluctuations within individual, opt-in markets."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "pendle",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-25",
+  "model": "GPT-5.5 Thinking",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Impacted TVS ~<1% overall: V2 SY dependencies are isolated, while Boros has oracle/bot-driven collateral risk.",
+  "short_headline": "Small Boros red tail",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Pendle V2 core markets bind each market to its PT, YT, and SY addresses, and YT reads the selected SY for exchangeRate, rewards, and reward indexes; SY adapter implementations can in turn call an external adapter/yield token for deposit and redeem. The Pendle PT/LP oracle is documented as an integration oracle for downstream consumers, not a dependency required by V2 mint, redeem, or AMM execution. Boros is different: its MarketHub/market architecture uses a per-market FIndex Oracle for floating-index and fee-index settlement, so incorrect oracle values can affect margin, settlement, liquidation, and user collateral."
+      },
+      {
+        "code": "A2",
+        "text": "No protocol-level off-chain reporter committee was identified for V2 core tokenization or AMM execution. Boros has oracle-reported rates and permissioned risk-operation actors; the public Boros docs and ChainSecurity report identify the existence and security relevance of these actors, but not the oracle committee size, quorum, or member-selection process."
+      },
+      {
+        "code": "A3",
+        "text": "Pendle V2 deployments include LayerZero endpoint fields, cross-chain exchange-rate-oracle fields, and PT OFT adapter factories, but the local V2 AMM/tokenization flow on a given chain does not require a bridge for ordinary mint, redeem, or swap. Material TVS routed through cross-chain PT adapters and the exact bridge trust configuration were not fully determined in this run."
+      },
+      {
+        "code": "A4",
+        "text": "Pendle V2 explicitly wraps yield-bearing assets through SY contracts, including LSTs, lending receipts, AMM LPs, and yield aggregators; this creates nested collateral or yield-source depth on a per-market basis. A failure of the selected underlying yield source can impair that SY market, but the dependency is opt-in and market-local rather than a cross-cutting dependency of all V2 markets."
+      },
+      {
+        "code": "A5",
+        "text": "No fork-lineage dependency was used in the grade; no current forkedFrom signal was verified from the allowed sources during this run."
+      },
+      {
+        "code": "A6",
+        "text": "V2 SY base contracts include pause/unpause controls that can stop transfers and operations for affected SY wrappers, but this is a freeze/circuit-breaker path, not a verified fallback that keeps users whole after a bad SY exchangeRate or underlying-asset failure. For Boros, permissioned close-only, force-cancel, liquidation, and related bots are described as required operational controls, but ChainSecurity characterizes these as trust assumptions needed for solvency rather than autonomous fallbacks."
+      },
+      {
+        "code": "A7",
+        "text": "Ethereum V2 deployments have no additional liveness dependency beyond Ethereum substrate. Pendle V2 also runs on L2s and Boros is deployed on Arbitrum, so those modules inherit host-chain sequencer/liveness risk that can freeze local use, although no evidence found in this run shows that sequencer failure alone can steal principal."
+      },
+      {
+        "code": "A8",
+        "text": "V2 mint, redeem, and AMM actions are user-callable through the router/factories and no required off-chain keeper was identified for core execution. Boros has permissioned relayers and risk bots, including liquidation, force-cancel, and close-only bots; ChainSecurity states users must trust the admin to perform these obligations at all times for the protocol to remain solvent."
+      },
+      {
+        "code": "A9",
+        "text": "V2 market dependencies are largely fixed at market creation because a market is constructed around a specific PT/YT/SY set, while market-factory owner controls observed in core code are fee/treasury related rather than external-dependency swaps. However, some SY adapter implementations have owner-settable adapter addresses, and Boros market configuration includes per-market oracle addresses; the timelock or exit-window protecting these dependency changes was not fully verified."
+      }
+    ],
+    "steelman": {
+      "red": "Boros is a live Pendle module whose margin collateral can be affected by FIndex oracle correctness and permissioned bot/admin risk operations, and the audit explicitly says users must trust those operations for solvency.",
+      "orange": "Pendle V2, which appears to represent the overwhelming majority of protocol TVS, isolates external yield-source failures to opt-in SY markets, while the Boros red surface is bounded to roughly the explorer-visible MarketHub collateral of about $8.3M, or <1% of overall Pendle TVS.",
+      "green": "The V2 AMM/tokenization core does not require Chainlink-style price feeds, off-chain reporters, or keepers for ordinary mint, redeem, or swap, and market contracts bind immutable PT/YT/SY addresses at creation."
+    },
+    "verdict": "Choosing orange because the green case fits the dominant V2 architecture but not the whole protocol: V2 external dependencies are opt-in and per-market, whereas Boros has a genuine red autonomy surface from per-market oracles plus permissioned solvency-critical bots. Module weighting drives the final grade: V2 yield-tokenization/AMM around RouterV4 0x888888888889758F76e7103c6CbF23ABbF58F946 and the V2 factories holds ~>99% of known protocol TVS and grades orange; Boros around MarketHub 0x1080808080f145b14228443212e62447C112ADaD, Router 0x8080808080daB95eFED788a9214e400ba552DEf6, and MarketFactory 0x3080808080Ee6a795c1a6Ff388195Aa5F11ECeE0 holds about $8.3M of explorer-visible collateral, or <1% of total protocol TVS, and grades red; weighted overall = orange because the red module is live but small relative to the isolated V2 core."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.pendle.finance/pendle-v2/Introduction",
+      "shows": "Pendle V2 wraps yield-bearing tokens into SY, splits them into PT and YT, and supports permissionless on-chain yield-trading market creation.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2-dev/Contracts/PendleRouter/PendleRouterOverview",
+      "shows": "Pendle Router aggregates user actions with SY, PT, YT, and markets, has no special permission or whitelist requirement, and documents RouterV4 at 0x888888888889758F76e7103c6CbF23ABbF58F946 as an upgradable Diamond router.",
+      "chain": "Ethereum",
+      "address": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pendle-finance/pendle-core-v2-public/main/deployments/1-core.json",
+      "shows": "Ethereum V2 deployment file listing governance, devMultisig, PENDLE, RouterV4, oracle, SY factory, market factories, cross-chain fields, and proxyAdmin addresses.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1A6fCc85557BC4fB7B534ed835a03EF056552D52",
+      "shows": "Ethereum deployed PendleMarketFactoryV3 contract with verified source-code status.",
+      "chain": "Ethereum",
+      "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xdF3601014686674e53d1Fa52F7602525483F9122",
+      "shows": "Ethereum deployed PendleYieldContractFactoryV3 contract with verified source-code status.",
+      "chain": "Ethereum",
+      "address": "0xdF3601014686674e53d1Fa52F7602525483F9122",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pendle-finance/pendle-core-v2-public/761033bcc36ecfdb3c523458d7f66aeabb01c3ab/contracts/core/Market/v3/PendleMarketV3.sol",
+      "shows": "PendleMarketV3 stores immutable PT/SY/YT dependencies per market and calls YT.newIndex during market operations rather than a protocol-wide price oracle.",
+      "commit": "761033bcc36ecfdb3c523458d7f66aeabb01c3ab",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pendle-finance/pendle-core-v2-public/761033bcc36ecfdb3c523458d7f66aeabb01c3ab/contracts/core/YieldContracts/PendleYieldToken.sol",
+      "shows": "PendleYieldToken reads the selected SY.exchangeRate and SY reward state, making each market dependent on its chosen SY wrapper for index and reward accounting.",
+      "commit": "761033bcc36ecfdb3c523458d7f66aeabb01c3ab",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pendle-finance/pendle-core-v2-public/761033bcc36ecfdb3c523458d7f66aeabb01c3ab/contracts/interfaces/IStandardizedYield.sol",
+      "shows": "IStandardizedYield interface defines deposit, redeem, exchangeRate, reward-index, claimRewards, yieldToken, and token-in/token-out functions used by Pendle V2 markets.",
+      "commit": "761033bcc36ecfdb3c523458d7f66aeabb01c3ab",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://github.com/pendle-finance/Pendle-SY-Public",
+      "shows": "Pendle SY repository describes SY wrappers for LSTs, lending protocols, AMM LPs, and yield aggregators.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pendle-finance/Pendle-SY-Public/main/contracts/core/StandardizedYield/SYBaseUpg.sol",
+      "shows": "Upgradeable SY base implementation includes owner-controlled pause/unpause behavior, supporting the finding that SY-level pausing is a circuit breaker but not a verified principal-preserving fallback.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pendle-finance/Pendle-SY-Public/main/contracts/core/StandardizedYield/implementations/Adapter/extensions/PendleERC20WithAdapterSY.sol",
+      "shows": "Adapter-based SY implementation sends assets to an adapter for deposit/redeem conversion and exposes an owner-settable adapter address, creating a mutable per-SY external dependency surface.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2/Developers/Oracles/HowToIntegratePtAndLpOracle",
+      "shows": "Pendle PT/LP oracle documentation is presented as an integration path for downstream protocols and Chainlink-compatible wrappers, not as a required core V2 execution dependency.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/boros-dev",
+      "shows": "Boros is documented as Pendle's on-chain interest-rate-swap trading platform on Arbitrum using leveraged long/short positions on variable interest rates and a hybrid CLOB/AMM architecture.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/boros-dev/HighLevelArchitecture",
+      "shows": "Boros architecture documentation states that MarketHub holds user deposits and checks margin, markets depend on per-market FIndex Oracle values, and Pendle operates permissioned liquidation, force-cancel, and close-only bots.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://github.com/pendle-finance/boros-core-public",
+      "shows": "Boros public core repository describes Boros as Pendle's on-chain IRS platform and links deployments and audits.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://github.com/pendle-finance/boros-core-public/blob/main/deployments/core.json",
+      "shows": "Boros deployment file listing Arbitrum accessController, adminModule, MarketHub, AMM factory, MarketFactory, Router, DepositBoxFactory, and related infrastructure addresses.",
+      "chain": "Arbitrum",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://arbiscan.io/address/0x1080808080f145b14228443212e62447C112ADaD",
+      "shows": "Arbitrum deployed Pendle Boros MarketHub proxy with explorer-visible collateral/token holdings of about $8.3M at fetch time.",
+      "chain": "Arbitrum",
+      "address": "0x1080808080f145b14228443212e62447C112ADaD",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://arbiscan.io/address/0x8080808080daB95eFED788a9214e400ba552DEf6",
+      "shows": "Arbitrum deployed Pendle Boros Router contract.",
+      "chain": "Arbitrum",
+      "address": "0x8080808080daB95eFED788a9214e400ba552DEf6",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://www.chainsecurity.com/security-audit/pendle-boros-markets",
+      "shows": "ChainSecurity Boros Markets audit summary states that Boros uses oracle-reported rates, permissioned risk operations, and requires users to trust admin operation of order cancellation, purging, and liquidations for solvency.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/boros",
+      "shows": "Boros DefiLlama page describes Boros TVL methodology as summing collateral tokens held in the Boros MarketHub contract.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/pendle",
+      "shows": "Pendle DefiLlama protocol page identifies Pendle as a yield-trading protocol and provides the protocol-level TVL context used to bound Boros collateral as a small share of overall Pendle TVS.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+      "shows": "Pendle deployment documentation identifies the canonical deployments index and per-chain deployment JSON files.",
+      "fetched_at": "2026-04-25T16:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A2: Boros FIndex Oracle reporter identity, committee size, quorum, and member-selection process were not disclosed in the fetched docs, deployment files, explorer pages, or audit summary.",
+    "A3: Material TVS and user-flow dependence on Pendle PT OFT adapters, LayerZero endpoints, and cross-chain exchange-rate-oracle paths were not fully determined from the fetched deployment files and explorer pages.",
+    "A4: An exhaustive per-market census of all live SY wrappers and every nested collateral/yield-source dependency was not completed; the core architecture was verified and graded, but per-market dependencies vary.",
+    "A5: DeFiLlama forkedFrom was not verified from the fetched evidence, so no fork-lineage dependency was included in the grade.",
+    "A6: Live activation status, owners, timelocks, and exit windows for per-SY pause controls, adapter changes, Boros oracle sanity checks, and Boros close-only/purge controls were not fully determined.",
+    "A7: Sequencer and DA trust models for every non-Ethereum Pendle deployment were not individually enumerated; Arbitrum/Boros and L2 V2 deployments were treated as having local liveness-freeze risk, not demonstrated principal-loss risk.",
+    "A9: Timelock and exit-window protection for owner-settable SY adapters, Boros per-market FIndex Oracle configuration, and cross-chain PT/OFT configuration were not fully verified."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/pendle-finance/pendle-core-v2-public",
+      "https://github.com/pendle-finance/Pendle-SY-Public",
+      "https://github.com/pendle-finance/boros-core-public"
+    ],
+    "docs_url": "https://docs.pendle.finance/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://www.chainsecurity.com/security-audit/pendle-boros-markets",
+        "date": "2025-10"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x808507121b80c02388fad14726482e061b8da827",
+      "symbol": "PENDLE"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1",
+        "role": "V2 governance",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1",
+        "role": "V2 devMultisig",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64",
+        "role": "V2 proxyAdmin",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x2080808080262c1706598c9DBDD3a0cD3601e5ea",
+        "role": "Boros accessController",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x353C6Ba99500f9F5a7937aF7BF26c8E40817518B",
+        "role": "Boros adminModule",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Pendle V2 tokenizes yield-bearing assets into Standardized Yield, Principal Tokens, and Yield Tokens, then lets users trade fixed-rate and future-yield exposure through AMM markets built for time-decaying assets. Its V2 markets are permissionless and mostly isolated by SY and expiry, so users explicitly choose the underlying yield source they wrap or trade. Pendle also ships Boros, an Arbitrum margin product for interest-rate-swap and funding-rate exposure, where user collateral sits in MarketHub and settlement depends on per-market floating-index oracles and permissioned risk bots."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "pendle",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-25",
+  "model": "claude-sonnet-4-6",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Pendle V2 core AMM uses internal TWAP only (no external oracle); LayerZero dependency for cross-chain emission syncing can impair L2 yield boosting; Boros module (launched Aug 2025) relies on external funding-rate oracle for settlements; ~70% TVS concentrates in sUSDe/Ethena markets. Impacted TVS under worst single-dependency failure: ~5-15% (LayerZero/sequencer) or ~1-2% (Boros oracle).",
+  "short_headline": "Internal oracle; LZ emission & Boros oracle risk",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Pendle V2 AMM core uses a built-in TWAP oracle derived from AMM trade observations (ln(impliedRate) cumulative, modeled after Uniswap V3) — no external oracle contract is called by PendleMarket for PT/SY pricing or PT redemption. The Router (0x00000000005BBB0EF59571E58418F9a4357b68A0, Ethereum, diamond-pattern) and MarketFactoryV3 (0x1A6fCc85557BC4fB7B534ed835a03EF056552D52, Ethereum) make no latestAnswer() or chainlink calls for core swap or redemption logic. External Chainlink/RedStone/Pyth feeds visible in docs are used only by third-party lending protocols that integrate Pendle PTs as collateral — not by Pendle's own contracts. Boros (Arbitrum, launched Aug 2025) is an exception: it queries an external funding-rate oracle (Binance BTC/USDT and ETH/USDT funding rates delivered on-chain) whose failure or mis-report would cause incorrect swap settlements and potential position liquidation. Each Pendle V2 market wraps a third-party yield-bearing SY asset (wstETH→Lido, sUSDe→Ethena, weETH→EtherFi, aUSDC→Aave, etc.); a failure of any one underlying degrades only the markets backed by that SY."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain oracle committee reports into Pendle V2 core contracts. All AMM pricing derives from on-chain trade observations stored in each PendleMarket's own ring-buffer. Boros pulls an off-chain sourced funding rate on-chain, but the specific committee/feed operator and quorum for that feed were not fully determinable from available sources. No validator set, guardian multisig, or exit-bus reporter is required for PT/YT minting or redemption on Pendle V2."
+      },
+      {
+        "code": "A3",
+        "text": "Pendle uses LayerZero (since March 2023) for two cross-chain flows: (1) syncing vePENDLE/sPENDLE positions from Ethereum to L2 chains so liquidity providers on Arbitrum, Base, Optimism, BNB Chain etc. can receive emissions boosts; (2) transmitting PENDLE as OFT native tokens across chains. If LayerZero messaging failed: LP providers on L2 chains would not receive their emission boosts (yield reduction, not principal loss), and PENDLE token bridging would halt. Crucially, PT/YT minting, swapping, and PT principal redemption on each chain operate entirely independently of LayerZero — a LayerZero outage does NOT block exit from any Pendle market. TVL fractions affected: approximately 30–40% of total TVS sits on non-Ethereum chains where boost syncing uses LZ, but principal is recoverable without LZ. Per LayerZero's own V2 architecture, endpoints are immutable and messages cannot be arbitrarily halted, reducing censorship risk."
+      },
+      {
+        "code": "A4",
+        "text": "Pendle V2 wraps yield-bearing assets at exactly one level of nesting per market: user deposits underlying → SY adapter → PT+YT. There is no protocol-level re-hypothecation or additional nesting beyond the SY. Failure of an underlying protocol (e.g., Ethena sUSDe de-pegging or Lido slashing) propagates to that specific SY-backed market only; other markets are unaffected. About 70% of TVS is in Ethena sUSDe-related markets per reporting through late 2025, meaning an Ethena failure would be severe at the portfolio level — but this is the underlying's risk, not an additional dependency Pendle introduces on top. At maturity, PT-sUSDe holders redeem for whatever the SY-sUSDe contract holds; Pendle adds no additional slashing actor or custodian in the middle."
+      },
+      {
+        "code": "A6",
+        "text": "For V2 core pricing: the internal TWAP stores up to 65,536 observations and the caller can choose a TWAP window up to ~9 days on Ethereum; no external fallback is needed because no external oracle is used. At maturity, PT redemption is deterministic (PT burns → receive underlying SY) with no price oracle required. For Boros: no documented on-chain fallback or sanity-check contract was identified for the external funding-rate oracle; activation status of any circuit-breaker for Boros oracle mis-reporting is unknown. Boros imposes initial open-interest caps per pool ($10M), which limits blast radius but does not substitute for an oracle fallback."
+      },
+      {
+        "code": "A7",
+        "text": "Pendle has substantial deployments on Arbitrum (Arbitrum sequencer, Offchain Labs), Base (Base sequencer, OP Stack/Coinbase), Optimism (OP Stack sequencer), BNB Chain, Mantle, Sonic, Berachain, Hyperliquid L1, and Avalanche. Sequencer downtime on any of these L2s would freeze Pendle market interactions on that chain (swapping, minting, LP adds/removes) but would NOT affect: (a) Ethereum mainnet markets, which have no sequencer dependency beyond base-chain substrate; (b) PT principal redemption on Ethereum. For each non-Ethereum chain, the canonical L1→L2 bridge and sequencer constitute a liveness dependency beyond the base-chain substrate. This is standard for all L2-deployed protocols and is not unique to Pendle."
+      },
+      {
+        "code": "A8",
+        "text": "Pendle V2 core operations (swap, mint PT/YT, redeem PT at/after maturity, claim YT yield) are fully permissionless — no keeper or relayer is required. The PENDLE emissions distribution to gauges on non-Ethereum chains requires someone to call the broadcast function (to send vePENDLE state via LayerZero), but this is user-callable (anyone can pay the LZ fee and call broadcastTotalSupply). Boros position settlements occur at each funding rate period (8 hours for Binance perps); if no settlement is triggered, positions accrue unrealised PnL — unclear whether this is permissionless-but-necessary or admin-only."
+      },
+      {
+        "code": "A9",
+        "text": "Pendle V2 core market contracts (PendleMarket, PYieldContractV3) are deployed as immutable bytecode — once deployed, the AMM logic and oracle implementation cannot be changed. The Router (diamond pattern) is upgradeable and admin-controlled, but per documentation the Router holds no funds and has no special allowlists on markets; upgrading the Router changes execution paths but does not swap or add external oracle/bridge dependencies the markets call. The MarketFactoryV3 uses BoringOwnableUpgradeable with an owner that can set treasury address and reserve fee percent, but cannot retroactively mutate deployed market contracts or their SY references. New markets are created permissionlessly by anyone via the factory; each new SY adapter created for a new market does reference a new external protocol, but this is market-scoped and users opt in per market. For Boros: whether the funding-rate oracle address is governance-mutable without a timelock could not be determined from available public sources."
+      }
+    ],
+    "steelman": {
+      "red": "Boros directly calls an external funding-rate oracle (Binance-sourced rate delivered on-chain) whose manipulation or failure can cause incorrect settlement and liquidation of user positions; if Boros scales to hold a significant share of TVS without an on-chain sanity check or fallback, this constitutes a principal-loss external dependency.",
+      "orange": "LayerZero messaging failure would deprive all L2 LP providers of emission boosts (unclaimed yield loss), L2 sequencer outages freeze market interactions for the ~30–40% of TVS on non-Ethereum chains, and Boros introduces a real external oracle dependency for its settlements — collectively, external failures can cause material unclaimed-yield loss and performance degradation even if they cannot, in the current architecture, steal PT principal.",
+      "green": "Pendle V2's core AMM on Ethereum uses an entirely internal TWAP oracle (no Chainlink, no Pyth, no committee), PT redemption is deterministic and autonomous at maturity with no external call required, SY underlying risk is per-market and user-opt-in, and LayerZero failure only impairs emission boosts (not principal or accrue-yield mechanics) — under this reading, no single external dependency can cause loss of principal or unclaimed yield."
+    },
+    "verdict": "Choosing orange because: (1) LayerZero dependency for cross-chain emission syncing can cause loss of unclaimed yield for LP providers on Arbitrum, Base, BNB, and other non-Ethereum chains (~30–40% of TVS at risk of yield impairment, not principal loss); (2) Boros module (launched August 2025, Arbitrum) depends on an external funding-rate oracle for settlement — Boros holds a smaller but real TVS share (estimated <5% as of analysis date given initial $10M per-pool caps) and lacks a confirmed on-chain fallback, meeting the orange criterion of an external dependency that can change expected performance; (3) L2 sequencer dependencies exist for all non-Ethereum deployments. The green steel-man is compelling for Ethereum-only PT/YT holders (redemption is fully autonomous), but the cross-chain and Boros dimensions push the overall grade to orange. Module-weighted: V2 Ethereum core ~60% TVS (grade: green-lean); V2 non-Ethereum ~35% TVS (grade: orange, sequencer + LZ emission risk); Boros ~1-5% TVS (grade: orange, external oracle). Weighted overall = orange."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x00000000005bbb0ef59571e58418f9a4357b68a0",
+      "shows": "Pendle Router V3 (diamond proxy) on Ethereum mainnet — confirmed deployed, no external oracle calls in core swap/redeem logic",
+      "chain": "Ethereum",
+      "address": "0x00000000005BBB0EF59571E58418F9a4357b68A0",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1A6fCc85557BC4fB7B534ed835a03EF056552D52",
+      "shows": "Pendle MarketFactoryV3 on Ethereum mainnet — BoringOwnableUpgradeable owner can set treasury/fee; market contracts deployed as immutable bytecode",
+      "chain": "Ethereum",
+      "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xdF3601014686674e53d1Fa52F7602525483F9122",
+      "shows": "Pendle YieldContractFactoryV3 on Ethereum mainnet",
+      "chain": "Ethereum",
+      "address": "0xdF3601014686674e53d1Fa52F7602525483F9122",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/Developers/Oracles/IntroductionOfPtOracle",
+      "shows": "Pendle PT oracle is a built-in TWAP in each PendleMarket contract, derived from AMM trade observations (ln(impliedRate) cumulative) — no external Chainlink or Pyth call in core contracts",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2/Developers/HighLevelArchitecture",
+      "shows": "PendleRouter has no special permissions on market contracts; SY is the sole standardized wrapper layer; PT/YT redemption is on-chain only",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://layerzero.network/blog/how-pendle-built-a-7b-protocol-everywhere",
+      "shows": "LayerZero used by Pendle for vePENDLE/sPENDLE cross-chain position syncing and PENDLE OFT; Pendle retains message ownership; LZ endpoints are immutable",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2/Developers/Contracts/vePENDLE",
+      "shows": "vePENDLE broadcastUserPosition and broadcastTotalSupply use LayerZero; locking/voting/principal operations on Ethereum do not require LZ; L2 users need sync for boost but not for yield accrual",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://oakresearch.io/en/reports/protocols/pendle-pendle-comprehensive-overview-leading-platform-on-chain-yield",
+      "shows": "Boros protocol queries external oracle for Binance BTC/USDT and ETH/USDT funding rates; AMM core is non-upgradable; governance modules remain changeable",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bug-bounty/pendle/information/",
+      "shows": "Pendle active bug bounty on Immunefi; rewards in PENDLE, USDC, USDT on Ethereum and Base",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2/FAQ",
+      "shows": "Pendle officially documents that it interacts with third-party protocols/contracts and users are exposed to those protocol risks; codebase audited by multiple firms",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://www.chainsecurity.com/security-audit/pendle-v2-core",
+      "shows": "ChainSecurity audit of Pendle V2 Core; notes security of SYs depends on derived implementation which was out of scope; confirms SY/PY/market V1 architecture",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://defisafety.com/app/pqrs/601",
+      "shows": "DeFiSafety notes Pendle core protocol contracts are immutable; Router design and upgrade surface described",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/boros-dev",
+      "shows": "Boros is deployed on Arbitrum as an on-chain IRS platform using a hybrid CLOB/AMM; uses external oracle for funding rates; separate from Pendle V2 core",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2/Developers/Contracts/PendleMarket",
+      "shows": "PendleMarket stores ln(impliedRate) TWAP observations internally (Uniswap V3 ring-buffer pattern); getPtToSyRate uses TWAP duration from stored observations; no external oracle call",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/pendle-finance/pendle-core-v2-public",
+      "shows": "Pendle V2 core public repo; six auditors noted; audits folder at main/audits; no commit SHA pinned as robots.txt blocked direct tree fetch"
+    },
+    {
+      "url": "https://docs.pendle.finance/Security",
+      "shows": "Auditors listed as Ackee, Dedaub, Dingbats, Code4rena wardens; all audits in github.com/pendle-finance/pendle-core-v2-public/tree/main/audits; all contracts open source",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A2: Boros funding-rate oracle — specific provider, committee size, quorum, and whether mis-reporting triggers a circuit breaker could not be determined from available public sources",
+    "A6: Boros oracle fallback / sanity check activation status — no confirmed on-chain fallback contract or price-deviation guard identified for Boros funding-rate feed",
+    "A8: Boros settlement trigger — unclear whether 8-hourly funding-rate settlements are permissionless or admin-only, and what degrades if no settlement is called for one period",
+    "A9: Boros funding-rate oracle address mutability — whether Pendle governance can change the Boros oracle address without a timelock could not be verified from available sources"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/pendle-finance/pendle-core-v2-public",
+      "https://github.com/pendle-finance/pendle-core"
+    ],
+    "docs_url": "https://docs.pendle.finance",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://www.chainsecurity.com/security-audit/pendle-v2-core",
+        "date": "2023"
+      },
+      {
+        "firm": "Ackee",
+        "url": "https://github.com/pendle-finance/pendle-core-v2-public/tree/main/audits",
+        "date": "2023"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://github.com/pendle-finance/pendle-core-v2-public/tree/main/audits",
+        "date": "2023"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x808507121B80c02388fAd14726482e061B8da827",
+      "symbol": "PENDLE"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/pendle/information/",
+    "security_contact": "https://github.com/pendle-finance/pendle-core-v2-public/tree/main/audits",
+    "deployed_contracts_doc": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x00000000005BBB0EF59571E58418F9a4357b68A0",
+        "role": "Router V3 (diamond proxy, admin-upgradeable facets)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52",
+        "role": "MarketFactoryV3 owner (sets treasury, reserve fee percent)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Pendle is a yield-tokenization and trading protocol that wraps any yield-bearing asset (LSTs, LRTs, lending receipts, yield-bearing stablecoins) into a Standardized Yield (SY) token, then splits it into a Principal Token (PT) — redeemable 1:1 for the underlying at maturity — and a Yield Token (YT) — claiming all yield until maturity. Users trade PT and YT on a purpose-built time-aware AMM with an internal TWAP oracle (no external price feed). In January 2026, Pendle replaced the vePENDLE lock model with sPENDLE, a liquid staking governance token. Its Boros module (launched August 2025 on Arbitrum) extends the model to funding-rate swaps on perpetual futures, allowing traders to lock in or speculate on BTC/ETH funding rates sourced from Binance."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "pendle",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-25",
+  "model": "grok-3",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Core pricing internal/deterministic; L2 sequencer & per-market underlying risks isolated (~15-30% TVS per incident)",
+  "short_headline": "L2 freezes possible; core autonomous",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Core contracts (PendleRouter 0x888888888889758F76e7103c6CbF23ABbF58F946, MarketFactoryV6 0x6d247b1c044fA1E22e6B04fA9F71Baf99EB29A9f, pyYtLpOracle 0x5542be50420E88dd7D5B4a3D488FA6ED82F6DAc2 on Ethereum) make zero external oracle/price-feed calls; PT/LP pricing uses internal TWAP (cumulative log implied APY in PendleMarket) or LinearDiscountOracle (block.timestamp only). External calls limited to per-market SY adapters calling their chosen underlyings (e.g. Aave, Lido, EigenLayer-based LRTs); no global cross-cutting external contract."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain actor committees, oracle reporters, guardian multisigs, or validator sets feeding into core contracts; all state (prices, yields, redemptions) derived on-chain from AMM or user deposits. Governance multisig (0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1) and devMultisig (0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1) are control actors, not reporters."
+      },
+      {
+        "code": "A3",
+        "text": "LayerZero endpoint (0x66A71Dcef29A0fFBDBE3c6A460a3B5BC225Cd675) deployed; cross-chain/ directory exists for messaging (likely governance/rewards/bridging). No evidence of material TVL or core user flows (mint/swap/redeem PT/YT) requiring non-canonical bridge; all principal-holding markets are chain-local and isolated."
+      },
+      {
+        "code": "A4",
+        "text": "Supports LRT/restaking underlyings (e.g. rsETH-PT market 0x7baf258049cc8b9a78097723dc19a8b103d4098f, pufETH SY 0x253008ba4ae2f3e6488dc998a5321d4eb1a0c905); collateral chains 2-4 layers deep (LST/LRT + EigenLayer + operators). Failures propagate only within that market's silo; users explicitly opt in at deposit time. No protocol-wide propagation."
+      },
+      {
+        "code": "A5",
+        "text": "No fork lineage recorded in GitHub repo, docs, or deployment files; Pendle V2 is original architecture with custom AMM and SY adapters."
+      },
+      {
+        "code": "A6",
+        "text": "Linear Discount Oracle is LIVE and enforcing (deterministic, no external input, always active per OracleOverview). TWAP oracle uses on-chain AMM state with built-in geometric mean; no external-report sanity checks or circuit breakers found in core architecture. No unmitigated external failure modes exist to trigger fallbacks."
+      },
+      {
+        "code": "A7",
+        "text": "Deployed on L2s including Arbitrum (chain 42161), Base (8453), Optimism (10), Sonic (146), Mantle (5000), Avalanche (43114), BSC (56). Each has centralized sequencer/DA that can pause L2 transactions (including exits). Fallback: L1 forced withdrawals (typical 1-7 day delay on optimistic rollups). Not base-substrate; additional liveness dependency for L2 TVS share."
+      },
+      {
+        "code": "A8",
+        "text": "No critical keeper/relayer/liquidation bot liveness required for core functions. AMM swaps, PT/YT mint/redeem, and maturity redemptions (1:1 to SY/asset) are fully permissionless on-chain; no auto-compounding or position-staleness failure modes."
+      },
+      {
+        "code": "A9",
+        "text": "Governance multisig and factories (yieldContractFactoryV6 0x3E6EBa46AbC5ab18ED95F6667d8B2fd4020E4637, marketFactoryV6 0x6fcf753f2C67b83f7B09746Bbc4FA0047b35D050) allow permissioned creation of new SY/markets for arbitrary underlyings. Cannot hot-swap existing oracles (internal/immutable), bridges, or global deps; new markets are opt-in only with no effect on prior positions. No timelock required for A9 scope as no silent cross-cutting external introduced."
+      }
+    ],
+    "steelman": {
+      "red": "L2 sequencers can freeze exits on chains holding material TVS and some LRT underlyings have deep restaking chains where failure could impair principal in opted-in markets, with governance able to list new risky SYs.",
+      "orange": "L2 sequencer liveness failures can pause withdrawals and trading on non-negligible TVS share (~15-30% per chain) and per-market underlyings introduce isolated but numerous external call surfaces, materially changing expected performance without principal theft or global mispricing.",
+      "green": "All critical pricing and tokenization logic is fully internal (no external oracles or shared deps per OracleOverview and core contract inspection), risks are strictly isolated per-market or per-L2 with L1 escape hatches, and governance cannot introduce protocol-wide external dependencies without user exit windows."
+    },
+    "verdict": "Choosing orange because the L2 sequencer dependency (explicitly recorded in A7 and evidenced by deployments on 42161/8453/etc. plus lzEndpoint in 1-core.json) introduces a material liveness risk that can freeze positions and change expected performance for a bounded but non-trivial TVS share, while the green steelman is weakened by this and the orange steelman is stronger than red (no theft or global principal loss path exists, unlike a single-oracle failure which is absent here per A1 and docs). This matches Stage 1 equivalent with isolated, recoverable impacts."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x888888888889758F76e7103c6CbF23ABbF58F946",
+      "shows": "Live PendleRouter V3+ deployment on Ethereum; verifies current on-chain core entrypoint and no external oracle wiring visible in verified source",
+      "chain": "Ethereum",
+      "address": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x27b1dAcd74688aF24a64BD3C9C1B143118740784",
+      "shows": "PendleMarketFactory deployment; confirms factory for isolated per-market creation with no global external deps",
+      "chain": "Ethereum",
+      "address": "0x27b1dAcd74688aF24a64BD3C9C1B143118740784",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x5542be50420E88dd7D5B4a3D488FA6ED82F6DAc2",
+      "shows": "pyYtLpOracle deployment (same address across chains per docs); verifies internal oracle contract exists and is not Chainlink/Pyth",
+      "chain": "Ethereum",
+      "address": "0x5542be50420E88dd7D5B4a3D488FA6ED82F6DAc2",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1",
+      "shows": "Governance multisig (Safe proxy); confirms actor class and control surface for A9 assessment",
+      "chain": "Ethereum",
+      "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pendle-finance/pendle-core-v2-public/main/deployments/1-core.json",
+      "shows": "Official core deployment addresses including router, all market/yield factories V3-V6, pyYtLpOracle, governance, devMultisig, proxyAdmin, lzEndpoint, and syFactory on Ethereum",
+      "chain": "Ethereum",
+      "address": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    },
+    {
+      "url": "https://docs.pendle.finance/pendle-v2-dev/Oracles/OracleOverview",
+      "shows": "Explicit confirmation that PT/LP oracles are internal (Linear Discount uses only block.timestamp; TWAP uses PendleMarket AMM state) with no external providers, fallbacks, or contract calls",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    },
+    {
+      "url": "https://github.com/pendle-finance/pendle-core-v2-public/tree/main/contracts",
+      "shows": "Source structure with oracles/, cross-chain/, core/ (no Chainlink/Pyth/Redstone files or imports in core paths); confirms internal-only architecture",
+      "commit": "fdcfe39ed7b45717f0e6e286581bdcf96bb2f9ce",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1b6d3e5da9004668e14ca39d1553e9a46fe842b3",
+      "shows": "Historical PendleRouter reference; cross-checks evolution to current 0x8888... address and V2/V3+ upgrade path",
+      "chain": "Ethereum",
+      "address": "0x1b6d3e5da9004668e14ca39d1553e9a46fe842b3",
+      "fetched_at": "2026-04-25T12:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: exhaustive per-market census of every SY underlying contract and its specific external calls (e.g. exact Aave pool or EigenLayer operator set for each of 50+ markets; core architecture has none global)",
+    "A3: quantitative TVL or core-flow dependency on LayerZero cross-chain features (endpoint and directory present but peripheral role unconfirmed in docs/deployments)",
+    "A7: exact sequencer/DA trust model, forced-exit delay parameters, and current TVS share for each supported L2 (verifiable per-chain but aggregate share and per-chain details not reconstructed from allowed sources)",
+    "A6: presence or activation status of any on-chain circuit breakers/sanity checks inside PendleMarket or router facets for hypothetical external failures (none visible in architecture review)"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/pendle-finance/pendle-core-v2-public"
+    ],
+    "docs_url": "https://docs.pendle.finance/",
+    "audits": [
+      {
+        "firm": "Ackee Blockchain",
+        "url": "https://github.com/pendle-finance/pendle-core-v2-public/blob/main/audits/Ackee/Ackee-Part%201.pdf",
+        "date": "2022-05"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://dedaub.com/audits/pendle/pendle-finance-v2-yield-tokenization-and-trading-jul-01-2022/",
+        "date": "2022-07"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x808507121b80c02388fad14726482e061b8da827",
+      "symbol": "PENDLE"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://github.com/pendle-finance/pendle-core-v2-public/tree/main/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1",
+        "role": "Governance multisig",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1",
+        "role": "Dev multisig",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64",
+        "role": "Proxy admin",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Pendle lets users deposit yield-bearing assets (LSTs, LRTs, lending receipts, stables, RWAs) into StandardizedYield (SY) adapters to split them into Principal Tokens (PT, zero-coupon style) and Yield Tokens (YT), then trade both on a custom AMM with built-in TWAP oracle for fixed-rate yields or leveraged speculation. Markets are created permissionlessly per underlying but UI-curated; the protocol is distinctive for its isolated per-market silos and fully on-chain deterministic pricing that never calls external oracles or price feeds."
+  }
+}
+  
+]
