@@ -35,16 +35,20 @@ function chipLabel(grade: string): string {
 }
 ---
 <ul class:list={["risk-matrix", `variant-${variant}`]}>
-  {tier !== "none" && (
-    <li class:list={["row", "tier-row", `tier-${tier}`]} data-tier-row={tier}>
-      <div class="row-link" role="presentation">
-        <span class="swatch tier-swatch" aria-hidden="true" style={`background: linear-gradient(135deg, ${TIER_STOPS[tier][0].color} 0%, ${TIER_STOPS[tier][1].color} 50%, ${TIER_STOPS[tier][2].color} 100%);`}></span>
-        <span class="dim">Tier</span>
-        <span class="chip tier-chip" style={`background: linear-gradient(135deg, ${TIER_STOPS[tier][0].color} 0%, ${TIER_STOPS[tier][1].color} 50%, ${TIER_STOPS[tier][2].color} 100%); border: 1px solid ${TIER_RIM_COLOR[tier]}`}>{TIER_CHIP_TEXT[tier]}</span>
-        <span class="headline">{TIER_ROW_LABEL[tier]}</span>
-      </div>
-    </li>
-  )}
+  {tier !== "none" && (() => {
+    const stops = TIER_STOPS[tier];
+    const tierGradient = `linear-gradient(135deg, ${stops.map((s, i) => `${s.color} ${i === 0 ? 0 : i === stops.length - 1 ? 100 : 50}%`).join(", ")})`;
+    return (
+      <li class:list={["row", "tier-row", `tier-${tier}`]} data-tier-row={tier}>
+        <div class="row-link" role="presentation">
+          <span class="swatch tier-swatch" aria-hidden="true" style={`background: ${tierGradient};`}></span>
+          <span class="dim">Tier</span>
+          <span class="chip tier-chip" style={`background: ${tierGradient}; border: 1px solid ${TIER_RIM_COLOR[tier]}`}>{TIER_CHIP_TEXT[tier]}</span>
+          <span class="headline">{TIER_ROW_LABEL[tier]}</span>
+        </div>
+      </li>
+    );
+  })()}
   {sorted.map((s) => (
     <li class:list={["row", `grade-${s.grade}`]} data-slice-row={s.id}>
       <a href={`#${s.id}`} class="row-link">

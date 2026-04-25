@@ -37,7 +37,7 @@ export function pizzaGradesFor(
       control: "red",
       "ability-to-exit": "red",
       autonomy: "red",
-      access: "red",
+      "open-access": "red",
       verifiability: "red",
     };
   }

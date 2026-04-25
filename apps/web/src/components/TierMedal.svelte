@@ -55,7 +55,7 @@
         <circle cx={cx} cy={dotY} r={dotR} fill={glyphColor} />
         <circle cx={cx + gap} cy={dotY} r={dotR} fill={glyphColor} />
       {:else if tier === "silver"}
-        {@const strokeW = Math.max(1, Math.round(s * 0.09))}
+        {@const strokeW = Math.max(1.5, s * 0.14)}
         {@const pad = s * 0.28}
         <path
           d={`M${pad} ${s * 0.52} L${s * 0.44} ${s - pad * 0.8} L${s - pad} ${s * 0.34}`}
