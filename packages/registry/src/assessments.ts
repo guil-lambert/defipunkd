@@ -120,10 +120,21 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         continue;
       }
 
-      const submissionPath = join(repoRoot, raw.primary_submission_path);
+      const hashIdx = raw.primary_submission_path.lastIndexOf("#");
+      const fileRelPath = hashIdx === -1 ? raw.primary_submission_path : raw.primary_submission_path.slice(0, hashIdx);
+      const arrayIndex = hashIdx === -1 ? null : Number(raw.primary_submission_path.slice(hashIdx + 1));
+      const submissionPath = join(repoRoot, fileRelPath);
       let sub: RawSubmission;
       try {
-        sub = JSON.parse(readFileSync(submissionPath, "utf8")) as RawSubmission;
+        const parsed = JSON.parse(readFileSync(submissionPath, "utf8")) as RawSubmission | RawSubmission[];
+        if (arrayIndex !== null) {
+          if (!Array.isArray(parsed) || !Number.isInteger(arrayIndex) || arrayIndex < 0 || arrayIndex >= parsed.length) {
+            throw new Error(`array index ${arrayIndex} out of range`);
+          }
+          sub = parsed[arrayIndex];
+        } else {
+          sub = Array.isArray(parsed) ? parsed[0] : parsed;
+        }
       } catch (err) {
         console.warn(
           `[registry] assessment ${slug}/${sliceId} references missing submission ${raw.primary_submission_path}: ${(err as Error).message}`,
