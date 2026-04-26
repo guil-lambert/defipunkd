@@ -16,6 +16,11 @@ export type {
   SourcifyFetchResult,
   SourcifyStatus,
 } from "./fetch-sourcify.js";
+export { chainNameToSafeSlug, isSupportedSafeChain } from "./safe-chain-id.js";
+export { fetchSafe } from "./fetch-safe.js";
+export type { FetchSafeOptions, SafeFetchResult, SafeMetadata } from "./fetch-safe.js";
+export { fetchOwner } from "./fetch-owner.js";
+export type { FetchOwnerOptions, OwnerFetchResult } from "./fetch-owner.js";
 export { inferPurpose } from "./purpose-heuristic.js";
 export type {
   ChainName,
