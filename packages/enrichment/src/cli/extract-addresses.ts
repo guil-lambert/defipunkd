@@ -33,6 +33,7 @@ import { execFileSync } from "node:child_process";
 
 import type { ProtocolSnapshot, Snapshot } from "@defipunkd/registry";
 
+import { loadAddressBook, type AddressBook } from "../address-book.js";
 import { parseAdapter } from "../parse.js";
 import type { ParsedAdapter } from "../types.js";
 
@@ -127,10 +128,23 @@ interface ProtocolResult {
   reason?: string;
 }
 
+function loadCoreAssets(adaptersDir: string): AddressBook {
+  const path = join(adaptersDir, "projects", "helper", "coreAssets.json");
+  if (!existsSync(path)) return new Map();
+  try {
+    const json = JSON.parse(readFileSync(path, "utf8"));
+    return loadAddressBook(json);
+  } catch (err) {
+    console.error(`[extract] failed to load coreAssets.json: ${(err as Error).message}`);
+    return new Map();
+  }
+}
+
 function processProtocol(
   p: ProtocolSnapshot,
   adaptersDir: string,
   adaptersSha: string,
+  addressBook: AddressBook,
 ): ProtocolResult {
   const adapterPath = resolveAdapterPath(adaptersDir, p);
   const adapterUrl = adapterPath
@@ -159,7 +173,7 @@ function processProtocol(
       reason: `read failed: ${(err as Error).message}`,
     };
   }
-  return { slug: p.slug, adapterUrl, parsed: parseAdapter(source) };
+  return { slug: p.slug, adapterUrl, parsed: parseAdapter(source, { addressBook }) };
 }
 
 function writeOutput(
@@ -223,6 +237,8 @@ function isActive(p: ProtocolSnapshot): boolean {
 async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
   const adaptersSha = ensureAdapters(opts);
+  const addressBook = loadCoreAssets(opts.adaptersDir);
+  console.error(`[extract] loaded ${addressBook.size} address-book entries`);
 
   const snapshot = loadSnapshot(opts.repoRoot);
   const all = Object.values(snapshot.protocols);
@@ -245,7 +261,7 @@ async function main(): Promise<void> {
   let totalDynamic = 0;
 
   for (const p of targets) {
-    const result = processProtocol(p, opts.adaptersDir, adaptersSha);
+    const result = processProtocol(p, opts.adaptersDir, adaptersSha, addressBook);
     writeOutput(opts.repoRoot, result, adaptersSha, extractedAt);
     if (!result.parsed) {
       unresolved++;

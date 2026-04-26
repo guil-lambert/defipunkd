@@ -13,6 +13,10 @@ const KEYWORDS: Array<[RegExp, PurposeHint]> = [
   [/vault/i, "vault"],
   [/staking|stake|gauge|lock/i, "staking"],
   [/pool|pair|amm|market/i, "pool"],
+  // Token symbols. Common patterns: STETH, WETH, USDC, USDT, WBTC, sUSDe,
+  // weETH, cbETH, rETH, DAI, MATIC, LINK, etc. Liquid-staking/restaking
+  // wrappers all carry an asset suffix.
+  [/^([sw]?eth|w?steth|reth|cbeth|usd[a-z]*|w?btc|matic|dai|link|ldo|aave|crv|frax|mkr|sushi|uni|aevo|ena|usde|stmatic|stsol|wsol|sfrxeth|stbsc|stdot|stnear|frxeth|sweth|metis|fxs|cvx|cvxcrv|cvxfxs|wavax|gnosis|gno|tbtc|lbtc|cbbtc|btcn|wsts|s?dai|usds)$/i, "token"],
   [/token|coin|asset|reward/i, "token"],
 ];
 
