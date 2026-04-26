@@ -162,18 +162,105 @@ function processProtocol(
         : `no module field, slug-fallback paths missing`,
     };
   }
-  let source: string;
-  try {
-    source = readFileSync(adapterPath, "utf8");
-  } catch (err) {
+  const parsed = parseAdapterRecursive(adapterPath, addressBook);
+  if (!parsed) {
     return {
       slug: p.slug,
       adapterUrl,
       parsed: null,
-      reason: `read failed: ${(err as Error).message}`,
+      reason: `read failed for ${adapterPath}`,
     };
   }
-  return { slug: p.slug, adapterUrl, parsed: parseAdapter(source, { addressBook }) };
+  return { slug: p.slug, adapterUrl, parsed };
+}
+
+/**
+ * Resolve a relative import like `./v1` or `./helpers/foo` to a real file path.
+ * Tries the literal path, then `.js`, then `/index.js`. Returns null if none
+ * exist. Non-relative imports (`../helper/*`, npm packages) are not followed.
+ */
+function resolveRelativeImport(fromFile: string, importPath: string): string | null {
+  if (!importPath.startsWith("./") && !importPath.startsWith("../")) return null;
+  // Don't descend into ../helper/* — those are utility code (sumTokens, getLogs)
+  // that don't carry per-protocol addresses. CoreAssets is already handled
+  // via the address book.
+  if (importPath.startsWith("../")) return null;
+  const baseDir = dirname(fromFile);
+  const candidates = [
+    importPath,
+    `${importPath}.js`,
+    `${importPath}/index.js`,
+  ].map((p) => resolve(baseDir, p));
+  for (const c of candidates) {
+    if (existsSync(c) && !c.endsWith(".json")) return c;
+  }
+  return null;
+}
+
+const MAX_IMPORT_DEPTH = 3;
+
+/**
+ * Parse the entry adapter and recursively walk its same-protocol relative
+ * imports (`./foo`, `./foo.js`). Many adapters are thin wrappers like
+ * `mergeExports([require("./v1"), require("./v2")])` — addresses live in the
+ * imported files, not the entry. We merge their static_addresses,
+ * dynamic_resolution, and warnings into a single ParsedAdapter.
+ *
+ * `../helper/*` and npm imports are skipped — they're shared utility code,
+ * not protocol-specific addresses.
+ */
+function parseAdapterRecursive(
+  entryPath: string,
+  addressBook: AddressBook,
+): ParsedAdapter | null {
+  const visited = new Set<string>();
+  const merged: ParsedAdapter = {
+    static_addresses: [],
+    dynamic_resolution: [],
+    imports: [],
+    warnings: [],
+  };
+
+  function walk(filePath: string, depth: number): void {
+    if (visited.has(filePath)) return;
+    visited.add(filePath);
+    let source: string;
+    try {
+      source = readFileSync(filePath, "utf8");
+    } catch (err) {
+      merged.warnings.push(`read failed for ${filePath}: ${(err as Error).message}`);
+      return;
+    }
+    const parsed = parseAdapter(source, { addressBook });
+    merged.static_addresses.push(...parsed.static_addresses);
+    merged.dynamic_resolution.push(...parsed.dynamic_resolution);
+    merged.imports.push(...parsed.imports);
+    merged.warnings.push(...parsed.warnings);
+    if (depth >= MAX_IMPORT_DEPTH) return;
+    for (const imp of parsed.imports) {
+      const resolved = resolveRelativeImport(filePath, imp);
+      if (resolved && !visited.has(resolved)) walk(resolved, depth + 1);
+    }
+  }
+
+  walk(entryPath, 0);
+  if (visited.size === 0) return null;
+
+  // Re-dedup after merging cross-file address lists.
+  // (parseAdapter already dedupes per-file; this collapses cross-file overlaps.)
+  const dedupedAddresses = new Map<string, typeof merged.static_addresses[number]>();
+  for (const a of merged.static_addresses) {
+    const k = `${a.chain ?? ""}|${a.address}`;
+    if (!dedupedAddresses.has(k)) dedupedAddresses.set(k, a);
+  }
+  merged.static_addresses = [...dedupedAddresses.values()].sort((a, b) => {
+    const ca = a.chain ?? "";
+    const cb = b.chain ?? "";
+    if (ca !== cb) return ca.localeCompare(cb);
+    return a.address.localeCompare(b.address);
+  });
+  merged.imports = [...new Set(merged.imports)].sort();
+  return merged;
 }
 
 function writeOutput(
