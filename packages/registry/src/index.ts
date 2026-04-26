@@ -13,6 +13,16 @@ import {
 import { loadMasters, type Master, type MasterSliceConsensus } from "./master";
 
 export type { Protocol, Snapshot, ProtocolSnapshot, ProvenanceTag, Slug } from "./types";
+export { getEnrichment, listEnrichedSlugs } from "./enrichment";
+export type {
+  EnrichmentAdapter,
+  EnrichmentAdapterAddress,
+  EnrichmentControl,
+  EnrichmentControlAddress,
+  EnrichmentSourceCode,
+  EnrichmentSourceCodeAddress,
+  ProtocolEnrichment,
+} from "./enrichment";
 export { OverlaySchema, type Overlay } from "./overlay-schema";
 export { loadMasters, type Master, type MasterSliceConsensus } from "./master";
 export {

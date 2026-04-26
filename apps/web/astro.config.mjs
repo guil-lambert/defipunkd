@@ -27,6 +27,7 @@ export default defineConfig({
       "../../data/assessments",
       "../../data/master",
       "../../data/submissions",
+      "../../data/enrichment",
     ],
   }),
   integrations: [svelte()],
