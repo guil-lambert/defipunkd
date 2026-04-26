@@ -23,6 +23,7 @@ const base: ProtocolSnapshot = {
   first_seen_at: "2026-01-01T00:00:00.000Z",
   last_seen_at: "2026-04-22T00:00:00.000Z",
   delisted_at: null,
+  module: null,
 };
 
 describe("mergeProtocol three-state semantics", () => {

@@ -1,0 +1,69 @@
+name: Adapter address extraction
+
+on:
+  schedule:
+    # Tuesdays 06:00 UTC, one day after the Monday snapshot sync.
+    - cron: "0 6 * * TUE"
+  workflow_dispatch:
+
+concurrency:
+  group: extract-addresses
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache DefiLlama-Adapters checkout
+        uses: actions/cache@v4
+        with:
+          path: .cache/defillama-adapters
+          key: defillama-adapters-${{ github.run_id }}
+          restore-keys: |
+            defillama-adapters-
+
+      - name: Extract adapter addresses
+        run: |
+          pnpm --filter @defipunkd/enrichment exec \
+            tsx src/cli/extract-addresses.ts 2>&1 | tee extract-log.txt
+
+      - name: Build PR body
+        run: |
+          {
+            echo "Adapter address extraction run ${{ github.run_number }}."
+            echo
+            echo '## Run summary'
+            echo
+            echo '```'
+            tail -20 extract-log.txt
+            echo '```'
+            echo
+            echo '## Diff'
+            echo
+            git --no-pager diff --stat -- data/enrichment | tail -50
+          } > extract-pr-body.md
+
+      - name: Open PR with enrichment diff
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(data): refresh enrichment/adapter addresses"
+          title: "chore(data): refresh enrichment/adapter addresses — ${{ github.run_number }}"
+          body-path: extract-pr-body.md
+          branch: enrichment/adapters-${{ github.run_number }}
+          add-paths: data/enrichment/**
+          delete-branch: true

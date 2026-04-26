@@ -1,0 +1,63 @@
+name: Sourcecode enrichment
+
+on:
+  schedule:
+    # Wednesdays 06:00 UTC, one day after Tuesday's adapter address extraction.
+    - cron: "0 6 * * WED"
+  workflow_dispatch:
+
+concurrency:
+  group: fetch-sourcecode
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Fetch verified-source + Sourcify metadata
+        env:
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: |
+          pnpm --filter @defipunkd/enrichment exec \
+            tsx src/cli/fetch-sourcecode.ts 2>&1 | tee fetch-log.txt
+
+      - name: Build PR body
+        run: |
+          {
+            echo "Sourcecode enrichment run ${{ github.run_number }}."
+            echo
+            echo '## Run summary'
+            echo
+            echo '```'
+            tail -20 fetch-log.txt
+            echo '```'
+            echo
+            echo '## Diff'
+            echo
+            git --no-pager diff --stat -- 'data/enrichment/**/sourcecode.json' | tail -50
+          } > fetch-pr-body.md
+
+      - name: Open PR with sourcecode diff
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(data): refresh enrichment/sourcecode"
+          title: "chore(data): refresh enrichment/sourcecode — ${{ github.run_number }}"
+          body-path: fetch-pr-body.md
+          branch: enrichment/sourcecode-${{ github.run_number }}
+          add-paths: "data/enrichment/**/sourcecode.json"
+          delete-branch: true

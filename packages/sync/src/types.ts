@@ -17,6 +17,7 @@ export type LlamaProtocol = {
   deadFrom?: number | string | null;
   tvl?: number | null;
   chainTvls?: Record<string, number | null> | null;
+  module?: string | null;
 };
 
 export type LlamaParentProtocol = {

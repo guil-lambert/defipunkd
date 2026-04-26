@@ -1,6 +1,6 @@
 ---
 import type { Protocol, ProvenanceTag, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
-import { getProtocolMetadata } from "@defipunkd/registry";
+import { getEnrichment, getProtocolMetadata } from "@defipunkd/registry";
 import { auditorDomain, EM_DASH, formatUtc, parseHallmarks } from "../lib/format";
 import ProtocolLogo from "./ProtocolLogo.astro";
 import SideNav from "./SideNav.astro";
@@ -10,6 +10,7 @@ import StagePreview from "./StagePreview.astro";
 import ProtocolSummary from "./ProtocolSummary.astro";
 import ProvTag from "./ProvTag.astro";
 import HallmarksTimeline from "./HallmarksTimeline.astro";
+import TvlSurface from "./TvlSurface.astro";
 
 interface Props {
   protocol: Protocol;
@@ -18,6 +19,7 @@ interface Props {
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
 }
 const { protocol, snapshotGeneratedAt, children, assessments } = Astro.props;
+const enrichment = getEnrichment(protocol.slug);
 const hasFamily = children.length > 0;
 const hasHallmarks = parseHallmarks(protocol.hallmarks).length > 0;
 const prov = protocol._provenance;
@@ -80,12 +82,15 @@ const provenanceSources = Array.from(new Set([
   updatedSource,
 ].filter((x): x is string => !!x)));
 
+const hasTvlSurface = !!enrichment.adapter && (enrichment.adapter.static_addresses?.length ?? 0) > 0;
 const navLinks = [
   { href: "#overview", label: "Overview" },
   ...(hasHallmarks ? [{ href: "#hallmarks", label: "Hallmarks" }] : []),
   { href: "#risk-analysis", label: "Risk analysis" },
+  ...(hasTvlSurface ? [{ href: "#tvl-surface", label: "TVL surface" }] : []),
   { href: "#reference", label: "References" },
   ...(hasFamily ? [{ href: "#family", label: "Family members" }] : []),
+  { href: "#stage", label: "Stage" },
 ];
 ---
 <SideNav links={navLinks} contentMaxWidth={1100} />
@@ -120,6 +125,8 @@ const navLinks = [
   <HallmarksTimeline hallmarks={hallmarks} />
 
   <RiskAnalysis protocol={protocol} snapshotGeneratedAt={snapshotGeneratedAt} assessments={assessments} />
+
+  <TvlSurface enrichment={enrichment} />
 
   <section id="reference" class="reference-section">
     <h2>References</h2>

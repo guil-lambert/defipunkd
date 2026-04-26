@@ -24,6 +24,7 @@ function fresh(slug: string, generatedAt: string): ProtocolSnapshot {
     first_seen_at: generatedAt,
     last_seen_at: generatedAt,
     delisted_at: null,
+    module: null,
   };
 }
 
