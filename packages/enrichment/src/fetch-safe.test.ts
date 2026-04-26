@@ -38,7 +38,7 @@ describe("fetchSafe", () => {
     expect(r.warnings).toEqual([]);
   });
 
-  it("returns is_safe=false on 404 (address is not a Safe) — no warning, reason='not_indexed'", async () => {
+  it("returns is_safe=false on 404 (not a Safe) — no warning, reason='not_a_safe'", async () => {
     const f = fakeFetch({}, false, 404);
     const r = await fetchSafe({
       chain: "ethereum",
@@ -47,11 +47,11 @@ describe("fetchSafe", () => {
     });
     expect(r.is_safe).toBe(false);
     expect(r.safe).toBeNull();
-    expect(r.not_safe_reason).toBe("not_indexed");
+    expect(r.not_safe_reason).toBe("not_a_safe");
     expect(r.warnings).toEqual([]);
   });
 
-  it("returns is_safe=false on 422 (address is an EOA) — no warning, reason='likely_eoa'", async () => {
+  it("422 should never happen now that we send checksummed; surfaces as a warning if it does", async () => {
     const f = fakeFetch({}, false, 422);
     const r = await fetchSafe({
       chain: "ethereum",
@@ -59,9 +59,22 @@ describe("fetchSafe", () => {
       fetch: f,
     });
     expect(r.is_safe).toBe(false);
-    expect(r.safe).toBeNull();
-    expect(r.not_safe_reason).toBe("likely_eoa");
-    expect(r.warnings).toEqual([]);
+    expect(r.warnings[0]).toContain("422");
+  });
+
+  it("sends an EIP-55-checksummed address in the URL", async () => {
+    const f = vi.fn(async (url: string) => {
+      // Address: 0xae7ab96520de3a18e5e111b5eaab095312d7fe84 (stETH)
+      // EIP-55:  0xae7ab96520DE3a18E5e111B5EaAb095312D7fE84
+      expect(url).toContain("0xae7ab96520DE3a18E5e111B5EaAb095312D7fE84");
+      return { ok: false, status: 404, json: async () => ({}) };
+    });
+    await fetchSafe({
+      chain: "ethereum",
+      address: "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      fetch: f as unknown as FetchFn,
+    });
+    expect(f).toHaveBeenCalled();
   });
 
   it("on a real Safe response, not_safe_reason is null", async () => {

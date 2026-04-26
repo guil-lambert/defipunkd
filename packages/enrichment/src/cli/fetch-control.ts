@@ -63,7 +63,7 @@ interface ControlAddress {
   /** True when the contract address itself is a Safe (rare). */
   self_is_safe: boolean;
   self_safe: SafeMetadata | null;
-  /** Why self isn't a Safe — "likely_eoa" / "not_indexed" / "skipped" / null. */
+  /** Why self isn't a Safe — "not_a_safe" / "skipped" / null. */
   self_not_safe_reason: NotSafeReason | null;
   /** Address from `owner()`. Null when the contract has no owner function or
    *  the call returned 0x000…0 (renounced). */
@@ -71,8 +71,7 @@ interface ControlAddress {
   /** True when the owner address is a Safe (the common multisig pattern). */
   owner_is_safe: boolean;
   owner_safe: SafeMetadata | null;
-  /** Why the owner isn't a Safe. "likely_eoa" here is the loudest possible
-   *  control-slice red flag — the contract is owned by a single private key. */
+  /** Why the owner isn't a Safe. */
   owner_not_safe_reason: NotSafeReason | null;
   /** Whether each fetch was attempted (false → skipped due to limits / errors). */
   fetched: { owner: boolean; self: boolean; owner_safe: boolean };
@@ -89,9 +88,11 @@ interface ControlFile {
     owners_resolved: number;
     self_is_safe: number;
     owner_is_safe: number;
-    /** Number of contracts whose owner is an EOA (single-key) — the loudest
-     *  control-slice red flag. */
-    owner_is_eoa: number;
+    /** Number of contracts whose owner exists but isn't a Safe. Could be a
+     *  Timelock, a custom multisig, an EOA, or another contract — Safe TS
+     *  alone doesn't distinguish those. A future eth_getCode pass on the
+     *  unique owners would split EOA vs contract definitively. */
+    owner_resolved_not_safe: number;
     unique_owner_safes: number;
     unique_owners: number;
   };
@@ -260,27 +261,28 @@ function summarize(entries: ControlAddress[]): ControlFile["summary"] {
   let owners_resolved = 0;
   let self_is_safe = 0;
   let owner_is_safe = 0;
-  let owner_is_eoa = 0;
+  let owner_resolved_not_safe = 0;
   const uniqueOwners = new Set<string>();
   const uniqueOwnerSafes = new Set<string>();
   for (const e of entries) {
     if (e.owner) {
       owners_resolved++;
       uniqueOwners.add(`${e.chain}|${e.owner}`);
+      if (e.owner_is_safe) {
+        owner_is_safe++;
+        uniqueOwnerSafes.add(`${e.chain}|${e.owner}`);
+      } else if (e.fetched.owner_safe) {
+        owner_resolved_not_safe++;
+      }
     }
     if (e.self_is_safe) self_is_safe++;
-    if (e.owner_is_safe) {
-      owner_is_safe++;
-      if (e.owner) uniqueOwnerSafes.add(`${e.chain}|${e.owner}`);
-    }
-    if (e.owner && e.owner_not_safe_reason === "likely_eoa") owner_is_eoa++;
   }
   return {
     total: entries.length,
     owners_resolved,
     self_is_safe,
     owner_is_safe,
-    owner_is_eoa,
+    owner_resolved_not_safe,
     unique_owner_safes: uniqueOwnerSafes.size,
     unique_owners: uniqueOwners.size,
   };

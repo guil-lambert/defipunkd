@@ -13,6 +13,7 @@
  * Reference: https://docs.safe.global/core-api/api-services/safe-transaction-service
  */
 
+import { toChecksumAddress } from "./checksum.js";
 import type { FetchFn } from "./fetch-etherscan.js";
 import { chainNameToSafeSlug } from "./safe-chain-id.js";
 
@@ -30,20 +31,19 @@ export interface SafeMetadata {
 }
 
 /**
- * Why an address isn't a Safe, when we've checked. The Safe TS response code
- * gives us a useful structural distinction:
- *   - "not_indexed"  → 404. Address has contract code but isn't a Safe (or
- *                       isn't yet indexed). Could be a Timelock, a custom
- *                       multisig, an admin contract, anything.
- *   - "likely_eoa"   → 422. Safe TS rejected the address as not-a-contract,
- *                       which strongly implies it's an externally-owned
- *                       account — a single private key. Worst-case for the
- *                       control slice: a TVL contract owned by an EOA has
- *                       no operational threshold and no key recovery.
- *   - "skipped"      → fetch wasn't attempted (unsupported chain, malformed
- *                       address).
+ * Why an address isn't a Safe, when we've checked.
+ *   - "not_a_safe" → 404. Safe TS confirms the address is not a Safe. Doesn't
+ *                     distinguish "EOA" from "non-Safe contract" — that's
+ *                     determined separately via eth_getCode if needed.
+ *   - "skipped"    → fetch wasn't attempted (unsupported chain, malformed
+ *                     address).
+ *
+ * Earlier versions classified Safe TS's 422 response as `likely_eoa`, but
+ * that turned out to be wrong: 422 = "checksum address validation failed",
+ * raised when we send lowercase hex. Sending EIP-55-checksummed addresses
+ * eliminates the 422 path entirely.
  */
-export type NotSafeReason = "not_indexed" | "likely_eoa" | "skipped";
+export type NotSafeReason = "not_a_safe" | "skipped";
 
 export interface SafeFetchResult {
   is_safe: boolean;
@@ -87,7 +87,19 @@ export async function fetchSafe(opts: FetchSafeOptions): Promise<SafeFetchResult
       warnings: [`safe: malformed address "${opts.address}"`],
     };
   }
-  const url = `https://safe-transaction-${slug}.safe.global/api/v1/safes/${opts.address}/`;
+  // Safe TS validates EIP-55 checksum and rejects lowercase with 422.
+  let checksummed: string;
+  try {
+    checksummed = toChecksumAddress(opts.address);
+  } catch (err) {
+    return {
+      is_safe: false,
+      not_safe_reason: "skipped",
+      safe: null,
+      warnings: [`safe: checksum failed: ${(err as Error).message}`],
+    };
+  }
+  const url = `https://safe-transaction-${slug}.safe.global/api/v1/safes/${checksummed}/`;
   let res: Awaited<ReturnType<FetchFn>>;
   try {
     res = await opts.fetch(url);
@@ -100,12 +112,18 @@ export async function fetchSafe(opts: FetchSafeOptions): Promise<SafeFetchResult
     };
   }
   if (res.status === 404) {
-    return { is_safe: false, not_safe_reason: "not_indexed", safe: null, warnings: [] };
+    return { is_safe: false, not_safe_reason: "not_a_safe", safe: null, warnings: [] };
   }
+  // Should not happen now that we send checksummed addresses, but keep a
+  // defensive branch — surface the unexpected 422 as a warning rather than
+  // misclassifying.
   if (res.status === 422) {
-    // Safe TS rejects non-contract addresses with 422. This is structural,
-    // not an error — the address is most likely an EOA (single private key).
-    return { is_safe: false, not_safe_reason: "likely_eoa", safe: null, warnings: [] };
+    return {
+      is_safe: false,
+      not_safe_reason: null,
+      safe: null,
+      warnings: ["safe http 422 (unexpected after checksum fix; investigate)"],
+    };
   }
   if (!res.ok) {
     return { is_safe: false, not_safe_reason: null, safe: null, warnings: [`safe http ${res.status}`] };
