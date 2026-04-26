@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 
 import { isSupportedChain } from "../chain-id.js";
 import { fetchOwner } from "../fetch-owner.js";
-import { fetchSafe, type SafeMetadata } from "../fetch-safe.js";
+import { fetchSafe, type NotSafeReason, type SafeMetadata } from "../fetch-safe.js";
 import type { FetchFn } from "../fetch-etherscan.js";
 
 interface CliOptions {
@@ -63,12 +63,17 @@ interface ControlAddress {
   /** True when the contract address itself is a Safe (rare). */
   self_is_safe: boolean;
   self_safe: SafeMetadata | null;
+  /** Why self isn't a Safe — "likely_eoa" / "not_indexed" / "skipped" / null. */
+  self_not_safe_reason: NotSafeReason | null;
   /** Address from `owner()`. Null when the contract has no owner function or
    *  the call returned 0x000…0 (renounced). */
   owner: string | null;
   /** True when the owner address is a Safe (the common multisig pattern). */
   owner_is_safe: boolean;
   owner_safe: SafeMetadata | null;
+  /** Why the owner isn't a Safe. "likely_eoa" here is the loudest possible
+   *  control-slice red flag — the contract is owned by a single private key. */
+  owner_not_safe_reason: NotSafeReason | null;
   /** Whether each fetch was attempted (false → skipped due to limits / errors). */
   fetched: { owner: boolean; self: boolean; owner_safe: boolean };
   warnings: string[];
@@ -84,6 +89,9 @@ interface ControlFile {
     owners_resolved: number;
     self_is_safe: number;
     owner_is_safe: number;
+    /** Number of contracts whose owner is an EOA (single-key) — the loudest
+     *  control-slice red flag. */
+    owner_is_eoa: number;
     unique_owner_safes: number;
     unique_owners: number;
   };
@@ -154,6 +162,7 @@ function key(chain: string, address: string): string {
 interface AddressFetched {
   self_is_safe: boolean;
   self_safe: SafeMetadata | null;
+  self_not_safe_reason: NotSafeReason | null;
   owner: string | null;
   fetched: { owner: boolean; self: boolean };
   warnings: string[];
@@ -162,6 +171,7 @@ interface AddressFetched {
 interface OwnerSafeFetched {
   is_safe: boolean;
   safe: SafeMetadata | null;
+  not_safe_reason: NotSafeReason | null;
   warnings: string[];
 }
 
@@ -175,6 +185,7 @@ async function fetchOneAddress(
   const result: AddressFetched = {
     self_is_safe: false,
     self_safe: null,
+    self_not_safe_reason: null,
     owner: null,
     fetched: { owner: false, self: false },
     warnings,
@@ -189,6 +200,7 @@ async function fetchOneAddress(
   const safe = await fetchSafe({ chain, address, fetch: fetchFn });
   result.self_is_safe = safe.is_safe;
   result.self_safe = safe.safe;
+  result.self_not_safe_reason = safe.not_safe_reason;
   result.fetched.self = true;
   warnings.push(...safe.warnings);
   if (rateLimitMs > 0) await sleep(rateLimitMs);
@@ -202,7 +214,12 @@ async function fetchOwnerSafe(
 ): Promise<OwnerSafeFetched> {
   const safe = await fetchSafe({ chain, address: ownerAddress, fetch: fetchFn });
   if (rateLimitMs > 0) await sleep(rateLimitMs);
-  return { is_safe: safe.is_safe, safe: safe.safe, warnings: safe.warnings };
+  return {
+    is_safe: safe.is_safe,
+    safe: safe.safe,
+    not_safe_reason: safe.not_safe_reason,
+    warnings: safe.warnings,
+  };
 }
 
 function isCacheable(entry: ControlAddress, hasApiKey: boolean): boolean {
@@ -243,6 +260,7 @@ function summarize(entries: ControlAddress[]): ControlFile["summary"] {
   let owners_resolved = 0;
   let self_is_safe = 0;
   let owner_is_safe = 0;
+  let owner_is_eoa = 0;
   const uniqueOwners = new Set<string>();
   const uniqueOwnerSafes = new Set<string>();
   for (const e of entries) {
@@ -255,12 +273,14 @@ function summarize(entries: ControlAddress[]): ControlFile["summary"] {
       owner_is_safe++;
       if (e.owner) uniqueOwnerSafes.add(`${e.chain}|${e.owner}`);
     }
+    if (e.owner && e.owner_not_safe_reason === "likely_eoa") owner_is_eoa++;
   }
   return {
     total: entries.length,
     owners_resolved,
     self_is_safe,
     owner_is_safe,
+    owner_is_eoa,
     unique_owner_safes: uniqueOwnerSafes.size,
     unique_owners: uniqueOwners.size,
   };
@@ -348,9 +368,11 @@ async function main(): Promise<void> {
           context: a.context,
           self_is_safe: false,
           self_safe: null,
+          self_not_safe_reason: "skipped",
           owner: null,
           owner_is_safe: false,
           owner_safe: null,
+          owner_not_safe_reason: null,
           fetched: { owner: false, self: false, owner_safe: false },
           warnings: [`skipped: chain "${a.chain}" not supported`],
         };
@@ -362,9 +384,11 @@ async function main(): Promise<void> {
           context: a.context,
           self_is_safe: false,
           self_safe: null,
+          self_not_safe_reason: null,
           owner: null,
           owner_is_safe: false,
           owner_safe: null,
+          owner_not_safe_reason: null,
           fetched: { owner: false, self: false, owner_safe: false },
           warnings: ["skipped: FETCH_LIMIT reached"],
         };
@@ -377,9 +401,11 @@ async function main(): Promise<void> {
           context: a.context,
           self_is_safe: fetched.self_is_safe,
           self_safe: fetched.self_safe,
+          self_not_safe_reason: fetched.self_not_safe_reason,
           owner: fetched.owner,
           owner_is_safe: false,
           owner_safe: null,
+          owner_not_safe_reason: null,
           fetched: { owner: fetched.fetched.owner, self: fetched.fetched.self, owner_safe: false },
           warnings: fetched.warnings,
         };
@@ -402,6 +428,7 @@ async function main(): Promise<void> {
         if (osf) {
           entry.owner_is_safe = osf.is_safe;
           entry.owner_safe = osf.safe;
+          entry.owner_not_safe_reason = osf.not_safe_reason;
           entry.fetched.owner_safe = true;
           entry.warnings.push(...osf.warnings);
           fetchedCache.set(k, entry);

@@ -38,7 +38,7 @@ describe("fetchSafe", () => {
     expect(r.warnings).toEqual([]);
   });
 
-  it("returns is_safe=false on 404 (address is not a Safe) — no warning", async () => {
+  it("returns is_safe=false on 404 (address is not a Safe) — no warning, reason='not_indexed'", async () => {
     const f = fakeFetch({}, false, 404);
     const r = await fetchSafe({
       chain: "ethereum",
@@ -47,7 +47,46 @@ describe("fetchSafe", () => {
     });
     expect(r.is_safe).toBe(false);
     expect(r.safe).toBeNull();
+    expect(r.not_safe_reason).toBe("not_indexed");
     expect(r.warnings).toEqual([]);
+  });
+
+  it("returns is_safe=false on 422 (address is an EOA) — no warning, reason='likely_eoa'", async () => {
+    const f = fakeFetch({}, false, 422);
+    const r = await fetchSafe({
+      chain: "ethereum",
+      address: "0x1234567890123456789012345678901234567890",
+      fetch: f,
+    });
+    expect(r.is_safe).toBe(false);
+    expect(r.safe).toBeNull();
+    expect(r.not_safe_reason).toBe("likely_eoa");
+    expect(r.warnings).toEqual([]);
+  });
+
+  it("on a real Safe response, not_safe_reason is null", async () => {
+    const f = fakeFetch({
+      threshold: 4,
+      owners: ["0x1111111111111111111111111111111111111111"],
+      version: "1.4.1",
+      modules: [],
+    });
+    const r = await fetchSafe({
+      chain: "ethereum",
+      address: "0x1234567890123456789012345678901234567890",
+      fetch: f,
+    });
+    expect(r.is_safe).toBe(true);
+    expect(r.not_safe_reason).toBeNull();
+  });
+
+  it("unsupported chain → not_safe_reason='skipped'", async () => {
+    const r = await fetchSafe({
+      chain: "fantom",
+      address: "0x1234567890123456789012345678901234567890",
+      fetch: vi.fn() as unknown as FetchFn,
+    });
+    expect(r.not_safe_reason).toBe("skipped");
   });
 
   it("warns on unsupported chain (no fetch attempted)", async () => {
