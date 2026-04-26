@@ -14,14 +14,24 @@
  *   pnpm --filter @defipunkd/enrichment exec \
  *     tsx src/cli/fetch-sourcecode.ts --slug lido                  # one slug
  *
+ *   ETHERSCAN_API_KEY=... FETCH_LIMIT=2000 pnpm ... fetch-sourcecode.ts
+ *     # Cap this run at 2000 fresh fetches; resume tomorrow without losing
+ *     # the work already done — existing sourcecode.json files seed the
+ *     # in-memory cache on every startup.
+ *
+ * Resume across runs:
+ *   The CLI loads every existing data/enrichment/<slug>/sourcecode.json on
+ *   startup and reuses (chain, address) records that have a successful
+ *   fetched flag. Use --force-refetch to bypass and start fresh.
+ *
  * Environment:
  *   ETHERSCAN_API_KEY        Required for Etherscan calls. If absent, only
  *                            Sourcify is queried (still produces useful output).
  *   DEFIPUNKD_REPO_ROOT      Override repo root.
  *   FETCH_RATE_LIMIT_MS      Inter-request delay (default 250ms ≈ 4 req/s,
  *                            under Etherscan's 5/s free-tier ceiling).
- *   FETCH_LIMIT              Cap on (chain,address) tuples processed this run.
- *                            Useful for incremental backfills.
+ *   FETCH_LIMIT              Cap on FRESH (chain,address) fetches this run.
+ *                            Cache hits don't count against the budget.
  */
 import {
   existsSync,
@@ -47,6 +57,7 @@ interface CliOptions {
   apiKey: string | null;
   rateLimitMs: number;
   limit: number | null;
+  forceRefetch: boolean;
 }
 
 interface AdapterFile {
@@ -110,10 +121,12 @@ function findRepoRoot(): string {
 
 function parseArgs(argv: string[]): CliOptions {
   let slug: string | null = null;
+  let forceRefetch = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--slug") slug = argv[++i] ?? null;
     else if (a?.startsWith("--slug=")) slug = a.slice("--slug=".length);
+    else if (a === "--force-refetch") forceRefetch = true;
   }
   const apiKey = process.env.ETHERSCAN_API_KEY?.trim() || null;
   const rateLimitMs = Number(process.env.FETCH_RATE_LIMIT_MS ?? "250");
@@ -124,6 +137,7 @@ function parseArgs(argv: string[]): CliOptions {
     apiKey,
     rateLimitMs: Number.isFinite(rateLimitMs) && rateLimitMs >= 0 ? rateLimitMs : 250,
     limit: rawLimit ? Number(rawLimit) : null,
+    forceRefetch,
   };
 }
 
@@ -150,6 +164,79 @@ function listAdapterFiles(repoRoot: string): string[] {
     if (existsSync(adapterPath)) out.push(adapterPath);
   }
   return out.sort();
+}
+
+/**
+ * Decide whether a previously-fetched record is "good enough" to reuse.
+ * - If apiKey is set: require both etherscan AND sourcify to have been
+ *   fetched, AND etherscan must not have soft-failure warnings.
+ * - If apiKey is not set: only sourcify needs to have been fetched.
+ *
+ * `verified=false` IS reusable — that's a real answer, not an error.
+ */
+function isCacheable(entry: SourceCodeAddress, hasApiKey: boolean): boolean {
+  const fatalEtherscan = (entry.warnings ?? []).some(
+    (w) => w.startsWith("etherscan ") && !w.startsWith("etherscan skipped:"),
+  );
+  if (fatalEtherscan) return false;
+  const ethOk = hasApiKey ? entry.etherscan?.fetched === true : true;
+  const sourcifyOk = entry.sourcify?.fetched === true;
+  return ethOk && sourcifyOk;
+}
+
+/**
+ * Walk every existing sourcecode.json and seed the in-memory cache so
+ * incremental runs (capped via FETCH_LIMIT, or interrupted runs) don't
+ * re-fetch addresses we already have answers for.
+ *
+ * Cross-protocol: many slugs cite the same USDC/WETH/etc., so a hit on one
+ * protocol's record is reusable everywhere.
+ */
+function loadFetchedCache(
+  repoRoot: string,
+  hasApiKey: boolean,
+): Map<string, FetchedEntry> {
+  const cache = new Map<string, FetchedEntry>();
+  const root = join(repoRoot, "data", "enrichment");
+  if (!existsSync(root)) return cache;
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const path = join(root, entry.name, "sourcecode.json");
+    if (!existsSync(path)) continue;
+    let file: SourceCodeFile;
+    try {
+      file = JSON.parse(readFileSync(path, "utf8")) as SourceCodeFile;
+    } catch {
+      continue;
+    }
+    for (const addr of file.addresses) {
+      if (!isCacheable(addr, hasApiKey)) continue;
+      const k = key(addr.chain, addr.address);
+      if (cache.has(k)) continue;
+      cache.set(k, {
+        etherscan: {
+          fetched: addr.etherscan?.fetched ?? false,
+          contract: addr.etherscan
+            ? {
+                verified: addr.etherscan.verified,
+                contract_name: addr.etherscan.contract_name,
+                compiler: addr.etherscan.compiler,
+                optimization: addr.etherscan.optimization,
+                is_proxy: addr.etherscan.is_proxy,
+                implementation: addr.etherscan.implementation,
+              }
+            : null,
+          warnings: [],
+        },
+        sourcify: {
+          fetched: addr.sourcify?.fetched ?? false,
+          status: addr.sourcify?.status ?? null,
+          warnings: [],
+        },
+      });
+    }
+  }
+  return cache;
 }
 
 function loadAdapter(path: string): AdapterFile | null {
@@ -303,9 +390,19 @@ async function main(): Promise<void> {
 
   console.error(`[sourcecode] processing ${filtered.length} adapter files`);
 
-  // Cross-protocol dedup: many protocols share token addresses (USDC, WETH).
-  const fetchedCache = new Map<string, FetchedEntry>();
+  // Cross-protocol + cross-run dedup: load any existing sourcecode.json
+  // records into the in-memory cache so a capped/interrupted run resumes.
+  const fetchedCache = opts.forceRefetch
+    ? new Map<string, FetchedEntry>()
+    : loadFetchedCache(opts.repoRoot, opts.apiKey !== null);
+  if (fetchedCache.size > 0) {
+    console.error(
+      `[sourcecode] resumed with ${fetchedCache.size} cached (chain,address) entries from prior runs`,
+    );
+  }
   let calls = 0;
+  let cacheHits = 0;
+  let limitedSkips = 0;
 
   for (const adapterPath of filtered) {
     const adapter = loadAdapter(adapterPath);
@@ -321,9 +418,12 @@ async function main(): Promise<void> {
       seen.add(k);
 
       let fetched = fetchedCache.get(k) ?? null;
-      if (!fetched && isSupportedChain(a.chain)) {
+      if (fetched) {
+        cacheHits++;
+      } else if (isSupportedChain(a.chain)) {
         if (opts.limit !== null && calls >= opts.limit) {
-          // Limit hit — emit unfetched record.
+          // Limit hit — emit unfetched record so the next run picks it up.
+          limitedSkips++;
           entries.push(buildAddressEntry(a.chain, a.address, a.context, null, opts.apiKey));
           continue;
         }
@@ -351,8 +451,15 @@ async function main(): Promise<void> {
   }
 
   console.error(
-    `[sourcecode] done: ${calls} unique address fetches across ${filtered.length} protocols`,
+    `[sourcecode] done: ${calls} fresh fetches, ${cacheHits} cache hits` +
+      (limitedSkips > 0 ? `, ${limitedSkips} skipped due to FETCH_LIMIT` : "") +
+      ` across ${filtered.length} protocols`,
   );
+  if (limitedSkips > 0) {
+    console.error(
+      `[sourcecode] re-run (without --force-refetch) to pick up the ${limitedSkips} skipped addresses`,
+    );
+  }
 }
 
 main().catch((err) => {
