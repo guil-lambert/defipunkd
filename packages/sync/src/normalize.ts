@@ -72,6 +72,7 @@ export function normalizeProtocol(
     first_seen_at: generatedAt,
     last_seen_at: generatedAt,
     delisted_at: null,
+    module: typeof entry.module === "string" && entry.module.length > 0 ? entry.module : null,
   };
 }
 
@@ -101,5 +102,6 @@ export function normalizeParent(
     first_seen_at: generatedAt,
     last_seen_at: generatedAt,
     delisted_at: null,
+    module: null,
   };
 }

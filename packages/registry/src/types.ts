@@ -21,6 +21,8 @@ export type ProtocolSnapshot = {
   first_seen_at: string;
   last_seen_at: string;
   delisted_at: string | null;
+  /** Path to this protocol's TVL adapter inside the DefiLlama-Adapters repo, e.g. "lido/index.js". */
+  module: string | null;
 };
 
 export type Snapshot = {

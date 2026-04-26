@@ -131,9 +131,15 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
           if (!Array.isArray(parsed) || !Number.isInteger(arrayIndex) || arrayIndex < 0 || arrayIndex >= parsed.length) {
             throw new Error(`array index ${arrayIndex} out of range`);
           }
-          sub = parsed[arrayIndex];
+          const indexed = parsed[arrayIndex];
+          if (!indexed) throw new Error(`array index ${arrayIndex} resolved to undefined`);
+          sub = indexed;
+        } else if (Array.isArray(parsed)) {
+          const first = parsed[0];
+          if (!first) throw new Error(`submission file is empty array`);
+          sub = first;
         } else {
-          sub = Array.isArray(parsed) ? parsed[0] : parsed;
+          sub = parsed;
         }
       } catch (err) {
         console.warn(

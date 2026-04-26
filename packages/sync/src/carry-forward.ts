@@ -36,7 +36,12 @@ export function carryForward(
     const absentFor = daysBetween(generatedAt, before.last_seen_at);
     const newlyDelisted =
       before.delisted_at === null && absentFor >= DELIST_GRACE_DAYS ? generatedAt : before.delisted_at;
-    out[slug] = { ...before, is_parent: before.is_parent ?? false, delisted_at: newlyDelisted };
+    out[slug] = {
+      ...before,
+      is_parent: before.is_parent ?? false,
+      delisted_at: newlyDelisted,
+      module: before.module ?? null,
+    };
   }
 
   return out;
