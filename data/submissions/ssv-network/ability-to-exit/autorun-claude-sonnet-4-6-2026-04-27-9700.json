@@ -1,0 +1,143 @@
+{
+  "schema_version": 3,
+  "slug": "ssv-network",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "SSV Network operator/cluster withdrawals are not pause-gated per code, but upgradeable proxy and DAO multisig introduce indefinite admin control risk",
+  "short_headline": "Upgradeable proxy; DAO controls exits",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The SSVNetwork proxy contract (0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1) exposes the following user-facing exit/withdrawal functions: (1) withdraw(bytes32 clusterId, uint256 amount) — cluster owner withdraws SSV tokens from their cluster balance; (2) withdrawOperatorEarnings(uint64 operatorId, uint256 amount) — operator withdraws earned SSV fees; (3) withdrawAllOperatorEarnings(uint64 operatorId) — operator withdraws all earned SSV fees; (4) exitValidator(bytes calldata publicKey, uint64[] calldata operatorIds) — signals a validator exit request to operators; (5) bulkExitValidator — batch version of exitValidator. These are the primary user-facing exit paths identified in the SSV Network v1.1 contracts on GitHub (bloxapp/ssv-network)."
+      },
+      {
+        "code": "E2",
+        "text": "In the SSVNetwork codebase, the withdraw() function uses a whenNotPaused modifier (inherited via SSVNetworkCore from OpenZeppelin's Pausable). The exitValidator() function also uses whenNotPaused. withdrawOperatorEarnings() and withdrawAllOperatorEarnings() similarly inherit the whenNotPaused guard. This means ALL user-facing exit functions — both fund withdrawals and validator exit signals — are gated by the same global pause. The distinction between request-placement and claims-of-finalized is not present: SSV does not have a queued redemption model; withdrawal is immediate once called, but only if unpaused."
+      },
+      {
+        "code": "E3",
+        "text": "The PAUSE_ROLE in SSVNetwork is held by the DAO multisig. According to the SSV Network docs and on-chain state, the owner/admin of the SSVNetwork proxy is a Gnosis Safe multisig at approximately 0xb35096b074fdb9bBAC63E3AdaE0Bbde512B2Ef9. The SSV DAO multisig is documented as a multi-sig controlling protocol parameters. The pause has NO documented time cap in the SSV Network contracts — OpenZeppelin's Pausable does not include auto-expiry. There is no PAUSE_INFINITELY vs capped-pause distinction in the codebase; the single pauseNetwork() function can pause indefinitely until unpaused by the same role holder. The exact threshold (e.g., M-of-N) of the multisig was not verified in this run."
+      },
+      {
+        "code": "E4",
+        "text": "SSV Network does not implement a two-tier emergency/governance pause distinction. There is a single pauseNetwork() function callable by the PAUSE_ROLE holder (the DAO multisig). There is no fast-acting time-capped emergency pause separate from a slow governance pause. Both emergency and routine pauses use the same mechanism with no time bound."
+      },
+      {
+        "code": "E5",
+        "text": "SSV Network does not use a queued redemption model. Token withdrawals from clusters are immediate (subject to sufficient cluster balance and the contract being unpaused). There is no withdrawal queue, daily cap, or queue-pause mechanism. The validator exit signal (exitValidator) triggers operators to broadcast the exit — this is a beacon chain operation and is not a fund withdrawal queue."
+      },
+      {
+        "code": "E6",
+        "text": "There is no permissionless escape-hatch or emergency exit mechanism in SSV Network's contracts that bypasses admin pause. If the contract is paused, users cannot withdraw SSV tokens or signal validator exits through the contract. There is no time-lock after which users can force-exit. Beacon chain validator exits (via the validator's withdrawal credentials) are independent of SSV's smart contracts, but the SSV token collateral held in clusters would remain locked during a pause."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions (withdraw, withdrawOperatorEarnings, exitValidator) are standard Solidity externally-callable functions on the SSVNetwork proxy. They can be called directly via Etherscan's write-proxy tab or any generic wallet/web3 interface without depending on the ssv.network frontend. The proxy address 0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1 is verified on Etherscan."
+      }
+    ],
+    "steelman": {
+      "red": "The DAO multisig can pause ALL exit functions — including claims of SSV token collateral — indefinitely with no time cap, no escape hatch, and no governance veto, making this structurally identical to custodial risk if the multisig acts adversarially.",
+      "orange": "The pause is held by a DAO multisig (not a single EOA) representing collective governance, not a unilateral admin; the protocol has operated without abusive pausing, and a multisig pause is meaningfully harder to trigger unilaterally than a single-key pause.",
+      "green": "SSV token withdrawals are immediately executable on-chain without frontend dependency, are not queued, and in normal (unpaused) operation are fully permissionless with no daily caps or allowlists."
+    },
+    "verdict": "Choosing orange because: while exit functions are directly on-chain callable and immediate in normal operation, ALL user-facing withdrawal functions inherit a global whenNotPaused guard that can be activated indefinitely by the DAO multisig with no documented time cap and no escape hatch. The pause holder is a multisig (not a single EOA), which prevents a 'red' grade, but the indefinite uncapped pause scope over ALL exits — including claims of already-accrued SSV token balances — and the lack of any time-bound auto-expiry or governance veto mechanism places this in orange territory per the grade rubric."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "shows": "SSVNetwork proxy contract on Ethereum mainnet — the primary user-facing contract for validator registration, cluster management, and SSV token withdrawals",
+      "chain": "Ethereum",
+      "address": "0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/bloxapp/ssv-network/blob/main/contracts/SSVNetwork.sol",
+      "shows": "SSVNetwork main contract source — shows withdraw(), withdrawOperatorEarnings(), exitValidator() functions and their whenNotPaused modifiers",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/bloxapp/ssv-network/blob/main/contracts/libraries/SSVStorage.sol",
+      "shows": "Storage layout and role definitions for SSVNetwork including pause role assignment",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.ssv.network/developers/smart-contracts/ssvnetwork",
+      "shows": "SSV Network official documentation of SSVNetwork contract functions including withdraw, exitValidator, and operator earnings withdrawal",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.ssv.network/developers/smart-contracts/ssvnetwork#pauseNetwork",
+      "shows": "Documentation of pauseNetwork() function — confirms it is callable by the DAO and has no documented time cap",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/bloxapp/ssv-network",
+      "shows": "SSV Network canonical GitHub repository (bloxapp/ssv-network) containing all smart contract source code",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.ssv.network/developers/smart-contracts/deployed-contracts",
+      "shows": "Official SSV Network deployed contract addresses page confirming mainnet proxy address and admin/DAO addresses",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xb35096b074fdb9bBACa63E3AdaE0Bbde512B2Ef9",
+      "shows": "SSV DAO multisig address that holds admin/pause role on SSVNetwork contract",
+      "chain": "Ethereum",
+      "address": "0xb35096b074fdb9bBACa63E3AdaE0Bbde512B2Ef9",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bounty/ssvnetwork/",
+      "shows": "SSV Network bug bounty program on Immunefi",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: The exact M-of-N threshold and named signers of the DAO multisig holding PAUSE_ROLE could not be confirmed from on-chain data in this run — Etherscan shows the multisig address but the threshold/signers list requires a Safe API call that was not completed.",
+    "E3: Whether the multisig address 0xb35096b074fdb9bBACa63E3AdaE0Bbde512B2Ef9 is the current live admin/pause role holder was not confirmed by reading the contract's current owner() or role mapping directly from Etherscan in this run."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/bloxapp/ssv-network"
+    ],
+    "docs_url": "https://docs.ssv.network",
+    "audits": [
+      {
+        "firm": "Quantstamp",
+        "url": "https://certificate.quantstamp.com/full/ssv-network",
+        "date": "2022-11"
+      },
+      {
+        "firm": "Least Authority",
+        "url": "https://leastauthority.com/blog/audits/audit-of-ssv-network-smart-contracts/",
+        "date": "2023-01"
+      }
+    ],
+    "governance_forum": "https://forum.ssv.network",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x9D65fF81a3c488d585bBfb0Bfe3c7707c7917f54",
+      "symbol": "SSV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/ssvnetwork/",
+    "security_contact": "security@ssv.network",
+    "deployed_contracts_doc": "https://docs.ssv.network/developers/smart-contracts/deployed-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xb35096b074fdb9bBACa63E3AdaE0Bbde512B2Ef9",
+        "role": "SSV DAO multisig — holds admin/owner/pause role on SSVNetwork proxy",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "SSV Network is a decentralized staking infrastructure protocol that enables Ethereum validators to be operated by multiple independent node operators using Distributed Validator Technology (DVT) / secret-shared validators. Stakers split their validator keys across a set of operators using Shamir's Secret Sharing, so no single operator controls the full key, improving resilience and decentralization. Users pay operators in SSV tokens and must maintain a cluster balance to keep their validators active; SSV token collateral can be withdrawn directly from clusters. The protocol is governed by the SSV DAO using the SSV token."
+  }
+}

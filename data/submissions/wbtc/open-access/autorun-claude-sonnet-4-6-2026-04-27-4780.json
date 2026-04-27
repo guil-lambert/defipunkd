@@ -1,0 +1,129 @@
+{
+  "schema_version": 3,
+  "slug": "wbtc",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "WBTC minting requires merchant whitelist approval; no permissionless on-chain entry for retail users",
+  "short_headline": "Merchant whitelist gates all minting",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "WBTC minting and burning are exclusively available to whitelisted 'Merchants' — entities approved by BitGo (and the WBTC DAO multisig). The ERC-20 contract exposes mint() gated to a single minter address and burn() gated to burner addresses. Ordinary users cannot call mint or burn directly; they must transact with an approved Merchant who holds the whitelisted role. The deployed contract on Ethereum (0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) uses an owner-controlled minter/burner registry. This constitutes a contract-level whitelist on user entry (minting) and exit (burning)."
+      },
+      {
+        "code": "A2",
+        "text": "The admission path for minting WBTC requires off-chain operator approval at two levels: (1) a Custodian (BitGo, historically) must receive and verify the BTC deposit, and (2) a whitelisted Merchant must submit a mint request on-chain. Retail users cannot directly trigger minting — they must go through a Merchant who performs KYC/AML on them. The Merchant set is a permissioned committee controlled by the WBTC DAO multisig. For burning/redemption, users must also go through a Merchant, which submits a burn request after the user sends WBTC. Transfers of existing WBTC between wallets are unconditional (standard ERC-20), but entry and exit require operator approval."
+      },
+      {
+        "code": "A3",
+        "text": "The official wbtc.network website and dashboard are informational. There is no retail-facing mint/burn interface — the site directs users to approved Merchants. This is not a frontend geo-block but a fundamental design: the official UI has no mint/burn function for retail users. The site does list approved Merchants (exchanges, OTC desks) as the access channel."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-i: No IPFS mirror of an official UI was found; the official site is informational only. A3b-ii: Alternative paths exist for holding and transferring WBTC (any DEX, any wallet) but minting/burning WBTC requires going through an approved Merchant — no independent path bypasses the Merchant whitelist for mint/burn. Uniswap and other DEXes allow secondary-market trading of WBTC but do not allow creation or redemption of WBTC without a Merchant."
+      },
+      {
+        "code": "A4",
+        "text": "Merchants are required to perform KYC/AML on their customers as a condition of their Merchant Agreement with the WBTC DAO. There is no on-chain OFAC blocklist applied to WBTC token transfers (transfers are standard ERC-20), but admission to minting/burning is filtered through Merchants who are contractually obligated to apply sanctions screening off-chain."
+      },
+      {
+        "code": "A5",
+        "text": "Read access: fully permissionless — anyone can query the WBTC contract, view balances, and observe the mint/burn history on Etherscan. Write access: (a) transfer — permissionless, standard ERC-20 for any holder; (b) mint — gated to whitelisted Merchants who must go through custodian approval; (c) burn — gated to whitelisted Merchants. Retail users cannot write to mint() or burn() directly."
+      },
+      {
+        "code": "A6",
+        "text": "The WBTC merchant/user agreement and legal framework require Merchants to verify customer identity. The wbtc.network site references a Merchant Agreement. A verbatim ToS clause specifically applicable to retail users was not extractable from the static site (it is directed at Merchants, not end-users). The WrappedBTC GitHub (wrappedbtc/wbtc-merchant-documentation or similar) contains the merchant framework. End-user ToS for the wbtc.network site itself is minimal since the site is informational."
+      }
+    ],
+    "steelman": {
+      "red": "WBTC minting and burning require approval from a whitelisted Merchant — a permissioned committee controlled by the WBTC DAO multisig — making all entry and exit from the WBTC system gated by a small set of approved intermediaries with no permissionless on-chain path for retail users, which squarely satisfies the red criterion of 'admission of a core user action requires approval from a single privileged operator or a small committee with no documented replacement procedure'.",
+      "orange": "Because the WBTC token itself transfers freely on Ethereum (standard ERC-20), and users can obtain WBTC on secondary markets (DEXes) without any whitelist, one could argue the practical access is only orange-level restricted — users can acquire and use WBTC freely, just not mint/redeem it directly.",
+      "green": "WBTC is a freely transferable ERC-20 token; the vast majority of user interactions (holding, transferring, using as collateral in DeFi) are fully permissionless, and the Merchant whitelist only applies to the Bitcoin-bridging entry/exit layer which is structurally necessary for a BTC-backed token."
+    },
+    "verdict": "Choosing red because the core function of WBTC — minting (entering the system from BTC) and burning (redeeming back to BTC) — is gated by a contract-level whitelist of approved Merchants, a permissioned committee controlled by the WBTC DAO multisig. This is confirmed by the deployed Ethereum contract (0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) which restricts mint() and burn() to designated addresses, and by the published WBTC merchant framework documenting the approval process. The green steel-man (free secondary-market transfers) and orange steel-man (practical acquisition via DEX) are accurate but do not override the red criterion: the protocol's own entry/exit mechanism requires approval from a permissioned committee."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/token/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "WBTC ERC-20 contract on Ethereum; mint and burn functions restricted to owner-designated addresses, confirming contract-level whitelist on minting/burning",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://wbtc.network/dashboard/partners",
+      "shows": "Official WBTC partners page listing approved Merchants and Custodians — confirming admission to minting/burning is limited to these whitelisted entities",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://wbtc.network/assets/wrapped-tokens-whitepaper.pdf",
+      "shows": "WBTC whitepaper describing the three-party model: Custodian, Merchant, User — where only Merchants can mint/burn, and Merchants must be approved by the WBTC DAO",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts",
+      "shows": "WrappedBTC GitHub repository containing WBTC smart contracts; shows mint and burn role-based access control",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599#readContract",
+      "shows": "WBTC contract read interface on Etherscan showing owner, minter, and burner role management confirming permissioned write access",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://wbtc.network/dashboard/audit",
+      "shows": "WBTC audit page listing security audits of the smart contracts",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://wbtc.network",
+      "shows": "Official WBTC website — informational only, no retail mint/burn UI; directs users to approved Merchants for minting/redemption",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts/blob/master/contracts/token/WBTC.sol",
+      "shows": "WBTC.sol source code showing MinterRole and BurnerRole inherited from OpenZeppelin role contracts, confirming only whitelisted addresses can mint or burn",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: Could not confirm via live fetch whether wbtc.network applies IP geo-blocking or wallet-address screening on the informational site (the site has no mint/burn UI, making this moot for admission purposes)",
+    "A6: Verbatim ToS text for retail end-users on wbtc.network could not be extracted — the site is primarily directed at Merchants and institutional partners; no retail-facing ToS page was found with jurisdiction/eligibility clauses applicable to token holders"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/bitcoin-token-smart-contracts"
+    ],
+    "docs_url": "https://wbtc.network/dashboard/partners",
+    "audits": [
+      {
+        "firm": "Chainsecurity",
+        "url": "https://wbtc.network/dashboard/audit",
+        "date": "2019-01"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://wbtc.network/dashboard/audit",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "role": "WBTC ERC-20 token contract (minter/burner registry owner)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "WBTC (Wrapped Bitcoin) is an ERC-20 token on Ethereum pegged 1:1 to Bitcoin, enabling BTC holders to use their assets in Ethereum DeFi. Minting requires sending BTC to a licensed Custodian (historically BitGo) and requesting WBTC through an approved Merchant — a permissioned intermediary that handles KYC/AML. Once minted, WBTC transfers freely as a standard ERC-20 and is widely used as collateral in lending protocols and liquidity pools. The system is governed by the WBTC DAO, a multisig of participating institutions."
+  }
+}

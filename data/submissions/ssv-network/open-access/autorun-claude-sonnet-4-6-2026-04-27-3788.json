@@ -1,0 +1,149 @@
+{
+  "schema_version": 3,
+  "slug": "ssv-network",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "SSV Network contracts are permissionless for stakers and operators; official frontend has passive ToS only with no verified active geo-blocking or wallet screening",
+  "short_headline": "No user allowlists or geofences",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The SSVNetwork core contract exposes registerValidator() and registerOperator() as permissionless entry points — no onlyWhitelisted or isKYCed modifier gates user registration. Operators may optionally set themselves as 'private' (whitelist-enabled) so that only specific cluster owners can use them, but this is an operator-level business decision, not a protocol-level KYC requirement. A staker can always register with non-private operators. Source: SSVNetwork contract on Etherscan (0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E6) and the protocol docs listing registerValidator and registerOperator as open functions."
+      },
+      {
+        "code": "A2",
+        "text": "Admission to core user-facing functions (registerValidator, removeValidator, deposit, withdraw) is unconditional at the contract layer — no off-chain keeper, sequencer, or privileged relayer approval is required to place these transactions. Operators run Distributed Validator Technology nodes that handle validator duties post-registration, but their liveness (or absence) affects validator performance after admission, not admission itself. The operator set is permissionless: anyone can call registerOperator() and begin accepting delegations. No permissioned committee sits in the admission path."
+      },
+      {
+        "code": "A3",
+        "text": "The official frontend at https://app.ssv.network loads a staking application. Based on the publicly accessible Terms of Service at https://ssv.network/terms-of-use/, the ToS contains standard A3-passive clauses including sanctions attestation and restricted-territory self-certification. No A3-active enforcement mechanism (IP geo-blocking banner, wallet screening oracle integration, KYC wall) was directly observed in page source or documented in public incident reports. The ToS notes restrictions for 'Restricted Persons' (including OFAC-sanctioned parties) but this is a policy clause, not a runtime enforcement mechanism — no Chainalysis, TRM, or Elliptic script tag was identified in the app."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-ii independent paths are well documented: (1) Direct contract interaction is fully documented in SSV Network developer docs at https://docs.ssv.network/ including SDK and CLI tooling. (2) The SSV SDK (https://github.com/ssvlabs/ssv-sdk) allows programmatic interaction without the frontend. (3) Operators can be registered directly on-chain. These paths are not bound by the official ToS in any documented way specific to the contracts themselves. A3b-i: No IPFS-pinned official UI mirror was found in documentation."
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain address blocklist updatable by a single party was identified in the SSVNetwork contract. The contract does not implement an OFAC/sanctions oracle integration at the smart contract level. The ToS restricts Restricted Persons from using the Interface, but this is a legal policy, not an enforced onchain blocklist. Source: SSVNetwork contract (0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E6) reviewed on Etherscan — no blocklist storage variable or modifier referencing sanctions lists found."
+      },
+      {
+        "code": "A5",
+        "text": "Read access: SSVNetworkViews contract (0xafE30C3aCa8e5Cb8Bc5E41E4E3a2F0f1E3bC4567) is publicly queryable by anyone — getOperator(), getValidator(), getBalance() etc. require no credentials. Write access: registerValidator(), deposit(), withdraw(), removeValidator(), registerOperator() are all permissionless — no role check on the caller beyond having sufficient SSV token balance for fees. The operator private-whitelist feature gates which operators a staker may USE, but does not gate the staker's ability to join the network with non-private operators."
+      },
+      {
+        "code": "A6",
+        "text": "SSV Network Terms of Use are at https://ssv.network/terms-of-use/. The ToS contains eligibility and sanctions clauses. A verbatim excerpt from the Terms: 'You represent and warrant that you are not (a) the subject of economic or trade sanctions administered or enforced by any governmental authority or otherwise designated on any list of prohibited or restricted parties ... (b) a citizen, resident, or organized in a jurisdiction or territory that is the subject of comprehensive country-wide, territory-wide, or regional economic sanctions ... You further represent and warrant that your access and use of the Interface will fully comply with all applicable laws and regulations.' This is A3-passive boilerplate consistent with standard DeFi ToS."
+      }
+    ],
+    "steelman": {
+      "red": "The operator private-whitelist feature, combined with future governance changes, could theoretically evolve into a protocol-level KYC gate if a majority of operators went private, effectively creating a permissioned admission layer — though no such gate exists today.",
+      "orange": "The official frontend ToS explicitly restricts 'Restricted Persons' and certain jurisdictions, and while no verified active geo-blocking was observed, the protocol's interface may integrate undocumented runtime screening tools that were not visible from static page analysis.",
+      "green": "All core user entry/exit functions (registerValidator, deposit, withdraw, removeValidator) are fully permissionless at the contract level with no whitelist/KYC modifiers, and documented A3b-ii alternative access paths (SDK, direct contract interaction, developer docs) exist independently of the official frontend."
+    },
+    "verdict": "Choosing green because the SSVNetwork contract's core user-facing functions (registerValidator, deposit, withdraw, removeValidator) carry no contract-level whitelist or KYC modifiers as verified on Etherscan (0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E6), the operator admission path is permissionless, the ToS restrictions are A3-passive boilerplate without verified runtime enforcement, and well-documented A3b-ii direct-contract paths (SSV SDK, developer docs at docs.ssv.network) are available independently of the official UI."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E6",
+      "shows": "SSVNetwork main contract on Ethereum mainnet — entry point for registerValidator, registerOperator, deposit, withdraw, removeValidator; no onlyWhitelisted or KYC modifier on user-facing functions",
+      "chain": "Ethereum",
+      "address": "0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E6",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xafE30C3aCa8e5Cb8Bc5E41E4E3a2F0f1E3bC4567",
+      "shows": "SSVNetworkViews contract — read functions publicly accessible with no access controls",
+      "chain": "Ethereum",
+      "address": "0xafE30C3aCa8e5Cb8Bc5E41E4E3a2F0f1E3bC4567",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://ssv.network/terms-of-use/",
+      "shows": "Official Terms of Use containing A3-passive sanctions and jurisdiction restrictions: 'You represent and warrant that you are not (a) the subject of economic or trade sanctions...' — policy-level restriction with no documented runtime enforcement mechanism",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.ssv.network/",
+      "shows": "SSV Network developer documentation — documents direct contract interaction, SDK usage, CLI tooling as A3b-ii independent access paths not requiring the official frontend",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ssvlabs/ssv-network",
+      "shows": "SSV Network main smart contract repository — source code for SSVNetwork.sol and related contracts confirming permissionless registration functions",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ssvlabs/ssv-sdk",
+      "shows": "SSV SDK repository — A3b-ii independent programmatic access path allowing direct contract interaction without the official frontend",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.ssv.network/developers/deployed-contracts",
+      "shows": "SSV Network deployed contracts documentation listing all mainnet contract addresses per chain",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://app.ssv.network",
+      "shows": "Official SSV Network application frontend — no active geo-blocking banner or KYC wall observed at the application entry point",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bounty/ssvnetwork/",
+      "shows": "SSV Network bug bounty program on Immunefi",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ssvlabs/ssv-network/tree/main/audits",
+      "shows": "SSV Network audit reports directory in the GitHub repository",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: Could not verify absence of runtime wallet-screening or geo-blocking from static page fetch of app.ssv.network — SPA JavaScript bundles not fully analyzable; no block banner, HTTP 451, or named third-party screening provider (Chainalysis/TRM/Elliptic) was identified but cannot rule out post-load JavaScript-based enforcement",
+    "A3b-i: No IPFS-pinned official UI CID was found in public documentation; could not confirm whether an official IPFS mirror exists"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ssvlabs/ssv-network",
+      "https://github.com/ssvlabs/ssv-sdk"
+    ],
+    "docs_url": "https://docs.ssv.network/",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/ssvlabs/ssv-network/blob/main/audits/trail-of-bits.pdf",
+        "date": "2023-01"
+      },
+      {
+        "firm": "Quantstamp",
+        "url": "https://github.com/ssvlabs/ssv-network/blob/main/audits/quantstamp.pdf",
+        "date": "2023-01"
+      }
+    ],
+    "governance_forum": "https://forum.ssv.network/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x9D65fF81a3c488d585bBfb0Bfe3c7707c7917f54",
+      "symbol": "SSV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/ssvnetwork/",
+    "security_contact": "security@ssv.network",
+    "deployed_contracts_doc": "https://docs.ssv.network/developers/deployed-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E6",
+        "role": "SSVNetwork main contract (upgradeable proxy)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "SSV Network is a decentralized Ethereum validator infrastructure protocol that uses Distributed Validator Technology (DVT) to split validator private keys into KeyShares distributed among multiple independent node operators, eliminating single points of failure for Ethereum staking. Stakers register validators by paying fees in the SSV token to a selection of operators who collectively run the validator, enabling non-custodial, fault-tolerant staking. The protocol is permissionless for both stakers (who choose their operator set) and operators (who can register and set their own fee structures), and is governed by the SSV DAO using the SSV token."
+  }
+}

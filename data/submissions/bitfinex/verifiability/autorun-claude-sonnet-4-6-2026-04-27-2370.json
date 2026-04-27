@@ -1,0 +1,92 @@
+{
+  "schema_version": 3,
+  "slug": "bitfinex",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Bitfinex is a closed-source CEX: no public smart-contract repo, no audit links, core custody logic is entirely off-chain and unverifiable",
+  "short_headline": "Closed-source CEX, no audits",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Bitfinex is a custodial CEX; its core matching engine and custody logic run off-chain on proprietary infrastructure. The only significant on-chain artefact directly associated with the exchange is the UNUS SED LEO (LEO) ERC-20 token at 0x2AF5D2aD76741191D15Dfe7bF6aC92d4Bd912Ca5 on Ethereum, which IS source-verified on Etherscan as a simple ERC-20. However, this token is not 'the protocol' — it does not represent custody, trading, or withdrawal logic. No other primary Bitfinex-operated smart contracts (deposit routers, settlement contracts, etc.) are documented or linked. The exchange deposit addresses observed on-chain are plain EOAs, not contracts."
+      },
+      {
+        "code": "V2",
+        "text": "Bitfinex's GitHub organisation (github.com/bitfinexcom) contains open-source tooling (trading libraries, Grenache P2P framework, API wrappers) but NO source code for the core exchange, custody system, or any smart contracts that embody the exchange protocol. The protocol.github field in the pinned inputs is explicitly listed as '(none recorded)', consistent with this finding. There is no repo from which a deployed contract ABI or bytecode can be independently verified."
+      },
+      {
+        "code": "V3",
+        "text": "protocol.audit_links is empty — no audit reports have been linked or publicly disclosed for Bitfinex's exchange platform or any smart contracts it operates. A search of common audit repositories (OpenZeppelin, Trail of Bits, Halborn, Quantstamp public disclosures) returned no Bitfinex exchange audit. The LEO token smart contract also carries no linked audit."
+      },
+      {
+        "code": "V4",
+        "text": "Because no audits exist (V3), there is no auditor firm to assess for recognition. Grade impact: the absence of any recognized-firm audit is itself a red signal per the grade rubric."
+      },
+      {
+        "code": "V5",
+        "text": "Post-audit drift cannot be assessed because there is no baseline audit to compare against. The exchange platform has been operating since 2012 and has undergone multiple security incidents (2016 hack of ~120k BTC) with no public post-incident smart-contract audit published."
+      },
+      {
+        "code": "V6",
+        "text": "The LEO token contract (0x2AF5D2aD76741191D15Dfe7bF6aC92d4Bd912Ca5) is a non-proxy ERC-20; implementation is direct and verified. However, this contract is peripheral to exchange operations. No proxy contracts operated by Bitfinex were identified for assessment."
+      }
+    ],
+    "steelman": {
+      "red": "The core Bitfinex exchange — custody, order matching, withdrawals — is entirely closed-source proprietary software running off-chain, with zero audit links and no public smart-contract repository, making independent verification of user fund handling impossible.",
+      "orange": "The LEO token (the exchange's native token) is a verified, non-proxy ERC-20 on Etherscan, and Bitfinex publishes open-source API/tooling libraries on GitHub, providing partial transparency even if the core exchange remains opaque.",
+      "green": "If Bitfinex were assessed purely on its on-chain token contract (LEO), the bytecode is verified, the contract is a simple auditable ERC-20, and users interacting solely with that token face no hidden logic."
+    },
+    "verdict": "Choosing red because Bitfinex's exchange protocol — the system that holds user funds and executes trades — is entirely off-chain proprietary software with no published smart-contract source repo (protocol.github = none), no audit links, and no on-chain settlement contracts whose bytecode can be independently verified. The only verified on-chain artefact (the LEO ERC-20) is peripheral to exchange operations and carries no audit. Per the grade rubric, 'no audit in protocol.audit_links' and 'no public repo' are both independent red criteria, both satisfied here."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/token/0x2AF5D2aD76741191D15Dfe7bF6aC92d4Bd912Ca5",
+      "shows": "UNUS SED LEO (LEO) ERC-20 token on Ethereum associated with Bitfinex — source code verified on Etherscan as a direct (non-proxy) contract; this is the primary on-chain artefact linked to Bitfinex",
+      "chain": "Ethereum",
+      "address": "0x2AF5D2aD76741191D15Dfe7bF6aC92d4Bd912Ca5",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/bitfinexcom",
+      "shows": "Bitfinex's public GitHub organisation contains open-source API wrappers and tooling (Grenache, bfx-hf-*, etc.) but no source code for the exchange core, custody system, or any smart contracts representing the exchange protocol",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bitfinex.com/legal/terms",
+      "shows": "Bitfinex Terms of Service confirm custodial model — Bitfinex holds assets on behalf of users via proprietary off-chain infrastructure; no mention of audited smart contracts governing custody",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bitfinex.com/posts/936",
+      "shows": "Bitfinex transparency / security page — no smart-contract audit links disclosed; security disclosures reference infrastructure and operational security rather than verifiable on-chain logic",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V1: Could not locate any Bitfinex-operated deposit router, settlement, or withdrawal smart contracts on Ethereum, Tron, or other listed chains beyond the LEO ERC-20 token — if such contracts exist, their addresses are not publicly documented",
+    "V2: No commit SHA pinnable for any Bitfinex smart contract — no canonical smart-contract repo was found during this run",
+    "V3: Searched but could not find any published audit for the Bitfinex exchange platform or LEO token contract from any firm; absence confirmed from available sources but cannot rule out undisclosed private audits",
+    "V5: Post-audit drift is indeterminate because no baseline audit was found to compare against current deployment state"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/bitfinexcom"
+    ],
+    "docs_url": "https://docs.bitfinex.com",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://hackerone.com/bitfinex",
+    "security_contact": "security@bitfinex.com",
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Bitfinex is a centralized custodial cryptocurrency exchange founded in 2012, offering spot trading, margin trading, and lending across a large number of token pairs. Users deposit assets into Bitfinex-controlled wallets; all order matching and settlement occurs off-chain on proprietary infrastructure. Bitfinex is also the issuer of the UNUS SED LEO (LEO) token, used for fee discounts and tied to a commitment to buy back tokens using exchange revenue. It is notable as one of the oldest large-volume exchanges and is operated by iFinex Inc."
+  }
+}

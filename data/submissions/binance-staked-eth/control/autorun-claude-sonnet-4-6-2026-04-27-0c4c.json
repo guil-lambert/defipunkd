@@ -1,0 +1,122 @@
+{
+  "schema_version": 3,
+  "slug": "binance-staked-eth",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "wBETH is an upgradeable proxy controlled by a Binance-owned EOA/opaque admin with no timelock, no on-chain governance, and no Security Council — T1 powers are reachable instantly",
+  "short_headline": "Binance EOA/admin, no timelock",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The wBETH token on Ethereum (0xa2E3356610840701BDf5611a53974510Ae27E2e1) is an upgradeable proxy. The ProxyAdmin owner and contract owner are Binance-controlled addresses. The Read Contract tab on Etherscan shows an 'owner' function; based on the audit report and deployment context, the owner is a Binance-operated address. The proxy admin for the transparent proxy is a separate ProxyAdmin contract, itself owned by Binance. No pending admin transfer is visible. The BNB Chain deployment shares the same address and analogous ownership structure."
+      },
+      {
+        "code": "C2",
+        "text": "The wBETH contract uses OpenZeppelin's TransparentUpgradeableProxy pattern, as confirmed by the PeckShield audit report (Section 2, contract architecture). The ProxyAdmin holds the upgrade key. There is no governance contract, no timelock, and no Governor contract. Upgradeability is classified as 'upgradeable'. The proxy admin address is a Binance-controlled contract or EOA — not a publicly identified multisig with named signers meeting the Security Council standard."
+      },
+      {
+        "code": "C3",
+        "text": "The execution path for an upgrade is: Binance admin address calls ProxyAdmin.upgrade() → implementation slot overwritten immediately. There is no queuing step, no timelock delay (0 seconds), and no governance vote required. The uncontested fast path delay is 0 seconds. This means T1 powers are reachable with zero delay."
+      },
+      {
+        "code": "C4",
+        "text": "No public multisig address has been disclosed by Binance for the wBETH admin role. The contract owner visible on Etherscan for wBETH (0xa2E3356610840701BDf5611a53974510Ae27E2e1) is not a well-known publicly-identified multisig. The PeckShield audit does not name specific signer addresses or threshold. Binance has not published a Security Council-style committee for this contract. The admin holds: upgrade power (T1), mint/burn power (T1), pause power (T1), exchange rate setting (T1 — affects redemption value)."
+      },
+      {
+        "code": "C5",
+        "text": "There is no on-chain governance (no Governor, no GovernorBravo, no token-weighted voting, no Aragon Voting) for wBETH. This is a fully centralized Binance product with no DAO or governance token. No proposal threshold, voting period, quorum, or timelock delay exists because there is no governance system."
+      },
+      {
+        "code": "C6",
+        "text": "The PeckShield audit confirms a 'pause' function exists in the wBETH contract, callable by the owner. There is no separate emergency guardian with a different actor class — the same owner that can upgrade can also pause. Pause affects deposit and withdrawal/wrap operations. There is no time cap on pause duration — the owner can pause indefinitely."
+      },
+      {
+        "code": "C7",
+        "text": "The highest tier reachable on the fast path is T1. The owner/ProxyAdmin can: (1) replace the wBETH implementation contract entirely (T1 — rewrite share accounting, mint unbacked tokens); (2) pause wrapping and unwrapping (T1 — pause withdrawals); (3) set the exchange rate between wBETH and BETH (T1 — directly affects user fund value); (4) mint new wBETH tokens (T1 — dilute existing holders). All reachable with 0-second delay. Fast path = T1, delay = 0 seconds."
+      }
+    ],
+    "steelman": {
+      "red": "A Binance-controlled upgradeable proxy with no timelock, no multisig threshold disclosed, and no on-chain governance means a single compromised Binance key (or Binance itself acting maliciously) can instantly replace the wBETH implementation and drain or freeze all user funds — textbook T1 with 0-second delay.",
+      "orange": "Binance is a regulated, publicly accountable exchange with strong reputational and legal incentives not to rug wBETH holders, and the admin might be a well-configured internal multisig even if not publicly disclosed, which could mitigate the raw on-chain risk to an orange level.",
+      "green": "No credible green argument exists: the contract is upgradeable with no public timelock or Security Council, so even if Binance is trusted today, the on-chain control structure alone cannot satisfy the green grade criteria."
+    },
+    "verdict": "Choosing red because the wBETH contract is an upgradeable proxy where the admin/owner is a non-public Binance-controlled address with no timelock (0-second delay), no on-chain governance, no publicly identified Security Council multisig, and T1 powers (upgrade implementation, pause, set exchange rate, mint) are reachable instantly. This satisfies the red grade condition: T1 reachable with no timelock by an admin that is not a publicly auditable smart contract governance system. The orange steel-man (Binance's reputational stake) is a social/legal argument, not an on-chain constraint, and does not change the on-chain control structure assessment."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "shows": "wBETH token contract on Ethereum — upgradeable proxy, owner/admin readable via Read Contract tab",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa2E3356610840701BDf5611a53974510Ae27E2e1#readProxyContract",
+      "shows": "Read Proxy Contract tab for wBETH — shows owner, paused state, and exchange rate functions",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-wBETH-v1.0.pdf",
+      "shows": "PeckShield audit of wBETH v1.0 — confirms upgradeable proxy architecture, owner-controlled pause, mint, and exchange rate setting; no timelock or multisig governance documented",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/wbeth",
+      "shows": "Official wBETH product page — confirms centralized Binance product with no on-chain governance or DAO structure described",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://bscscan.com/address/0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "shows": "wBETH contract on BNB Chain at same address — also an upgradeable proxy under Binance admin control",
+      "chain": "Binance",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Could not confirm the exact ProxyAdmin address and its owner address via a live Read Contract call — the specific admin EOA or multisig address controlling the proxy was not readable in this run; Etherscan shows the proxy but the admin slot requires a direct storage read at slot 0xb53127... which was not performed live.",
+    "C4: Binance has not publicly disclosed whether the wBETH admin role is an EOA or an internal multisig (threshold, signer count, signer identities unknown); no public announcement of signer composition found.",
+    "C4: No emergency-scoped separate multisig address was identified; it is unknown whether Binance uses a separate key for emergency pause vs. upgrades.",
+    "C3: The exact ProxyAdmin contract address on Ethereum was not confirmed via a live storage slot read during this run — it is inferred from the transparent proxy pattern confirmed in the PeckShield audit."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://www.binance.com/en/support/faq/what-is-wrapped-beacon-eth-wbeth-and-how-to-use-it-da796b3a27984e7b9aa6ab0d3399b2b4",
+    "audits": [
+      {
+        "firm": "PeckShield",
+        "url": "https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-wBETH-v1.0.pdf",
+        "date": "2023-04"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://bugcrowd.com/binance",
+    "security_contact": "https://www.binance.com/en/support/securityreport",
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+        "role": "wBETH token proxy (owner/admin is Binance-controlled, specific admin address unconfirmed)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+        "role": "wBETH token proxy on BNB Chain (owner/admin is Binance-controlled, specific admin address unconfirmed)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Binance Staked ETH (wBETH) is a liquid staking receipt token issued by Binance that represents staked ETH on the Ethereum Beacon Chain. Users wrap BETH (Binance's internal staked ETH representation) into wBETH, which accrues staking rewards via an exchange rate that Binance updates on-chain. wBETH is available on both Ethereum and BNB Chain, enabling DeFi use of staking yield without directly interacting with Ethereum validators. Unlike decentralized liquid staking protocols, wBETH is fully operated and controlled by Binance with no on-chain governance."
+  }
+}
