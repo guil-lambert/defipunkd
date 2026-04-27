@@ -1,5 +1,5 @@
 ---
-import type { Protocol, LoadedAssessment, AssessmentSliceId } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId, LoadedSubmission } from "@defipunkd/registry";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
@@ -10,20 +10,29 @@ import type { PizzaSliceId } from "../lib/pizza";
 interface Props {
   protocol: Protocol;
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
+  submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
 }
-const { protocol, assessments } = Astro.props;
+const { protocol, assessments, submissions } = Astro.props;
 
-const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
+const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
 
 let tierInput: TierInput | undefined;
-if (assessments && assessments.size > 0) {
+if ((assessments && assessments.size > 0) || (submissions && submissions.size > 0)) {
   tierInput = {};
-  for (const [sliceId, a] of assessments.entries()) {
-    tierInput[sliceId as PizzaSliceId] = {
-      models: a.models,
-      merged_at: a.merged_at,
-      human_signoff: a.human_signoff ?? null,
-    };
+  if (assessments) {
+    for (const [sliceId, a] of assessments.entries()) {
+      tierInput[sliceId as PizzaSliceId] = {
+        models: a.models,
+        merged_at: a.merged_at,
+        human_signoff: a.human_signoff ?? null,
+      };
+    }
+  }
+  if (submissions) {
+    for (const [sliceId, arr] of submissions.entries()) {
+      const existing = tierInput[sliceId as PizzaSliceId] ?? {};
+      tierInput[sliceId as PizzaSliceId] = { ...existing, submissionCount: arr.length };
+    }
   }
 }
 const protocolTier = deriveTier(tierInput);
@@ -34,6 +43,17 @@ const GRADE_FILL: Record<string, string> = {
   orange: "oklch(0.65 0.120 75)",
   red: "oklch(0.52 0.170 22)",
 };
+
+function tentativeGrade(s: SliceAssessment): string {
+  if (!s.partial || !s.partialModelGrades || s.partialModelGrades.length === 0) return s.grade;
+  // Tentative pizza fill: pick the most-severe grade across submissions so the
+  // visual bias is "warn first, confirm later". Severity: red > orange > gray > green.
+  const order: Record<string, number> = { red: 0, orange: 1, gray: 2, green: 3 };
+  const sorted = [...s.partialModelGrades].sort(
+    (a, b) => (order[a.grade] ?? 9) - (order[b.grade] ?? 9),
+  );
+  return sorted[0]?.grade ?? "gray";
+}
 const PIZZA_VIEW = 360;
 const PIZZA_CENTER = PIZZA_VIEW / 2;
 const PIZZA_RADIUS = 140;
@@ -48,6 +68,7 @@ const SHORT_LABEL: Record<string, string> = {
 const PIZZA_CR = 12;
 const PIZZA_TIP_R = 8;
 const pizzaSlices = headerSlices.map((s, i) => {
+  const fillGrade = tentativeGrade(s);
   const a = (2 * Math.PI) / headerSlices.length;
   const a0 = -Math.PI / 2 + i * a;
   const a1 = a0 + a;
@@ -69,6 +90,7 @@ const pizzaSlices = headerSlices.map((s, i) => {
   const labelY = PIZZA_CENTER + PIZZA_LABEL_RADIUS * Math.sin(aMid);
   return {
     assessment: s,
+    fillGrade,
     d: `M${Tx0.toFixed(2)},${Ty0.toFixed(2)} L${Ax.toFixed(2)},${Ay.toFixed(2)} A${PIZZA_CR},${PIZZA_CR} 0 0 1 ${Bx.toFixed(2)},${By.toFixed(2)} A${PIZZA_RADIUS},${PIZZA_RADIUS} 0 0 1 ${Cx.toFixed(2)},${Cy.toFixed(2)} A${PIZZA_CR},${PIZZA_CR} 0 0 1 ${Dx.toFixed(2)},${Dy.toFixed(2)} L${Tx1.toFixed(2)},${Ty1.toFixed(2)} A${PIZZA_TIP_R},${PIZZA_TIP_R} 0 0 1 ${Tx0.toFixed(2)},${Ty0.toFixed(2)} Z`,
     labelLeftPct: (labelX / PIZZA_VIEW) * 100,
     labelTopPct: (labelY / PIZZA_VIEW) * 100,
@@ -149,12 +171,19 @@ const aboutUnknown = !curatedAbout;
               <stop offset="55%" stop-color="#000000" stop-opacity="0.12" />
               <stop offset="100%" stop-color="#000000" stop-opacity="0" />
             </radialGradient>
+            <pattern id="partial-hatch" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="rgba(0,0,0,0)" />
+              <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(255,255,255,0.35)" stroke-width="3" />
+            </pattern>
           </defs>
-          {pizzaSlices.map(({ assessment, d }) => (
+          {pizzaSlices.map(({ assessment, fillGrade, d }) => (
             <a href={`#${assessment.id}`} data-pizza-slice={assessment.id} class="pizza-slice">
-              <path d={d} fill={GRADE_FILL[assessment.grade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
-                <title>{`${assessment.label} — ${assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
+              <path d={d} fill={GRADE_FILL[fillGrade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
+                <title>{`${assessment.label} — ${assessment.partial ? `tentative ${fillGrade === "gray" ? "unknown" : fillGrade} (${assessment.models?.length ?? 0}/3 models submitted)` : assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
               </path>
+              {assessment.partial && (
+                <path d={d} fill="url(#partial-hatch)" stroke="none" pointer-events="none" />
+              )}
             </a>
           ))}
           <circle cx={PIZZA_CENTER} cy={PIZZA_CENTER} r={PIZZA_RADIUS} fill="url(#pie-ao)" style="mix-blend-mode: hard-light" pointer-events="none" />

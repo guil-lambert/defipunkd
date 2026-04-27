@@ -1,4 +1,4 @@
-import type { Protocol, LoadedAssessment, AssessmentSliceId, Rationale } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId, Rationale, LoadedSubmission } from "@defipunkd/registry";
 import type { GradeColor } from "./verifiability";
 import { verifiabilityGrade } from "./verifiability";
 import { autonomyGrade } from "./autonomy";
@@ -13,6 +13,11 @@ export type SliceAssessment = {
   structured?: Rationale;
   strength?: "strong" | "weak";
   models?: string[];
+  /** True when at least one submission exists but quorum is not met. UI hides
+   * verdict + steel-man and shows an "(N/3 models submitted)" pill instead of a
+   * grade chip. */
+  partial?: boolean;
+  partialModelGrades?: { model: string; grade: GradeColor }[];
 };
 
 function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models"> {
@@ -121,9 +126,43 @@ function autonomyRationale(p: Protocol): { grade: GradeColor; headline: string; 
   };
 }
 
+function partialFromSubmissions(arr: LoadedSubmission[]): Pick<SliceAssessment, "headline" | "short_headline" | "rationale" | "structured" | "models" | "partial" | "partialModelGrades"> {
+  // arr is pre-sorted newest-first by the loader.
+  const latest = arr[0]!;
+  // Merge findings across all submissions, deduped by code|text.
+  const findingSeen = new Set<string>();
+  const findings: Rationale["findings"] = [];
+  for (const s of arr) {
+    for (const f of s.rationale?.findings ?? []) {
+      const key = `${f.code}|${f.text}`;
+      if (findingSeen.has(key)) continue;
+      findingSeen.add(key);
+      findings.push(f);
+    }
+  }
+  const structured: Rationale = {
+    findings,
+    steelman: null,
+    verdict: "",
+  };
+  return {
+    headline: latest.headline,
+    short_headline: latest.short_headline,
+    rationale: latest.headline,
+    structured,
+    models: arr.map((s) => s.model),
+    partial: true,
+    partialModelGrades: arr.map((s) => ({
+      model: s.model,
+      grade: (s.grade === "unknown" ? "gray" : s.grade) as GradeColor,
+    })),
+  };
+}
+
 export function assessProtocol(
   p: Protocol,
   assessments?: Map<AssessmentSliceId, LoadedAssessment>,
+  submissions?: Map<AssessmentSliceId, LoadedSubmission[]>,
 ): SliceAssessment[] {
   const v = verifiabilityRationale(p);
   const d = autonomyRationale(p);
@@ -168,10 +207,14 @@ export function assessProtocol(
     },
   ];
 
-  if (!assessments) return base;
   return base.map((s) => {
-    const a = assessments.get(s.id);
-    return a ? { ...s, ...overrideFromAssessment(a) } : s;
+    const a = assessments?.get(s.id);
+    if (a) return { ...s, ...overrideFromAssessment(a) };
+    const subs = submissions?.get(s.id);
+    if (subs && subs.length > 0 && s.grade === "gray") {
+      return { ...s, ...partialFromSubmissions(subs) };
+    }
+    return s;
   });
 }
 

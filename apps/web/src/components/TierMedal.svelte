@@ -23,7 +23,37 @@
   }
 </script>
 
-{#if tier !== "none"}
+{#if tier === "none"}
+  {@const s = size}
+  {@const cx = s / 2}
+  {@const r = s / 2 - 0.5}
+  {@const showGlyph = s >= MEDAL_CHECK_MIN_SIZE}
+  {@const armLen = s * 0.22}
+  {@const armW = Math.max(1, s * 0.1)}
+  <svg
+    width={s}
+    height={s}
+    viewBox={`0 0 ${s} ${s}`}
+    role="img"
+    aria-label="No submissions yet"
+    class="tier-medal tier-medal-empty"
+  >
+    <title>No submissions yet</title>
+    <circle
+      cx={cx}
+      cy={cx}
+      r={r}
+      fill="none"
+      stroke="var(--surface-raised)"
+      stroke-width="1"
+      stroke-dasharray="2 2"
+    />
+    {#if showGlyph}
+      <line x1={cx - armLen} y1={cx} x2={cx + armLen} y2={cx} stroke="var(--text-muted)" stroke-width={armW} stroke-linecap="round" />
+      <line x1={cx} y1={cx - armLen} x2={cx} y2={cx + armLen} stroke="var(--text-muted)" stroke-width={armW} stroke-linecap="round" />
+    {/if}
+  </svg>
+{:else}
   {@const s = size}
   {@const cx = s / 2}
   {@const r = s / 2 - 0.5}
@@ -47,7 +77,12 @@
       stroke-width="1"
     />
     {#if showGlyph}
-      {#if tier === "bronze"}
+      {#if tier === "wood"}
+        {@const armLen = s * 0.26}
+        {@const armW = Math.max(1.4, s * 0.13)}
+        <line x1={cx - armLen} y1={cx} x2={cx + armLen} y2={cx} stroke={glyphColor} stroke-width={armW} stroke-linecap="round" />
+        <line x1={cx} y1={cx - armLen} x2={cx} y2={cx + armLen} stroke={glyphColor} stroke-width={armW} stroke-linecap="round" />
+      {:else if tier === "bronze"}
         {@const dotR = Math.max(0.9, s * 0.08)}
         {@const dotY = s / 2}
         {@const gap = s * 0.22}

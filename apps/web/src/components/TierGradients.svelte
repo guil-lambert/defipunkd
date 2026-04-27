@@ -1,6 +1,6 @@
 <script lang="ts">
   import { TIER_STOPS } from "../lib/tier";
-  const tiers = ["bronze", "silver", "gold"] as const;
+  const tiers = ["wood", "bronze", "silver", "gold"] as const;
 </script>
 
 <svg aria-hidden="true" class="tier-gradients" focusable="false">

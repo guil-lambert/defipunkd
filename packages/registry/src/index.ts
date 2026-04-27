@@ -11,6 +11,7 @@ import {
   type ProtocolMetadata,
 } from "./assessments";
 import { loadMasters, type Master, type MasterSliceConsensus } from "./master";
+import { loadSubmissions, type LoadedSubmission } from "./submissions";
 
 export type { Protocol, Snapshot, ProtocolSnapshot, ProvenanceTag, Slug } from "./types";
 export { getEnrichment, listEnrichedSlugs } from "./enrichment";
@@ -25,6 +26,7 @@ export type {
 } from "./enrichment";
 export { OverlaySchema, type Overlay } from "./overlay-schema";
 export { loadMasters, type Master, type MasterSliceConsensus } from "./master";
+export { loadSubmissions, type LoadedSubmission, type SubmissionGrade, type SubmissionEvidence } from "./submissions";
 export {
   loadAssessments,
   aggregateProtocolMetadata,
@@ -175,6 +177,13 @@ export function getAssessments(): Map<string, Map<AssessmentSliceId, LoadedAsses
   if (cachedAssessments) return cachedAssessments;
   cachedAssessments = loadAssessments(DATA_DIR);
   return cachedAssessments;
+}
+
+let cachedSubmissions: Map<string, Map<AssessmentSliceId, LoadedSubmission[]>> | null = null;
+export function getSubmissions(): Map<string, Map<AssessmentSliceId, LoadedSubmission[]>> {
+  if (cachedSubmissions) return cachedSubmissions;
+  cachedSubmissions = loadSubmissions(DATA_DIR);
+  return cachedSubmissions;
 }
 
 export function listChildren(parentSlug: string): Protocol[] {

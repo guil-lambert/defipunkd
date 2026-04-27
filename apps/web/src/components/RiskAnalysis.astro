@@ -1,5 +1,5 @@
 ---
-import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding, LoadedSubmission } from "@defipunkd/registry";
 import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
 import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
 
@@ -7,16 +7,17 @@ interface Props {
   protocol: Protocol;
   snapshotGeneratedAt: string;
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
+  submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
 }
-const { protocol, snapshotGeneratedAt, assessments } = Astro.props;
-const rawSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments);
+const { protocol, snapshotGeneratedAt, assessments, submissions } = Astro.props;
+const rawSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
 
 const SEVERITY_ORDER: Record<string, number> = { red: 0, orange: 1, green: 2, gray: 3 };
 const slices = [...rawSlices].sort(
   (a, b) => (SEVERITY_ORDER[a.grade] ?? 9) - (SEVERITY_ORDER[b.grade] ?? 9),
 );
-const gradedSlices = slices.filter((s) => s.grade !== "gray");
-const graySlices = slices.filter((s) => s.grade === "gray");
+const gradedSlices = slices.filter((s) => s.grade !== "gray" || s.partial);
+const graySlices = slices.filter((s) => s.grade === "gray" && !s.partial);
 
 const ANALYSIS_DATE = new Date().toISOString().slice(0, 10);
 const REPO = "guil-lambert/defipunkd";
@@ -73,7 +74,8 @@ const auditSlices = slices.map((s) => ({
   prompt: promptFor(s.id as SliceId),
   submitUrl: submitUrl(s.id as SliceId),
   modelCount: s.models?.length ?? 0,
-  hasQuorum: (s.models?.length ?? 0) >= QUORUM_MIN,
+  hasQuorum: (s.models?.length ?? 0) >= QUORUM_MIN && !s.partial,
+  isPartial: !!s.partial,
 }));
 
 const TAXONOMY_LABEL: Record<string, string> = {
@@ -86,7 +88,36 @@ function chipLabel(grade: string): string {
   return grade === "gray" ? "unknown" : grade;
 }
 
+const GRADE_VAR: Record<string, string> = {
+  red: "var(--grade-red)",
+  orange: "var(--grade-orange)",
+  green: "var(--grade-green)",
+  gray: "var(--grade-gray)",
+};
+
+function partialStripeStyle(s: SliceAssessment): string {
+  // Build a diagonal repeating stripe alternating each tentative grade with gray.
+  const grades = (s.partialModelGrades ?? []).map((g) => g.grade);
+  const uniq = Array.from(new Set(grades));
+  const colors = uniq.length > 0 ? uniq.map((g) => GRADE_VAR[g] ?? "var(--grade-gray)") : ["var(--grade-gray)"];
+  const band = 8;
+  const grayBand = "var(--surface)";
+  const segments: string[] = [];
+  let pos = 0;
+  for (const c of colors) {
+    segments.push(`${c} ${pos}px ${pos + band}px`);
+    pos += band;
+    segments.push(`${grayBand} ${pos}px ${pos + band}px`);
+    pos += band;
+  }
+  return `background: repeating-linear-gradient(135deg, ${segments.join(", ")});`;
+}
+
 const TOP_EVIDENCE = 2;
+
+function partialPillText(modelCount: number): string {
+  return `${modelCount}/${QUORUM_MIN} model${modelCount === 1 ? "" : "s"} submitted`;
+}
 ---
 <section class="risk-analysis" id="risk-analysis">
   <h2>Risk analysis</h2>
@@ -113,6 +144,11 @@ const TOP_EVIDENCE = 2;
                   ✓ {a.modelCount}/{a.modelCount} models agree
                 </span>
               )}
+              {a.isPartial && (
+                <span class="audit-partial" title={`${a.modelCount} of ${QUORUM_MIN} models needed for quorum`}>
+                  {a.modelCount}/{QUORUM_MIN} submitted
+                </span>
+              )}
             </span>
             <button type="button" class="copy-btn" data-copy-target={`#prompt-${a.id}`}>Copy prompt</button>
             <a href={a.submitUrl} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
@@ -125,13 +161,19 @@ const TOP_EVIDENCE = 2;
 
   <ol class="cards">
     {gradedSlices.map((s) => (
-      <li id={s.id} class:list={["card", `grade-${s.grade}`]}>
+      <li id={s.id} class:list={["card", `grade-${s.grade}`, { partial: s.partial }]} style={s.partial ? partialStripeStyle(s) : undefined}>
         <details class="body card-details">
           <summary class="card-summary">
             <div class="meta">
               <span class="label">{s.label}</span>
-              <span class:list={["chip", `grade-${s.grade}`]}>{chipLabel(s.grade)}</span>
-              {s.models && s.models.length > 0 && (
+              {s.partial ? (
+                <span class="chip chip-partial" title={`${s.models?.length ?? 0} of ${QUORUM_MIN} models needed for quorum`}>
+                  {partialPillText(s.models?.length ?? 0)}
+                </span>
+              ) : (
+                <span class:list={["chip", `grade-${s.grade}`]}>{chipLabel(s.grade)}</span>
+              )}
+              {!s.partial && s.models && s.models.length > 0 && (
                 <span
                   class:list={["consensus", s.models.length >= 2 ? "consensus-agree" : "consensus-single"]}
                   title={s.strength ? `${s.strength} consensus` : undefined}
@@ -147,17 +189,31 @@ const TOP_EVIDENCE = 2;
           </summary>
           {s.structured ? (
             <div class="structured">
-              {s.structured.steelman && s.structured.steelman[s.grade as "red" | "orange" | "green"] && (
+              {!s.partial && s.structured.steelman && s.structured.steelman[s.grade as "red" | "orange" | "green"] && (
                 <div class:list={["steelman-chosen", `grade-${s.grade}`]}>
                   <span class="steelman-label">{TAXONOMY_LABEL[s.grade] ?? "Argument"}</span>
                   <span class="steelman-text">{s.structured.steelman[s.grade as "red" | "orange" | "green"]}</span>
                 </div>
               )}
-              {s.structured.verdict && s.structured.verdict.trim().length > 0 && (
+              {!s.partial && s.structured.verdict && s.structured.verdict.trim().length > 0 && (
                 <details class="drawer">
                   <summary>Verdict</summary>
                   <p class="verdict">{s.structured.verdict}</p>
                 </details>
+              )}
+              {s.partial && s.partialModelGrades && s.partialModelGrades.length > 0 && (
+                <div class="partial-grades">
+                  <span class="partial-grades-label">Tentative grades</span>
+                  <ul class="partial-grades-list">
+                    {s.partialModelGrades.map((mg) => (
+                      <li>
+                        <span class="model-badge">{mg.model}</span>
+                        <span class:list={["chip", `grade-${mg.grade}`]}>{chipLabel(mg.grade)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p class="partial-grades-note">No quorum yet — verdict and steel-man hidden until ≥{QUORUM_MIN} models agree.</p>
+                </div>
               )}
               {s.structured.findings.length > 0 && (
                 <div class="evidence">
@@ -190,6 +246,14 @@ const TOP_EVIDENCE = 2;
             </div>
           ) : (
             <p class="rationale">{s.rationale}</p>
+          )}
+
+          {s.partial && (
+            <div class="partial-cta">
+              <button type="button" class="copy-btn" data-copy-target={`#prompt-partial-${s.id}`}>Copy prompt</button>
+              <a href={submitUrl(s.id as SliceId)} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
+              <pre id={`prompt-partial-${s.id}`} class="prompt-hidden" hidden>{promptFor(s.id as SliceId)}</pre>
+            </div>
           )}
 
           {s.models && s.models.length > 0 && (
@@ -364,6 +428,17 @@ const TOP_EVIDENCE = 2;
     gap: 0.5rem;
     flex-wrap: wrap;
   }
+  .audit-partial {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    color: var(--text-muted);
+    border: 1px dashed var(--surface-raised);
+    background: transparent;
+    white-space: nowrap;
+  }
   .audit-quorum {
     font-size: 0.7rem;
     font-weight: 600;
@@ -463,6 +538,74 @@ const TOP_EVIDENCE = 2;
   .chip.grade-orange { background: oklch(0.78 0.140 75);  color: #1a1208; }
   .chip.grade-green  { background: oklch(0.74 0.140 150); color: #081610; }
   .chip.grade-gray   { background: oklch(0.72 0.015 235); color: #0d1114; }
+  .chip-partial {
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px dashed color-mix(in oklab, var(--text-muted) 50%, transparent);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    font-weight: 600;
+  }
+  .card.partial {
+    /* inline `style` provides the diagonal stripes; clear the side bar overlay */
+    background-blend-mode: normal;
+  }
+  .card.partial::before { display: none; }
+  .card.partial .body {
+    /* Slight inner panel so text remains legible over stripes */
+    background: color-mix(in oklab, var(--surface) 88%, transparent);
+    border-radius: 4px;
+    margin: 0.35rem;
+    padding: 0.65rem 0.9rem 0.8rem 0.9rem;
+  }
+  .card.partial .card-summary {
+    margin: -0.65rem -0.9rem 0 -0.9rem;
+    padding: 0.65rem 0.9rem 0.65rem 0.9rem;
+  }
+
+  .partial-grades {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px dashed var(--surface-raised);
+    border-radius: 4px;
+    background: var(--surface-raised);
+  }
+  .partial-grades-label {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .partial-grades-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .partial-grades-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .partial-grades-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .partial-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
   .consensus {
     font-size: 0.68rem;
     letter-spacing: 0.04em;
