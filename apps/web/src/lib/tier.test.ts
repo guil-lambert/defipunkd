@@ -14,9 +14,14 @@ describe("deriveTier", () => {
     expect(deriveTier(input)).toBe("bronze");
   });
 
-  it("ignores slices below quorum", () => {
+  it("returns 'wood' when a slice has submissions but no quorum", () => {
     const input: TierInput = { control: { models: models(2) } };
-    expect(deriveTier(input)).toBe("none");
+    expect(deriveTier(input)).toBe("wood");
+  });
+
+  it("returns 'wood' from raw submissionCount even without merged models", () => {
+    const input: TierInput = { control: { submissionCount: 1 } };
+    expect(deriveTier(input)).toBe("wood");
   });
 
   it("returns 'silver' when all 5 slices have quorum", () => {

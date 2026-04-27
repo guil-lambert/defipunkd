@@ -1,6 +1,6 @@
 ---
 export const prerender = true;
-import { listProtocols, getAssessments } from "@defipunkd/registry";
+import { listProtocols, getAssessments, getSubmissions } from "@defipunkd/registry";
 import type { GradeColor } from "../lib/verifiability";
 import Base from "../layouts/Base.astro";
 import LandingTable from "../components/LandingTable.svelte";
@@ -14,6 +14,7 @@ import type { PizzaSliceId } from "../lib/pizza";
 
 const protocols = listProtocols();
 const assessments = getAssessments();
+const submissions = getSubmissions();
 const unmapped = new Set<string>();
 
 const rows: LandingRow[] = protocols.map((p) => {
@@ -27,15 +28,27 @@ const rows: LandingRow[] = protocols.map((p) => {
         ]),
       )
     : undefined;
+  const subBySlice = submissions.get(p.slug);
   let tierInput: TierInput | undefined;
-  if (bySlice) {
+  if (bySlice || subBySlice) {
     tierInput = {};
-    for (const [sliceId, a] of bySlice.entries()) {
-      tierInput[sliceId as PizzaSliceId] = {
-        models: a.models,
-        merged_at: a.merged_at,
-        human_signoff: a.human_signoff ?? null,
-      };
+    if (bySlice) {
+      for (const [sliceId, a] of bySlice.entries()) {
+        tierInput[sliceId as PizzaSliceId] = {
+          models: a.models,
+          merged_at: a.merged_at,
+          human_signoff: a.human_signoff ?? null,
+        };
+      }
+    }
+    if (subBySlice) {
+      for (const [sliceId, arr] of subBySlice.entries()) {
+        const existing = tierInput[sliceId as PizzaSliceId] ?? {};
+        tierInput[sliceId as PizzaSliceId] = {
+          ...existing,
+          submissionCount: arr.length,
+        };
+      }
     }
   }
   const tier = deriveTier(tierInput);

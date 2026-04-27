@@ -291,10 +291,10 @@
     </td>
     <td class="stage-cell">
       {#if tier !== "none"}
-        <span class="tt-wrap">
+        <a class="tt-wrap audit-cta" href={`/protocol/${row.slug}#audit-yourself`} aria-label={`${TIER_LABEL[tier]} — contribute another run`}>
           <TierMedal tier={tier} size={20} />
-          <span class="tt" role="tooltip">{TIER_LABEL[tier]}</span>
-        </span>
+          <span class="tt" role="tooltip">{TIER_LABEL[tier]} · contribute a run</span>
+        </a>
       {:else}
         <a class="tt-wrap audit-cta" href={`/protocol/${row.slug}#audit-yourself`} aria-label="Be the first to audit this protocol">
           <svg class="audit-plus" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
