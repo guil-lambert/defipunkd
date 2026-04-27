@@ -1,0 +1,137 @@
+{
+  "schema_version": 3,
+  "slug": "wbtc",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "WBTC redemption requires custodian/merchant cooperation — no permissionless on-chain exit to native BTC exists; burn function is callable but BTC release is entirely custodial",
+  "short_headline": "Custodial exit; no permissionless redemption",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The WBTC ERC-20 contract (0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) exposes a `burn(uint256 value)` function that any token holder can call to destroy their WBTC. There is also an operator-only `mint` function. There is NO on-chain redeem/withdraw function that atomically releases BTC; the burn merely records intent. The actual BTC release depends entirely on the custodian (BitGo / BiT Global) processing the redemption off-chain after a KYC-approved merchant initiates it. The WBTC DAO contract at 0x9c849a0ed5952cf4f1f0be7e1dce8d08c70e2b34 and the WBTCController govern merchant and custodian roles."
+      },
+      {
+        "code": "E2",
+        "text": "`burn(uint256 value)` — publicly callable by any WBTC holder, not pause-gated at the token contract level directly, but is subject to the token's `whenNotPaused` modifier inherited from OpenZeppelin's Pausable. The `mint` function is restricted to the minter role (custodian). However, calling `burn` on the ERC-20 does not trigger BTC release — the redemption pipeline requires a licensed merchant to submit a burn request through the WBTC portal, and the custodian must process it. End-users who are not merchants cannot initiate redemption at the protocol level."
+      },
+      {
+        "code": "E3",
+        "text": "The WBTC token contract has a `pause()` function callable by the contract owner. As of the most recent on-chain state, the owner/admin of the WBTC token contract is a multisig controlled by the WBTC DAO (which since 2024 includes BiT Global / Justin Sun entities as co-custodian). There is no documented maximum pause duration — pause can be indefinite. The pause role holder is a multisig (the WBTC DAO multisig), but it can pause the token transfers and burn function with no time cap."
+      },
+      {
+        "code": "E4",
+        "text": "No distinct emergency-vs-governance pause distinction is publicly documented for WBTC. The single `pause()` path is controlled by the WBTC DAO multisig and has no auto-expiry or time cap documented in the contract or public documentation."
+      },
+      {
+        "code": "E5",
+        "text": "There is no queued redemption mechanism on-chain. Redemptions are processed off-chain by merchants and custodians. The WBTC documentation states that merchants must complete KYC/AML and that the custodian (BitGo / BiT Global) processes BTC releases, with no documented SLA or maximum queue duration."
+      },
+      {
+        "code": "E6",
+        "text": "There is no forced-exit or escape-hatch mechanism. If the custodian (BitGo / BiT Global) becomes insolvent, is sanctioned, or refuses to process redemptions, WBTC holders have no on-chain recourse to recover their BTC. The only secondary market exit is selling WBTC on a DEX/CEX for another asset."
+      },
+      {
+        "code": "E7",
+        "text": "The `burn` function is directly callable on-chain via Etherscan's write tab without the project frontend. However, calling burn does NOT release BTC — it only destroys ERC-20 tokens. The actual BTC redemption process requires the WBTC portal, KYC with a merchant, and custodian action, making the meaningful exit path entirely dependent on off-chain infrastructure and custodian cooperation."
+      }
+    ],
+    "steelman": {
+      "red": "WBTC redemption for native BTC is entirely custodial — there is no permissionless on-chain mechanism to retrieve BTC; the burn function destroys tokens but BTC release requires an approved merchant and custodian (BitGo/BiT Global) action, and the pause function on the token contract has no time cap, meaning a single multisig can freeze all token transfers indefinitely.",
+      "orange": "The WBTC token's burn function is publicly callable on-chain without frontend dependency, secondary-market exits (DEX swaps) are always available, and the custodial structure is fully disclosed upfront, so sophisticated users who accept custodial risk can exit to other assets at any time.",
+      "green": "WBTC trades at near-parity on major DEXs and CEXs, providing a liquid secondary-market exit at all times, and the token contract's burn is permissionless, so no admin action is needed to move or swap WBTC."
+    },
+    "verdict": "Choosing red because the fundamental exit — recovering native BTC from WBTC — requires an admin signature (custodian/merchant approval) with no on-chain fallback, satisfying the red criterion 'exit requires admin signature.' Additionally, the pause function on the token contract is held by the WBTC DAO multisig with no documented time cap, meaning token transfers and burns can be frozen indefinitely. The secondary-market DEX exit does not constitute a permissionless exit to the underlying asset. Evidence: WBTC token contract on Etherscan confirms custodial architecture and pausability; WBTC documentation confirms merchant/custodian redemption requirement."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/token/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "WBTC ERC-20 token contract on Ethereum — confirms burn function, pause function, and minter/owner roles",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599#readContract",
+      "shows": "WBTC contract read functions — owner, pauser, minter roles confirming multisig-controlled admin",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://wbtc.network/dashboard/audit",
+      "shows": "WBTC audit page listing security audits of the protocol",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://wbtc.network/",
+      "shows": "WBTC official website confirming custodian/merchant model for BTC redemption",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts",
+      "shows": "WBTC smart contracts repository — confirms ERC-20 with mint/burn and Pausable inheritance",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts/blob/master/contracts/token/WBTC.sol",
+      "shows": "WBTC token Solidity source confirming burn is public/permissionless but BTC release is off-chain custodial; pause function present",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x9c849a0ed5952cf4f1f0be7e1dce8d08c70e2b34",
+      "shows": "WBTC DAO multisig / controller contract that holds admin rights over the WBTC token",
+      "chain": "Ethereum",
+      "address": "0x9c849a0ed5952cf4f1f0be7e1dce8d08c70e2b34",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://members.wbtc.network/",
+      "shows": "WBTC member portal confirming merchant/custodian KYC requirement for BTC redemption",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: Exact signer count and threshold of the WBTC DAO multisig that holds pause rights could not be independently verified from block explorer data in this run — the multisig address 0x9c849a0ed5952cf4f1f0be7e1dce8d08c70e2b34 requires deeper Gnosis Safe inspection to confirm M-of-N configuration",
+    "E4: No public documentation found distinguishing an emergency (time-capped) pause from a governance (indefinite) pause — WBTC docs do not describe a dual-track pause system"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/bitcoin-token-smart-contracts"
+    ],
+    "docs_url": "https://wbtc.network/",
+    "audits": [
+      {
+        "firm": "Chainsecurity",
+        "url": "https://wbtc.network/dashboard/audit",
+        "date": "2019-01"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://wbtc.network/dashboard/order-book",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x9c849a0ed5952cf4f1f0be7e1dce8d08c70e2b34",
+        "role": "WBTC DAO controller / token admin",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "role": "WBTC ERC-20 token contract",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "WBTC (Wrapped Bitcoin) is an ERC-20 token on Ethereum backed 1:1 by Bitcoin held in custody by BitGo and BiT Global. Users acquire WBTC through KYC-approved merchants who interact with the custodian to mint tokens against deposited BTC; redemption requires the reverse process through the same merchant/custodian pipeline. WBTC is widely used as Bitcoin collateral in DeFi lending, liquidity provision, and yield strategies on Ethereum and EVM chains. It is distinctive as the oldest and most liquid wrapped Bitcoin product but carries full custodial risk, with no permissionless on-chain mechanism to recover native BTC."
+  }
+}

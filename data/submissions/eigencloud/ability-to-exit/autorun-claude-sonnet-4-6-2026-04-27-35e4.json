@@ -1,0 +1,113 @@
+{
+  "schema_version": 3,
+  "slug": "eigencloud",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "EigenCloud is a thin layer over EigenLayer; exit mechanics depend on EigenLayer core contracts whose pause/control details could not be fully verified in this run",
+  "short_headline": "Exit mechanics unverified this run",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "EigenCloud.xyz describes itself as built on top of EigenLayer restaking infrastructure. The Layr-Labs GitHub hosts EigenLayer core contracts. User-facing exit functions in EigenLayer core include: queueWithdrawals (DelegationManager), completeQueuedWithdrawals (DelegationManager), undelegate (DelegationManager), and forceUndelegateAll (for operator-initiated exits). EigenCloud-specific exit functions (if any beyond the EigenLayer primitives) could not be identified from the eigencloud.xyz docs or any eigencloud-specific deployed contract address, as no address book was provided and the docs site (https://docs.eigencloud.xyz) did not enumerate EigenCloud-specific contracts distinct from EigenLayer core."
+      },
+      {
+        "code": "E2",
+        "text": "For EigenLayer's queueWithdrawals: callable by any staker (no allowlist), but subject to whenNotPaused modifier gated by PauserRegistry. completeQueuedWithdrawals: also subject to whenNotPaused. The distinction between request-placement and claim-of-finalized is present — both are pause-gated in EigenLayer. EigenCloud-specific access modifiers could not be verified because no EigenCloud-native deployed contract addresses were located."
+      },
+      {
+        "code": "E3",
+        "text": "EigenLayer's PauserRegistry holds PAUSER_ROLE. As of last verifiable state, the Operations multisig (Layr-Labs controlled) holds pause rights, and the EigenLayer Community Multisig (reportedly 9-of-13 at some point) holds unpause rights. The exact current composition and time cap of the pause could not be verified from a fresh block-explorer query in this run because no specific deployed contract address for EigenCloud was provided. Maximum pause duration: EigenLayer documentation does not specify a hard cap on pause duration in the core contracts, making indefinite pause possible."
+      },
+      {
+        "code": "E4",
+        "text": "EigenLayer has an Operations multisig that can pause rapidly (emergency path) and a Community/Protocol Council multisig that can unpause. There is no documented auto-expiry on pauses in EigenLayer core. EigenCloud does not appear to add an additional pause layer based on available docs, but this could not be confirmed from EigenCloud-specific contracts."
+      },
+      {
+        "code": "E5",
+        "text": "EigenLayer enforces a withdrawal queue with a MIN_WITHDRAWAL_DELAY_BLOCKS (historically 50400 blocks ~ 7 days on Ethereum). This applies to queueWithdrawals. Daily caps were not identified in core DelegationManager. The queue mechanism itself is pausable via PauserRegistry. EigenCloud does not appear to modify these parameters based on available documentation, but EigenCloud-specific queue parameters could not be verified."
+      },
+      {
+        "code": "E6",
+        "text": "No permissionless escape-hatch or forced-exit mechanism was identified in EigenLayer core contracts beyond the standard queueWithdrawals path. There is no 'rage-quit' or bypass for adversarial-admin scenarios. EigenCloud docs do not document any additional escape hatch."
+      },
+      {
+        "code": "E7",
+        "text": "EigenLayer core contracts (DelegationManager, StrategyManager) are directly callable on-chain via Etherscan write tab. EigenCloud appears to be a frontend/orchestration layer; if it is purely a UI over EigenLayer primitives, users can interact directly with EigenLayer contracts without the EigenCloud frontend. However, if EigenCloud deploys its own middleware contracts (AVS-layer, operator sets), those contracts' direct callability could not be verified in this run due to absence of specific deployed addresses."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Assessment blocked by inability to identify EigenCloud-specific deployed contract addresses (no address book provided, docs site did not enumerate distinct EigenCloud contracts separate from EigenLayer core). Without confirmed on-chain addresses for any EigenCloud-native contracts, it is unclear whether EigenCloud introduces additional exit restrictions or pause mechanisms beyond EigenLayer's base layer. E3 is also unresolved because the current PauserRegistry composition and pause time-cap for EigenLayer cannot be freshly verified without a specific contract address to query. E1 and E2 are only partially answered for the EigenLayer primitives that EigenCloud appears to wrap. These gaps prevent assigning a confident grade."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.eigencloud.xyz/eigenlayer/security/audits",
+      "shows": "EigenCloud docs audit page — references EigenLayer security audits, confirming EigenCloud is built on EigenLayer infrastructure",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/Layr-Labs/eigenlayer-contracts",
+      "shows": "Layr-Labs GitHub repository for EigenLayer core contracts including DelegationManager with queueWithdrawals and completeQueuedWithdrawals exit functions",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.eigencloud.xyz",
+      "shows": "EigenCloud documentation site — describes EigenCloud as built on EigenLayer; does not enumerate EigenCloud-specific deployed contract addresses",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37B",
+      "shows": "EigenLayer DelegationManager proxy on Ethereum mainnet — the primary exit contract for EigenLayer stakers (queueWithdrawals, completeQueuedWithdrawals)",
+      "chain": "Ethereum",
+      "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37B",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/core/DelegationManager.sol",
+      "shows": "DelegationManager source code showing queueWithdrawals and completeQueuedWithdrawals with whenNotPaused modifiers and MIN_WITHDRAWAL_DELAY_BLOCKS",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E1: No EigenCloud-specific deployed contract addresses were found in docs or provided address book — cannot enumerate EigenCloud-native exit functions separate from EigenLayer primitives",
+    "E2: EigenCloud-specific access modifiers and pause guards on any EigenCloud-native contracts could not be verified without deployed addresses",
+    "E3: Current PauserRegistry holder composition for EigenLayer could not be freshly verified from a block-explorer query; maximum pause duration (time cap) for EigenLayer pauses is not documented in core contracts and may be indefinite",
+    "E4: EigenCloud-specific emergency vs governance pause distinction could not be assessed without EigenCloud-native contract addresses",
+    "E5: EigenCloud-specific queue parameters or caps (if any beyond EigenLayer defaults) not verifiable",
+    "E6: No EigenCloud-specific escape hatch or emergency exit beyond EigenLayer queueWithdrawals could be confirmed or ruled out",
+    "E7: EigenCloud middleware or AVS-layer contracts (if deployed) could not be confirmed as directly callable without the EigenCloud frontend, due to absence of specific addresses"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Layr-Labs/eigenlayer-contracts"
+    ],
+    "docs_url": "https://docs.eigencloud.xyz",
+    "audits": [
+      {
+        "firm": "Various (referenced via EigenLayer audits)",
+        "url": "https://docs.eigencloud.xyz/eigenlayer/security/audits",
+        "date": "2024-01"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37B",
+        "role": "EigenLayer DelegationManager proxy (exit gateway for restakers)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "EigenCloud is a platform built on top of EigenLayer's restaking infrastructure, enabling operators and stakers to participate in Actively Validated Services (AVSs) on Ethereum. Users restake ETH or liquid staking tokens through EigenLayer's core contracts (StrategyManager, DelegationManager) and EigenCloud provides tooling or middleware to simplify AVS deployment and operator management. Withdrawals follow EigenLayer's queued exit model with a minimum delay of approximately 7 days. EigenCloud does not appear to issue its own receipt token distinct from EigenLayer's accounting."
+  }
+}

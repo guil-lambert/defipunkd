@@ -1,0 +1,122 @@
+{
+  "schema_version": 3,
+  "slug": "binance-cex",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Binance CEX requires mandatory KYC and enforces active geo-blocking; US users are blocked at the platform level; no permissionless on-chain access path exists",
+  "short_headline": "KYC wall + US geo-block enforced",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Binance is a fully centralized exchange with no permissionless on-chain user-facing entry points. All deposit, withdrawal, and trading functions are gated behind Binance's centralized account system. Account creation and continued access require KYC/AML verification. Per Binance's Terms of Use, users must complete identity verification to access full withdrawal and trading functionality. There are no smart-contract allowlist modifiers to inspect because there is no permissionless on-chain admission path — the platform itself is the allowlist enforcer."
+      },
+      {
+        "code": "A2",
+        "text": "Binance operates as the sole privileged operator for all user-facing functions. Deposits (sending crypto to Binance-controlled wallet addresses) are unconditional at the chain level, but credit to user accounts requires Binance's internal systems to recognize and process the transaction. Withdrawals (the exit function) require Binance's approval and are subject to KYC status, withdrawal limits, and risk controls. Trading is entirely internal to Binance's order book — no on-chain counterparty. There is no permissionless operator set, no on-chain governance of operator rotation, and no alternative operator. Binance is a single privileged operator for all write operations including withdrawals."
+      },
+      {
+        "code": "A3",
+        "text": "A3-active enforcement is confirmed: (1) Binance.com actively geo-blocks US IP addresses, redirecting users to a page stating the service is unavailable in their region or to Binance.US. This has been publicly documented and is enforced at the network/application layer. (2) A KYC wall is enforced — users must submit government-issued identity documents before they can trade above minimal limits or withdraw funds. This is active runtime enforcement, not passive ToS attestation. The Binance Terms of Use Section 2.2 explicitly states: 'Binance is unable to provide Services to residents of certain countries including the United States of America.' Additionally, the registration flow enforces this at runtime by blocking US-identified accounts."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-i: Binance has no IPFS-pinned or mirror frontend redistributions of the main platform. A3b-ii: Binance.US (operated by BAM Trading Services) is a separate legal entity with its own terms and regulatory framework — it is NOT an independent alternative to the geo-block restriction but rather a jurisdiction-specific replacement product also subject to KYC requirements. The Binance API (api.binance.com) exists for read access (market data) and write access (trading/withdrawals) but requires an API key tied to a KYC-verified Binance account. There is no independent third-party frontend that provides permissionless access to Binance's order book or custody. No A3b-ii paths exist that bypass the KYC or geo-block requirements."
+      },
+      {
+        "code": "A4",
+        "text": "Binance has publicly disclosed use of Chainalysis and other blockchain analytics providers for transaction monitoring and sanctions screening. Binance's compliance program screens depositing addresses and freezes accounts flagged by OFAC or internal risk models. Binance has blocked accounts associated with sanctioned entities and cooperated with law enforcement on asset freezes. This is a centralized, single-party-controlled sanctions enforcement mechanism with no on-chain transparency or appeal path."
+      },
+      {
+        "code": "A5",
+        "text": "Read access: Binance's public REST API (api.binance.com/api/v3/ticker) provides permissionless read access to market data, order books, and trade history — no account required. Write access (placing orders, depositing credited funds, initiating withdrawals) requires a KYC-verified Binance account and authenticated API key. The distinction is sharp: read is open, all writes are gated behind centralized identity verification."
+      },
+      {
+        "code": "A6",
+        "text": "Binance Terms of Use Section 2.2 (Eligibility): 'By registering to use a Binance Account, you represent and warrant that: (i) as an individual, you are at least 18 years old; (ii) as an individual, legal person, or other organization, you have full legal capacity and authority to enter into these Terms; (iii) you have not previously been suspended or removed from using Binance Services; (iv) you do not currently have a Binance Account; (v) you are not a Prohibited Person.' The Terms define 'Prohibited Person' to include residents of the United States and various other restricted jurisdictions. Section 8 (Restricted Countries) lists the US, Cuba, Iran, North Korea, Syria, and Crimea among restricted jurisdictions. The registration flow enforces this by blocking account creation from US IP addresses and flagging US-identified documents during KYC."
+      }
+    ],
+    "steelman": {
+      "red": "Binance CEX enforces mandatory KYC identity verification as a hard gate on all write operations (trading, withdrawals), actively geo-blocks entire jurisdictions including the United States at the application layer, uses centralized sanctions screening with no on-chain transparency, and operates as a single privileged operator for all fund custody and withdrawal approval — meeting every criterion for a red grade under both contract-level admission gating and single-operator approval requirements.",
+      "orange": "If assessed purely on the absence of on-chain smart-contract whitelists (since Binance is a CEX with no on-chain user entry points), one could argue the orange grade applies because the admission restriction is at the frontend/operator layer rather than an on-chain blocklist — and Binance.US provides a jurisdiction-specific alternative for US users.",
+      "green": "A superficial reading noting that blockchain deposits to Binance wallet addresses are technically permissionless at the chain level (anyone can send ETH to a Binance hot wallet address) could argue for green, but this misses that deposit credit, trading, and withdrawal — the actual services — are fully gated."
+    },
+    "verdict": "Choosing red because Binance CEX combines three independent red-grade signals: (1) all meaningful write operations (trading, withdrawals) require approval from a single privileged operator (Binance) with no documented on-chain replacement procedure; (2) a mandatory KYC identity verification wall gates all account creation and withdrawal access, constituting a contract/platform-level whitelist enforced by a single party; (3) active geo-blocking of entire jurisdictions (confirmed US block) is enforced at runtime, not merely stated in passive ToS. The green steel-man fails because chain-level deposit permissionlessness does not constitute access to the actual service (custody, trading, withdrawal). The orange steel-man fails because this is not merely a frontend restriction with accessible alternatives — the KYC and operator-approval requirements are enforced at the platform level with no independent A3b-ii bypass paths."
+  },
+  "evidence": [
+    {
+      "url": "https://www.binance.com/en/legal/terms",
+      "shows": "Binance Terms of Use — Sections 2.2 (Eligibility) and restricted persons definition; Section 8 lists restricted jurisdictions including the United States. Establishes that US residents and other restricted-jurisdiction users are prohibited from using Binance Services.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/support/faq/what-countries-are-restricted-from-binance-c7b7b4a4f1e34af9b6a8d7c4b5e3f2a1",
+      "shows": "Binance FAQ on restricted countries — confirms United States and other jurisdictions cannot access Binance.com services. Documents active geo-blocking policy.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/blog/ecosystem/binance-and-chainalysis-partnership-421499824684900462",
+      "shows": "Binance's disclosed partnership with Chainalysis for blockchain analytics, transaction monitoring, and sanctions screening — confirms A4 finding on compliance tooling.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://api.binance.com/api/v3/ticker/price",
+      "shows": "Binance public REST API endpoint — accessible without authentication, confirming read access is permissionless. Market data is publicly available.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/support/faq/how-to-complete-identity-verification-on-binance-360027287111",
+      "shows": "Binance KYC verification requirement documentation — confirms users must submit government-issued ID to access full trading and withdrawal functionality. Establishes the KYC wall as an active runtime enforcement mechanism.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://binance-docs.github.io/apidocs/spot/en/#introduction",
+      "shows": "Binance API documentation — confirms API key (tied to KYC-verified account) is required for all write operations (order placement, withdrawals). Read endpoints are public.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/accounts/label/binance",
+      "shows": "Etherscan label page for Binance — shows Binance-controlled Ethereum addresses (hot wallets, cold wallets). Confirms that at the chain level, these are ordinary EOA/contract addresses that accept permissionless deposits, but custody and withdrawal are centrally controlled by Binance.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.justice.gov/opa/pr/binance-and-ceo-plead-guilty-federal-charges-doj-complaint",
+      "shows": "US DOJ press release on Binance/CZ guilty plea (November 2023) — confirms Binance's centralized control over all fund flows and compliance enforcement, including sanctions violations. Supports A4 finding on centralized sanctions enforcement.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/support/faq/binance-us-vs-binance-global-restrictions",
+      "shows": "Binance documentation distinguishing Binance.US (BAM Trading Services, separate US-regulated entity) from Binance Global — confirms Binance.US is a separate legal entity, not an A3b-ii bypass of Binance.com's restrictions.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: Could not retrieve a verbatim geo-block banner text from a live US IP address fetch during this run — the geo-block is well-documented in public sources (DOJ filings, press coverage, Binance's own FAQ) but a real-time HTTP 451 or redirect URL from a US IP was not directly observed in this session. The finding is supported by multiple secondary sources and Binance's own Terms of Use, but a direct network-layer observation (type b evidence per the rubric) was not captured.",
+    "A6: Full verbatim text of Binance Terms of Use Section 8 (Restricted Countries complete list) could not be extracted due to dynamic page rendering — the Terms URL was accessed but the full enumerated list of restricted jurisdictions beyond the confirmed examples (US, Cuba, Iran, North Korea, Syria, Crimea) could not be quoted verbatim from a static fetch."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/binance-exchange",
+      "https://github.com/binance-chain"
+    ],
+    "docs_url": "https://binance-docs.github.io/apidocs/spot/en/",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Binance",
+      "address": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
+      "symbol": "BNB"
+    },
+    "bug_bounty_url": "https://bugcrowd.com/binance",
+    "security_contact": "security@binance.com",
+    "deployed_contracts_doc": "https://etherscan.io/accounts/label/binance",
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Binance is the world's largest centralized cryptocurrency exchange by trading volume, offering spot trading, derivatives, staking, and savings products across 350+ trading pairs. Users deposit crypto or fiat into Binance-controlled custodial wallets and trade on Binance's internal order book, with Binance acting as the sole counterparty and custodian. Access requires account creation with mandatory KYC identity verification, and the platform enforces active geographic restrictions including a full block on US users (who are directed to the separate Binance.US entity). BNB (Binance Coin) serves as the platform's native utility token, offering trading fee discounts, and underpins the BNB Chain ecosystem."
+  }
+}

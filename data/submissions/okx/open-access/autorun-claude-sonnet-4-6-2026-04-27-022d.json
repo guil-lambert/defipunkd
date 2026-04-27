@@ -1,0 +1,112 @@
+{
+  "schema_version": 3,
+  "slug": "okx",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "OKX is a centralized exchange with active geo-blocking and KYC requirements; no smart-contract whitelist on DEX aggregator tools, but the main CEX requires identity verification and is unavailable in the US and other jurisdictions",
+  "short_headline": "KYC wall; active geo-blocking enforced",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "OKX is a CEX; the primary exchange functions (spot trading, derivatives, withdrawal) are gated behind account registration and KYC identity verification. There is no on-chain whitelist contract governing the CEX itself. OKX also operates a DEX aggregator and Web3 wallet which interact with public smart contracts directly and do not enforce a contract-level whitelist on user entry points. However, accessing the DEX aggregator via the official OKX interface requires an OKX account for full features, though basic swap functionality may be available without full KYC via the Web3 wallet."
+      },
+      {
+        "code": "A2",
+        "text": "For CEX functions (deposit, trade, withdraw), OKX acts as the sole centralized operator: all order matching, custody, and settlement are off-chain and require OKX's approval. There is no permissionless path to CEX trading. For the Web3 wallet and DEX aggregator, on-chain settlement is permissionless once a transaction is broadcast, but the official OKX frontend routes trades through OKX's aggregation infrastructure. Withdrawal of self-custodied assets from the Web3 wallet is permissionless at the contract layer."
+      },
+      {
+        "code": "A3",
+        "text": "The official OKX website (okx.com) actively geo-blocks users from the United States. Visiting okx.com from a US IP redirects to a page stating 'OKX isn't available in your region' or equivalent. This is A3-active enforcement. Additionally, full account functionality requires KYC identity verification (passport/ID upload), constituting an active KYC wall for CEX services. The Web3 wallet section may be accessible without geo-block in some regions but the main exchange is not."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-i: OKX does not publish an IPFS-hosted mirror of its official frontend. The ToS covers all access to the 'Services' broadly. A3b-ii: The OKX DEX aggregator API is documented and accessible programmatically (api.okx.com/api/v5/dex/), providing an independent path for technically sophisticated users to interact with aggregated DEX liquidity without the geo-blocked frontend. Third-party wallets and frontends (e.g., MetaMask, 1inch, Uniswap) can access the same underlying DeFi protocols OKX's Web3 wallet routes to. However, for CEX services (the primary product), there are no meaningful A3b-ii alternative paths — CEX trading, custody, and fiat on/off-ramps are exclusively through OKX's own platform."
+      },
+      {
+        "code": "A4",
+        "text": "OKX's Terms of Service explicitly prohibit use by persons on OFAC SDN lists and persons in sanctioned jurisdictions. OKX has publicly stated it uses compliance screening tools. However, no publicly documented on-chain blocklist contract operated by OKX was found. The sanctions screening appears to be implemented at the account/KYC layer (off-chain) rather than via an on-chain address blocklist."
+      },
+      {
+        "code": "A5",
+        "text": "Read access: OKX's public market data APIs and price feeds are read-permissionless — anyone can query order book data, prices, and history without an account. Write access (placing orders, withdrawing funds, depositing): fully gated behind account registration and KYC. For the Web3 wallet's on-chain interactions, write access to public smart contracts is permissionless at the contract layer, but the official OKX Web3 wallet interface may apply geo-restrictions to its UI."
+      },
+      {
+        "code": "A6",
+        "text": "OKX Terms of Service at https://www.okx.com/help/terms-of-service states (verbatim excerpt from the live page): 'The Services are not available to residents or persons located in the United States of America, Canada, Cuba, Iran, North Korea, Crimea, Sevastopol, Sudan, Syria, and any other jurisdiction where the use of the Services is prohibited.' Additionally: 'By accessing or using the Services, you represent and warrant that you are not a Restricted Person.' KYC requirement: 'OKX may require you to complete certain verification procedures before you are permitted to use the Services or specific Services.' These constitute active enforcement conditions, not merely passive attestation."
+      }
+    ],
+    "steelman": {
+      "red": "OKX is a fully centralized exchange where all admission to core trading and custody functions is controlled by a single private company with no documented decentralization path, and the exchange unilaterally decides who can access funds — including the ability to freeze accounts — making it operationally equivalent to a single privileged operator with no on-chain recourse.",
+      "orange": "The official OKX frontend actively enforces geo-blocking (US and multiple other jurisdictions) and a mandatory KYC wall for CEX access, which are A3-active restrictions; while DeFi-layer interactions via the Web3 wallet bypass some restrictions, the primary product (CEX) has no meaningful independent access path for blocked users.",
+      "green": "OKX's Web3 wallet and DEX aggregator interact with fully public, permissionless smart contracts that any user can access directly without OKX's permission, and the underlying DeFi protocols are not controlled by OKX, meaning self-custodied assets in those protocols are freely accessible."
+    },
+    "verdict": "Choosing orange because: (1) the OKX Terms of Service explicitly lists the US and multiple other jurisdictions as restricted, constituting A3-active policy enforcement; (2) the main CEX platform enforces KYC identity verification as a precondition for deposits, withdrawals, and trading — a documented KYC wall; (3) there are no A3b-ii independent alternative paths for CEX services (the primary product). While the Web3 wallet's underlying DeFi interactions are permissionless at the contract layer, OKX's primary user value proposition is the centralized exchange, which is actively gated. The red steel-man is noted but red is reserved for contract-level whitelists or single-operator approval requirements on specific DeFi protocols — OKX is a CEX and its centralized nature is the expected category, not a surprising additional restriction."
+  },
+  "evidence": [
+    {
+      "url": "https://www.okx.com/help/terms-of-service",
+      "shows": "OKX Terms of Service listing restricted jurisdictions (US, Canada, Cuba, Iran, North Korea, Crimea, Sevastopol, Sudan, Syria) and KYC verification requirements for service access",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com",
+      "shows": "OKX main website; US-based access triggers geo-restriction notice; main exchange requires account registration",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com/web3",
+      "shows": "OKX Web3 wallet interface, accessible as part of OKX platform for self-custodied DeFi interactions",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com/help/okx-kyc-verification-guide",
+      "shows": "OKX KYC verification guide documenting mandatory identity verification (government-issued ID, facial recognition) required for full platform access including withdrawals",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com/docs-v5/en/#overview",
+      "shows": "OKX API documentation showing public read-access to market data and the DEX aggregator API endpoint (api.okx.com/api/v5/dex/) as a potential A3b-ii path for technical users",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40aa958dd87fc8305b97f2ba922cddca374bcd7f",
+      "shows": "OKX DEX router contract on Ethereum — public, permissionless smart contract that any address can interact with directly without OKX's permission; no whitelist modifier on user-facing swap functions",
+      "chain": "Ethereum",
+      "address": "0x40aa958dd87fc8305b97f2ba922cddca374bcd7f",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com/help/okx-compliance-aml-policy",
+      "shows": "OKX AML/Compliance policy describing sanctions screening and OFAC list checking as part of account onboarding — implemented at account layer, not via on-chain blocklist",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: Could not obtain verbatim geo-block banner text from a live US-IP fetch of okx.com during this run; the ToS jurisdictional restriction clause is verbatim-cited but the runtime block banner text was not directly captured — active geo-blocking is well-documented publicly but the specific banner wording was not retrieved in this session",
+    "A3b-i: Could not confirm whether OKX publishes any IPFS-pinned or alternative-CDN mirror of its official frontend; no such mirror was found in documentation",
+    "A4: No on-chain OKX-operated address blocklist contract was identified on any chain; sanctions screening appears entirely off-chain but full confirmation across all OKX-operated contracts was not exhaustively verified"
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://www.okx.com/docs-v5/en/",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x75231f58b43240c9718dd58b4967c5114342a86c",
+      "symbol": "OKB"
+    },
+    "bug_bounty_url": "https://hackerone.com/okcoin",
+    "security_contact": "security@okx.com",
+    "deployed_contracts_doc": "https://www.okx.com/web3/build/docs/waas/dex-contract-address",
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "OKX is a centralized cryptocurrency exchange (CEX) offering spot trading, derivatives, and staking for hundreds of digital assets, serving retail and institutional users globally except in the US and other restricted jurisdictions. It also operates an embedded Web3 wallet and DEX aggregator that routes swaps across multiple chains and decentralized liquidity sources, allowing users to self-custody assets and interact with DeFi protocols directly. The platform is distinctive for combining a full-featured CEX with non-custodial Web3 tooling in a single interface. OKB is OKX's native exchange token used for fee discounts and platform governance."
+  }
+}

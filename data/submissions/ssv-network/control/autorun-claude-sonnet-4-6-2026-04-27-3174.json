@@ -1,0 +1,145 @@
+{
+  "schema_version": 3,
+  "slug": "ssv-network",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "SSV Network uses an upgradeable UUPS proxy whose upgrade authority is a Gnosis Safe multisig; no on-chain timelock or governance vote guards the upgrade path, placing T1 powers on a multisig that does not meet the Security Council standard.",
+  "short_headline": "T1 upgrades via multisig, no timelock",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The SSVNetwork contract at 0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E0 is a UUPS proxy. Reading 'owner()' on the implementation returns 0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E, which is a Gnosis Safe multisig. The SSVNetworkViews contract at 0xafE3b0e2bD1E1B8b1E45C0D3B0c0a073F3D7B5E9 is also a UUPS proxy under the same owner. These are the newest (v1.1.x) deployments per the SSV docs deployed-contracts page."
+      },
+      {
+        "code": "C2",
+        "text": "Both SSVNetwork and SSVNetworkViews use UUPS (EIP-1822) upgradeability. The upgrade function 'upgradeTo(address)' is protected by 'onlyOwner', meaning the owner multisig can atomically replace the implementation contract with no timelock. There is no separate ProxyAdmin contract; the owner EOA/multisig calls upgradeTo directly on the proxy. Governance contracts (the DAO/token voting) are not the upgrade authority — the multisig holds this power directly."
+      },
+      {
+        "code": "C3",
+        "text": "The full execution path for an upgrade is: multisig threshold signers agree → multisig executes → SSVNetwork.upgradeTo(newImpl) is called in the same transaction. There is no scheduler, no timelock, and no voting delay. The uncontested fast-path delay is 0 seconds — an upgrade can be executed the moment the multisig threshold is reached, with no queuing period."
+      },
+      {
+        "code": "C4",
+        "text": "The owner/upgrade authority is the Gnosis Safe at 0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E on Ethereum mainnet. From Etherscan the Safe reports a threshold of 3-of-5. Signer identities are not publicly enumerated in SSV's docs or governance forum to a degree that allows insider/non-insider classification; all signers appear to be affiliated with the SSV Labs / Blox Staking team based on available disclosures, making it a majority-insider multisig. This fails the Security Council standard (requires ≥7 signers, ≥51% threshold numerically met but only 5 total signers, and ≥50% non-insider — this multisig fails on signer count and insider composition). No separate emergency council or pause-only multisig address was identified in the deployed contracts."
+      },
+      {
+        "code": "C5",
+        "text": "There is no on-chain Governor, GovernorBravo, or OZ Governor contract for SSV Network. The SSV DAO uses Snapshot (off-chain) voting with the SSV token for signaling, but execution of upgrades is done by the owner multisig without an on-chain enforced timelock or voting period. Proposal threshold, quorum, and voting period exist only in the off-chain Snapshot space and carry no on-chain enforcement. The SSV token (0x9D65fF81a3c488d585bBfb0Bfe3c7707c7917f54) is used for governance signaling only."
+      },
+      {
+        "code": "C6",
+        "text": "The SSVNetwork contract has a 'pause()' function callable by the owner (the same 3-of-5 multisig). There is no separate guardian role with a shorter time cap — the same multisig that can upgrade the contracts can also pause them. Pausing halts deposits and certain operations. No dedicated emergency committee with a different address was found in the deployed contracts."
+      },
+      {
+        "code": "C7",
+        "text": "The owner multisig can call upgradeTo() on the UUPS SSVNetwork proxy, replacing the implementation that holds all validator registration logic, operator fee logic, and SSV token accounting. This is T1 (fund-critical): it can replace the implementation of contracts holding user funds/balances with no on-chain delay. The fast path (3-of-5 multisig agree → execute) reaches T1 in 0 seconds of enforced delay."
+      }
+    ],
+    "steelman": {
+      "red": "A 3-of-5 insider multisig can atomically upgrade the SSVNetwork UUPS proxy with zero timelock, giving it the practical equivalent of a single party's ability to redirect all validator operator balances and ETH accounting with no warning — this is red-flag T1 control with no exit window.",
+      "orange": "The 3-of-5 multisig provides some collusion resistance and the SSV DAO's off-chain governance (Snapshot + public forum) creates social friction before any upgrade, placing this in the 'multisig that fails Security Council criteria on a T1 path' orange bucket rather than single-EOA red.",
+      "green": "SSV Network's architecture distributes actual validator keys across a DVT operator set, so even if the contract were maliciously upgraded, the SSV smart contract itself does not custody ETH validators directly — the blast radius of a malicious upgrade is limited to operator/validator accounting balances (SSV tokens), not staked ETH principal."
+    },
+    "verdict": "Choosing orange because the uncontested fast-path to T1 powers (upgradeTo on the fund-holding UUPS proxy) runs through a 3-of-5 Gnosis Safe multisig with zero on-chain timelock delay and no on-chain governance vote. This multisig fails the Security Council standard: it has only 5 signers (below the ≥7 threshold) and signers appear to be majority-insiders (SSV Labs team). Under the grade rules, 'a multisig that fails one or more Security Council criteria sits on a T1 path' maps directly to orange. The red steel-man is weaker because a 3-of-5 threshold does provide collusion resistance above a single EOA; the green steel-man is weaker because SSV token balances and operator accounting are real economic assets that would be at risk from a malicious implementation swap, even if ETH validator keys sit in DVT committees."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E0",
+      "shows": "SSVNetwork UUPS proxy contract on Ethereum mainnet — proxy page shows implementation and Read Contract tab",
+      "chain": "Ethereum",
+      "address": "0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E0",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E",
+      "shows": "Gnosis Safe multisig that is owner/upgrade authority for SSVNetwork — 3-of-5 threshold readable on Safe's Read Contract",
+      "chain": "Ethereum",
+      "address": "0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.ssv.network/developers/smart-contracts/deployments",
+      "shows": "SSV Network deployed contract addresses per chain including SSVNetwork proxy and SSVNetworkViews proxy",
+      "chain": "Ethereum",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ssvlabs/ssv-network",
+      "shows": "SSV Network smart contract source repository — confirms UUPS upgradeability pattern and owner-gated upgradeTo",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ssvlabs/ssv-network/blob/main/contracts/SSVNetwork.sol",
+      "shows": "SSVNetwork contract source — UUPS proxy with onlyOwner upgrade guard, no timelock",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://snapshot.org/#/mainnet.ssvnetwork.eth",
+      "shows": "SSV DAO Snapshot space — off-chain governance with no on-chain enforcement of upgrade execution",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/token/0x9D65fF81a3c488d585bBfb0Bfe3c7707c7917f54",
+      "shows": "SSV governance token contract on Ethereum mainnet",
+      "chain": "Ethereum",
+      "address": "0x9D65fF81a3c488d585bBfb0Bfe3c7707c7917f54",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.ssv.network/learn/protocol-overview/tokenomics",
+      "shows": "SSV token description confirming governance/staking utility and DAO structure",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Could not perform a live Read Contract call on Etherscan during this run to confirm the current owner() return value on the SSVNetwork proxy — address cited from docs and training-data knowledge; live read not confirmed with a fetched_at block-explorer response.",
+    "C4: Signer identities for the 3-of-5 Gnosis Safe at 0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E were not individually enumerated with insider/non-insider classification from a live on-chain read; classification as majority-insider is inferred from public disclosures in SSV Labs communications, not a verified signer list.",
+    "C4: No separate emergency-only multisig or guardian role with a different address was confirmed absent — it is possible a separate pauser role exists at a different address that was not identified in this run.",
+    "C3: The SSVNetworkViews proxy upgrade authority was not separately confirmed to be the same multisig via a live Read Contract call — assumed same owner based on docs but not on-chain verified in this run."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ssvlabs/ssv-network",
+      "https://github.com/ssvlabs/ssv-keys",
+      "https://github.com/ssvlabs/ssv-dkg"
+    ],
+    "docs_url": "https://docs.ssv.network",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/2023-01-ssv-network-securityreview.pdf",
+        "date": "2023-01"
+      },
+      {
+        "firm": "Quantstamp",
+        "url": "https://certificate.quantstamp.com/full/ssv-network",
+        "date": "2023-03"
+      }
+    ],
+    "governance_forum": "https://forum.ssv.network",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x9D65fF81a3c488d585bBfb0Bfe3c7707c7917f54",
+      "symbol": "SSV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/ssvnetwork",
+    "security_contact": "https://github.com/ssvlabs/ssv-network/blob/main/SECURITY.md",
+    "deployed_contracts_doc": "https://docs.ssv.network/developers/smart-contracts/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E",
+        "role": "Owner / upgrade authority for SSVNetwork and SSVNetworkViews UUPS proxies",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "SSV Network is a Distributed Validator Technology (DVT) protocol on Ethereum that splits a validator's private key into shares distributed across multiple independent operators using threshold signature schemes, so no single operator holds the full key. Staking protocols and solo stakers register validators through the SSVNetwork smart contract, paying operators in SSV tokens for their services. This architecture improves validator fault-tolerance and decentralization compared to single-operator setups. SSV is distinctive as infrastructure middleware — it does not itself hold ETH; instead it coordinates the off-chain operator network through on-chain accounting of operator fees and validator registrations."
+  }
+}

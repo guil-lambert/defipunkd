@@ -1,0 +1,104 @@
+{
+  "schema_version": 3,
+  "slug": "robinhood",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Robinhood is a fully custodial CEX: withdrawals require platform approval and can be halted unilaterally; no on-chain escape hatch exists",
+  "short_headline": "Custodial CEX; no permissionless exit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Robinhood Crypto is a custodial brokerage. Users do not hold private keys to their crypto. Withdrawal functions are entirely off-chain: users submit a withdrawal request via the Robinhood app/web UI, Robinhood's backend processes it, and Robinhood's hot/cold wallet infrastructure executes the on-chain transfer. There are no user-callable smart contracts with withdraw(), redeem(), or exit() functions — the on-chain leg is entirely controlled by Robinhood's custody infrastructure. Per Robinhood's Crypto User Agreement, Robinhood acts as custodian and users have a claim against Robinhood, not direct ownership of on-chain assets."
+      },
+      {
+        "code": "E2",
+        "text": "Because all exit functions are off-chain backend processes (not smart contract functions), there are no access modifiers or pause guards in the traditional DeFi sense. The only 'pause guard' is Robinhood's platform-level decision to process or block withdrawals, which is entirely at Robinhood's discretion per its User Agreement and applicable law. Robinhood's ToS explicitly reserve the right to restrict or suspend account activity, including withdrawals, for compliance, security, or operational reasons."
+      },
+      {
+        "code": "E3",
+        "text": "No PAUSE_ROLE or on-chain guardian exists. The role holder for all pause/halt power is Robinhood Markets, Inc. (a single centralized company), which can halt withdrawals unilaterally with no time cap, no governance process, and no on-chain constraint. This is a single-actor unilateral halt with indefinite duration."
+      },
+      {
+        "code": "E4",
+        "text": "No emergency vs governance pause distinction exists. All pause power is held by Robinhood's internal operations team under the platform's Terms of Service. There is no on-chain governance, no timelock, and no separation of emergency vs routine pause. Any suspension of withdrawals is a unilateral corporate decision."
+      },
+      {
+        "code": "E5",
+        "text": "Robinhood imposes withdrawal limits. Per their published help documentation, there are daily and weekly crypto withdrawal limits (e.g., $10,000/day and $50,000/week for crypto withdrawals at time of last public documentation). ACH withdrawals of fiat may be subject to holds of up to 5 business days. No maximum queue duration is documented for crypto withdrawals under normal operations; under suspension, there is no documented cap."
+      },
+      {
+        "code": "E6",
+        "text": "There is no forced-exit, escape-hatch, or permissionless emergency-exit mechanism. If Robinhood suspends withdrawals or becomes insolvent, users have no on-chain mechanism to reclaim their assets. Users would be unsecured creditors in an insolvency proceeding. The FTX collapse highlighted this risk class for custodial exchanges. Robinhood does participate in SIPC for securities accounts but SIPC does not cover crypto assets."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are NOT directly callable on-chain. Users cannot bypass Robinhood's frontend or API to withdraw funds — there is no Etherscan write-tab equivalent for Robinhood's custody. All withdrawals require Robinhood's platform to be operational and cooperative. The Robinhood app and web interface are the only exit paths."
+      }
+    ],
+    "steelman": {
+      "red": "Robinhood is a fully custodial CEX where all crypto assets are held by Robinhood's custody infrastructure, there are no user-callable on-chain exit functions, Robinhood can unilaterally halt withdrawals with no time cap or on-chain constraint, and users have no escape hatch if the platform is uncooperative or insolvent — a textbook red-grade custodial risk.",
+      "orange": "Robinhood is a regulated U.S. broker-dealer and RIA subject to SEC, FINRA, and state money transmitter regulations, which impose external legal constraints on its ability to misappropriate user funds or halt withdrawals arbitrarily, providing meaningful (if off-chain) protection beyond an unregulated CEX.",
+      "green": "Robinhood has launched a self-custody wallet (Robinhood Wallet) allowing users who choose it to hold their own keys and withdraw permissionlessly on-chain, meaning users who opt in to self-custody have a fully permissionless exit path."
+    },
+    "verdict": "Choosing red because the core Robinhood Crypto brokerage product — where the vast majority of users hold crypto — is fully custodial with no on-chain exit function (E1, E7), Robinhood can halt withdrawals unilaterally with no time cap or on-chain constraint (E3), there is no escape hatch (E6), and regulatory oversight (the orange steel-man) does not provide the technical permissionless exit that the rubric requires. The self-custody Robinhood Wallet (the green steel-man) is a separate optional product and does not change the assessment for the default custodial account."
+  },
+  "evidence": [
+    {
+      "url": "https://robinhood.com/us/en/support/articles/cryptocurrency-transfers/",
+      "shows": "Robinhood's help page describing crypto transfer/withdrawal process — requires app submission, processed by Robinhood backend, subject to limits and holds",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://robinhood.com/legal/crypto-user-agreement",
+      "shows": "Robinhood Crypto User Agreement establishing custodial relationship: Robinhood holds assets on behalf of users, users do not hold private keys, Robinhood can restrict account activity",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://robinhood.com/us/en/support/articles/robinhood-wallet/",
+      "shows": "Robinhood Wallet is a separate self-custody product; the default Robinhood Crypto brokerage account remains fully custodial",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x22fa8cc33a42320385cbd3690ed60a021891cb32",
+      "shows": "One of several Robinhood hot wallet addresses on Ethereum — confirms on-chain presence is Robinhood's own infrastructure wallets, not user-accessible smart contracts; users cannot call these addresses directly",
+      "chain": "Ethereum",
+      "address": "0x22fa8cc33a42320385cbd3690ed60a021891cb32",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://robinhood.com/legal/user-agreement",
+      "shows": "Robinhood general user agreement including provisions permitting account suspension and withdrawal restrictions for compliance, security, legal, or operational reasons with no defined time cap",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://robinhood.com/us/en/support/articles/withdrawal-limits/",
+      "shows": "Robinhood published withdrawal limits: daily and weekly caps on crypto and fiat withdrawals, hold periods for ACH deposits before withdrawal allowed",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: Exact internal Robinhood role/team that holds withdrawal-halt authority not publicly documented in ToS beyond 'Robinhood Crypto LLC'; no on-chain role structure exists to inspect",
+    "E5: Maximum documented queue duration for crypto withdrawals under suspension not publicly stated in any help article or ToS; Robinhood does not publish an SLA for withdrawal processing under adversarial conditions"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/robinhood"
+    ],
+    "docs_url": "https://robinhood.com/us/en/support/",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://hackerone.com/robinhood",
+    "security_contact": "security@robinhood.com",
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Robinhood is a U.S.-regulated retail brokerage offering commission-free trading in stocks, ETFs, options, and cryptocurrencies. In its default crypto product, Robinhood acts as custodian — users hold a claim against Robinhood rather than owning on-chain assets directly. Robinhood separately offers a self-custody mobile wallet (Robinhood Wallet) supporting Bitcoin, Ethereum, Polygon, and Avalanche for users who prefer to control their own keys. The platform is distinctive for its mobile-first UX and fractional share/crypto trading aimed at retail investors."
+  }
+}

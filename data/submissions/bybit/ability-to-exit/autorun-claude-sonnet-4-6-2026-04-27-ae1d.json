@@ -1,0 +1,104 @@
+{
+  "schema_version": 3,
+  "slug": "bybit",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Bybit is a fully custodial CEX with no permissionless on-chain exit; withdrawals require Bybit's processing and have been suspended unilaterally",
+  "short_headline": "Custodial CEX; no permissionless exit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Bybit is a centralized exchange. There are no user-callable smart-contract exit functions (withdraw, redeem, burn, requestWithdrawal, claim, exit, etc.) deployed by Bybit. All fund withdrawals are initiated through Bybit's web interface or API, processed by Bybit's custodial back-end, and broadcast from Bybit-controlled hot/warm/cold wallet addresses on each supported chain. No protocol.github is recorded and Bybit publishes no smart-contract ABI for user withdrawals. Bybit's on-chain presence consists solely of custodial deposit/withdrawal wallet addresses, not user-facing DeFi contracts."
+      },
+      {
+        "code": "E2",
+        "text": "Because there are no on-chain exit contracts, there are no access modifiers or pause guards to enumerate per function. The effective 'gate' on exit is Bybit's internal withdrawal-processing system, which requires the user to be logged into a verified Bybit account, pass 2FA, and have the withdrawal approved by Bybit's risk/compliance engine. Withdrawal of assets in staking or savings products additionally requires an unbonding period set by Bybit."
+      },
+      {
+        "code": "E3",
+        "text": "No on-chain PAUSE_ROLE or GUARDIAN contract exists. The functional equivalent is Bybit's unilateral ability to suspend withdrawals via a server-side switch. During the February 21, 2025 hack (approximately $1.46 billion in ETH stolen from Bybit's ETH cold wallet), Bybit suspended withdrawals for several hours. This was a single-actor (Bybit's operations team) action with no coded time cap. The suspension was lifted at Bybit's discretion."
+      },
+      {
+        "code": "E4",
+        "text": "No on-chain emergency vs. governance pause distinction exists. Bybit has one operational lever: its internal system can halt all withdrawals immediately, with no on-chain governance vote, no timelock, and no coded maximum duration. There is no separate slow-governance path — all suspension power is held by Bybit as a single centralized actor."
+      },
+      {
+        "code": "E5",
+        "text": "Bybit imposes withdrawal processing windows (typically near-instant for hot-wallet assets, longer for cold-wallet assets after manual review). Bybit's Earn and staking products have product-specific lock-up and redemption periods (e.g. flexible savings redeem within hours; fixed-term products lock until maturity). These are operationally defined and can be changed by Bybit unilaterally. No smart-contract-enforced maximum queue duration or daily cap is published in an auditable form."
+      },
+      {
+        "code": "E6",
+        "text": "There is no forced-exit, escape-hatch, or permissionless emergency-exit mechanism. Users have no on-chain recourse if Bybit suspends withdrawals, becomes insolvent, or is seized by regulators. The only remedies are legal/regulatory (filing claims with Bybit or regulators). Bybit's proof-of-reserves Merkle tree attestation allows users to verify their balance is included, but does not grant any on-chain claim or withdrawal right independent of Bybit."
+      },
+      {
+        "code": "E7",
+        "text": "Exit is entirely dependent on Bybit's frontend (bybit.com) and/or its API. There is no generic on-chain interaction path (e.g. Etherscan write tab) that allows a user to withdraw without Bybit's cooperation. Bybit's custodial wallet addresses on Ethereum and other chains are controlled exclusively by Bybit's private keys; users hold no keys and have no direct on-chain claim to funds in those wallets."
+      }
+    ],
+    "steelman": {
+      "red": "Bybit is a purely custodial exchange with no on-chain exit contract whatsoever; withdrawals require Bybit's unilateral approval and have been suspended by a single centralized actor with no time cap, as demonstrated during the February 2025 hack response.",
+      "orange": "Bybit maintains a publicly verifiable proof-of-reserves Merkle attestation and has demonstrated operational resilience (fully covering the $1.46B hack loss and resuming withdrawals within hours), suggesting the practical suspension risk, while real, is bounded by strong reputational and regulatory incentives.",
+      "green": "For a CEX operating across 35+ chains with no smart contracts, the concept of 'permissionless exit' does not apply in the DeFi sense, and Bybit's near-instant withdrawal processing under normal conditions is functionally equivalent to liquid access for most users most of the time."
+    },
+    "verdict": "Choosing red because Bybit is a fully custodial CEX with zero on-chain exit functions — there is no smart contract a user can call independently of Bybit's infrastructure, Bybit can halt withdrawals unilaterally with no coded time cap (demonstrated in practice during the February 2025 hack), and users hold no on-chain keys or claims to their deposited assets. The green steel-man conflates operational convenience with permissionless exit; the orange steel-man is a reputational argument, not a structural safeguard. Under the rubric's definition — 'exit requires admin signature' / 'no on-chain exit function at all (purely custodial)' — this is unambiguously red."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xf89d7b9c864f589bbF53a82105107622B35EaA40",
+      "shows": "Bybit ETH hot wallet address on Ethereum — a Bybit-controlled custodial address with no user-callable withdrawal contract; demonstrates purely custodial on-chain presence",
+      "chain": "Ethereum",
+      "address": "0xf89d7b9c864f589bbF53a82105107622B35EaA40",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bybit.com/en/help-center/article/Withdrawal-FAQs",
+      "shows": "Bybit's withdrawal FAQ confirming withdrawals are processed through Bybit's custodial system, require account verification, and are subject to Bybit's risk controls",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://announcements.bybit.com/en/article/bybit-remains-solvent-despite-eth-cold-wallet-incident-blt7e9de8e4dab0adb3/",
+      "shows": "Bybit's February 21 2025 announcement confirming the ~$1.46B ETH cold wallet hack, temporary withdrawal suspension by Bybit's operations team (single centralized actor), and subsequent resumption — demonstrating unilateral indefinite suspension power",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bybit.com/en/proof-of-reserves/",
+      "shows": "Bybit's proof-of-reserves page showing Merkle-tree balance attestation — confirms users can verify inclusion but have no independent on-chain claim or withdrawal right",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bybit.com/en/help-center/article/ByFi-Products-Terms-and-Conditions",
+      "shows": "Bybit Earn/savings product terms showing lock-up periods and redemption conditions are set and changeable by Bybit unilaterally",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: No on-chain pause contract exists to inspect; the maximum duration of a Bybit-initiated withdrawal suspension is not disclosed in any public document — it is operationally unbounded.",
+    "E5: No publicly auditable smart-contract-enforced daily withdrawal cap or maximum queue duration for Earn products was locatable; these are governed by Bybit's internal systems."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://www.bybit.com/en/help-center/",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://hackerone.com/bybit",
+    "security_contact": "security@bybit.com",
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xf89d7b9c864f589bbF53a82105107622B35EaA40",
+        "role": "Bybit ETH hot wallet (custodial)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Bybit is a centralized cryptocurrency exchange (CEX) allowing users to trade spot and derivatives markets, earn yield on idle assets, and access Web3 features including NFTs and DeFi integrations. Users deposit funds into Bybit-controlled custodial wallets across 35+ blockchains; Bybit holds all private keys and processes withdrawals through its internal risk and compliance systems. It is one of the largest exchanges by derivatives volume and gained significant attention in February 2025 when approximately $1.46 billion in ETH was stolen from its cold wallet in the largest crypto hack on record, with Bybit subsequently covering all losses and maintaining solvency."
+  }
+}

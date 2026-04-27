@@ -1,0 +1,108 @@
+{
+  "schema_version": 3,
+  "slug": "okx",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "OKX is a fully custodial CEX: all withdrawals require operator co-signing; no permissionless on-chain exit path exists",
+  "short_headline": "Custodial CEX; no on-chain exit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "OKX is a centralized custodial exchange. There are no user-callable on-chain exit functions (withdraw, redeem, burn, requestWithdrawal, etc.) that users can invoke directly. All asset withdrawals are processed through OKX's internal systems and signed by exchange-controlled hot/cold wallets. OKX's Web3 Wallet product is non-custodial but is a separate product from the main exchange balance; exchange balances have no on-chain exit path. OKX's Terms of Service and Help Center confirm that withdrawals are processed by the platform. [https://www.okx.com/help-center/how-to-withdraw]"
+      },
+      {
+        "code": "E2",
+        "text": "Because there are no on-chain exit functions (see E1), there are no access modifiers or pause guards to enumerate for individual functions. The effective 'pause guard' is the exchange operator itself: OKX can halt withdrawals for any asset or all assets at any time via internal policy, as documented in its Terms of Service ('OKX reserves the right to suspend withdrawals'). Both new withdrawal requests and processing of pending withdrawals are subject to this unilateral operator control."
+      },
+      {
+        "code": "E3",
+        "text": "The PAUSE_ROLE equivalent is held by OKX's centralized operations team — a single corporate entity, not a multisig or on-chain governance. There is no publicly documented maximum pause duration; OKX's Terms of Service do not cap how long withdrawals may be suspended. OKX has historically suspended withdrawals for specific assets (e.g., BTC, ETH) without advance notice or fixed time limits. [https://www.okx.com/legal/terms-of-service]"
+      },
+      {
+        "code": "E4",
+        "text": "No smart-contract-level distinction between emergency and governance pause paths exists, because the system is custodial. Both 'emergency' and 'routine' suspension of withdrawals are executed unilaterally by OKX operations with no on-chain timelock or governance vote. There is no separate fast-vs-slow pause framework."
+      },
+      {
+        "code": "E5",
+        "text": "OKX does not publish a documented maximum queue duration or daily withdrawal cap in its public documentation. Withdrawal processing times vary by network and are subject to internal review. The queue itself is entirely controlled by OKX with no on-chain enforceability or documented SLA. [https://www.okx.com/help-center/how-to-withdraw]"
+      },
+      {
+        "code": "E6",
+        "text": "There is no forced-exit, escape-hatch, or permissionless emergency-exit mechanism. OKX publishes a Proof of Reserves (PoR) page showing on-chain reserve addresses, but the PoR mechanism only demonstrates solvency — it does not grant users any on-chain ability to claim funds from those reserve addresses. The reserve wallets are exchange-controlled multisigs, not user-claimable contracts. [https://www.okx.com/proof-of-reserves]"
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are NOT directly callable on-chain by users. Users cannot use Etherscan's write tab or any generic wallet interface to withdraw their exchange balance. All withdrawals require authenticating with OKX's platform (web or app), passing KYC/AML checks, and the exchange processing and broadcasting the transaction on the user's behalf. If OKX's frontend or backend becomes unavailable, users have no independent on-chain recourse for exchange balances."
+      }
+    ],
+    "steelman": {
+      "red": "OKX is a fully custodial exchange where exit requires the operator to co-sign every withdrawal transaction; no on-chain permissionless exit function exists, withdrawal suspension is unilateral and uncapped, and users have no cryptographic ability to reclaim funds if OKX refuses or becomes unavailable.",
+      "orange": "OKX has published Proof of Reserves attestations showing >100% reserve backing, maintains a transparent on-chain reserve address page, and as a large regulated exchange faces significant legal and reputational consequences for halting withdrawals without cause, making indefinite suspension practically unlikely.",
+      "green": "OKX's non-custodial Web3 Wallet product gives users genuine self-custody for assets they hold there, and OKX has operated continuously for years without a withdrawal halt affecting its broad user base."
+    },
+    "verdict": "Choosing red because, per the checklist criteria, exit from OKX exchange balances requires admin (operator) signature on every transaction, there is no on-chain exit function whatsoever, and any actor — in this case a single corporate entity with no on-chain timelock or governance constraint — can pause claims of finalized withdrawals indefinitely. The Proof of Reserves page (https://www.okx.com/proof-of-reserves) demonstrates solvency attestation but grants users zero on-chain withdrawal rights. OKX's Terms of Service (https://www.okx.com/legal/terms-of-service) explicitly reserve the right to suspend withdrawals with no stated time cap. This squarely meets the red criteria: 'exit requires admin signature' and 'no on-chain exit function at all (purely custodial)'."
+  },
+  "evidence": [
+    {
+      "url": "https://www.okx.com/help-center/how-to-withdraw",
+      "shows": "OKX withdrawal process is entirely platform-mediated; users submit requests through the OKX UI and the exchange processes and broadcasts the transaction — no on-chain self-service exit.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com/legal/terms-of-service",
+      "shows": "OKX Terms of Service reserve the platform's right to suspend withdrawals and impose restrictions; no cap on suspension duration is stated.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com/proof-of-reserves",
+      "shows": "OKX Proof of Reserves page shows reserve wallet addresses and solvency attestations, but these are exchange-controlled addresses — users cannot call any contract function to withdraw funds from them.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x6cc5f688a315f3dc28a7781717a9a798a59fda7b",
+      "shows": "One of OKX's publicly known Ethereum hot wallet addresses (OKX: Hot Wallet 1 as labelled by Etherscan), confirming exchange-controlled signing keys with no user-callable withdrawal functions.",
+      "chain": "Ethereum",
+      "address": "0x6cc5f688a315f3dc28a7781717a9a798a59fda7b",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.okx.com/web3",
+      "shows": "OKX Web3 Wallet is a separate non-custodial product; exchange balances are not covered by this self-custody path.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: Maximum pause duration for OKX withdrawal suspensions — OKX Terms of Service do not specify a cap; no on-chain timelock document found.",
+    "E5: Documented daily withdrawal caps or maximum queue duration — OKX does not publish binding on-chain SLAs for withdrawal processing times."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://www.okx.com/help-center",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x75231f58b43240c9718dd58b4967c5114342a86c",
+      "symbol": "OKB"
+    },
+    "bug_bounty_url": "https://www.okx.com/legal/bug-bounty",
+    "security_contact": "security@okx.com",
+    "deployed_contracts_doc": "https://www.okx.com/proof-of-reserves",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x6cc5f688a315f3dc28a7781717a9a798a59fda7b",
+        "role": "OKX Ethereum Hot Wallet (exchange-controlled signing key for user withdrawals)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "OKX is a centralized cryptocurrency exchange (CEX) that enables users to trade, buy, sell, and store a wide range of digital assets. User funds held on the exchange are fully custodied by OKX, which controls all deposit and withdrawal signing keys. OKX also operates a separate non-custodial Web3 Wallet and DEX aggregator product. It publishes periodic Proof of Reserves attestations to demonstrate that on-chain reserves cover user balances."
+  }
+}

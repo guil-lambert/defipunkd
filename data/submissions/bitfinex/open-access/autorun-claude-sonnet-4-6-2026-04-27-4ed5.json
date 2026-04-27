@@ -1,0 +1,102 @@
+{
+  "schema_version": 3,
+  "slug": "bitfinex",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Bitfinex is a fully centralized exchange requiring account registration, KYC verification, and Bitfinex's ongoing approval for all trading, deposit, and withdrawal actions; no permissionless on-chain access path exists",
+  "short_headline": "CEX KYC wall; no permissionless path",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "No on-chain whitelist modifiers exist because Bitfinex is a CEX with entirely off-chain admission controls. All user-facing write functions (deposit address generation, order placement, withdrawal request submission) are gated behind a centralized account system operated solely by iFinex Inc. There are no publicly deployed smart contracts with permissionless entry points for trading or withdrawing custodied funds; the 'whitelist' is Bitfinex's own KYC-cleared account database."
+      },
+      {
+        "code": "A2",
+        "text": "Bitfinex (iFinex Inc.) is the single privileged operator across every admission-path function class. Deposit: users receive a Bitfinex-generated address only after account creation; no account means no deposit credited. Withdrawal request: requires authenticated session and, above certain thresholds, enhanced KYC approval by Bitfinex compliance staff. Order placement: requires an active, non-suspended account. Claim of settled funds: no on-chain claim mechanism exists; Bitfinex processes withdrawals at its discretion. There is no permissioned committee with a documented replacement procedure — iFinex Inc. is the sole gatekeeper with no on-chain fallback."
+      },
+      {
+        "code": "A3",
+        "text": "A3-active (KYC wall confirmed): Bitfinex's public Terms of Service explicitly require account registration and identity verification (KYC/AML) before users may deposit, trade, or withdraw. The ToS (Section 2) states eligibility requires users to not be a 'US Person' and to complete verification procedures. The registration and KYC flow is enforced at runtime — unauthenticated users cannot place orders or request withdrawals through any Bitfinex interface. This constitutes a KYC wall under A3-active criteria. A3-passive: The ToS also includes standard sanctions attestation, age-of-majority (18+) requirement, and restricted-territory self-certification clauses."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-i: Bitfinex publishes an API (REST and WebSocket) but it still requires authenticated API keys tied to a verified Bitfinex account — same ToS, same KYC requirement, not an independent access path. No IPFS-pinned UI mirrors with independent ToS were found. A3b-ii: No independent third-party frontends provide access to Bitfinex's order book or custody. Bitfinex's own Honey Framework / terminal tools all require Bitfinex account credentials. No documented direct-contract interaction path exists for trading or withdrawing custodied assets."
+      },
+      {
+        "code": "A4",
+        "text": "Bitfinex performs sanctions screening as part of its compliance program under the iFinex corporate compliance policy. Their ToS explicitly prohibits use by persons subject to OFAC, EU, or UN sanctions. Screening is conducted off-chain by Bitfinex compliance staff; no publicly documented on-chain blocklist contract was found. The screening is opaque — there is no on-chain oracle or publicly auditable list."
+      },
+      {
+        "code": "A5",
+        "text": "Read access: Bitfinex's public REST API (https://api-pub.bitfinex.com) provides unauthenticated access to order books, ticker data, and trade history — permissionless for read. Write access: All write actions (order placement, deposit, withdrawal) require a valid authenticated session with a KYC-verified Bitfinex account. These two access tiers are clearly bifurcated."
+      },
+      {
+        "code": "A6",
+        "text": "Bitfinex Terms of Service (https://www.bitfinex.com/legal/terms) Section 2 'Eligibility' includes the following verbatim-quoted language (as of April 2026 per archive.org): 'You are not a United States Person. You are not a resident of, or located in, a jurisdiction where the use of the Services is prohibited or restricted by applicable law or regulation. You have successfully completed our verification procedures.' This confirms both the US-person prohibition and the KYC-wall requirement as explicit eligibility conditions."
+      }
+    ],
+    "steelman": {
+      "red": "Bitfinex is a single-operator CEX where every admission function — deposit crediting, order placement, withdrawal execution — requires approval from iFinex Inc., a single corporate entity with no documented on-chain replacement procedure and a mandatory KYC wall that blocks users who cannot or will not submit identity documents.",
+      "orange": "If one treats Bitfinex's centralized operator status as equivalent to a 'permissioned committee with a documented replacement procedure' (because regulated exchanges are subject to court-ordered administration/receivership), the KYC wall plus geo-blocking might only warrant orange rather than red — active frontend enforcement without on-chain blocklist.",
+      "green": "Market data and order-book reads are fully permissionless via the public API, and Bitfinex's longevity and regulatory compliance history could be seen as equivalent to a well-governed permissioned system."
+    },
+    "verdict": "Choosing red because Bitfinex is a single corporate operator (iFinex Inc.) that controls every write-path admission function — deposit crediting, order execution, and withdrawal processing — with a mandatory KYC wall enforced at account registration, no permissionless on-chain alternative, and no documented replacement procedure if iFinex ceases to operate. This satisfies the red criterion: admission of every core user action requires approval from a single privileged operator with no documented replacement procedure. The orange steel-man is weaker because regulated-exchange administration is an involuntary legal process, not a 'documented replacement procedure' in the governance sense required by the rubric."
+  },
+  "evidence": [
+    {
+      "url": "https://www.bitfinex.com/legal/terms",
+      "shows": "Bitfinex Terms of Service — Section 2 Eligibility requires users to not be a US Person, to not be in a prohibited jurisdiction, and to have completed verification procedures (KYC). Confirms A3-active KYC wall and US-person prohibition.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bitfinex.com/sign-up",
+      "shows": "Bitfinex registration flow — new users must create an account before accessing any trading or withdrawal functionality, confirming the KYC wall is enforced at runtime.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.bitfinex.com/docs/introduction",
+      "shows": "Bitfinex API documentation confirms that all write-path API calls (order placement, withdrawal requests) require authenticated API keys bound to a verified Bitfinex account; public (unauthenticated) endpoints cover read-only market data only.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://api-pub.bitfinex.com/v2/tickers?symbols=tBTCUSD",
+      "shows": "Bitfinex public REST API endpoint — returns ticker data without authentication, confirming read access is permissionless.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://web.archive.org/web/2026/https://www.bitfinex.com/legal/terms",
+      "shows": "Archived version of Bitfinex ToS for reference, corroborating the eligibility and KYC requirements cited in A6.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://support.bitfinex.com/hc/en-us/articles/115003361925-Verification-Levels",
+      "shows": "Bitfinex support article describing tiered KYC verification levels — unverified accounts have severely limited functionality; full trading and withdrawal access requires identity verification documents.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A4: Could not identify a specific named third-party sanctions-screening provider (e.g. Chainalysis, TRM Labs) integrated into Bitfinex's compliance stack from publicly available sources; sanctions screening is performed but the tooling is not publicly disclosed.",
+    "A3-active: Could not extract verbatim block-banner text from the live site for US-person geo-blocking enforcement (JavaScript-rendered SPA prevented static fetch of the actual runtime block message); ToS language was extracted but live geo-block message text was not confirmed."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/bitfinexcom"
+    ],
+    "docs_url": "https://docs.bitfinex.com",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://hackerone.com/bitfinex",
+    "security_contact": "security@bitfinex.com",
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Bitfinex is a centralized cryptocurrency exchange operated by iFinex Inc., offering spot trading, margin trading, and derivatives across a wide range of digital assets including Bitcoin, Ethereum, and many altcoins. Users deposit funds into Bitfinex-custodied wallets, trade via the exchange's order book, and withdraw to external addresses — all intermediated by iFinex. Bitfinex is distinctive for its professional-grade trading tools, peer-to-peer margin funding market (where users can lend to leveraged traders), and as the issuer/operator of the USDT stablecoin infrastructure through its affiliated entity Tether."
+  }
+}

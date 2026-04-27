@@ -1,0 +1,103 @@
+{
+  "schema_version": 3,
+  "slug": "bybit",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "Bybit is a fully centralized exchange requiring account registration, KYC, and active geo-blocking (US and others); all user actions require single-operator approval with no permissionless alternative path",
+  "short_headline": "CEX: KYC, geo-block, single operator",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Bybit is a CEX with no public user-facing smart contracts that users directly call. All entry points (deposit, withdraw, trade) are mediated by Bybit's centralized platform. Account registration is mandatory; unverified accounts face withdrawal caps (capped at 1 BTC/day without KYC per Bybit help docs). Full withdrawal access requires identity verification (KYC Level 1+). There are no on-chain whitelist modifier contracts to inspect because Bybit does not publish on-chain entry-point contracts."
+      },
+      {
+        "code": "A2",
+        "text": "All user-facing functions — spot/derivatives deposit, withdrawal request, trade placement, and claim of funds — require Bybit's centralized systems to process them. Bybit is the sole operator; there is no permissioned committee with a documented replacement procedure, no on-chain fallback, and no permissionless relay path. Withdrawal requests specifically pass through Bybit's custody and risk systems before execution. This is a single-operator admission path for every function class."
+      },
+      {
+        "code": "A3",
+        "text": "A3-active enforcement confirmed. Bybit's Terms of Service and registration page explicitly list blocked jurisdictions including the United States, Cuba, Iran, North Korea, Syria, Crimea, Sevastopol, and others. Bybit exited the US market in 2020 and maintains active IP geo-blocking for US users. The Bybit ToS (https://www.bybit.com/en/terms-service/terms-of-use/) states under 'Eligibility': 'You are not permitted to use the Services if you are a Citizen or a resident of, or located in: the United States of America.' This is a rendering-blocking jurisdiction restriction, not merely a passive attestation."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-i: Bybit operates no IPFS-pinned or independently-hosted mirror of its UI. A3b-ii: There are no independent third-party frontends that provide equivalent access to Bybit's order book or custody. Direct contract interaction is not possible because Bybit's trading and custody systems are off-chain/centralized. The Bybit API (https://bybit-exchange.github.io/docs/v5/intro) exists but still requires a Bybit account with KYC compliance — it is not an independent access path free of ToS restrictions. No A3b-ii paths exist."
+      },
+      {
+        "code": "A4",
+        "text": "Bybit performs KYC/AML checks and screens against sanctions lists (OFAC and others) as part of its compliance program. Per Bybit's AML/CFT policy page (https://www.bybit.com/en/aml-cft/), Bybit conducts customer due diligence and monitors transactions for sanctions compliance. Address screening and identity verification are part of the onboarding flow. This is an active compliance tooling system operated entirely off-chain by Bybit."
+      },
+      {
+        "code": "A5",
+        "text": "Read access: Bybit's market data (order book, prices, trade history) is publicly accessible via API without account registration. Write access: all state-changing operations — placing orders, depositing, withdrawing, transferring — require a registered and KYC-verified Bybit account. There is a clear asymmetry: read-permissionless, write-gated behind account + KYC."
+      },
+      {
+        "code": "A6",
+        "text": "Bybit Terms of Use (https://www.bybit.com/en/terms-service/terms-of-use/) contains the following verbatim eligibility clause: 'You are not permitted to use the Services if you are a Citizen or a resident of, or located in: the United States of America, Cuba, Crimea and Sevastopol, Iran, Syria, North Korea, Donetsk People's Republic and Luhansk People's Republic, and any other jurisdiction prohibited by the laws of the relevant jurisdiction.' Additionally the ToS states: 'You are required to fully comply with all applicable laws and regulations in your country of residence or domicile in connection with your use of the Services.'"
+      }
+    ],
+    "steelman": {
+      "red": "Bybit is a single centralized operator that controls all admission to every user-facing function (deposit, trade, withdraw) with mandatory KYC, active IP geo-blocking of the US and multiple other jurisdictions, and zero permissionless or on-chain alternative paths — a textbook single-operator admission bottleneck.",
+      "orange": "One could argue orange because the geo-restrictions and KYC are standard compliance measures for regulated exchanges, leaving the majority of global users able to access the platform via account registration without extraordinary barriers, and the API provides a documented alternative access channel.",
+      "green": "One could argue green only if CEX account registration (without per-user whitelist smart contracts) is considered unconditional admission — but this ignores that KYC gates full access and a single operator can revoke any account unilaterally."
+    },
+    "verdict": "Choosing red because all user-facing functions (deposit, withdraw, trade) require admission approval from a single centralized operator (Bybit) with no documented replacement procedure, KYC is required for full write access, the US and multiple other jurisdictions are actively geo-blocked per verbatim ToS language (A6), and no A3b-ii independent alternative paths exist — satisfying the red criterion of 'admission of a core user action requires approval from a single privileged operator with no documented replacement procedure.'"
+  },
+  "evidence": [
+    {
+      "url": "https://www.bybit.com/en/terms-service/terms-of-use/",
+      "shows": "Bybit Terms of Use — verbatim eligibility clause listing prohibited jurisdictions including USA, Cuba, Iran, North Korea, Syria, Crimea, Donetsk, Luhansk. Confirms active geo/jurisdiction restrictions on service access.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bybit.com/en/aml-cft/",
+      "shows": "Bybit AML/CFT policy page confirming customer due diligence, KYC requirements, and sanctions screening as part of onboarding and transaction monitoring.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://bybit-exchange.github.io/docs/v5/intro",
+      "shows": "Bybit V5 API documentation — confirms API access requires a Bybit account (API keys tied to registered accounts), meaning API is not a ToS-free independent access path.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bybit.com/en/help-center/article/Withdrawal-Limits-and-KYC-Verification",
+      "shows": "Bybit help article confirming unverified (non-KYC) accounts face withdrawal limits, and full withdrawal access requires KYC Level 1 identity verification.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/accounts/label/bybit",
+      "shows": "Etherscan labeled Bybit addresses — confirms Bybit operates as a custodial CEX with hot/cold wallet infrastructure on Ethereum; users do not interact with contracts directly but send to Bybit-controlled EOA/multisig addresses.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    },
+    {
+      "url": "https://www.bybit.com/en/register",
+      "shows": "Bybit registration page — confirms account registration is mandatory for any write access (deposit, trade, withdraw); unregistered users cannot transact.",
+      "fetched_at": "2026-04-27T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: Could not independently verify real-time IP geo-blocking behavior via direct HTTP observation (e.g., HTTP 451 response code from a US IP); the finding relies on verbatim ToS text and documented 2020 US market exit rather than a live network-layer test. Active enforcement is strongly implied by ToS and public reporting but not directly observed in this run.",
+    "A1: No on-chain smart contract addresses for user-facing entry points could be identified, as Bybit operates as a custodial CEX with off-chain order books; any on-chain Bybit contracts (e.g. withdrawal multisigs) are infrastructure, not user-callable entry points.",
+    "A3b-i: Could not confirm whether Bybit maintains any IPFS or decentralized frontend deployment; no evidence found of such a deployment."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/bybit-exchange"
+    ],
+    "docs_url": "https://bybit-exchange.github.io/docs/v5/intro",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://hackerone.com/bybit",
+    "security_contact": "security@bybit.com",
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Bybit is a centralized cryptocurrency exchange (CEX) founded in 2018, offering spot trading, derivatives (perpetual and futures contracts), options, and earn products across hundreds of trading pairs. Users deposit assets into Bybit-controlled custodial wallets, trade on a centralized order book, and withdraw back to self-custody addresses. Bybit is notable for its derivatives liquidity and was the victim of a ~$1.5B ETH hack in February 2025 attributed to the Lazarus Group. It operates without a governance token or DAO structure."
+  }
+}
