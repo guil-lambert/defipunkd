@@ -8,8 +8,13 @@ interface Props {
   snapshotGeneratedAt: string;
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
   submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
+  children?: Protocol[];
 }
-const { protocol, snapshotGeneratedAt, assessments, submissions } = Astro.props;
+const { protocol, snapshotGeneratedAt, assessments, submissions, children = [] } = Astro.props;
+const isFamily = protocol.is_parent && children.length > 0;
+const familyMembers = isFamily
+  ? [...children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))
+  : [];
 const rawSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
 
 const SEVERITY_ORDER: Record<string, number> = { red: 0, orange: 1, green: 2, gray: 3 };
@@ -121,6 +126,23 @@ function partialPillText(modelCount: number): string {
 ---
 <section class="risk-analysis" id="risk-analysis">
   <h2>Risk analysis</h2>
+  {isFamily ? (
+    <div class="family-redirect">
+      <p class="family-redirect-lede">
+        <strong>{protocol.name}</strong> is a product family that bundles several sub-products under one roof. Family-level prompts span too many smart-contract layers to produce a meaningful verdict, so risk analysis is performed per sub-product instead.
+      </p>
+      <p class="family-redirect-cta">Pick a sub-product to see its risk analysis and run prompts:</p>
+      <ul class="family-redirect-list">
+        {familyMembers.map((c) => (
+          <li>
+            <a href={`/protocol/${c.slug}#risk-analysis`} class="link">{c.name}</a>
+            {c.category && <span class="family-redirect-cat"> · {c.category}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : (
+  <>
   <p class="lede">
     One card per dimension, sorted by severity. Only <em>Verifiability</em> and <em>Autonomy</em> carry automated signals in Phase 0. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
   </p>
@@ -305,6 +327,8 @@ function partialPillText(modelCount: number): string {
         })}
       </ol>
     </details>
+  )}
+  </>
   )}
 </section>
 
@@ -829,6 +853,34 @@ function partialPillText(modelCount: number): string {
   .submit-btn:hover { background: var(--accent-link); color: var(--bg); border-color: var(--accent-link); }
 
   .prompt-hidden { display: none; }
+
+  .family-redirect {
+    margin-top: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-left: 4px solid var(--accent-link);
+    border-radius: 6px;
+    color: var(--text);
+  }
+  .family-redirect-lede { margin: 0 0 0.75rem 0; line-height: 1.5; font-size: 0.92rem; }
+  .family-redirect-cta {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .family-redirect-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .family-redirect-list li { font-size: 0.95rem; }
+  .family-redirect-cat { color: var(--text-muted); font-size: 0.85rem; }
 
   @media (max-width: 720px) {
     .audit-list li {
