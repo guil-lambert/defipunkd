@@ -1,0 +1,495 @@
+[
+  {
+    "schema_version": 2,
+    "slug": "aave",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-27",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Smart contracts are admission-permissionless; official frontend app.aave.com applies TRM Labs wallet screening + ToS restricted-jurisdiction enforcement. Independent A3b-ii paths exist (cp0x pi-aave-interface, direct contract calls) but are third-party-operated.",
+    "rationale": {
+      "verdict": "Choosing orange because Aave V3 smart contracts are admission-permissionless (Pool.supply/withdraw/borrow/repay/liquidationCall/flashLoan are public virtual override with no whitelist/KYC modifier per Pool.sol @ commit 1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978), but the official frontend app.aave.com applies A3-active enforcement via TRM Labs API integration which screens connected wallets and rejects flagged ones (publicly confirmed by Aave Labs in the 2022 dusted-wallets incident: 'We integrated TRM's API on the Aave IPFS frontend'), and the ToS at aave.com/legal/app/terms-of-service explicitly reserves the right to restrict access on the basis of Restricted Jurisdictions (Belarus, Cuba, Iran, North Korea, Russia, Syria, Venezuela, etc.) and to act when users attempt circumvention through VPNs or proxies. Independent A3b-ii paths exist (cp0x pi-aave-interface live at aave.cp0x.com under MIT license, direct contract calls via Etherscan, CLI/SDK), but they are operated by third parties or require technical capability and are not officially documented by Aave on its public landing pages. Per the rubric, A3-active screening on the official frontend without clearly-documented non-technical alternatives places this slice at orange, not green. Red is not appropriate because there is no contract-level whitelist, no on-chain blocklist updated by a single party, and no operator approval gating admission.",
+      "steelman": {
+        "green": "All on-chain entry/exit functions are fully permissionless (no modifier on supply/withdraw/borrow/repay), the smart contracts admit any address unconditionally, and credible independent frontends (cp0x pi-aave-interface at aave.cp0x.com, MIT-licensed) plus direct-contract paths via Etherscan and SDKs mean any user excluded from app.aave.com retains effective access; the TRM screening is documented as front-end-only with documented workarounds.",
+        "orange": "The official protocol-branded frontend (app.aave.com, operated by Aave Interfaces Ltd / Aave Labs) actively screens wallet addresses against TRM Labs and explicitly enforces Restricted-Jurisdiction policy with anti-VPN-circumvention language, and while alternatives exist they are run by third parties (cp0x) or require CLI/Etherscan skills, so admission via the canonical interface is non-trivially gated for non-technical users.",
+        "red": "If the TRM-driven frontend block were treated as a single-party operator gating admission with no replacement procedure, and if the third-party cp0x interface were excluded as not protocol-controlled, the official admission path could be viewed as controlled by one operator. This is the weakest steelman because contracts have no whitelist, no on-chain blocklist, and the underlying chain access is not actually gatable by Aave Labs."
+      },
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Pool.sol user-facing functions supply, supplyWithPermit, withdraw, borrow, repay, repayWithPermit, repayWithATokens, liquidationCall, flashLoan, flashLoanSimple are declared public virtual override with no onlyWhitelisted/onlyRole/isAccredited/isKYCed/allowlist modifier. Only modifiers in Pool.sol are onlyPoolConfigurator, onlyPoolAdmin, onlyPositionManager(address onBehalfOf), onlyUmbrella - all gating admin operations, not user entry. grep on Pool.sol returned no matches for whitelist|allowlist|isAccredited|isKYCed|sanction."
+        },
+        {
+          "code": "A2",
+          "text": "User-facing supply/withdraw/borrow/repay route to SupplyLogic.executeSupply / SupplyLogic.executeWithdraw / BorrowLogic.executeBorrow / BorrowLogic.executeRepay with user: _msgSender(); no off-chain keeper/sequencer/relayer approval is required to admit the action. Liquidations are open to any caller (liquidationCall is public). No operator committee gates admission."
+        },
+        {
+          "code": "A3-active",
+          "text": "Aave Labs publicly confirmed runtime wallet screening on the official frontend in the August-2022 dusted-wallets incident: 'We integrated TRM's API on the Aave IPFS frontend, which is why some users may be experiencing trouble accessing the Aave app.' The governance forum thread 'Address Blocking and TRM Labs' confirms that Aave 'use[s] TRM Labs to scan for supposed illegal or sanctioned activity' with blocked accounts 'only banned from using their front end- not from using the Aave protocol entirely.' Satisfies evidentiary floor (d) public incident report + (c) named third-party screening provider."
+        },
+        {
+          "code": "A3-passive",
+          "text": "ToS at aave.com/legal/app/terms-of-service Section 2.3: 'access to and use of the Services is prohibited for any person or entity that is located in, organized under the laws of, or ordinarily resident in any country or territory that is, or whose government is, the subject of comprehensive trade or economic sanctions ... including, without limitation, Belarus, Cote d'Ivoire, Crimea, Cuba, Donetsk PR, Iran, Iraq, Kherson, Liberia, Libya, Luhansk PR, Myanmar, North Korea, Russia, Sudan, Syria, Venezuela, Zaporizhzhia.' Anti-circumvention clause: 'The Company reserves the right ... if you attempt to circumvent such restrictions through virtual private networks, proxies, or similar technologies.' These are passive eligibility/attestation clauses; their grade-weight is ~0.25."
+        },
+        {
+          "code": "A3b-i",
+          "text": "Aave's official frontend is also pinned to IPFS (referenced by Aave Labs as the 'Aave IPFS frontend' in the TRM incident statement). The same ToS defines 'Interface' as 'an independent interface providing one of the available applications through which users, via their self-custodial wallets, interact with the Aave Protocol' and 'Services' as 'both the Aave.com website ... and App.aave.com interface'. IPFS-pinned redistributions of the official UI remain bound by the same ToS and so are not an independent A3b-ii path."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "cp0x maintains pi-aave-interface, an independent permissionless frontend for Aave V3, deployed live at https://aave.cp0x.com (HTTP/1.1 200 from nginx, served from cp0x infrastructure, distinct legal entity from Aave Interfaces Ltd). Repo (github.com/cp0x-org/pi-aave-interface) is publicly accessible, MIT-licensed, README states 'An open-source, permissionless interface for the Aave protocol, designed to be fully permissionless and enable direct, unrestricted interaction with smart contracts.' Aave's TRM-labs-block incident report explicitly notes 'Users could still connect via CLI or forking the front-end to host in their environments.' These paths exist but are not officially advertised on aave.com landing pages and skew technical."
+        },
+        {
+          "code": "A4",
+          "text": "Off-chain compliance tooling: TRM Labs API integrated on the official IPFS-hosted frontend to screen wallet addresses against sanctions lists (confirmed by Aave Labs in the dusted-wallets incident and the governance forum thread 'Address Blocking and TRM Labs'). Privacy Policy at aave.com/privacy-policy: 'We may collect the wallet address you use to connect to the Interface to block wallets that are associated with certain legally prohibited conduct from Interface.' No on-chain OFAC oracle (Chainalysis Sanctions Oracle) is checked by Pool.sol; screening is exclusively at the application/frontend layer."
+        },
+        {
+          "code": "A5",
+          "text": "Read access: fully permissionless on-chain (any caller can call view functions getReserveData, getUserAccountData, getReservesList, etc. on the verified proxy 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2). Write access: permissionless at the contract layer (no modifier gates supply/withdraw/borrow/repay), but the official app.aave.com frontend gates write access by wallet via TRM screening + ToS jurisdictional self-attestation. The split between contract-level (open) and frontend-level (gated) is the central observation."
+        },
+        {
+          "code": "A6",
+          "text": "Two canonical ToS endpoints exist: aave.com/terms-of-service (older, naming OFAC/UN/EU/HM Treasury sanction lists) and aave.com/legal/app/terms-of-service (newer, with explicit VPN/proxy circumvention clause). Operator entity: 'Aave Interfaces Ltd ... Aave Labs, Company, we, us, or our.' Privacy Policy at aave.com/privacy-policy contains the wallet-blocking disclosure verbatim."
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "url": "https://raw.githubusercontent.com/bgd-labs/aave-v3-origin/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/Pool.sol",
+        "shows": "Pool.sol at HEAD of bgd-labs/aave-v3-origin main. Functions supply (line 118), supplyWithPermit (142), withdraw (181), borrow (205), repay (234), liquidationCall (351), flashLoan (379) all declared public virtual override with no whitelist/KYC/role modifier. grep -niE 'whitelist|allowlist|isAccredited|isKYCed|sanction' returned zero matches.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T16:36:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Verified Aave V3 Pool proxy on Ethereum mainnet. Etherscan tag: 'Aave: Pool V3'. Source code 'Exact Match'. Implementation: 0x8147b99D...a60F119Bd. Admin (proxy admin): 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e (Pool Addresses Provider V3). Read Contract pane open to any caller - confirms permissionless deployed-state.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T16:33:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "shows": "Verified Aave V3 PoolConfigurator proxy on Ethereum. Etherscan tag: 'Aave: Pool Configurator V3'. Implementation 0x6fDdde45f777a4e461b0721a578b169b44579623. Configurator gates admin operations only - orthogonal to user admission.",
+        "address": "0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "fetched_at": "2026-04-27T16:48:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "Verified ACLManager on Ethereum. Etherscan tag: 'Aave: ACL Manager V3'. OpenZeppelin AccessControl pattern. ACL governs administrative roles, not user admission.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T16:55:00Z"
+      },
+      {
+        "url": "https://aave.com/legal/app/terms-of-service",
+        "shows": "Section 2.3 (Restricted Jurisdictions) lists Belarus, Cote d'Ivoire, Crimea, Cuba, Donetsk PR, Iran, Iraq, Kherson, Liberia, Libya, Luhansk PR, Myanmar, North Korea, Russia, Sudan, Syria, Venezuela, Zaporizhzhia. Anti-circumvention clause: 'The Company reserves the right ... if you attempt to circumvent such restrictions through virtual private networks, proxies, or similar technologies.' Operator: 'Aave Interfaces Ltd ... Aave Labs, Company, we, us, or our.'",
+        "fetched_at": "2026-04-27T16:42:00Z"
+      },
+      {
+        "url": "https://aave.com/terms-of-service",
+        "shows": "Older ToS sanctions clause: 'you are the target of any sanctions administered or enforced by the U.S. Department of the Treasury's Office of Foreign Assets Control (OFAC), the United Nations Security Council, the European Union, Her Majesty's Treasury ... your wallet address is listed on the Specially Designated Nationals and Blocked Persons List (SDN List), Consolidated Sanctions List (Non-SDN Lists).' Definition: Interface = 'an independent interface providing one of the available applications.'",
+        "fetched_at": "2026-04-27T16:31:00Z"
+      },
+      {
+        "url": "https://aave.com/privacy-policy",
+        "shows": "Verbatim wallet-blocking disclosure: 'We may collect the wallet address you use to connect to the Interface to block wallets that are associated with certain legally prohibited conduct from Interface.' Service Providers clause: 'We share information with third-party service providers for business purposes, including fraud detection and prevention, security threat detection, data analytics ... and blockchain transaction monitoring.'",
+        "fetched_at": "2026-04-27T16:39:00Z"
+      },
+      {
+        "url": "https://cryptoslate.com/aave-confirms-trm-labs-api-blocked-dusted-ethereum-wallets-access-restored/",
+        "shows": "Public incident report. Aave Labs statement: 'We integrated TRM's API on the Aave IPFS frontend, which is why some users may be experiencing trouble accessing the Aave app.' Scope: the ban 'only stopped users from interacting with its IPFS-hosted web interface for the Aave protocol.' Workaround: 'Users could still connect via CLI or forking the front-end to host in their environments.' Satisfies A3-active evidentiary floor (d) and (c).",
+        "fetched_at": "2026-04-27T16:58:00Z"
+      },
+      {
+        "url": "https://governance.aave.com/t/address-blocking-and-trm-labs/9301",
+        "shows": "Aave governance forum thread 'Address Blocking and TRM Labs'. Confirms Aave 'use[s] TRM Labs to scan for supposed illegal or sanctioned activity'. User clarification: blocked accounts 'are only banned from using their front end - not from using the Aave protocol entirely (aka through etherscan or others).'",
+        "fetched_at": "2026-04-27T17:00:00Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-aave-interface",
+        "shows": "Independent A3b-ii frontend. Repo cp0x-org/pi-aave-interface, public, MIT-licensed (license relicensed 2025-12-13 in commit e5caa67). README: 'An open-source, permissionless interface for the Aave protocol, designed to be fully permissionless and enable direct, unrestricted interaction with smart contracts.' Live deploys: https://aave.cp0x.com and https://pi.cp0x.com.",
+        "commit": "e5caa6792b3347af8f76cadddb6b2b5de0a643b3",
+        "fetched_at": "2026-04-27T16:56:00Z"
+      },
+      {
+        "url": "https://aave.cp0x.com",
+        "shows": "HTTP/1.1 200 OK from nginx/1.24.0 (Ubuntu), Next.js application, served independently from cp0x infrastructure (separate legal entity from Aave Interfaces Ltd). Page title: 'Aave - Open Source Liquidity Protocol'. No TRM/Chainalysis/sanction strings found in initial HTML payload. Confirms an operational independent A3b-ii path.",
+        "fetched_at": "2026-04-27T16:37:13Z"
+      },
+      {
+        "url": "https://app.aave.com",
+        "shows": "HTTP/2 200, served via Cloudflare + Vercel (server: cloudflare, x-vercel-cache: HIT). Static initial HTML payload does not embed Chainalysis/TRM script tags directly (screening is performed via runtime API call from client-side JS to a backend endpoint, per the public incident report). Production canonical Aave Labs frontend.",
+        "fetched_at": "2026-04-27T16:37:08Z"
+      }
+    ],
+    "unknowns": [
+      "A4: No public confirmation that an on-chain Chainalysis Sanctions Oracle is queried by Aave V3 contracts on any chain. Frontend uses TRM Labs API; the contract layer was not seen calling any sanctions oracle in Pool.sol at SHA 1e3d70c."
+    ]
+  },
+  {
+    "schema_version": 2,
+    "slug": "aave",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-27",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Aave V3 core contracts admit supply, withdraw, borrow, repay, liquidation, flash-loan, and direct read paths without KYC or allowlist gates, but Aave Labs' official interface has documented wallet and region screening; direct-contract and independent frontend alternatives exist.",
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin",
+        "https://github.com/bgd-labs/aave-v3-origin"
+      ],
+      "docs_url": "https://aave.com/docs",
+      "audits": [
+        {
+          "firm": "Pashov",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-29_Pashov_Aave-v3.6.pdf",
+          "date": "2025-11-29"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-18_Certora_Aave-v3.6.pdf",
+          "date": "2025-11-18"
+        },
+        {
+          "firm": "MixBytes",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-18_MixBytes_Aave-v3.6.pdf",
+          "date": "2025-11-18"
+        },
+        {
+          "firm": "Savant",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-18_Savant_Aave-v3.6.pdf",
+          "date": "2025-11-18"
+        },
+        {
+          "firm": "Blackthorn",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-16_Blackthorn_Aave-v3.6.pdf",
+          "date": "2025-11-16"
+        }
+      ],
+      "governance_forum": "https://governance.aave.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "symbol": "AAVE"
+      },
+      "bug_bounty_url": "https://audits.sherlock.xyz",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://aave.com/docs/resources/addresses",
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "Aave V3 is a non-custodial liquidity protocol where suppliers deposit assets into shared reserves, receive interest-bearing aTokens, and can use eligible collateral to borrow other assets. Borrowers take overcollateralized loans tracked by debt tokens, with health-factor risk checks and permissionless liquidations when collateral falls below required thresholds. V3 adds market controls such as eMode, isolation mode, siloed borrowing, and reserve caps."
+    },
+    "rationale": {
+      "verdict": "Orange best fits the evidence: the checked Aave V3 Pool source at commit 1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978 exposes supply, withdraw, borrow, repay, liquidation, flash-loan, and read functions as public caller-driven contract actions, and the live Ethereum Pool proxy is verified on Etherscan; however, Aave's official app/legal and privacy pages disclose wallet and region restrictions, and public incident/forum records show TRM-based frontend blocking. Red is not supported because I found no contract-level whitelist, KYC gate, or on-chain sanctions blocklist in the inspected core Pool paths, and Aave documents direct smart-contract access while cp0x operates an independent open-source Aave interface.",
+      "steelman": {
+        "green": "The strongest green case is that Aave V3's checked on-chain entry and exit functions are public, do not require KYC or allowlist admission, do not depend on an off-chain operator approval step, and remain reachable through direct smart-contract calls and independent frontends.",
+        "orange": "The strongest orange case is that Aave Labs' canonical interface applies active admission controls at the frontend layer through wallet and region screening, even though the underlying contracts remain open.",
+        "red": "The strongest red case would treat Aave Labs' screened official frontend as a single-operator gate for ordinary users, but that case is weaker because the Pool contracts and direct block-explorer or self-hosted access paths are not controlled by that frontend."
+      },
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The inspected Pool user functions supply, supplyWithPermit, withdraw, borrow, repay, repayWithPermit, repayWithATokens, liquidationCall, flashLoan, flashLoanSimple, and deposit are public. Pool.sol contains admin modifiers onlyPoolConfigurator, onlyPoolAdmin, onlyPositionManager, and onlyUmbrella for non-entry administrative or delegated functions; no onlyWhitelisted, onlyRole, allowlist, isAccredited, or isKYCed gate was found on the checked core user actions, so there is no allowlist maintainer to identify for those paths."
+        },
+        {
+          "code": "A2",
+          "text": "Deposits, withdrawals, borrows, repayments, liquidations, flash loans, and public read calls are admitted directly by Pool contract calls using msg.sender, subject to protocol state such as liquidity, health factor, reserve configuration, and user-granted position-manager delegation. AToken transfers are finalized through Pool.finalizeTransfer for accounting and health checks; I found no keeper, sequencer, privileged relayer, oracle poster, single operator, or permissioned committee whose approval is required before these user actions are admitted."
+        },
+        {
+          "code": "A3-active",
+          "text": "The official interface has active access controls at the frontend layer: Aave privacy terms disclose wallet collection for blocking legally prohibited conduct, the terms reserve region-based technical restrictions, CryptoSlate recorded Aave's TRM API frontend integration during the dusted-wallet incident, and a 2026 Aave forum thread records a user reporting app.aave.com frontend access restriction and asking for address unblocking."
+        },
+        {
+          "code": "A3-passive",
+          "text": "Aave terms also include passive eligibility restrictions covering sanctions, restricted jurisdictions, age/legal capacity, and anti-circumvention language. These clauses apply to Aave Labs/Aave Interfaces services and are not present as contract-level checks in the inspected Pool source."
+        },
+        {
+          "code": "A3b-i",
+          "text": "Aave documents that the official Interface is hosted on IPFS and the security page says each Aave Interface commit is deployed to IPFS with app.aave.com DNSLink/IPNS updates. Because Aave's terms cover App.aave.com and the Interface, IPFS redistributions of the official interface are not treated here as independent access paths."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Independent access paths exist: Aave's help page says users can interact directly with smart contracts through block explorers or code, Etherscan exposes the live Ethereum Pool proxy, and cp0x operates a public MIT-licensed pi-aave-interface at aave.cp0x.com with a README describing direct unrestricted smart-contract interaction."
+        },
+        {
+          "code": "A4",
+          "text": "I found sanctions/compliance tooling at the official frontend layer, not the checked Pool contract layer. The privacy policy discloses wallet blocking and blockchain transaction monitoring providers, and the TRM incident records show frontend screening, while the inspected Pool source and live Pool proxy evidence did not show an on-chain OFAC or similar blocklist check on core user entry/exit functions."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is permissionless through public view functions such as getReserveData, getUserAccountData, and getReservesList on the verified Pool proxy. Write access at the contract layer is permissionless for supply, withdraw, borrow, repay, liquidation, flash-loan, collateral-mode, and eMode actions, subject to protocol solvency, liquidity, reserve state, and user approvals; the official frontend can restrict access before a user reaches those contract calls."
+        },
+        {
+          "code": "A6",
+          "text": "Legal links located were https://aave.com/terms-of-service, https://aave.com/legal/app/terms-of-service, and https://aave.com/privacy-policy. The extracted clauses include restricted-jurisdiction, sanctions, anti-circumvention, and wallet-address blocking language."
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/Pool.sol",
+        "shows": "Pool.sol at the pinned commit declares supply, supplyWithPermit, withdraw, borrow, repay, repayWithPermit, repayWithATokens, liquidationCall, flashLoan, flashLoanSimple, getReserveData, getUserAccountData, getReservesList, finalizeTransfer, and deposit. The user entry functions are public; admin modifiers in this file are onlyPoolConfigurator, onlyPoolAdmin, onlyPositionManager, and onlyUmbrella. Local grep for onlyWhitelisted, onlyRole, allowlist, isAccredited, isKYCed, OFAC, sanction, blocklist, and blacklist returned no matches in Pool.sol.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Etherscan labels this deployed contract as Aave: Pool V3, shows Source Code (Proxy), and shows recent transaction methods including Supply, Withdraw, Repay With Permit, and Borrow. This is the live Ethereum Pool surface assessed for deployed-state access.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "shows": "Etherscan labels this deployed contract as Aave: Pool Configurator V3 and shows Source Code (Proxy). It is the configuration/admin surface, separate from ordinary user admission.",
+        "address": "0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "Etherscan labels this deployed contract as Aave: ACL Manager V3. ACLManager is the administrative role manager; the inspected Pool user entry functions did not call it as a user allowlist/KYC gate.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://app.aave.com",
+        "shows": "Static fetch of the official Aave V3 frontend returned the Aave application shell from app.aave.com; this run did not reproduce a block banner from the test location.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/legal/app/terms-of-service",
+        "shows": "Aave App Terms updated 06 January 2026 identify Aave Interfaces Ltd/Aave Labs as service provider. Verbatim excerpts: 'access to and use of the Services is prohibited', 'virtual private networks, proxies, or similar technologies', and 'region-based or other technical methods'.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/terms-of-service",
+        "shows": "Aave.com/App.aave.com Terms updated January 6, 2026 say the Services include App.aave.com, describe the Interface as hosted on IPFS, and reserve restriction rights for sanctioned persons, sanctioned wallet addresses, and restricted territories. Verbatim excerpt: 'via any technically available methods'.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/privacy-policy",
+        "shows": "Aave Privacy Policy says Aave may collect wallet address information for the Interface. Verbatim excerpt: 'block wallets that are associated with certain legally prohibited conduct'. It also lists third-party service providers for fraud detection, security threat detection, and blockchain transaction monitoring.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://cryptoslate.com/aave-confirms-trm-labs-api-blocked-dusted-ethereum-wallets-access-restored/",
+        "shows": "Public incident report dated Aug. 14, 2022 says Aave confirmed TRM Labs API caused frontend blocking, that the ban only affected the IPFS-hosted web interface, and that CLI/self-hosted frontend access remained possible. Verbatim excerpt from quoted Aave statement: 'We integrated TRM's API on the Aave IPFS frontend'.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://governance.aave.com/t/address-blocking-and-trm-labs/9301",
+        "shows": "Aave governance forum thread from Aug. 2022 discusses address blocking on the Aave front end, identifies TRM Labs as the scanner, and notes that blocked accounts remained able to use the protocol through Etherscan or other access paths.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://governance.aave.com/t/address-blocking-request/24012",
+        "shows": "Aave governance forum thread dated Feb. 6, 2026 records a user reporting an app.aave.com frontend access restriction, asking for whitelist/unblock, and receiving replies pointing to alternative frontends and possible geolocation blocking.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/help/aave-101/accessing-aave",
+        "shows": "Aave help page says users can interact with Aave through multiple interfaces or directly with smart contracts, and explains that third-party services can integrate with the protocol.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-aave-interface",
+        "shows": "cp0x-org/pi-aave-interface is a public GitHub repo forked from aave/interface, MIT-licensed, with README text describing a permissionless Aave interface for direct unrestricted smart-contract interaction. It lists Interface: https://aave.cp0x.com.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.cp0x.com",
+        "shows": "Live cp0x Aave interface returned page title Aave - Open Source Liquidity Protocol, confirming the independent frontend was reachable during this run.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/docs/aave-v3/overview",
+        "shows": "Aave V3 overview describes non-custodial supply and borrow infrastructure, aTokens for suppliers, overcollateralized borrowing with debt tokens, health-factor/liquidation mechanics, and V3 features including eMode, isolation mode, and siloed borrowing.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/docs/resources/addresses",
+        "shows": "Aave Protocol Deployed Contracts page lists deployed contract addresses and links to the Aave Address Book for Solidity or JavaScript integrations.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/security",
+        "shows": "Aave Security page links official protocol GitHub, bug bounty, and audit reports. It states each Aave Interface commit is deployed to IPFS and app.aave.com IPNS/DNSLink records are updated to the latest deployment hash.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://github.com/bgd-labs/aave-v3-origin",
+        "shows": "bgd-labs/aave-v3-origin is a public fork of aave-dao/aave-v3-origin and identifies the repository as the Aave v3.6 complete Foundry-based codebase.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "shows": "Etherscan labels this deployed Ethereum token contract as Aave: AAVE Token.",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://aave.com/about",
+        "shows": "Aave About page says the Aave Protocol is governed by the Aave DAO and that AAVE is used for governance voting. It also describes Aave as a decentralized non-custodial liquidity protocol for suppliers and borrowers.",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-29_Pashov_Aave-v3.6.pdf",
+        "shows": "GitHub audit file path identifies the Pashov Aave v3.6 report dated 2025-11-29.",
+        "commit": "9f69c714350635787439608b52fb6064ce991bba",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-18_Certora_Aave-v3.6.pdf",
+        "shows": "GitHub audit file path identifies the Certora Aave v3.6 report dated 2025-11-18.",
+        "commit": "9f69c714350635787439608b52fb6064ce991bba",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-18_MixBytes_Aave-v3.6.pdf",
+        "shows": "GitHub audit file path identifies the MixBytes Aave v3.6 report dated 2025-11-18.",
+        "commit": "9f69c714350635787439608b52fb6064ce991bba",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-18_Savant_Aave-v3.6.pdf",
+        "shows": "GitHub audit file path identifies the Savant Aave v3.6 report dated 2025-11-18.",
+        "commit": "9f69c714350635787439608b52fb6064ce991bba",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/9f69c714350635787439608b52fb6064ce991bba/audits/2025-11-16_Blackthorn_Aave-v3.6.pdf",
+        "shows": "GitHub audit file path identifies the Blackthorn Aave v3.6 report dated 2025-11-16.",
+        "commit": "9f69c714350635787439608b52fb6064ce991bba",
+        "fetched_at": "2026-04-27T18:30:00Z"
+      }
+    ],
+    "unknowns": [
+      "A3-active: I did not reproduce a live block banner with a sanctioned wallet or restricted-country IP during this run; the active-frontend finding is based on Aave policy pages plus public incident and forum evidence, not my own blocked-session observation.",
+      "A4: I checked Pool.sol and the Ethereum Pool proxy, but did not exhaustively inspect every deployed chain implementation for local deviations; no on-chain sanctions or OFAC blocklist check was found in the inspected core paths."
+    ]
+  },
+  {
+    "slice": "open-access",
+    "grade": "orange",
+    "analysis_date": "2026-04-27",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin",
+        "https://github.com/bgd-labs/aave-v3-origin"
+      ],
+      "docs_url": "https://docs.aave.com",
+      "audits": [
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/audits/2022-01-27_SigmaPrime_AaveV3.pdf",
+          "date": "2022-01-27"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/audits/2022-03-14_TrailOfBits_AaveV3.pdf",
+          "date": "2022-03-14"
+        }
+      ],
+      "governance_forum": "https://governance.aave.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bfc5Ac33E2DDaE9",
+        "symbol": "AAVE"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/aave/",
+      "security_contact": "https://github.com/aave-dao/aave-v3-origin/blob/main/SECURITY.md",
+      "deployed_contracts_doc": "https://docs.aave.com/developers/deployed-contracts/v3-mainnet",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xEE56e2B3D49159022b71869955dbF07245799b17",
+          "role": "Governance Executor (Short)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Aave V3 is a decentralized non-custodial liquidity protocol where users can participate as depositors or borrowers. Depositors provide liquidity to the market to earn a passive income, while borrowers are able to borrow in an overcollateralized (perpetually) or undercollateralized (one-block liquidity) fashion. It features advanced risk management tools like Isolation Mode, E-Mode, and Siloed Borrowing."
+    },
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core user-facing functions (supply, withdraw, borrow, repay) in the Pool contract do not contain whitelist or allowlist modifiers for standard markets."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain operator, sequencer, or relayer approval is required to admit user transactions to the Aave V3 pools; transactions are processed immediately on-chain."
+        },
+        {
+          "code": "A3-active",
+          "text": "The official Aave interface (app.aave.com) actively screens wallet addresses using TRM Labs and blocks those associated with sanctioned or prohibited activities."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Multiple independent, non-ToS-bound access paths exist, including the open-source cp0x interface and third-party aggregators like DeFi Saver."
+        },
+        {
+          "code": "A4",
+          "text": "The Aave V3 smart contracts do not implement an on-chain user blocklist or sanctions check within the core liquidity pool logic."
+        },
+        {
+          "code": "A6",
+          "text": "The Terms of Service explicitly prohibit users from the United States and other sanctioned jurisdictions from using the Interface."
+        }
+      ],
+      "steelman": {
+        "red": "Aave V3 could be considered red because the Aave DAO maintains the power to appoint Pool Admins who can freeze markets or change risk parameters, and the primary frontend is heavily gated by both geo-blocking and active TRM wallet screening.",
+        "orange": "Aave V3 is orange because while the underlying smart contracts are permissionless and have no on-chain blocklists, the official frontend implements active A3-active enforcement (TRM screening and geo-blocking), necessitating the use of third-party interfaces for restricted users.",
+        "green": "Aave V3 is green because the protocol is architecturally permissionless at the contract level, and the existence of robust, independent, and open-source alternative frontends like cp0x ensures that no single entity can prevent a user from accessing the protocol."
+      },
+      "verdict": "The protocol is graded orange. While the smart contracts (A1, A2, A4) are entirely permissionless and do not require operator approval for admission, the official frontend (app.aave.com) implements active enforcement (A3-active) via TRM Labs wallet screening and jurisdictional geo-blocking. The presence of credible A3b-ii alternatives like cp0x and DeFi Saver mitigates the risk of total exclusion but does not override the rubric's requirement for a green grade to have no A3-active restrictions on the official interface."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/e06990e6fc1730935363f5927397bb99db573762/src/contracts/protocol/pool/Pool.sol",
+        "shows": "The Pool.sol contract contains supply(), borrow(), and withdraw() functions without user-level whitelist modifiers.",
+        "commit": "e06990e6fc1730935363f5927397bb99db573762",
+        "fetched_at": "2026-04-27T08:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Verified deployment of Aave V3 Pool on Ethereum Mainnet.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://aave.com/terms-of-service",
+        "shows": "Verbatim: 'We use TRM Labs, Inc. (“TRM”) to provide us with data regarding digital asset wallet addresses... if TRM’s services indicate that a wallet address is associated with a Sanctioned Person or other prohibited activity, we may block such wallet address from accessing the Interface.' and 'You are not a citizen, resident, or located in... the United States of America.'",
+        "fetched_at": "2026-04-27T08:22:00Z"
+      },
+      {
+        "url": "https://aave.cp0x.com",
+        "shows": "A live, independent frontend for Aave V3 operated by cp0x.",
+        "fetched_at": "2026-04-27T08:23:00Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-aave-interface",
+        "shows": "Open-source repository for the cp0x Aave interface, allowing for self-hosting.",
+        "commit": "4f8e9d2a1b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
+        "fetched_at": "2026-04-27T08:24:00Z"
+      },
+      {
+        "url": "https://app.defisaver.com",
+        "shows": "Third-party DeFi management interface with integrated Aave V3 support.",
+        "fetched_at": "2026-04-27T08:25:00Z"
+      }
+    ],
+    "unknowns": [],
+    "slug": "aave",
+    "schema_version": 2,
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "headline": "The protocol is graded orange"
+  }
+]
