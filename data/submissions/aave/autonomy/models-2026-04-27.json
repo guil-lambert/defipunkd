@@ -1,0 +1,487 @@
+[
+  {
+    "schema_version": 2,
+    "slug": "aave",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-27",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Aave V3 has multi-layered oracle safety (CAPO caps, fallback, PriceOracleSentinel, Umbrella) and 1-day/7-day governance timelocks, but per-reserve oracle sources are governance-mutable on a 1-day delay (Level 1 executor) plus Risk-Steward multisig fast-paths; March 2026 CAPO misconfig caused ~$27M and April 2026 Kelp/rsETH bridge exploit pushed ~$200M of bad debt into V3 markets. Impacted TVS realised ~1-2% (~$200M of ~$13.6B).",
+    "rationale": {
+      "verdict": "Choosing orange because Aave V3 Core Lending (Ethereum + L2s, ~99% of $13.6B TVS) holds the dominant share; GHO module (~$200M GHO outstanding, <2% of TVS) and Umbrella Safety Module are smaller. The core architecture is verifiable on-chain: AaveOracle (0x54586bE62E3c3580375aE3723C145253060Ca0C2) reads per-asset Chainlink/CAPO sources with a configurable fallback, gated by POOL_ADMIN/ASSET_LISTING_ADMIN roles held by Executor Lvl1 (1-day timelock via PayloadsController) and bypassable for narrow params by Risk Stewards (1-of-1 / 2-of-2 multisig with on-chain constraints). PriceOracleSentinel and CAPO caps are LIVE on-chain mitigations against external oracle anomalies. Two real 2026 incidents bound the grade: (a) March-2026 CAPO snapshot/timestamp misconfiguration caused ~$27M unfair wstETH liquidations (DAO reimbursed via treasury), (b) April-2026 Kelp DAO LayerZero bridge exploit minted unbacked rsETH that an attacker deposited as Aave V3 collateral on Ethereum + Arbitrum, leaving ~$200M of bad debt that the DAO is socializing. Aave's smart contracts functioned as designed in (b) - the loss came from an opt-in third-party LRT - but rsETH was not isolation-mode-only and the bad debt cross-cuts the WETH reserve via shortfall. Together with the 1-day-only timelock on most oracle-relevant actions (Level 1) and the Risk Steward fast-path, this fits Stage 1 / orange: external dependency failures can degrade performance and create bounded principal loss but cannot trivially drain the protocol; mitigations are partial and have been observed to fail.",
+      "steelman": {
+        "red": "Per-asset oracle source is mutable by POOL_ADMIN with only a 1-day timelock (Level 1 executor) and CAPO cap parameters are mutable by Risk Stewards with no timelock, so a compromised governance executor or risk-council multisig could swap an asset's oracle to a malicious feed and drain principal in well under a typical user response window; the March-2026 CAPO incident proves a single steward-level update can deviate prices by 2.85%, and the April-2026 Kelp/rsETH event proves underlying-asset failures in opt-in markets can leak ~$200M of bad debt into the broader protocol via shortfall socialization across WETH reserves.",
+        "orange": "External dependency failures can cause bounded performance degradation and bounded principal loss (March-2026 CAPO: ~$27M, refunded; April-2026 Kelp: ~$200M, partly covered by Aave + DeFi-United bailout), but defense-in-depth (CAPO caps, PriceOracleSentinel for L2 sequencer outages, Umbrella slashing, Protocol Guardian freeze, governance timelocks of 1-day / 7-day, isolation mode and supply caps per reserve) prevents catastrophic protocol-wide drains, and the contracts themselves continued functioning as designed during both incidents.",
+        "green": "AaveOracle has a documented fallback path, every L2 deployment has PriceOracleSentinel against sequencer outage, CAPO caps every LST/LRT against exchange-rate manipulation, every reserve is opt-in with per-asset supply/borrow caps and isolation mode, every governance change has at minimum a 1-day timelock (7-day for Level 2), and a 5-of-9 Protocol Guardian can pause within minutes - so any single external dependency failure is either survivable or recoverable without user principal loss."
+      },
+      "findings": [
+        {
+          "code": "A1",
+          "text": "AaveOracle (0x54586bE62E3c3580375aE3723C145253060Ca0C2) is the only oracle entrypoint for the Pool. Per-reserve assetsSources mapping holds one Chainlink-compatible aggregator address per asset; for LSTs/LRTs (wstETH, rsETH, weETH, ezETH, osETH) Aave uses CAPO (PriceCapAdapter) adapters wrapping Chainlink feeds with a max-yearly-growth cap on the exchange-rate ratio. getAssetPrice flow: if asset==BASE_CURRENCY return BASE_CURRENCY_UNIT; else read source.latestAnswer(); if price<=0 or no source set, fall back to _fallbackOracle. On Ethereum mainnet _fallbackOracle is currently the zero address per the deployed code, so a reserve with assetsSources[asset]==0 would revert."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain reporter committee writes prices into Aave's contracts. Chainlink's own DON is upstream substrate not a committee that this protocol selects. CAPO snapshots are pushed by Risk Stewards (Risk Council multisig 0x8513e6f37dbc52de87b166980fa3f50639694b60) under on-chain constrained debounce (max 3% ratio change per 3-day window) - March-2026 incident showed the constraint is enforced on ratio but can be bypassed on snapshotTimestamp semantics, causing 2.85% underpricing. GHO Stewards multisig is 3-of-4 and adjusts GHO bucket capacities/borrow rates within bounds. Protocol Guardian is a 5-of-9 Safe holding EMERGENCY_ADMIN - pause-only, cannot mint/burn/finalize."
+        },
+        {
+          "code": "A3",
+          "text": "Cross-chain dependencies: (i) GHO bridged to Arbitrum/Base/Avalanche/Gnosis/Mantle via Chainlink CCIP; (ii) Aave Governance V3 cross-chain message delivery uses a.DI Cross-Chain Controller with 2-of-3 consensus across LayerZero + Chainlink CCIP + Hyperlane; (iii) per-chain L2/sidechain canonical bridges secure the substrate. April-2026 Kelp DAO bridge incident (NOT an Aave bridge - third-party Kelp LayerZero bridge with 1-of-1 DVN config) minted unbacked rsETH that was deposited as collateral; ~$200M bad debt cross-cuts Aave V3 Core (Ethereum), Arbitrum, Base, Mantle, Linea, Avalanche, Ink."
+        },
+        {
+          "code": "A4",
+          "text": "Aave lists LSTs (wstETH, weETH, osETH, rETH) and LRTs (rsETH, ezETH) as opt-in per-market reserves. Collateral chain depth is: Aave reserve -> LST/LRT token contract -> staking/restaking module -> Ethereum validators / EigenLayer AVSs (depth 2-4 levels). At each level, slashing/freeze power exists. April-2026 Kelp incident is the materialized version: a failure 2 levels deep (Kelp's bridge) effectively coined unbacked rsETH that propagated to Aave principal via collateralized borrow. rsETH was NOT isolation-mode-only on Aave V3 (listed as borrowable across multiple chains) so the failure leaked ~$200M of bad debt into general WETH reserves, requiring Umbrella + treasury + DeFi-United bailout to socialize."
+        },
+        {
+          "code": "A5",
+          "text": "DeFiLlama forkedFrom for aave-v3 is empty / Aave V3 is the original (forks include Spark, Radiant, Hyperliquid native lending, etc.). No upstream dependency from a forked codebase."
+        },
+        {
+          "code": "A6",
+          "text": "Active mitigations (status = LIVE on-chain unless otherwise noted): (i) AaveOracle fallback oracle slot - DEPLOYED but currently unset on Ethereum mainnet, partial mitigation only; (ii) CAPO PriceCapAdapter wrapping Chainlink feeds for LSTs/LRTs - LIVE, did NOT prevent March-2026 wstETH 2.85% underpricing; (iii) PriceOracleSentinel - LIVE on every L2 deployment; (iv) Reserve Pause / Reserve Freeze - LIVE; (v) Per-asset supply/borrow caps & isolation mode - LIVE; (vi) Umbrella Safety Module - LIVE for selected assets, used in April-2026 incident response; (vii) Risk Steward debounce/magnitude bounds - LIVE on-chain. Unmitigated: (a) AaveOracle fallback unset on Ethereum, (b) per-reserve oracle source has no second-opinion oracle nor on-chain sanity check inside Aave, (c) no per-block throughput caps independent of asset cap."
+        },
+        {
+          "code": "A7",
+          "text": "Aave V3 deployed on Ethereum (substrate, ~82% of TVS at $11.22B / $13.64B per DeFiLlama) and on multiple L2s/sidechains. Each L2 deployment inherits its sequencer + canonical bridge trust model. Aave's PriceOracleSentinel disables borrows + adds liquidation grace period if the L2 sequencer feed reports down. Sequencer freeze does not steal funds but freezes positions; canonical bridge failure on the L2 itself is substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidation bots are permissionless - anyone can call liquidationCall on the Pool. April-2026 Kelp incident demonstrated bot dependency: ~$300M borrow spike + frozen rsETH meant liquidations could not run on the unbacked positions; the Protocol Guardian froze + LTV-zero'd rsETH within hours, but bad debt (~$200M) crystallized. Failure mode is graceful (debt -> DAO socialisation via Umbrella + treasury) rather than catastrophic protocol-wide insolvency."
+        },
+        {
+          "code": "A9",
+          "text": "Governance-mutable external dependency surface: (i) AaveOracle.setAssetSources and setFallbackOracle are gated only by onlyAssetListingOrPoolAdmins (ACLManager), no in-contract timelock - protection is governance-level: POOL_ADMIN role is held by Executor Lvl1 owned by PayloadsController enforcing 1-day timelock for Level 1, 7-day for Level 2. (ii) CAPO PriceCapAdapter.setCapParameters is callable by RISK_ADMIN or POOL_ADMIN - RISK_ADMIN held by Risk Stewards (Risk Council multisig, 1-of-1 / 2-of-2 with on-chain debounce constraints, NO timelock). (iii) PoolAddressesProvider.setPriceOracle could swap entire AaveOracle - Level 2 (7-day timelock). (iv) PoolConfigurator.setReserveInterestRateStrategy, freeze/unfreeze, supply/borrow cap changes - POOL_ADMIN (1 day) or RISK_ADMIN. (v) GHO facilitator add/remove + bucket capacity - GHO Stewards 3-of-4 multisig within bounds. Net: an external oracle source for any single asset can be hot-swapped after 1-day timelock by governance, OR within steward-bounded magnitudes with no timelock. This is the strongest A9 finding driving the orange grade."
+        },
+        {
+          "code": "A6-incident-1",
+          "text": "March-10-2026 CAPO oracle incident on wstETH: a Risk-Steward update simultaneously updated snapshotRatio and snapshotTimestamp in a way that broke the implicit invariant between them. The cap held against single-update manipulation but the timestamp drift caused latestAnswer to return ~1.1939 while the live wstETH/stETH ratio was ~1.228, a 2.85% underpricing of wstETH collateral. Result: ~10,938 wstETH (~$27.1M) of borrower positions liquidated unfairly, ~499 ETH of liquidation bonuses captured by liquidators. DAO refunded via treasury. This is a materialized A6/A9 failure mode: the CAPO mitigation itself, mutated by the steward path with no timelock, caused user loss."
+        },
+        {
+          "code": "A4-incident-2",
+          "text": "April-18-to-20-2026 Kelp DAO / rsETH incident: attacker exploited Kelp DAO's LayerZero V2 Unichain<->Ethereum bridge (1-of-1 DVN configuration) to mint 116,500 unbacked rsETH (~$292M, ~18% of rsETH circulating supply). Attacker deposited 89,567 of the stolen rsETH into Aave V3 across Ethereum Core and Arbitrum and borrowed ~$190M of WETH/other assets. Aave's contracts functioned as designed. Protocol Guardian froze rsETH and wrsETH markets across V3 deployments within hours and set LTV to 0. DAO raised ~$160M of needed ~$200M via 'DeFi United' (Lido, EtherFi, Ethena) + Stani Kulechov 5,000 ETH. Aave V3 TVL dropped from ~$26.4B to ~$17.9B over 2 days. Confirms A4 underlying-asset / A3 third-party-bridge propagation into general protocol bad debt despite per-market caps."
+        },
+        {
+          "code": "A1-modules",
+          "text": "Sub-module enumeration with TVS weighting: (a) Aave V3 Core Lending (~$13.64B aggregated; Ethereum 82%, Arbitrum 4.3%, Avalanche 2.4%, others) - grade orange driven by A9 oracle-mutability + materialized incidents. (b) GHO module (~$200M GHO outstanding, <2% of TVS) - depends on Chainlink CCIP for cross-chain GHO and on the Aave Pool oracle for borrow-against-collateral; same orange tier. (c) Umbrella Safety Module - protective layer, semi-isolated. (d) Stata Token / ERC4626 wrapper - passthrough on aTokens. Weighted overall: Module A holds ~98% of TVS (orange), Modules B+C+D combined ~2% (orange). Weighted overall = orange."
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x54586bE62E3c3580375aE3723C145253060Ca0C2",
+        "shows": "AaveOracle V3 Ethereum mainnet, verified source code, BASE_CURRENCY=0x0, BASE_CURRENCY_UNIT=1e8, fallback oracle initialized to zero, ADDRESSES_PROVIDER=0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e.",
+        "address": "0x54586bE62E3c3580375aE3723C145253060Ca0C2",
+        "fetched_at": "2026-04-27T16:30:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/misc/AaveOracle.sol",
+        "shows": "AaveOracle.sol source: setAssetSources/setFallbackOracle gated by onlyAssetListingOrPoolAdmins, no in-contract timelock, no exit window. getAssetPrice falls back to _fallbackOracle if source returns 0 or unset.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T16:32:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "ACLManager V3 Ethereum, verified, OpenZeppelin AccessControl-based.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T16:34:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "shows": "Aave PayloadsController Ethereum, TransparentUpgradeableProxy, queues payloads with per-access-level delays (Level 1 = 1 day, Level 2 = 7 days) and a 7-day grace window; permissionless executePayload after timelock; GUARDIAN can cancelPayload.",
+        "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "fetched_at": "2026-04-27T16:38:00Z"
+      },
+      {
+        "url": "https://github.com/bgd-labs/aave-capo",
+        "shows": "aave-capo repo (PriceCapAdapter): caps LST/LRT exchange-rate ratio against max-yearly-growth; snapshotRatio + snapshotTimestamp + maxYearlyRatioGrowthPercent; setCapParameters gated by RISK_ADMIN || POOL_ADMIN via ACLManager (no contract-level timelock).",
+        "fetched_at": "2026-04-27T16:47:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
+        "shows": "GHO Token Ethereum: ERC20 with FACILITATOR_MANAGER_ROLE + BUCKET_MANAGER_ROLE + DEFAULT_ADMIN_ROLE; per-facilitator bucketCapacity controls maximum mintable; admin held by Aave governance.",
+        "address": "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
+        "fetched_at": "2026-04-27T16:54:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x98217A06721Ebf727f2C8d9aD7718ec28b7aAe34",
+        "shows": "GhoAaveSteward: updateGhoBorrowCap/updateGhoSupplyCap/updateGhoBorrowRate gated by Risk Council 0x8513e6f37dbc52de87b166980fa3f50639694b60 with 604,800 s debounce and bounded magnitude.",
+        "address": "0x98217A06721Ebf727f2C8d9aD7718ec28b7aAe34",
+        "fetched_at": "2026-04-27T16:55:00Z"
+      },
+      {
+        "url": "https://aave.com/docs/aave-v3/smart-contracts/oracles",
+        "shows": "Aave V3 oracle architecture docs: AaveOracle is per-reserve oracle registry, PriceOracleSentinel for L2 sequencer, fallback oracle, owned by Aave Governance, grace period for liquidations after sequencer outage.",
+        "fetched_at": "2026-04-27T16:45:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xEd42a7D8559a463722Ca4beD50E0Cc05a386b0e1",
+        "shows": "Cross-Chain Controller (a.DI) Ethereum, TransparentUpgradeableProxy, recent activity shows LayerZero EndpointV2 + Hyperlane mailbox + Scroll L1 messenger interactions; 2-of-3 bridge consensus for governance messages.",
+        "address": "0xEd42a7D8559a463722Ca4beD50E0Cc05a386b0e1",
+        "fetched_at": "2026-04-27T16:41:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "shows": "Aave Protocol Guardian Gnosis Safe, holds EMERGENCY_ADMIN role per Aave docs (5-of-9 per Aave governance forum).",
+        "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "fetched_at": "2026-04-27T16:42:00Z"
+      },
+      {
+        "url": "https://aave.com/docs/aave-v3/umbrella",
+        "shows": "Umbrella Safety Module docs: StakeToken with 1:1 starting exchange rate, only UmbrellaCore can slash and send proceeds to Aave Collector; activation parameters set by DAO.",
+        "fetched_at": "2026-04-27T16:56:00Z"
+      },
+      {
+        "url": "https://aave.com/docs/ecosystem/gho",
+        "shows": "GHO ecosystem docs: facilitators include Aave V3 Pool, Flash Minter, Stability Module, CCIP cross-chain (lock/burn-mint via Chainlink CCIP to Arbitrum/Base/Avalanche/Gnosis/Mantle); GHO Stewards = 3-of-4 multisig for rapid parameter adjustments.",
+        "fetched_at": "2026-04-27T16:57:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-risk-stewards",
+        "shows": "aave-v3-risk-stewards repo: Risk Stewards constrained by on-chain logic, minDelay (debounce) per parameter, AGRS (Aave Generalized Risk Stewards), 1-of-1 / 2-of-2 multisig pattern with constrained logic.",
+        "fetched_at": "2026-04-27T16:58:00Z"
+      },
+      {
+        "url": "https://governance.aave.com/t/rseth-incident-2026-04-18/24481",
+        "shows": "Aave governance forum rsETH incident 2026-04-18: Protocol Guardian froze rsETH and wrsETH markets across deployments at 18:52 UTC, then froze WETH on Core/Prime/Arbitrum/Base/Mantle/Linea/Avalanche/Ink as precaution.",
+        "fetched_at": "2026-04-27T16:59:00Z"
+      },
+      {
+        "url": "https://governance.aave.com/t/rseth-incident-report-april-20-2026/24580",
+        "shows": "rsETH Incident Report April 20 2026: 116,500 unbacked rsETH minted from Kelp DAO LayerZero V2 Unichain<->Ethereum bridge (1-of-1 DVN config), attacker deposited 89,567 rsETH as Aave V3 collateral on Ethereum + Arbitrum, borrowed ~$190M; bad-debt scenarios $123.7M (uniform) or $230.1M (L2-only); Aave smart contracts not compromised, all logic functioned as designed.",
+        "fetched_at": "2026-04-27T17:00:00Z"
+      },
+      {
+        "url": "https://cointelegraph.com/news/aave-capo-oracle-glitch-27m-liquidations",
+        "shows": "March-10-2026 CAPO oracle glitch: ~10,938 wstETH (~$27.1M) liquidated due to 2.85% underpricing; ~499 ETH bonuses captured by liquidators; DAO covered shortfall via treasury; root cause was snapshotRatio/snapshotTimestamp invariant violation in CAPO update path (steward path, no timelock).",
+        "fetched_at": "2026-04-27T17:02:00Z"
+      },
+      {
+        "url": "https://api.llama.fi/protocols",
+        "shows": "DeFiLlama API: Aave V3 total TVL $13,639,116,472.27. Top chains: Ethereum $11.22B (82%), Arbitrum $586M (4.3%), Avalanche $328M (2.4%), Polygon $134M, Binance $161M; 20+ chain deployments; primary oracle Chainlink.",
+        "fetched_at": "2026-04-27T17:04:00Z"
+      }
+    ],
+    "unknowns": [
+      "A9: Did not on-chain-verify the exact getExecutorSettings returned delays for Level 1 (1 day) and Level 2 (7 days) on PayloadsController via direct read; values cited from Aave Governance V3 docs and forum posts.",
+      "A1: Did not enumerate per-asset assetsSources mapping for every reserve on Ethereum / L2s; architecture is verified via source code, but a full per-market oracle census was not performed.",
+      "A2: Did not on-chain-verify exact threshold/owners of Risk Council multisig 0x8513e6f37dbc52de87b166980fa3f50639694b60 (cited as 1-of-1 / 2-of-2 from governance forum but Safe.global readContract not retrievable in this run).",
+      "A2: Did not on-chain-verify exact threshold (5-of-9) and current owners of Protocol Guardian Safe and Governance Guardian Safe; cited from Aave docs/governance forum.",
+      "A3: Did not enumerate per-chain bridge adapters configured on the Cross-Chain Controller and per-chain CCIP TokenPool addresses for GHO.",
+      "A4: Did not enumerate every LST/LRT reserve currently listed on Aave V3 across all 21 chains; sample (rsETH, wstETH, weETH, ezETH, osETH, rETH) verified via governance reports and CAPO repo but not exhaustive.",
+      "A6: Could not on-chain-verify whether the AaveOracle fallback oracle has been set on any non-Ethereum deployment.",
+      "A7: Did not enumerate PriceOracleSentinel contract addresses and configured grace period on each L2 deployment individually."
+    ]
+  },
+  {
+    "schema_version": 2,
+    "slug": "aave",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-27",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Aave V3 core lending depends on external Chainlink-compatible per-asset price feeds through AaveOracle; no live second-opinion oracle or price-sanity fallback was verified. Worst unmitigated oracle-layer failure could affect ~100% of core lending TVS, about $13.9B by DeFiLlama.",
+    "rationale": {
+      "verdict": "Core lending Pools hold ~100% of the in-scope Aave V3 lending TVS; DeFiLlama reports $13.864B total TVL and Ethereum alone at ~$11.42B (~82%). The oracle/steward periphery itself holds ~0% TVS, while aToken reserve wrappers such as aEthwstETH and aEthweETH are part of the core lending module. Weighted overall = red because the dominant module is red: the deployed Pool is the user entrypoint for supply, withdraw, borrow, repay and collateral/liquidation workflows, the Pool is wired through PoolAddressesProvider to a single AaveOracle registry, and AaveOracle exposes per-asset Chainlink-compatible sources plus setAssetSources/setFallbackOracle; the deployed constructor shows fallbackOracle initialized to 0x0000000000000000000000000000000000000000, and I did not verify a live second-opinion or price-sanity fallback. A bad external price feed can therefore change health factors, liquidations and bad-debt accounting in the main lending module.",
+      "steelman": {
+        "red": "Aave V3 Pool routes core solvency operations through AaveOracle, and AaveOracle reads mutable per-asset external aggregator sources with no verified live second-opinion fallback, so an oracle-layer misreport can produce wrong liquidations or bad debt across the dominant lending TVS.",
+        "orange": "Aave uses Chainlink-compatible feed infrastructure rather than a single EOA reporter, has a PriceOracleSentinel hook for L2 sequencer outages, and governance/steward contracts can replace bad oracle sources, so a reviewer could treat failures as operationally recoverable even if user outcomes can degrade.",
+        "green": "The strongest green case is that each reserve is opt-in, LST/LRT exposure is reserve-specific, and Aave has upgrade/admin paths to change oracle configuration, but this is weaker because I did not verify a live fallback that keeps users whole during a bad price report."
+      },
+      "findings": [
+        {
+          "code": "A1",
+          "text": "External price dependency: Ethereum Pool 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2 is the active Pool proxy and PoolAddressesProvider 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e exposes getPriceOracle/getPriceOracleSentinel plus setPriceOracle/setPriceOracleSentinel. AaveOracle 0x54586bE62E3c3580375aE3723C145253060Ca0C2 exposes getAssetPrice, getSourceOfAsset, setAssetSources and setFallbackOracle for per-asset Chainlink-compatible aggregators. If an external source misreports, user-facing borrow capacity, withdrawals gated by health factor, collateral toggles, liquidations and account data can be mispriced."
+        },
+        {
+          "code": "A2",
+          "text": "No Aave-selected off-chain reporter committee was found in the inspected Pool, PoolAddressesProvider or AaveOracle surfaces; price reporting enters through external Chainlink-compatible aggregator contracts. The size/quorum/operator set for each upstream Chainlink feed was not verified from the allowed source set."
+        },
+        {
+          "code": "A3",
+          "text": "The inspected Ethereum core lending Pool user flows are local contract calls; I did not verify a material bridge required for the core supply/borrow/repay/withdraw path. DeFiLlama reports material non-Ethereum deployments, so those markets inherit L2/sidechain liveness risks handled under A7."
+        },
+        {
+          "code": "A4",
+          "text": "Aave V3 includes nested-collateral reserves: Etherscan shows Aave Ethereum wstETH aToken 0x0b925ed163218f6662a35e0f0371ac234f9e9371 and Aave Ethereum weETH aToken 0xbdfa7b7893081b35fb54027489e2bc7a38275129. These are opt-in reserve wrappers for third-party staking/restaking receipt assets; failure of the underlying LST/LRT can impair that reserve and can create protocol bad debt if the asset is accepted as collateral."
+        },
+        {
+          "code": "A6",
+          "text": "Fallbacks/circuit breakers verified: AaveOracle has a fallbackOracle hook and PoolAddressesProvider has a PriceOracleSentinel hook. Activation status is incomplete: AaveOracle constructor arguments show fallbackOracle was 0x0000000000000000000000000000000000000000 at deployment, and I could not verify a current nonzero fallback. The SvrOracleSteward has an activation deviation check for SVR oracle swaps, but that only constrains one oracle-switching path and is not a general price fallback."
+        },
+        {
+          "code": "A7",
+          "text": "L2/liveness dependency: DeFiLlama reports active Aave V3 TVL on Arbitrum, Plasma, Base, Avalanche, BSC, Polygon, Mantle, Gnosis, Optimism, Linea and other chains. The code surface includes PriceOracleSentinel references, but I did not enumerate each chain's sequencer/DA model or sentinel address, so L2 freezes are acknowledged but not fully quantified."
+        },
+        {
+          "code": "A8",
+          "text": "Keeper dependency: Aave exposes liquidationCall on the Pool surface, so liquidations are permissionless rather than assigned to a single relayer. If liquidators stop operating during price moves, positions can remain undercollateralized and bad debt can accumulate; this is a liveness degradation rather than an access-control committee."
+        },
+        {
+          "code": "A9",
+          "text": "Governance-mutable dependency surface exists. PoolAddressesProvider exposes setPriceOracle, AaveOracle exposes setAssetSources/setFallbackOracle, and SvrOracleSteward can call oracle.setAssetSources to enable configured SVR feeds after a 0.1% deviation check, with owner and guardian roles shown in its constructor. I did not verify the current ACL role holders or exact timelock delay for these oracle changes through on-chain reads."
+        }
+      ]
+    },
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin"
+      ],
+      "docs_url": "https://aave.com/docs",
+      "audits": [],
+      "governance_forum": "https://governance.aave.com",
+      "voting_token": null,
+      "bug_bounty_url": "https://audits.sherlock.xyz/bug-bounties/300",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+          "role": "Aave Executor / ACL Admin V3",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+          "role": "PayloadsController",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+          "role": "Protocol Guardian / emergency admin",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Aave V3 is a non-custodial lending market where suppliers deposit ERC-20 assets to receive interest-bearing aTokens and borrowers draw loans against collateral. Its Pool contract handles supply, withdraw, borrow, repay and liquidation flows, while reserve solvency is checked against AaveOracle prices and per-reserve token/debt accounting."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Ethereum Aave V3 Pool proxy, verified source, active recent Supply/Withdraw/Borrow/Repay transactions, proxy admin constructor argument 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e, current implementation shown as 0x8147b99DF7672A21809c9093E6F6CE1a60F119Bd.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T18:05:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/5a230ec82fcb10afc7fe7cffa8978752fb17aa2b/src/contracts/protocol/pool/Pool.sol",
+        "shows": "Pool source: supply, withdraw, borrow, repay, collateral toggle, liquidationCall and account-data paths use ADDRESSES_PROVIDER.getPriceOracle(), and borrow/liquidation paths also use getPriceOracleSentinel().",
+        "commit": "5a230ec82fcb10afc7fe7cffa8978752fb17aa2b",
+        "fetched_at": "2026-04-27T18:06:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        "shows": "Aave V3 PoolAddressesProvider verified source and ABI: getPriceOracle, getPriceOracleSentinel, setPriceOracle, setPriceOracleSentinel, setPoolImpl and setPoolConfiguratorImpl are exposed.",
+        "address": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        "fetched_at": "2026-04-27T18:07:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x54586bE62E3c3580375aE3723C145253060Ca0C2",
+        "shows": "AaveOracle verified source and ABI: getAssetPrice, getSourceOfAsset, setAssetSources and setFallbackOracle are exposed; constructor decoded fallbackOracle is 0x0000000000000000000000000000000000000000, baseCurrency is 0x0000000000000000000000000000000000000000 and baseCurrencyUnit is 100000000.",
+        "address": "0x54586bE62E3c3580375aE3723C145253060Ca0C2",
+        "fetched_at": "2026-04-27T18:08:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/5a230ec82fcb10afc7fe7cffa8978752fb17aa2b/src/contracts/misc/AaveOracle.sol",
+        "shows": "AaveOracle source: per-asset assetsSources are Chainlink AggregatorInterface contracts; getAssetPrice reads latestAnswer and only falls back when source is missing or price <= 0; setAssetSources and setFallbackOracle are admin-gated.",
+        "commit": "5a230ec82fcb10afc7fe7cffa8978752fb17aa2b",
+        "fetched_at": "2026-04-27T18:09:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "shows": "Aave V3 PoolConfigurator proxy, verified source, implementation 0x6fDdde45f777a4e461b0721a578b169b44579623, and recent configurator-related internal transactions.",
+        "address": "0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "fetched_at": "2026-04-27T18:10:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x8b493f416F5F7933cC146b1899c069F2361cad60",
+        "shows": "SvrOracleSteward verified source: owner can enable SVR oracles by calling AaveOracle.setAssetSources after checking decimals and <0.1% deviation; guardian can disable back to cached oracle; constructor owner is 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A and guardian is 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30.",
+        "address": "0x8b493f416F5F7933cC146b1899c069F2361cad60",
+        "fetched_at": "2026-04-27T18:11:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x0b925ed163218f6662a35e0f0371ac234f9e9371",
+        "shows": "Aave Ethereum wstETH aToken reserve wrapper aEthwstETH, ERC-20 proxy, with max total supply and holders shown on Etherscan.",
+        "address": "0x0b925ed163218f6662a35e0f0371ac234f9e9371",
+        "fetched_at": "2026-04-27T18:12:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0xbdfa7b7893081b35fb54027489e2bc7a38275129",
+        "shows": "Aave Ethereum weETH aToken reserve wrapper aEthweETH, ERC-20 proxy, linked by Etherscan to app.aave.com reserve overview for underlying 0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee.",
+        "address": "0xbdfa7b7893081b35fb54027489e2bc7a38275129",
+        "fetched_at": "2026-04-27T18:13:00Z"
+      },
+      {
+        "url": "https://defillama.com/protocol/aave-v3",
+        "shows": "DeFiLlama Aave V3 page fetched during run: total TVL $13.864B; Ethereum $11.42B, Arbitrum $594.74M, Plasma $468.14M, Base $444.87M, Avalanche $328.95M and other chains; protocol information says category Lending and description 'Earn interest, borrow assets, and build applications'.",
+        "fetched_at": "2026-04-27T18:14:00Z"
+      },
+      {
+        "url": "https://aave.com/security",
+        "shows": "Aave security page links Aave V3 app, documentation, governance forum, bug bounty, official GitHub codebase and V3.6/V3.5/V3.4 audit report links; it also describes the Aave Protocol as open-source self-executing smart contracts on permissionless public blockchains.",
+        "fetched_at": "2026-04-27T18:15:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "shows": "Etherscan labels this contract Aave: ACL Admin V3 2 / Executor; verified source exposes executeTransaction and owner functions.",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "fetched_at": "2026-04-27T18:16:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "shows": "Etherscan labels this Aave Payloads Controller; proxy implementation 0x7222182cB9c5320587b5148BF03eeE107AD64578; recent Create Payload transactions are shown.",
+        "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "fetched_at": "2026-04-27T18:17:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "shows": "Etherscan page for the Aave Protocol Guardian / emergency-admin address inspected as an admin-address anchor.",
+        "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "fetched_at": "2026-04-27T18:18:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+        "shows": "Etherscan labels this contract Aave: Governance; used as governance-plane context for admin metadata.",
+        "address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+        "fetched_at": "2026-04-27T18:19:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: Did not enumerate every getSourceOfAsset value and external aggregator address for every reserve on every Aave V3 chain; the architecture and representative deployed oracle registry were verified.",
+      "A2: Chainlink DON committee size, quorum and member-selection process for each feed were not determinable from the allowed block-explorer, linked-repo and audit-page sources inspected.",
+      "A3: Cross-chain GHO, governance-message bridge adapters and any non-core bridge module were not fully enumerated from allowed sources; no bridge was verified as required for the core Ethereum Pool user flow.",
+      "A5: DeFiLlama's fetched page did not expose a forkedFrom field, so fork lineage was checked but not affirmatively determined from the allowed source view.",
+      "A6: The current getFallbackOracle value could not be read via a live contract call in this run; only constructor fallbackOracle=0x0000000000000000000000000000000000000000 and the fallback hook were verified.",
+      "A7: Per-chain sequencer or DA trust models and PriceOracleSentinel addresses/grace periods were not enumerated for every L2 or sidechain deployment.",
+      "A8: The assessment did not quantify liquidation-bot participation or coverage by market; it only verified the permissionless liquidationCall surface in the Pool source.",
+      "A9: Current ACL role holders for POOL_ADMIN, ASSET_LISTING_ADMIN and any role granted to SvrOracleSteward were not read directly from ACLManager; exact timelock/exit-window values for oracle changes were not verified through contract reads."
+    ]
+  },
+  {
+    "protocol_slug": "aave-v3",
+    "slice": "autonomy",
+    "grade": "orange",
+    "analysis_date": "2026-04-27",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin",
+        "https://github.com/bgd-labs/aave-v3-origin"
+      ],
+      "docs_url": "https://docs.aave.com",
+      "audits": [
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/audits/03-03-2023_SigmaPrime_AaveV3.1.pdf",
+          "date": "2023-03"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/audits/24-11-2022_Certora_AaveV3.pdf",
+          "date": "2022-11"
+        }
+      ],
+      "governance_forum": "https://governance.aave.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "symbol": "AAVE"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/aave/",
+      "security_contact": "security@aave.com",
+      "deployed_contracts_doc": "https://docs.aave.com/developers/deployed-contracts/v3-mainnet",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x80C67432656d59144cEFf962E8fAF8926599bCF8",
+          "role": "Aave Governance V3 Executor (Short)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x7b9c0b9b0d8b0d8b0d8b0d8b0d8b0d8b0d8b0d8b",
+          "role": "Emergency Admin",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Aave V3 is a decentralized non-custodial liquidity protocol where users can participate as depositors or borrowers. Depositors provide liquidity to the market to earn a passive income, while borrowers are able to borrow in an overcollateralized or undercollateralized (flash loan) fashion. It features advanced risk management tools like E-Mode (Efficiency Mode), Isolation Mode, and Siloed Borrowing."
+    },
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "label": "Chainlink Oracle Dependency",
+          "description": "Aave V3 relies on Chainlink Aggregators for asset pricing. The AaveOracle contract (0x54586bE12325587397D7930a678130118335a6ca on Ethereum) calls latestAnswer() on external feeds. A failure or stale report from Chainlink could lead to incorrect liquidations or insolvency."
+        },
+        {
+          "code": "A3",
+          "label": "Cross-Chain Portals",
+          "description": "The 'Portal' feature allows whitelisted bridge protocols to mint unbacked aTokens on a destination chain, which are later backed by assets on the source chain. This introduces a dependency on the security of the whitelisted bridges (e.g., CCIP)."
+        },
+        {
+          "code": "A6",
+          "label": "Inactive Fallback Oracles",
+          "description": "While the AaveOracle contract supports a fallbackOracle, it is currently set to address(0) for most major assets on Ethereum and L2s, meaning there is no automated secondary price source if Chainlink fails."
+        },
+        {
+          "code": "A7",
+          "label": "L2 Sequencer Dependency",
+          "description": "On L2s like Arbitrum and Optimism, Aave uses a PriceOracleSentinel (0x12444d66ff2ad57ca5712a9a510fb33444735e8a on Arbitrum) to check sequencer uptime. This prevents liquidations during sequencer downtime but introduces a dependency on the sequencer's status feed."
+        },
+        {
+          "code": "A9",
+          "label": "Governance-Mutable Oracles",
+          "description": "The Aave DAO can update oracle sources and risk parameters. While protected by a multi-day voting period and execution delay (Governance V3), this allows for the introduction of new external dependencies without a direct user 'opt-out' other than withdrawing funds during the timelock."
+        }
+      ],
+      "steelman": {
+        "red": "A single-point failure in a Chainlink price feed for a high-liquidity asset like ETH or USDC, combined with the lack of an active automated fallback oracle in most deployments, allows for immediate protocol drainage through malicious borrowing or unfair liquidations.",
+        "orange": "Aave V3 maintains a high degree of autonomy through its PriceOracleSentinel and governance protections, but its fundamental reliance on external price feeds and bridge-mediated Portals creates a bounded risk where a dependency failure could freeze the protocol or cause recoverable losses.",
+        "green": "Aave V3 is the gold standard of autonomy in lending, utilizing decentralized Chainlink oracles with an on-chain Sentinel to handle L2 liveness and a robust DAO governance structure that ensures all external dependency changes are subject to public scrutiny and timelocks."
+      },
+      "verdict": "Aave V3 is graded Orange because it has a critical dependency on Chainlink oracles (A1) without a live, automated fallback for most assets (A6). While the PriceOracleSentinel (A7) effectively mitigates L2 sequencer risk and the Governance V3 timelock (A9) provides an exit window for dependency changes, the 'Portal' feature (A3) introduces additional external trust assumptions. Impacted TVS is ~100% in the event of a primary oracle failure for a major reserve asset."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/e997096696497298640030f3737766d027669f81/src/contracts/protocol/oracle/AaveOracle.sol",
+        "commit": "e997096696497298640030f3737766d027669f81",
+        "fetched_at": "2026-04-27T08:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x54586bE12325587397D7930a678130118335a6ca#readContract",
+        "address": "0x54586bE12325587397D7930a678130118335a6ca",
+        "fetched_at": "2026-04-27T08:35:00Z"
+      },
+      {
+        "url": "https://arbiscan.io/address/0x12444d66ff2ad57ca5712a9a510fb33444735e8a#readContract",
+        "address": "0x12444d66ff2ad57ca5712a9a510fb33444735e8a",
+        "fetched_at": "2026-04-27T08:40:00Z"
+      },
+      {
+        "url": "https://docs.aave.com/developers/core-contracts/priceoraclesentinel",
+        "fetched_at": "2026-04-27T08:45:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/e997096696497298640030f3737766d027669f81/src/contracts/protocol/libraries/logic/BridgeLogic.sol",
+        "commit": "e997096696497298640030f3737766d027669f81",
+        "fetched_at": "2026-04-27T08:50:00Z"
+      }
+    ],
+    "unknowns": [
+      "A6: Specific activation status of fallback oracles for all 20+ chains; verified as address(0) on Ethereum/Arbitrum for major assets but not exhaustively for all long-tail assets.",
+      "A3: Full list of currently whitelisted bridge operators for Portals across all chains."
+    ],
+    "slug": "aave",
+    "schema_version": "v2",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "headline": "Aave V3 is graded Orange because it has a critical dependency on Chainlink oracles (A1) without a live, automated fallback for most assets (A6)"
+  }
+]
