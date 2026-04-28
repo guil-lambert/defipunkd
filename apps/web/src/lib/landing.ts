@@ -150,11 +150,13 @@ function compareNodes(a: LandingNode, b: LandingNode, field: SortField, dir: Sor
     }
     case "risks": {
       const diff = risksScore(a) - risksScore(b);
-      return dir === "asc" ? diff : -diff || a.slug.localeCompare(b.slug);
+      const primary = dir === "asc" ? diff : -diff;
+      return primary || (b.tvl ?? -1) - (a.tvl ?? -1);
     }
     case "stage": {
       const diff = TIER_RANK[a.tier ?? "none"] - TIER_RANK[b.tier ?? "none"];
-      return dir === "asc" ? diff : -diff || a.slug.localeCompare(b.slug);
+      const primary = dir === "asc" ? diff : -diff;
+      return primary || (b.tvl ?? -1) - (a.tvl ?? -1);
     }
   }
 }
