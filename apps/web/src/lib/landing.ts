@@ -2,6 +2,7 @@ import { bucketCategory, CHAIN_TABS, isCexCategory, type CategoryTab, type Chain
 import { rankMatch } from "./search";
 import { dominantChildGrade, type GradeColor } from "./verifiability";
 import { maxTier, TIER_RANK, type Tier } from "./tier";
+import { pizzaGradesFor, PIZZA_SLICES } from "./pizza";
 export type { GradeColor } from "./verifiability";
 
 export type LandingRow = {
@@ -106,9 +107,9 @@ export type SortField = "tvl" | "name" | "chain" | "type" | "risks" | "stage";
 const GRADE_SCORE: Record<GradeColor, number> = { green: 3, orange: 2, red: 1, gray: 0 };
 
 function risksScore(node: LandingNode): number {
-  const grades = node.assessment_grades;
-  if (!grades) return 0;
-  return Object.values(grades).reduce((sum, g) => sum + (g ? GRADE_SCORE[g] : 0), 0);
+  const base = pizzaGradesFor(node.category, node.verifiability_grade, node.autonomy_grade);
+  const all = { ...base, ...(node.assessment_grades ?? {}) };
+  return PIZZA_SLICES.reduce((sum, { id }) => sum + GRADE_SCORE[all[id] ?? "gray"], 0);
 }
 export type SortDir = "asc" | "desc";
 
