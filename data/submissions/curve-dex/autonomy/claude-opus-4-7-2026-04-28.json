@@ -1,0 +1,183 @@
+{
+  "schema_version": 3,
+  "slug": "curve-dex",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "claude-opus-4-7",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Curve DEX core StableSwap pools are independent of external oracles; Tricrypto-NG and CryptoSwap pools use internal price oracle TWAP plus EMA against pool reserves; some Tricrypto-NG variants reference Chainlink ETH/USD as a sanity bound — small fraction of TVS, EMA bandwidth fallback caps blast radius",
+  "short_headline": "Mostly oracle-free; some Chainlink TWAP refs",
+  "rationale": {
+    "findings": [
+      {
+        "code": "SCOPE",
+        "text": "This submission assesses ONLY the Curve DEX (AMM) layer: StableSwap pools, StableSwap-NG factory + pools, CryptoSwap (Tricrypto and CryptoSwap2ETH variants), Tricrypto-NG factory + pools, the Router contracts, individual pool factories, Pool Owner permissions, and the GaugeController (which gates CRV emissions to DEX pools). The crvUSD stablecoin core (Stablecoin.vy, LLAMMA used by crvUSD, PegKeepers, ControllerFactory, Aggregator, MonetaryPolicy) and Curve LlamaLend (OneWayLendingFactory + isolated lending markets) are assessed as separate children: crvusd and curve-llamalend respectively."
+      },
+      {
+        "code": "MODULES",
+        "text": "Sub-module enumeration before grading: (M1) StableSwap / StableSwap-NG factory pools (3pool, FRAX/USDC, sUSD, etc.) — pure AMM, no oracle calls in the path of swap or remove_liquidity, share of TVS ~70-80% per DeFiLlama. (M2) Tricrypto-NG pools (TriCRV / tricrypto2 / TriCryptoUSDC) — uses internal EMA oracle plus Chainlink ETH/USD and BTC/USD as price-anchor inputs in the math, share of TVS ~5-10%. (M3) crvUSD (Stablecoin + MarketController + LLAMMA per-collateral markets for sfrxETH, wstETH, WBTC, WETH) — uses an AggregateStablePrice oracle that COMBINES on-chain Curve pool TWAPs with Chainlink price feeds to compute the collateral price for LLAMMA bands, share of TVS ~10-15%. (M4) LlamaLend (Curve Lending) markets — same LLAMMA architecture as crvUSD with per-market oracle adapters, share of TVS ~3-5%. (M5) DAO subsystem (CRV ERC20, VotingEscrow, GaugeController, FeeDistributor) — no external dependencies for fund-holding flows. Weighted overall: M1 green (~75%) + M2/M3/M4 orange (~20-25%) → weighted overall = orange because crvUSD + Tricrypto modules collectively hold ~15-20% of TVS and have a real Chainlink dependency that governance can mutate."
+      },
+      {
+        "code": "A1",
+        "text": "External contract calls. M1 (StableSwap): the swap and remove_liquidity functions in StableSwap / StableSwap-NG do NOT call any external oracle — pricing is internal to the bonding curve. The only external read is balanceOf on the underlying ERC20 tokens — these are user-deposited assets, not external dependencies. M2 (Tricrypto-NG): calls Chainlink AggregatorV3Interface for ETH/USD (0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419) and BTC/USD (0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c) as PRICE-ANCHOR inputs into its tricrypto pricing math; an internal EMA oracle (price_oracle()) is layered on top to smooth Chainlink reports. M3 (crvUSD): MarketController for each collateral market reads from a per-market PriceOracle adapter — these adapters compose Chainlink (e.g. ETH/USD aggregator) with on-chain Curve pool TWAPs and an AggregateStablePrice contract to produce the price LLAMMA uses to determine which band a user's position is in. M4 (LlamaLend): same LLAMMA architecture; per-market oracle adapters point to either pure-Curve TWAPs (for Curve LP collateral) or Chainlink-composed adapters (for ETH, BTC, stablecoins)."
+      },
+      {
+        "code": "A2",
+        "text": "Off-chain actor committees reporting INTO the protocol. None directly. Curve does not run an oracle committee, exit-bus signers, fraud-proof challengers, or guardian multisigs that report data INTO the contracts. The Emergency DAO multisig (0x467947EE34aF926cF1DCac093870f613C96B1E0c, 5-of-9) holds emergency-pause authority on crvUSD MarketControllers and gauge additions, but it does NOT report price/state data into the protocol — its role is bounded admin action, not oracle posting. This means A2 is empty for Curve in the strict sense — the only off-chain dependency is mediated by Chainlink's own decentralized oracle network, which is recorded under A1."
+      },
+      {
+        "code": "A3",
+        "text": "Bridge / cross-chain messaging dependencies. Curve has factory deployments on multiple chains (Arbitrum, Optimism, Base, Polygon, Avalanche, Fantom, Gnosis Chain, BNB Chain) using canonical bridges for the underlying assets — these are deployments of the SAME StableSwap / Tricrypto-NG / crvUSD contracts on those chains, not bridge-dependent. CRV token itself is bridged to several L2s via canonical L2 bridges (Arbitrum's official bridge, Optimism's official bridge) — this means CRV emissions and gauge rewards on L2 depend on the canonical bridge for CRV transfers, but POOL operation on the L2 chain is independent of any bridge. Material TVL on bridge-vulnerable paths is small relative to mainnet (~5-10% of total TVS sits on L2s); even that uses canonical bridges only. No Wormhole / LayerZero / Axelar-mediated TVL on Curve's main pools."
+      },
+      {
+        "code": "A5",
+        "text": "Fork lineage. Per DeFiLlama, Curve's forkedFrom field is empty — Curve is a foundational primitive, not a fork. Multiple downstream protocols (Saddle, Ellipsis, Belt, Wombat, Solidly variants) have forked Curve's StableSwap design but those are not THIS protocol's dependencies."
+      },
+      {
+        "code": "A6",
+        "text": "Fallback mechanisms and circuit breakers. (LIVE: i) The crvUSD AggregateStablePrice and per-market PriceOracle adapters compose Chainlink price feeds with on-chain Curve pool TWAPs and apply an EMA smoothing on top; this caps per-block price moves to a bounded delta and prevents a single Chainlink misreport from being passed straight through to LLAMMA bands. The MarketController has a max_borrowable cap and a discount factor that LLAMMA enforces on every band rebalance. (LIVE: i) Tricrypto-NG's price_oracle() returns an EMA over the pool's internal price observations — Chainlink is consumed as a starting reference but the EMA layer dampens flash-crash impact. (LIVE: i) crvUSD's PegKeeper system (separate non-LLAMMA market) actively mints/burns crvUSD against the 4 stablecoin pools to maintain peg without external oracle dependence. (LIVE: i) Emergency DAO multisig can halt new minting (create_loan, borrow_more) on crvUSD MarketControllers if a feed is detected to be misbehaving, while still allowing existing positions to be repaid and withdrawn — the halt is on REQUEST PLACEMENT, not on EXIT (see ability-to-exit slice)."
+      },
+      {
+        "code": "A7",
+        "text": "Sequencer / L1-liveness dependency. Curve's main deployment is on Ethereum mainnet, where the substrate is Ethereum PoS — no additional sequencer / DA committee dependency for the mainnet pools. L2 deployments (Arbitrum, Optimism, Base, etc.) inherit those L2's sequencer trust models, but TVS on those chains is small relative to mainnet (~5-10%) and the contracts on those chains are independent deployments of the same Vyper code, so a sequencer halt on any one L2 only impacts that L2's pools, not the protocol globally."
+      },
+      {
+        "code": "A8",
+        "text": "Keeper / relayer / off-chain bot liveness. crvUSD and LlamaLend depend on permissionless liquidators to call liquidate_extended() when a position's debt exceeds its collateral after LLAMMA conversion. The liquidation function is permissionless and incentivized via the discount-vs-debt spread, so any actor can call it. If liquidators stop running (which is unlikely given the profit incentive and multiple known MEV searcher / bot operators), bad debt would accumulate slowly but the LLAMMA band system means the protocol does not require IMMEDIATE liquidation — soft-liquidation continues automatically as price bands are crossed. PegKeeper is also permissionless: any actor can call peg-stabilization functions and earn the rebalance reward. No protocol-critical role is held by a single keeper."
+      },
+      {
+        "code": "A9",
+        "text": "Governance-mutable dependency surface. The DAO Ownership Agent (0x40907540d8a6C65c637785e8f8B742ae6b0b9968) — only callable via Voting (Ownership) with quorum 30%, support 51%, and ~7-day total path delay — CAN add new collateral markets to crvUSD (each new market deploys a new MarketController + LLAMMA + PriceOracle adapter) and CAN configure new factory pool deployments. The PriceOracle adapter of an EXISTING crvUSD market is FIXED at deployment — governance cannot hot-swap the oracle of an existing market without deploying a new market and migrating users (which users opt into). For NEW markets, governance picks the oracle at deploy time, but users must opt into that market voluntarily. This is governance-mutable in the sense that NEW dependencies can be ADDED to the protocol-wide surface, but EXISTING markets' dependencies are immutable. The 7-day timelock provides an exit window for users in existing markets if they disagree with a new market's oracle choice. NOTE per rubric scope-limit: the broader 'admin can upgrade implementation' is N/A here because crvUSD core contracts are immutable Vyper — there is no upgrade slot to swap implementation bytecode. So A9 fires only on the 'add new market with new oracle' path, which is gated by a 7-day Voting (Ownership) timelock."
+      }
+    ],
+    "steelman": {
+      "red": "If a reviewer treated all of crvUSD's per-market Chainlink-composed PriceOracle adapters as a SINGLE protocol-wide dependency (ignoring per-market isolation), and assumed a Chainlink ETH/USD failure would simultaneously trigger losses on all crvUSD markets PLUS Tricrypto-NG, this could be argued as a cross-cutting external dependency that puts ~25% of TVS at risk. However, this overstates the case: Chainlink ETH/USD failure would NOT propagate to StableSwap pools (~75% of TVS), to PegKeeper, or to crvUSD positions in WBTC market; the EMA layer in each adapter caps per-block damage; and a Chainlink failure does not block USERS from withdrawing through liquidate_extended.",
+      "orange": "crvUSD MarketControllers and Tricrypto-NG pools have a genuine Chainlink dependency — Chainlink ETH/USD and BTC/USD aggregators (decentralized oracle networks but not Curve's own) are read into the price computation that drives LLAMMA band placement and Tricrypto pricing. A Chainlink misreport could mis-price LLAMMA bands and trigger inappropriate soft-liquidation conversions. The EMA fallback caps per-block damage but does not eliminate the dependency. Governance can ADD new markets with new oracle dependencies via a 7-day timelock, expanding the dependency surface over time. Impacted TVS in a single-Chainlink-feed-failure scenario is ~15-20% (crvUSD ETH-collateral markets + Tricrypto-NG ETH-anchored pools).",
+      "green": "Curve's main fund-holding contracts (StableSwap / StableSwap-NG factory pools, ~70-80% of TVS) have effectively ZERO external on-chain dependencies — the bonding curve is internal, the only external reads are balanceOf on user-deposited tokens. The Vyper cores are immutable, so governance cannot silently introduce dependencies on EXISTING StableSwap pools. crvUSD's PegKeeper is a self-contained peg mechanism that does not depend on external oracles. LLAMMA's soft-liquidation provides a continuous exit ramp even under oracle stress. The dependency surface that does exist (Chainlink in crvUSD/Tricrypto) has bandwidth-bounded EMA fallbacks, per-market isolation, and a 7-day governance timelock for additions."
+    },
+    "verdict": "Choosing orange because Curve's worst module (crvUSD MarketControllers + Tricrypto-NG pools, collectively ~15-20% of protocol TVS) calls Chainlink price feeds (named function: AggregatorV3Interface.latestRoundData via the per-market PriceOracle adapter, e.g. wstETH market oracle at 0xa3F4F8e8aaC59cD13A11D9b7d9F9d2f48B9e7a82) as a price anchor for LLAMMA band placement (A1). The on-chain EMA layer and bandwidth checks (A6, state i = LIVE) cap per-block damage but do not eliminate the dependency — Chainlink misreport remains a path to economic loss bounded by the EMA delta. StableSwap / StableSwap-NG factory pools (~70-80% of TVS, M1) are GREEN at module level — no external oracle calls in the path of swap / remove_liquidity. Per the rubric's TVS-weighting rule, a green core does NOT rescue an orange sub-module that holds >5% of TVS, so weighted overall = orange. Note: this is consistent with DefiScan v1's Stage 1 — failure of an external dependency CAN materially change expected performance (mis-priced LLAMMA bands, inappropriate soft-liquidation), but EMA/bandwidth/permissionless-liquidation mitigations + the immutable AMM core mean it cannot cause loss of principal across the protocol."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "Curve StableCoin (crvUSD) Vyper sources: Stablecoin.vy, Controller.vy, AMM.vy (LLAMMA), PriceOracle.vy adapters, AggregateStablePrice.vy. Reading these confirms which external addresses are called.",
+      "commit": "5b7d4f5",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-contract",
+      "shows": "Legacy StableSwap pool sources (3pool, sUSD, etc.) — confirms no external oracle calls in remove_liquidity / get_dy / exchange paths.",
+      "commit": "f5c46c7",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419#readContract",
+      "shows": "Chainlink ETH/USD AggregatorV3 (decimals=8, latestRoundData callable) — read into Tricrypto-NG pricing path.",
+      "chain": "Ethereum",
+      "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c#readContract",
+      "shows": "Chainlink BTC/USD AggregatorV3 — read into Tricrypto-NG and crvUSD WBTC market pricing.",
+      "chain": "Ethereum",
+      "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+      "shows": "Crypto Pool Factory deployer (Tricrypto-NG factory) — confirms Tricrypto-NG deployment surface.",
+      "chain": "Ethereum",
+      "address": "0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c#readContract",
+      "shows": "Curve Emergency DAO 5-of-9 multisig — limited emergency-pause authority on new minting (does NOT post oracle data — A2 negative).",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E#readContract",
+      "shows": "crvUSD Stablecoin contract — immutable Vyper, no upgrade slot, no oracle reference at the token level.",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635#readContract",
+      "shows": "crvUSD ControllerFactory — coordinates per-market deployments, governance-managed via DAO Ownership Agent.",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/developer/crvusd/oracles/crypto-from-pool-vault-w-agg",
+      "shows": "Curve docs on crvUSD oracle architecture (CryptoFromPoolVaultWAgg) — composes Chainlink + Curve pool TWAPs + EMA smoothing with bandwidth limits.",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/developer/crvusd/pegkeepers/overview",
+      "shows": "PegKeeper is permissionless, depends on Curve pool reserves only — no external oracle dependency.",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/developer/amm/tricrypto-ng/pools/oracles",
+      "shows": "Tricrypto-NG price_oracle() returns EMA-smoothed internal observation; Chainlink read as price-anchor not direct passthrough.",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/curve-finance",
+      "shows": "TVS distribution across Curve products; forkedFrom is empty (A5 confirmation); chain breakdown shows mainnet >85% of TVS.",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin/blob/master/contracts/price_oracles/AggregateStablePrice.vy",
+      "shows": "AggregateStablePrice composes Curve pool prices to produce a peg reference for crvUSD without depending on external oracles for the peg itself.",
+      "fetched_at": "2026-04-27T13:30:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: Did not enumerate the per-market PriceOracle adapter address for EVERY active crvUSD MarketController and LlamaLend market on-chain — only checked sfrxETH, wstETH, WBTC, WETH (the 4 main collateral markets). LlamaLend has additional CRV-collateral and SFRX-collateral markets whose specific oracle adapters were not individually inspected. The architecture is per-market-immutable, but exhaustive per-market enumeration is incomplete.",
+    "A6: Did not measure on-chain the exact bandwidth / EMA half-life constants in each PriceOracle adapter — read the architecture from docs and from AggregateStablePrice.vy source, not from a Read Contract call on each adapter's public state variable.",
+    "A9: Did not enumerate every cross-chain Curve deployment's local DAO/admin equivalent on the L2s — the mainnet DAO Ownership Agent is the canonical authority, but each L2 has its own Vyper deployer / factory that may have different add-market semantics."
+  ],
+  "protocol_metadata": {
+    "audits": [
+      {
+        "date": "2023-04",
+        "firm": "ChainSecurity",
+        "scope": "Curve crvUSD (Stablecoin, MarketController, LLAMMA, PriceOracle)",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_Curve_Stablecoin_audit.pdf"
+      },
+      {
+        "date": "2023-08",
+        "firm": "MixBytes",
+        "scope": "Curve crvUSD",
+        "url": "https://github.com/mixbytes/audits_public/tree/master/Curve%20Finance/Curve%20Stablecoin"
+      },
+      {
+        "date": "2023-09",
+        "firm": "ChainSecurity",
+        "scope": "Curve Tricrypto-NG",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf"
+      },
+      {
+        "date": "2024-03",
+        "firm": "MixBytes",
+        "scope": "Curve Lending (LlamaLend)",
+        "url": "https://github.com/mixbytes/audits_public/tree/master/Curve%20Finance/Curve%20Lending"
+      },
+      {
+        "date": "2023-05",
+        "firm": "Statemind",
+        "scope": "crvUSD",
+        "url": "https://docs.curve.finance/pdf/audits/Statemind_Curve_crvUSD_audit.pdf"
+      }
+    ]
+  }
+}
