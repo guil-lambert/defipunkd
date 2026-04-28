@@ -1,0 +1,168 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "chatgpt-5",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Per-market oracle/keeper dependencies; mispricing could force liquidations (worst case ~100% of the affected market’s TVS)",
+  "short_headline": "Per-market oracle/keeper risk",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "crvUSD borrowing markets (Controllers/LLAMMAs) rely on external price oracles to value collateral and drive liquidation band movement; the crvUSD audit describes oracle-driven pricing in the LLAMMA/Controller design, making these oracles external dependencies whose pause or misreporting would mis-price positions."
+      },
+      {
+        "code": "A2",
+        "text": "Where third‑party oracle feeds are used, updates originate from off-chain reporters; the audit discusses oracle inputs affecting liquidation and stability mechanisms, implying that misreporting can trigger wrongful liquidations or prevent them."
+      },
+      {
+        "code": "A3",
+        "text": "Core crvUSD contracts (stablecoin and ControllerFactory) are deployed on Ethereum L1 and do not require cross‑chain messaging for mint/repay flows."
+      },
+      {
+        "code": "A4",
+        "text": "Controllers are per‑collateral; some supported collaterals can be wrapper assets (e.g., LSTs/LBTC wrappers), so failures in underlying protocols would impair positions in that specific market but do not automatically propagate to others."
+      },
+      {
+        "code": "A6",
+        "text": "LLAMMA uses an on-chain pricing mechanism with smoothing/TWAP-style protections described in the audits, which acts as a live mitigation against short-term oracle manipulation; this reduces but does not eliminate oracle failure risk."
+      },
+      {
+        "code": "A7",
+        "text": "All referenced core contracts are on Ethereum L1, so there is no additional L2 sequencer or DA committee liveness dependency beyond the base chain."
+      },
+      {
+        "code": "A8",
+        "text": "Liquidations and band adjustments rely on permissionless external callers/keepers; if off-chain bots stop, positions can become stale and bad debt risk increases, degrading protocol performance rather than halting on-chain logic."
+      },
+      {
+        "code": "A9",
+        "text": "Governance can list new markets (and thereby introduce new external oracle dependencies per market) via the factory; the audits indicate admin/governance configurability for markets and parameters, but the specific ability to hot-swap oracle addresses and the presence/length of any timelock or exit window are not determinable from the allowed sources used here."
+      },
+      {
+        "code": "Modules",
+        "text": "Sub-modules: (1) ControllerFactory → Controllers + LLAMMAs (per-collateral markets) hold ~100% of TVS relevant to autonomy; these depend on external oracles and keeper liveness (grade: orange). No other crvUSD module with material TVS surfaced from the allowed sources."
+      }
+    ],
+    "steelman": {
+      "red": "A single-market oracle failure or misreport can cause wrongful liquidations and principal loss for all borrowers in that market with no guaranteed second-source fallback, potentially impacting a large share of the protocol’s TVS at once.",
+      "orange": "Per-market oracle and keeper dependencies can degrade performance or cause losses within an affected market, but on-chain TWAP-style mitigations and siloed markets bound the blast radius, making full-protocol loss unlikely.",
+      "green": "If all production markets exclusively use robust on-chain TWAP oracles with strict bounds and governance cannot rapidly swap dependencies, external failures would only slow adjustments without risking user principal."
+    },
+    "verdict": "Choosing orange because the audits show oracle-driven pricing and reliance on permissionless keepers for liquidations in per-collateral markets, which are real external dependencies; on-chain smoothing/TWAP mitigations and market siloing bound the blast radius to the affected market rather than the whole protocol, but mispricing could still force liquidations in that market (evidence: crvUSD audit and Ethereum L1 deployments on Etherscan)."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+      "shows": "Architecture of crvUSD stablecoin, including LLAMMA/Controller design, oracle-driven pricing inputs, liquidation mechanisms, and mitigations such as smoothed on-chain pricing.",
+      "fetched_at": "2026-04-28T10:45:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+      "shows": "Lending/LLAMMA details, keeper/liquidation flows, and oracle usage within the lending module affecting liquidation and position health.",
+      "fetched_at": "2026-04-28T10:45:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "shows": "crvUSD stablecoin contract deployed on Ethereum L1 (no cross-chain requirement for core mint/repay).",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "fetched_at": "2026-04-28T10:45:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "shows": "crvUSD ControllerFactory on Ethereum L1, indicating per-collateral market creation/configuration by governance/admins.",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "fetched_at": "2026-04-28T10:45:01Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "shows": "Curve DAO Voting (Ownership) governance address referenced for admin/governance powers affecting markets/dependencies.",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "fetched_at": "2026-04-28T10:45:01Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent contract that executes ownership actions on behalf of governance.",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-04-28T10:45:02Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO multisig (5-of-9) address which may be relevant for emergency actions but is not a core oracle/keeper dependency.",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-04-28T10:45:02Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "shows": "CRV governance token contract used by the Curve DAO for voting.",
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "fetched_at": "2026-04-28T10:45:03Z"
+    }
+  ],
+  "unknowns": [
+    "A1: Could not enumerate the exact oracle contract addresses used by each live Controller/market from on-chain sources within this run.",
+    "A2: The specific off-chain reporter/committee model and quorum (if any third-party oracle feeds are used in production markets) could not be determined from the allowed sources.",
+    "A4: Full current list of collateral types (and whether they include restaked/LRT wrappers) with their nested dependency chains was not reconstructed within this run.",
+    "A6: Exact live configuration of oracle fallbacks/sanity bounds per market (e.g., TWAP window lengths, any second-source oracle) could not be verified from on-chain within this run.",
+    "A8: Whether the DAO operates canonical keepers or if all keeper activity is purely third-party permissionless is unclear from the allowed sources.",
+    "A9: Whether governance can hot-swap an existing market’s oracle address without a timelock or user exit window could not be confirmed from the allowed sources."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": null,
+    "audits": [
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+        "date": "2023-05"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+        "date": "2024-04"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "DAO Voting (Ownership)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig (5-of-9 Gnosis Safe)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "crvUSD is an overcollateralized stablecoin issued via per-collateral markets on Ethereum. Users deposit collateral into LLAMMA-based markets and borrow crvUSD against it, with liquidation handled via a soft-band mechanism that trades between collateral and crvUSD as prices move. The system relies on on-chain price oracles to value collateral and on permissionless liquidators/keepers to adjust positions, with markets siloed so issues in one collateral market do not automatically propagate to others."
+  }
+}
