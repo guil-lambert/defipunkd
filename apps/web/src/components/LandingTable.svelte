@@ -74,7 +74,7 @@
       sortDir = sortDir === "asc" ? "desc" : "asc";
     } else {
       sortField = field;
-      sortDir = field === "tvl" ? "desc" : "asc";
+      sortDir = field === "tvl" || field === "risks" || field === "stage" ? "desc" : "asc";
     }
   }
 
@@ -186,8 +186,18 @@
               Name<span class="arrow">{arrow("name")}</span>
             </button>
           </th>
-          <th>Risks</th>
-          <th>Stage</th>
+          <th class="sortable">
+            <button type="button" onclick={() => showSort && onSortClick("risks")} disabled={!showSort} aria-sort={ariaSort("risks")}
+              class:is-active={showSort && sortField === "risks"}>
+              Risks<span class="arrow">{arrow("risks")}</span>
+            </button>
+          </th>
+          <th class="sortable">
+            <button type="button" onclick={() => showSort && onSortClick("stage")} disabled={!showSort} aria-sort={ariaSort("stage")}
+              class:is-active={showSort && sortField === "stage"}>
+              Stage<span class="arrow">{arrow("stage")}</span>
+            </button>
+          </th>
           <th class="sortable">
             <button type="button" onclick={() => showSort && onSortClick("chain")} disabled={!showSort} aria-sort={ariaSort("chain")}
               class:is-active={showSort && sortField === "chain"}>
