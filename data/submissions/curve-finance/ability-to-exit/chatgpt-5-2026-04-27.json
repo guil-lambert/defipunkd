@@ -1,0 +1,147 @@
+{
+  "schema_version": 3,
+  "slug": "curve-finance",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-26T00:49:34.724Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-27",
+  "model": "chatgpt-5",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "User-facing exit functions on Curve pools, crvUSD MarketControllers, and LlamaLend markets are permissionless on immutable Vyper bytecode with no whenNotPaused guard on remove_liquidity / withdraw / repay; the Emergency DAO's kill_me() power is a one-way switch into withdraw-only mode rather than a withdrawal pause; LLAMMA soft-liquidation provides a continuous passive exit ramp on crvUSD and Lending; Etherscan write tab and curve-js SDK provide on-chain access independent of the official frontend.",
+  "short_headline": "Permissionless exits; kill_me enables withdraw, not pause",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Exit-function inventory across the protocol: (a) StableSwap and StableSwap-NG pools expose remove_liquidity, remove_liquidity_one_coin, remove_liquidity_imbalance. (b) Tricrypto and Tricrypto-NG pools expose remove_liquidity and remove_liquidity_one_coin. (c) crvUSD per-market MarketController contracts expose withdraw (collateral), repay (debt), liquidate_extended (self-liquidate), close_loan. (d) LLAMMA AMM exposes withdraw via Controller call. (e) LlamaLend markets expose withdraw, redeem, repay. (f) VotingEscrow.withdraw is callable after the user-chosen lock_end (a commitment, not an admin lockup). (g) FeeDistributor.claim is permissionless for veCRV holders."
+      },
+      {
+        "code": "E2",
+        "text": "Reading the Vyper sources for StableSwap, StableSwap-NG, Tricrypto-NG pool variants and the crvUSD Controller / Stablecoin / LLAMMA shows no whenNotPaused-style global pause on the exit functions. The kill_me() switch on pool admin functions sets is_killed = True, which disables deposits and trades but leaves remove_liquidity callable through the special killed-pool path that returns proportional underlying assets. The crvUSD Controller pause analogue halts new minting (create_loan, borrow_more) without gating repay or withdraw on existing positions."
+      },
+      {
+        "code": "E3",
+        "text": "kill_me() callers: the Curve DAO Ownership Agent at 0x40907540d8a6C65c637785e8f8B742ae6b0b9968 (only reachable via Voting Ownership at 0xE478de485ad2fe566d49342Cbd03E49ed7DB3356, ~7-day cycle) and the Emergency DAO multisig at 0x467947EE34aF926cF1DCac093870f613C96B1E0c (5-of-9 Gnosis Safe, immediate execution). kill_me is a one-way switch with no un-kill function; once set, the pool degrades to permanent withdraw-only mode. There is no PAUSE_INFINITELY-style role on Curve's main fund-holding contracts, and no admin function that pauses withdrawals."
+      },
+      {
+        "code": "E4",
+        "text": "Emergency vs governance separation: the Emergency DAO has bounded immediate-execution powers — kill_me on pools, halt new crvUSD minting, fee zero, gauge halts — none of which can pause user withdrawals or repayments. Voting (Ownership) is the only governance path that could deploy NEW immutable contracts with different exit semantics, but it cannot retroactively change the exit semantics of EXISTING pool / Stablecoin / LLAMMA contracts because those are immutable Vyper. The 'admin pauses withdrawals indefinitely' scenario is structurally absent from Curve's deployed surface."
+      },
+      {
+        "code": "E5",
+        "text": "Queue / cap analysis: not applicable. Curve pools are AMMs without exit queues, daily withdrawal caps, or maximum wait times. crvUSD repayment and collateral withdrawal are atomic single-tx operations. LLAMMA soft-liquidation is a continuous price-band-by-price-band conversion rather than a queue — users can claim the accumulated mix of collateral and crvUSD at any time. LlamaLend follows the same pattern."
+      },
+      {
+        "code": "E6",
+        "text": "Adversarial-admin escape hatch: Curve's design provides an effective hatch through immutability + the kill_me one-way switch. The worst-case admin action on existing pools is kill_me, which by design FORCES the pool into withdraw-only mode — that is itself an exit hatch. crvUSD users can self-liquidate via liquidate_extended at any time. LLAMMA's continuous soft-liquidation means even an oracle-pause or price-crash scenario does not require admin action for users to exit — the band system converts collateral automatically. No scenario requires admin signature for a user to retrieve funds from an existing position."
+      },
+      {
+        "code": "E7",
+        "text": "Frontend independence: all exit functions on StableSwap / StableSwap-NG / Tricrypto / Tricrypto-NG / crvUSD MarketControllers / LlamaLend markets are callable via Etherscan's Write Contract tab without the curve.finance frontend. The Vyper-generated ABI surfaces remove_liquidity, withdraw, repay as standard external functions. Wallet UIs (MetaMask, Safe, Frame, Rabby) and SDKs (curve-js) can construct these calls independently. There is no off-chain authorization step required for an exit transaction."
+      }
+    ],
+    "steelman": {
+      "red": "A reviewer treating kill_me() as 'admin can pause user activity' could read the lack of an explicit withdraw-only fallback for some legacy 2-asset Crypto pool variants strictly, framing kill_me as an admin-controlled state transition. But kill_me is by construction an exit-enabler — it disables deposits and trades while leaving withdrawals open — so this framing is not a withdrawal pause.",
+      "orange": "Some legacy 2-asset Crypto pools and pre-NG factory deployments did not get pulled into the canonical NG-line and may have slightly different kill_me semantics or older admin-pause hooks; a cautious reviewer pointing to a small number of edge-case pool deployments could land at orange citing 'pausable with broad scope' on the long tail. These legacy pools are however well-established with Curve's standard withdrawal semantics and have been audited.",
+      "green": "Every user-facing exit function on Curve's main fund-holding contracts is permissionless on immutable Vyper code with no whenNotPaused guard on withdrawals; the worst admin power (kill_me) only restricts deposits and forces the pool into withdraw-only mode; LLAMMA provides continuous soft-liquidation as a passive exit ramp; Etherscan write tab and curve-js SDK work directly without frontend dependency."
+    },
+    "verdict": "Choosing green because every user-facing exit function on Curve's main fund-holding contracts is permissionless on immutable Vyper code with no whenNotPaused guard on remove_liquidity / withdraw / repay (E1, E2). The Emergency DAO's kill_me power on pools forces withdraw-only mode but does not pause withdrawals — it is an exit ENABLER, not a pause (E3, E4). There is no exit queue and no maximum queue duration on Curve (E5: not applicable). Continuous LLAMMA soft-liquidation provides a passive exit ramp on crvUSD and LlamaLend even under adversarial-admin or oracle-paused conditions (E6). Etherscan write tab and curve-js SDK are independently usable (E7)."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "shows": "crvUSD Stablecoin (Stablecoin.vy) on Mainnet — verified Vyper source; Read/Write Contract tabs accessible; no global pause on transfer / burnFrom",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "shows": "crvUSD ControllerFactory — coordinates per-market MarketController deployments; admin path is the DAO Ownership Agent, no per-user gating on exit functions",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Curve Emergency DAO multisig (Gnosis Safe, 5-of-9) — historically used for kill_me invocations on incident-affected pools and fee zero on specific pools; never used to pause user withdrawals",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
+      "shows": "Curve 3pool (DAI/USDC/USDT) StableSwap — verified Vyper; Write Contract tab exposes remove_liquidity, remove_liquidity_one_coin, remove_liquidity_imbalance directly",
+      "chain": "Ethereum",
+      "address": "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "Source for Controller.vy (withdraw, repay, liquidate_extended, close_loan), AMM.vy (LLAMMA soft-liquidation), Stablecoin.vy (immutable). Controller pause halts CREATE_LOAN only; repay/withdraw NOT gated by pause flag",
+      "commit": "c65baa3ec9bf4b9afda12f8148503ad088a5efd8",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-contract",
+      "shows": "Source for original StableSwap pool implementations — remove_liquidity / remove_liquidity_one_coin / remove_liquidity_imbalance; kill_me() is a one-way switch with no un-kill function",
+      "commit": "574f44027d089de0eac765f5a74ea5ae96aba968",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-dao-contracts",
+      "shows": "Source for VotingEscrow.vy — withdraw is callable only after user-chosen lock_end (not an admin pause); FeeDistributor.vy claim is permissionless for veCRV holders",
+      "commit": "fa127b1cb7bf83e4f3d605f7244b7b4ed5ebe053",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/user/security/risks/crvusd",
+      "shows": "Curve official user-facing risk documentation for crvUSD — confirms LLAMMA soft-liquidation behavior and that exit / repayment on existing positions is not pausable; governance can halt new mints but not user repayments",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/user/security/risks/lending",
+      "shows": "Curve user-facing risk documentation for Curve Lending (LlamaLend) — confirms isolated-market design and permissionless withdraw / repay; pause is bounded to new-minting, not exit",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/user/security/risks/pools",
+      "shows": "Curve user-facing risk documentation for AMM pools — confirms remove_liquidity is always permitted on the pool contract, including the killed-pool path",
+      "fetched_at": "2026-04-27T15:10:00Z"
+    }
+  ],
+  "unknowns": [
+    "E2-legacy: Per-pool census of every legacy 2-asset Crypto pool / pre-NG factory deployment for exit-function-pause semantics was not run. Curve's policy is consistent across all pool implementations (no withdrawal pause), but exhaustive enumeration of legacy variants is incomplete.",
+    "E3-multisig: The exact set of Curve pool functions delegated to the Emergency DAO multisig (vs functions reserved for the DAO Ownership Agent only) was not exhaustively mapped on-chain in this run.",
+    "E5-llamalend: The full enumeration of LlamaLend per-market controllers (a growing list as new isolated markets are deployed) and confirmation that each market's withdraw / repay are gateless was not run as a per-market census; a sample on the most TVL-significant markets was checked."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-aragon-voting",
+      "https://github.com/curvefi/curve-js",
+      "https://github.com/curvefi/security-incident-reports"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {"firm": "MixBytes", "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf", "date": "2023-05"},
+      {"firm": "MixBytes", "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf", "date": "2024-04"},
+      {"firm": "ChainSecurity", "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf", "date": "2023-06"},
+      {"firm": "MixBytes", "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20StableSwapNG%20Security%20Audit%20Report.pdf", "date": "2024-01"}
+    ],
+    "governance_forum": "https://gov.curve.finance/",
+    "voting_token": {"chain": "Ethereum", "address": "0xD533a949740bb3306d119CC777fa900bA034cd52", "symbol": "CRV"},
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/curve/",
+    "security_contact": "https://github.com/curvefi/security-incident-reports",
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {"chain": "Ethereum", "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356", "role": "DAO Voting (Ownership) — the only governance path to bounded admin levers; cannot block existing exits", "actor_class": "governance"},
+      {"chain": "Ethereum", "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c", "role": "Emergency DAO multisig — kill_me on pools (forces withdraw-only), halt new crvUSD minting, fee zero; CANNOT pause withdrawals or repayments", "actor_class": "multisig"}
+    ],
+    "upgradeability": "mixed",
+    "about": "Curve Finance exit semantics: all withdraw / remove_liquidity / repay / claim functions on the main fund-holding contracts are permissionless and immutable. Continuous LLAMMA soft-liquidation provides a passive exit ramp on crvUSD and LlamaLend. Emergency DAO can force a pool into withdraw-only mode (kill_me) but cannot pause withdrawals."
+  }
+}
