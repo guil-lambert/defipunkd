@@ -1,5 +1,5 @@
 import type { Submission } from "./schema";
-import { isExplorerUrl } from "./cross-check";
+import { isExplorerUrl, isPublicChatShareUrl } from "./cross-check";
 
 export type ScoredSubmission = {
   submission: Submission;
@@ -51,28 +51,10 @@ export type QuorumContext = {
   now: string;
 };
 
-const PUBLIC_SHARE_HOSTS = [
-  "claude.ai",
-  "chatgpt.com",
-  "chat.openai.com",
-  "g.co",
-  "gemini.google.com",
-];
-
-function isPublicShareUrl(url: string | null | undefined): boolean {
-  if (!url) return false;
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    if (!PUBLIC_SHARE_HOSTS.some((h) => host === h || host.endsWith("." + h))) return false;
-    return /\/share\//.test(new URL(url).pathname) || host === "g.co";
-  } catch {
-    return false;
-  }
-}
 
 function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): ScoredSubmission {
   let weight = 1.0;
-  if (isPublicShareUrl(s.chat_url ?? null)) weight += 0.3;
+  if (!isPublicChatShareUrl(s.chat_url ?? null)) weight *= 0.05;
 
   const explorerCount = s.evidence.filter((e) => isExplorerUrl(e.url)).length;
   weight += Math.min(explorerCount * 0.1, 0.3);
