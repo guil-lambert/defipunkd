@@ -104,7 +104,7 @@ export function tvlSortDesc(a: LandingRow, b: LandingRow): number {
 
 export type SortField = "tvl" | "name" | "chain" | "type" | "risks" | "stage";
 
-const GRADE_SCORE: Record<GradeColor, number> = { green: 3, orange: 2, red: 1, gray: 0 };
+const GRADE_SCORE: Record<GradeColor, number> = { green: 4, orange: 1.5, red: 1, gray: 0 };
 
 function risksScore(node: LandingNode): number {
   const base = pizzaGradesFor(node.category, node.verifiability_grade, node.autonomy_grade);
