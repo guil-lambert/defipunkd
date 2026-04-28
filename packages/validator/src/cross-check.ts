@@ -1,6 +1,31 @@
 import type { Submission } from "./schema";
 import { SLICES } from "./schema";
 
+const PROVIDER_SHARE_HOSTS = [
+  "chatgpt.com",
+  "chat.openai.com",
+  "claude.ai",
+  "gemini.google.com",
+  "g.co",
+  "chat.mistral.ai",
+  "grok.com",
+  "copilot.microsoft.com",
+  "www.perplexity.ai",
+  "perplexity.ai",
+];
+
+export function isPublicChatShareUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const { hostname, pathname } = new URL(url);
+    const host = hostname.toLowerCase();
+    if (!PROVIDER_SHARE_HOSTS.some((h) => host === h || host.endsWith("." + h))) return false;
+    return /\/share\//.test(pathname) || host === "g.co";
+  } catch {
+    return false;
+  }
+}
+
 export type CrossCheckContext = {
   currentPromptVersion: number;
   currentSnapshotGeneratedAt: string;
@@ -107,6 +132,14 @@ export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIss
       severity: "warning",
       field: "snapshot_generated_at",
       message: `snapshot pin does not match current snapshot (${ctx.currentSnapshotGeneratedAt}); downweighted by quorum`,
+    });
+  }
+
+  if (!isPublicChatShareUrl(s.chat_url ?? null)) {
+    issues.push({
+      severity: "warning",
+      field: "chat_url",
+      message: `no verified chat_url provided; quorum weight reduced by 95% — add a public share link (e.g. claude.ai, chatgpt.com, gemini.google.com) to restore full weight`,
     });
   }
 

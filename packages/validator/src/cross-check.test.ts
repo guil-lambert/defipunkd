@@ -10,7 +10,7 @@ const sub = (over: Partial<Submission> = {}): Submission => ({
   prompt_version: 5,
   analysis_date: "2026-04-23",
   model: "claude-sonnet-4-6",
-  chat_url: null,
+  chat_url: "https://claude.ai/share/test",
   grade: "orange",
   headline: "x",
   rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "x" },

@@ -17,7 +17,7 @@ function mkSub(over: Partial<Submission> = {}): Submission {
     prompt_version: 5,
     analysis_date: "2026-04-23",
     model: "claude-sonnet-4-6",
-    chat_url: null,
+    chat_url: "https://claude.ai/share/test",
     grade: "orange",
     headline: "x",
     rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "x" },
@@ -94,11 +94,11 @@ describe("computeQuorum", () => {
     expect(r.kind).toBe("disagreement");
   });
 
-  it("gives a weight bonus for public chat_url on a claude.ai share link", () => {
+  it("penalizes missing chat_url by 95%: submission with share link outweighs one without", () => {
     const r = computeQuorum(
       [
         withPath(mkSub({ model: "with-share", chat_url: "https://claude.ai/share/abc" }), "a.json"),
-        withPath(mkSub({ model: "without-share" }), "b.json"),
+        withPath(mkSub({ model: "without-share", chat_url: null }), "b.json"),
       ],
       ctx,
     );
