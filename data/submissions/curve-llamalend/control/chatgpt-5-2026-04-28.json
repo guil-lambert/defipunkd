@@ -1,0 +1,216 @@
+{
+  "schema_version": 3,
+  "slug": "curve-llamalend",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "chatgpt-5",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "LlamaLend MarketControllers and LLAMMA AMM are immutable; OneWayLendingFactory adds new isolated markets via Curve DAO Voting (Ownership) full ~7-day path; per-market parameters (debt cap, monetary policy) governed by DAO; Emergency DAO 5-of-9 multisig has bounded kill_me powers per market",
+  "short_headline": "Immutable per-market AMM, DAO factory",
+  "rationale": {
+    "findings": [
+      {
+        "code": "SCOPE",
+        "text": "This submission assesses ONLY Curve LlamaLend: the OneWayLendingFactory deploying isolated lending markets, each with its own MarketController + Vault + LLAMMA AMM instance. LlamaLend markets do NOT mint crvUSD — they accept arbitrary (collateral, borrow) token pairs configured at market deployment. crvUSD core (Stablecoin.vy + crvUSD-specific PegKeepers + Aggregator + MonetaryPolicy) and the Curve DEX layer are assessed as separate children: crvusd and curve-dex respectively."
+      },
+      {
+        "code": "C1",
+        "text": "Owner / admin reads on Curve's main fund-holding contracts: most StableSwap, Tricrypto, StableSwap-NG, Tricrypto-NG pools have no owner / admin slot at all because they are direct Vyper deployments. Where a factory exists, the factory's admin() function returns the Curve DAO Ownership Agent at 0x40907540d8a6C65c637785e8f8B742ae6b0b9968 (Aragon Agent app), which is only callable by the Voting (Ownership) Aragon Voting at 0xE478de485ad2fe566d49342Cbd03E49ed7DB3356. The crvUSD Stablecoin.vy at 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E is itself immutable; its set_minter is restricted to the controller architecture. crvUSD MarketController contracts have admin-class callers limited to the DAO Ownership Agent and to Voting (Parameter) at 0xBCfF8B0b9419b9A88c44546519b1e909cF330399 for parameter tuning."
+      },
+      {
+        "code": "C2",
+        "text": "Upgrade mechanism: Curve's main fund-holding surface is IMMUTABLE Vyper. There is no proxy admin for StableSwap / Tricrypto / StableSwap-NG / Tricrypto-NG pools, the crvUSD Stablecoin.vy, or LLAMMA AMM contracts. Factory contracts themselves are also Vyper, and an existing pool's implementation cannot be retroactively swapped after deployment. The Aragon Voting contracts (Ownership and Parameter) ARE Aragon AppProxyUpgradeable proxies whose implementation is registered in Aragon Kernel; that implementation can be replaced via a Voting (Ownership) vote, but per the prompt's note on immutable cores with upgradable governance, this is a T3-only path because the upgradable Voting / Agent surface cannot reach the immutable pool / Stablecoin / LLAMMA contracts."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path for protocol changes (uncontested fast path): vote creation in Voting (Ownership) requires the proposer to hold at least 2500 veCRV (Aragon minimumAcceptanceQuorum / proposalThreshold); voting period is 1 week (604800 seconds; voteTime is denominated in seconds at the Aragon level); pass conditions are support ≥51%, quorum ≥30% of veCRV total supply for Ownership and ≥30% support, ≥15% quorum for Parameter. On pass, vote.executed flips and the Voting Forwarder dispatches the script through the DAO Ownership Agent. There is NO additional timelock between vote pass and execution — Aragon Voting executes immediately on executeVote once the period ends, so the uncontested-fast-path delay is the voting period itself: ~7 days for Ownership, ~3 days for Parameter."
+      },
+      {
+        "code": "C4",
+        "text": "Multisigs with reachable control over Curve: (1) Emergency DAO multisig at 0x467947EE34aF926cF1DCac093870f613C96B1E0c — 5-of-9 Gnosis Safe; signers publicly disclosed via gov.curve.finance/t/proposal-to-elect-the-emergency-dao election threads; powers limited to kill_me() on pools (one-way switch into withdraw-only mode), halt new gauges, set fees to zero, halt crvUSD Controller new-minting in emergency; CANNOT upgrade contracts, mint, or redirect funds (T2-bounded). (2) DAO operations / parameter committees are off the upgrade path; they hold delegated authority for narrow operational tasks routed via Voting (Parameter) only. (3) No 'main proxy admin' multisig exists for the immutable cores because there is no proxy admin to hold."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance is Aragon Voting weighted by veCRV, with vote weight = locked-CRV * (lock_remaining / max_lock_4yr) per VotingEscrow.vy. Voting (Ownership) parameters: support_required ≈ 51%, min_accept_quorum ≈ 30%, voteTime = 604800 seconds. Voting (Parameter) parameters: support_required ≈ 30%, min_accept_quorum ≈ 15%, voteTime ≈ 172800 seconds. Quorum is checked against total veCRV voting power at the snapshot block. Proposal threshold 2500 veCRV is separate from Aragon's minimumAcceptanceQuorum and is the create-vote bar."
+      },
+      {
+        "code": "C6-emergency",
+        "text": "Emergency powers: the Emergency DAO multisig is bounded to a documented set of safety actions — kill_me() on Curve pools (forces withdraw-only mode, does NOT pause withdrawals), set pool fees to zero, halt new minting on crvUSD MarketControllers (does NOT pause user repay / withdraw of existing positions), pause new gauge additions. The Emergency DAO CANNOT change AMM math, replace implementations (none to replace on cores), redirect funds, or mint unbacked tokens. Time cap: actions are immediate (no delay) but bounded in scope. The 0-second emergency delay matters only because the powers are bounded T2 (cannot reach T1). kill_me on a pool is a one-way switch — once killed, the pool is permanently withdraw-only and cannot be un-killed."
+      },
+      {
+        "code": "C7",
+        "text": "Power tier classification: (a) on the IMMUTABLE pool / Stablecoin / LLAMMA cores, the highest tier is T3-T4 — DAO can set bounded parameters (admin_fee 0-50% of trading fee, fee_receiver, gauge weight emissions, oracle fallback selection on a small set of NG pools), add / remove gauges (T2-bounded), grant or revoke crvUSD MarketController ceilings (T2-bounded). The DAO CANNOT replace the AMM math, the Stablecoin logic, or the LLAMMA controller because there is no upgrade slot. (b) on the upgrade-bearing governance contracts (Voting / Agent / Forwarder, Xgov, FeeSplitter), the highest tier is T3 — DAO can rewrite voting rules or replace its own Voting / Agent app implementation, change FeeSplitter logic; none of those reach user funds. Per the prompt's immutable-core / upgradable-governance note, the highest reachable tier on the fast path is T3, and T1 is structurally unreachable on existing user funds."
+      }
+    ],
+    "steelman": {
+      "red": "If a reviewer treats the Emergency DAO's kill_me as a fund-loss-equivalent action — because LP positions can no longer earn fees once a pool is killed — they could push toward red. But kill_me does not steal funds; it ENABLES withdrawals and disables deposits / trades, which is structurally a T2 emergency, not a T1.",
+      "orange": "The Emergency DAO does not strictly meet Security Council criteria (insider / non-insider classification is debatable, several signers are paid contributors), and Voting (Parameter) at 30% / 15% with ~3-day voteTime falls below the 7-day exit-window bar. If T2 powers reachable through Voting (Parameter) on non-immutable surfaces are weighed against the 7-day standard, an orange grade is defensible.",
+      "green": "Curve's main fund-holding contracts (pools, crvUSD Stablecoin, LLAMMA AMM, LlamaLend Controllers) are IMMUTABLE Vyper deployments with no upgrade slot, so T1 is structurally unreachable on user funds; the Voting (Ownership) cycle is ~7 days end-to-end with no separate timelock-bypass; the Emergency DAO is bounded to safety actions that cannot move user funds; per the prompt's immutable-cores rule, 'highest reachable tier is T3' is green regardless of timelock."
+    },
+    "verdict": "Choosing green because Curve's main fund-holding contracts (pool implementations, crvUSD Stablecoin.vy, LLAMMA AMM, LlamaLend Controllers) are IMMUTABLE Vyper deployments with no admin-reachable function that can move, freeze, or re-route user funds — making T1 structurally unreachable through the upgrade path. Bounded parameter changes on those contracts (admin_fee within hardcoded 0-50% range, fee_receiver, gauge weights, ceiling caps) are T2 changes routed through Voting (Parameter, ~3-day cycle, 30% / 15%) or Voting (Ownership, ~7-day cycle, 51% / 30%). The Emergency DAO multisig (5-of-9, public signers) is bounded to T2 safety actions (kill_me, fee zero, gauge halts) and cannot upgrade or mint. The Aragon DAO Voting layer is itself proxy-upgradable, but per the rubric this is a T3-only power because the upgrade surface does not reach the immutable cores."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "shows": "Curve DAO Voting (Ownership) — Aragon AppProxyUpgradeable on Mainnet; Read Contract tab exposes voteTime, supportRequiredPct, minAcceptQuorumPct, votesLength, kernel pointer; Voting app implementation registered through Aragon Kernel and verified separately",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xBCfF8B0b9419b9A88c44546519b1e909cF330399",
+      "shows": "Curve DAO Voting (Parameter) — Aragon AppProxyUpgradeable on Mainnet; lower-threshold parameter voting forwarder; supportRequiredPct ~30%, minAcceptQuorumPct ~15%, voteTime ~172800s",
+      "chain": "Ethereum",
+      "address": "0xBCfF8B0b9419b9A88c44546519b1e909cF330399",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent — Aragon Agent app holding admin privileges of pool factories and DAO-owned contracts; only callable by Voting (Ownership)",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Curve Emergency DAO multisig — Gnosis Safe 5-of-9 threshold; signers publicly disclosed via gov.curve.finance Emergency DAO election threads; bounded scope (kill_me, fee zero, halts)",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "shows": "CRV governance token — direct Vyper deployment; no proxy, no admin; the underlying token of the veCRV staking system",
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "shows": "crvUSD Stablecoin (Stablecoin.vy) — direct Vyper deployment, no proxy, no upgrade slot; minter set is whitelist-managed by the controller architecture, the Stablecoin contract itself is immutable",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
+      "shows": "Curve GaugeController — verified Vyper, owner is the DAO Ownership Agent; T2-bounded (gauge weight votes, gauge add / remove via DAO)",
+      "chain": "Ethereum",
+      "address": "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-aragon-voting",
+      "shows": "Source for the Curve fork of Aragon Voting; voteTime constant and support / quorum threshold logic visible in Voting.sol",
+      "commit": "141d3470edad98603eb43bfca70127571729330a",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-dao-contracts",
+      "shows": "Source for VotingEscrow.vy (veCRV), GaugeController.vy, FeeDistributor.vy — admin-class functions only callable by the DAO Ownership Agent",
+      "commit": "fa127b1cb7bf83e4f3d605f7244b7b4ed5ebe053",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "Source for Stablecoin.vy, LLAMMA AMM (AMM.vy), Controller.vy — Controller's admin functions (set_amm_fee, set_borrow_threshold, etc.) only callable by admin which is set to the DAO Ownership Agent; Stablecoin.vy has no upgrade slot",
+      "commit": "c65baa3ec9bf4b9afda12f8148503ad088a5efd8",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://gov.curve.finance/",
+      "shows": "Curve governance forum — discussions of Emergency DAO scope, signer election threads, Voting (Ownership) and Voting (Parameter) procedural standards; corroborates on-chain constants",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/curve_dao/dao-vote/",
+      "shows": "Curve docs page describing the Voting (Ownership) / Voting (Parameter) split, support / quorum / voteTime constants and Emergency DAO scope (corroboration only — on-chain Read Contract is the primary source per Hard Rule 7)",
+      "fetched_at": "2026-04-27T15:12:00Z"
+    }
+  ],
+  "unknowns": [
+    "C3: A live Read Contract pull of voteTime, supportRequiredPct, minAcceptQuorumPct on Voting (Ownership) and Voting (Parameter) was not performed in this run beyond what historical reads have shown. The cited values come from the Aragon constants set at app initialization and corroborated by docs, but a fresh on-chain read is recommended for the next iteration.",
+    "C4-signers: The exact current signer list and threshold of the Emergency DAO multisig (5-of-9 stated based on publicly known election results) was not freshly read from the Gnosis Safe in this run; insider / non-insider classification of each signer is also a judgment call rather than a clean on-chain fact.",
+    "C2-periphery: A complete enumeration of every upgrade-bearing periphery contract (Xgov modules across each chain, Fast Bridge endpoints, FeeSplitter v2 etc.) and verification that none of them have admin-reachable hooks back into pool fund flow was not performed exhaustively.",
+    "C7-future-deploys: This assessment grades the EXISTING immutable-core deployments. New pool factories or new crvUSD market types deployed under DAO authority could in principle ship with different admin surfaces; that is a deploy-time concern, not a control-slice attack vector on existing user funds.",
+    "C1-newest-deployments: Not every newly-deployed crvUSD market or LlamaLend market admin pointer was re-read on-chain this run — Curve has continued shipping new isolated markets, and a per-market admin() census is recommended for an exhaustive assessment."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-aragon-voting",
+      "https://github.com/curvefi/curve-js",
+      "https://github.com/curvefi/security-incident-reports"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://docs.curve.finance/pdf/audits/curve-dao-ToB-final.pdf",
+        "date": "2020-08"
+      },
+      {
+        "firm": "Quantstamp",
+        "url": "https://docs.curve.finance/pdf/audits/curve-dao-quantstamp.pdf",
+        "date": "2020-08"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20DAO%20Voting%20Forwarder%20Security%20Audit%20Report.pdf",
+        "date": "2023-12"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20DAO%20Voting%20Security%20Audit%20Report.pdf",
+        "date": "2023-12"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_Xgov_Audit.pdf",
+        "date": "2024-03"
+      }
+    ],
+    "governance_forum": "https://gov.curve.finance/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/curve/",
+    "security_contact": "https://github.com/curvefi/security-incident-reports",
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "DAO Voting (Ownership) — top-tier governance vote, ~51% support / ~30% quorum, ~7-day voteTime",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xBCfF8B0b9419b9A88c44546519b1e909cF330399",
+        "role": "DAO Voting (Parameter) — bounded parameter governance vote, ~30% support / ~15% quorum, ~3-day voteTime",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "DAO Ownership Agent — Aragon Agent holding admin privileges of pool factories and DAO-owned contracts, called only via Voting (Ownership)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig — 5-of-9 Gnosis Safe; bounded T2-class powers (kill_me, fee zero, gauge halts); CANNOT upgrade or mint",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Curve Finance is a decentralized AMM with an Aragon-based DAO. Pool contracts are immutable Vyper deployments; Aragon Voting (Ownership) and Voting (Parameter) coordinate governance, with bounded parameter changes and immutable AMM logic on the fund-holding surface. An Emergency DAO multisig (5-of-9) has narrow safety powers."
+  }
+}
