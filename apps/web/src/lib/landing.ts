@@ -1,7 +1,7 @@
 import { bucketCategory, CHAIN_TABS, isCexCategory, type CategoryTab, type ChainTab, type Tab } from "./category-map";
 import { rankMatch } from "./search";
 import { dominantChildGrade, type GradeColor } from "./verifiability";
-import { maxTier, type Tier } from "./tier";
+import { maxTier, TIER_RANK, type Tier } from "./tier";
 export type { GradeColor } from "./verifiability";
 
 export type LandingRow = {
@@ -101,7 +101,15 @@ export function tvlSortDesc(a: LandingRow, b: LandingRow): number {
   return b.tvl - a.tvl;
 }
 
-export type SortField = "tvl" | "name" | "chain" | "type";
+export type SortField = "tvl" | "name" | "chain" | "type" | "risks" | "stage";
+
+const GRADE_SCORE: Record<GradeColor, number> = { green: 3, orange: 2, red: 1, gray: 0 };
+
+function risksScore(node: LandingNode): number {
+  const grades = node.assessment_grades;
+  if (!grades) return 0;
+  return Object.values(grades).reduce((sum, g) => sum + (g ? GRADE_SCORE[g] : 0), 0);
+}
 export type SortDir = "asc" | "desc";
 
 export type FilterOptions = {
@@ -138,6 +146,14 @@ function compareNodes(a: LandingNode, b: LandingNode, field: SortField, dir: Sor
       if (a.tvl === null) return 1;
       if (b.tvl === null) return -1;
       return dir === "asc" ? a.tvl - b.tvl : b.tvl - a.tvl;
+    }
+    case "risks": {
+      const diff = risksScore(a) - risksScore(b);
+      return dir === "asc" ? diff : -diff || a.slug.localeCompare(b.slug);
+    }
+    case "stage": {
+      const diff = TIER_RANK[a.tier ?? "none"] - TIER_RANK[b.tier ?? "none"];
+      return dir === "asc" ? diff : -diff || a.slug.localeCompare(b.slug);
     }
   }
 }
