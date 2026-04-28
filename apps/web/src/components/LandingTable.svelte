@@ -74,7 +74,7 @@
       sortDir = sortDir === "asc" ? "desc" : "asc";
     } else {
       sortField = field;
-      sortDir = field === "tvl" ? "desc" : "asc";
+      sortDir = field === "tvl" || field === "risks" || field === "stage" ? "desc" : "asc";
     }
   }
 
