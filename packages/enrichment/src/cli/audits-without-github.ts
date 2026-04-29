@@ -67,8 +67,16 @@ function isActive(p: ProtocolSnapshot): boolean {
   return !p.is_dead && p.delisted_at === null && !p.is_parent;
 }
 
-function hasGithub(p: ProtocolSnapshot): boolean {
-  return Array.isArray(p.github) && p.github.length > 0;
+function hasGithub(p: ProtocolSnapshot, repoRoot: string): boolean {
+  if (Array.isArray(p.github) && p.github.length > 0) return true;
+  const overlayPath = join(repoRoot, "data", "overlays", `${p.slug}.json`);
+  if (!existsSync(overlayPath)) return false;
+  try {
+    const overlay = JSON.parse(readFileSync(overlayPath, "utf8")) as { github?: string[] | null };
+    return Array.isArray(overlay.github) && overlay.github.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 function loadAudits(repoRoot: string, slug: string): AuditFileEntry[] {
@@ -107,7 +115,7 @@ async function main(): Promise<void> {
   const rows: Row[] = [];
   for (const p of Object.values(snapshot.protocols)) {
     if (!isActive(p)) continue;
-    if (hasGithub(p)) continue;
+    if (hasGithub(p, opts.repoRoot)) continue;
     if ((p.tvl ?? 0) < opts.minTvl) continue;
     const audits = loadAudits(opts.repoRoot, p.slug);
     if (audits.length === 0) continue;

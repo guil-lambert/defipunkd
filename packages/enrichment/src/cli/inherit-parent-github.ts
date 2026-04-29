@@ -4,20 +4,23 @@
  *
  * Walks the snapshot and, for every active protocol with a non-null
  * `parent_slug` and `github == null`, looks up the parent record. If the
- * parent has a non-empty `github` list, the child inherits it.
+ * parent has a non-empty `github` list, the child inherits it via a
+ * per-protocol overlay at `data/overlays/<slug>.json`.
  *
- * By default this runs in dry-run mode (writes nothing). Pass `--apply` to
- * mutate `data/defillama-snapshot.json` in place. The diff is small and
- * easily reviewable in `git diff`.
+ * Overlays are the durable curation mechanism — the snapshot is regenerated
+ * from DefiLlama on every sync, but overlays survive and get layered on top
+ * with [curated] provenance.
+ *
+ * By default this runs in dry-run mode. Pass `--apply` to write overlay
+ * files. Existing overlays are merged: we set the `github` key only and
+ * preserve any other curated fields already present in the file.
  *
  * Usage:
  *   pnpm --filter @defipunkd/enrichment exec tsx src/cli/inherit-parent-github.ts
  *   pnpm --filter @defipunkd/enrichment exec tsx src/cli/inherit-parent-github.ts --apply
  *   pnpm --filter @defipunkd/enrichment exec tsx src/cli/inherit-parent-github.ts --only-with-audits
- *     (only inherit when the child has at least one audit reference — narrower,
- *      lower-risk first pass)
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -113,17 +116,36 @@ async function main(): Promise<void> {
   );
 
   if (!opts.apply) {
-    console.error(`[inherit-parent-github] dry run — pass --apply to write changes`);
+    console.error(`[inherit-parent-github] dry run — pass --apply to write overlay files`);
     return;
   }
 
+  const overlayDir = join(opts.repoRoot, "data", "overlays");
+  mkdirSync(overlayDir, { recursive: true });
+  let written = 0;
+  let skipped = 0;
   for (const r of rows) {
-    const target = snapshot.protocols[r.slug];
-    if (!target) continue;
-    target.github = [...r.inherited];
+    const path = join(overlayDir, `${r.slug}.json`);
+    let overlay: Record<string, unknown> = {};
+    if (existsSync(path)) {
+      try {
+        overlay = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+      } catch {
+        // fall through and overwrite
+      }
+    }
+    // Don't trample an existing curated github value.
+    if (Array.isArray(overlay.github) && overlay.github.length > 0) {
+      skipped++;
+      continue;
+    }
+    overlay.github = [...r.inherited];
+    writeFileSync(path, `${JSON.stringify(overlay, null, 2)}\n`);
+    written++;
   }
-  writeFileSync(snapshotPath, `${JSON.stringify(snapshot, null, 2)}\n`);
-  console.error(`[inherit-parent-github] wrote ${rows.length} updates → ${snapshotPath}`);
+  console.error(
+    `[inherit-parent-github] wrote ${written} overlays, skipped ${skipped} that already had a curated github`,
+  );
 }
 
 main().catch((err) => {
