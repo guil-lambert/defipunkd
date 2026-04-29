@@ -123,10 +123,29 @@ export interface EnrichmentControl {
   };
 }
 
+export interface EnrichmentAuditEntry {
+  /** Auditor firm inferred from the URL host (e.g. "Trail of Bits"). May be null. */
+  firm: string | null;
+  /** Audit report URL — github blob, code4rena report, OZ blog post, etc. */
+  url: string;
+  /** YYYY-MM or YYYY-MM-DD when extractable from the auditor index, else null. */
+  date: string | null;
+  /** Where the entry came from: DefiLlama's audit_links or our auditor-side index. */
+  source: "defillama" | "auditor-repo";
+  raw_name?: string;
+}
+
+export interface EnrichmentAudits {
+  slug: string;
+  extracted_at: string;
+  audits: EnrichmentAuditEntry[];
+}
+
 export interface ProtocolEnrichment {
   adapter: EnrichmentAdapter | null;
   sourcecode: EnrichmentSourceCode | null;
   control: EnrichmentControl | null;
+  audits: EnrichmentAudits | null;
 }
 
 /**
@@ -164,7 +183,7 @@ function readJsonIfExists<T>(path: string): T | null {
 const cache = new Map<string, ProtocolEnrichment>();
 
 export function getEnrichment(slug: string): ProtocolEnrichment {
-  if (!ROOT) return { adapter: null, sourcecode: null, control: null };
+  if (!ROOT) return { adapter: null, sourcecode: null, control: null, audits: null };
   const cached = cache.get(slug);
   if (cached) return cached;
   const dir = join(ROOT, slug);
@@ -172,6 +191,7 @@ export function getEnrichment(slug: string): ProtocolEnrichment {
     adapter: readJsonIfExists<EnrichmentAdapter>(join(dir, "adapter.json")),
     sourcecode: readJsonIfExists<EnrichmentSourceCode>(join(dir, "sourcecode.json")),
     control: readJsonIfExists<EnrichmentControl>(join(dir, "control.json")),
+    audits: readJsonIfExists<EnrichmentAudits>(join(dir, "audits.json")),
   };
   cache.set(slug, value);
   return value;
