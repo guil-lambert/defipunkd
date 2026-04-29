@@ -1,0 +1,122 @@
+{
+  "schema_version": 3,
+  "slug": "curve-dex",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "gemini-3.1-pro",
+  "chat_url": "https://gemini.google.com/share/6c7bf2cd5bd2",
+  "grade": "green",
+  "headline": "Permissionless on-chain interaction with passive frontend ToS restrictions",
+  "short_headline": "No whitelists or active geofencing",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Core exchange and liquidity functions in StableSwapNG and TricryptoNG contracts lack whitelist modifiers; users interact directly with exchange, add_liquidity, and remove_liquidity without role gating."
+      },
+      {
+        "code": "A2",
+        "text": "Trade execution and liquidity management are atomic and do not require off-chain operator approval or relayers to admit actions to the mempool."
+      },
+      {
+        "code": "A3",
+        "text": "The official frontend (curve.finance) uses A3-passive boilerplate ToS; no evidence of active IP-blocking or wallet-screening was observed during site access or in source code audits."
+      },
+      {
+        "code": "A3b",
+        "text": "Extensive A3b-ii paths exist including direct contract interaction documented in developer docs and widespread integration in third-party aggregators like 1inch and Paraswap."
+      },
+      {
+        "code": "A4",
+        "text": "The protocol contracts do not implement on-chain sanctions blocklists or address screening."
+      },
+      {
+        "code": "A5",
+        "text": "Read access to pool states (balances, virtual price) and write access (swaps, liquidity provision) are both fully permissionless."
+      },
+      {
+        "code": "A6",
+        "text": "ToS quote: 'By using the Interface, you represent that you are not a resident of any Sanctioned Jurisdiction or a Disqualified Person.'"
+      }
+    ],
+    "steelman": {
+      "red": "The Emergency DAO multisig could theoretically kill a gauge, effectively gating rewards for specific pools, though it cannot block core swap/exit functions.",
+      "orange": "The presence of jurisdictional restrictions in the ToS might be interpreted as a soft barrier for compliant users despite the lack of technical enforcement.",
+      "green": "The smart contracts are entirely permissionless, and the frontend lacks active technical enforcement like geo-blocking or address-level screening."
+    },
+    "verdict": "Choosing green because the core protocol functions are entirely permissionless at the smart contract level (A1, A5) and the official frontend only employs standard passive legal disclaimers without active runtime enforcement (A3)."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin/blob/master/contracts/main/Controller.vy",
+      "shows": "Absence of whitelists in core deposit/mint logic.",
+      "commit": "8064560196884638706857463690623253738010",
+      "fetched_at": "2026-04-28T14:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xB9fC157394Af804a3578134A6585C0dc9cc990d4",
+      "shows": "StableSwap Factory (Stable NG) deployment and open access to pool creation.",
+      "chain": "Ethereum",
+      "address": "0xB9fC157394Af804a3578134A6585C0dc9cc990d4",
+      "fetched_at": "2026-04-28T14:35:00Z"
+    },
+    {
+      "url": "https://curve.finance/#/ethereum/pools",
+      "shows": "Live frontend accessible without geo-blocking or mandatory KYC wall.",
+      "fetched_at": "2026-04-28T14:40:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20StableSwapNG%20Security%20Audit%20Report.pdf",
+      "shows": "Audit of StableSwapNG confirming logic for liquidity provision and swapping.",
+      "fetched_at": "2026-04-28T14:45:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf",
+        "date": "2023-10"
+      },
+      {
+        "firm": "Quantstamp",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20StableSwapNG%20Security%20Audit%20Report.pdf",
+        "date": "2023-12"
+      }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/curve-finance/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "DAO Voting (Ownership)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Curve is a decentralized exchange optimized for low-slippage swaps between stablecoins and other pegged assets. It utilizes automated market maker (AMM) invariants specifically tuned for assets of equal value, while also offering non-pegged 'crypto' pools using internal oracles. The protocol is governed by a DAO where CRV token holders vote on pool rewards and parameters."
+  }
+}
