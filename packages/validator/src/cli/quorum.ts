@@ -140,7 +140,7 @@ async function main(): Promise<number> {
         } else if (prev?.short_headline && !consensusChanged) {
           a.short_headline = prev.short_headline;
         }
-      } else if (!consensusChanged && prev?.short_headline && !a.short_headline) {
+      } else if (!consensusChanged && prev?.short_headline) {
         a.short_headline = prev.short_headline;
       }
 
