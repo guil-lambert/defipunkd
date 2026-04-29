@@ -1,0 +1,114 @@
+{
+  "schema_version": 3,
+  "slug": "curve-llamalend",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "chatgpt-5",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "Autonomy could not be verified from allowed sources",
+  "short_headline": "Autonomy inconclusive",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "LlamaLend is deployed via OneWayLendingFactory and the Curve stablecoin/lending codebase includes lending and oracle modules that interface with external price feeds (e.g., Chainlink AggregatorV3Interface) per market; if those feeds pause or mis-report, market pricing/borrowing could be impacted."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Assessment blocked: could not reconstruct the concrete external dependency set per market (oracle addresses/providers, any on-chain sanity checks/fallbacks) or verify keeper/relayer requirements and governance mutability from the permitted sources during this run (A1, A2, A6, A8, A9), and also could not verify L2-specific liveness dependencies for Arbitrum/Fraxtal (A3, A7)."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "shows": "Deployed OneWayLendingFactory contract for Curve LlamaLend on Ethereum (factory for isolated lending markets).",
+      "chain": "Ethereum",
+      "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "Curve stablecoin/lending repository containing the LlamaLend (lending) contracts and oracle interfaces (e.g., Chainlink Aggregator usage)."
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+      "shows": "Audit of Curve Lending components discussing lending architecture, price oracles, and liquidation mechanics."
+    },
+    {
+      "url": "https://etherscan.io/token/0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "shows": "CRV (Curve DAO Token) on Ethereum used for Curve DAO governance.",
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52"
+    },
+    {
+      "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "shows": "Curve DAO Voting contract address (governance).",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent contract address.",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO multisig (5-of-9 Gnosis Safe) used by Curve.",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c"
+    }
+  ],
+  "unknowns": [
+    "A1: Could not enumerate the specific oracle contracts/addresses and external price sources used by each deployed market across Ethereum/Arbitrum/Fraxtal from the factory alone.",
+    "A2: Chainlink (or other) oracle committee sizes/quorums and selection for the exact feeds used by these markets were not identified from the permitted sources.",
+    "A3: Whether any cross-chain messaging/bridging is used for core LlamaLend user flows (beyond canonical asset bridges) is not determined from the permitted sources.",
+    "A4: The depth and composition of nested collateral (e.g., LP tokens or yield wrappers) per market and how failures propagate were not verified on-chain for deployed markets.",
+    "A6: Fallback mechanisms and circuit breakers on price/oracle inputs (sanity bounds, TWAP clamps, dual-source validation) could not be verified as LIVE on deployed markets.",
+    "A7: Additional L2 liveness dependencies (e.g., sequencer/DA assumptions) for Arbitrum and Fraxtal deployments were not verified from the permitted sources in this run.",
+    "A8: Keeper/relayer requirements for liquidations or maintenance (permissionless vs whitelisted, failure modes if absent) were not verified on deployed markets.",
+    "A9: Governance-mutable external dependency surface (e.g., ability to hot-swap oracle addresses or register new external adapters without an exit window) could not be determined."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/security-incident-reports"
+    ],
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "DAO Voting (Ownership)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig (5-of-9 Gnosis Safe)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Curve LlamaLend is a factory-based system for launching isolated lending markets where users post specific collateral assets to borrow crvUSD. The lending code in the Curve stablecoin repository includes market factories and oracle adapters that source external prices per market, with liquidations handled by market-specific logic. Each market is siloed so risk does not automatically propagate across markets."
+  }
+}
