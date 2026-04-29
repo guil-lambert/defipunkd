@@ -1,0 +1,473 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Protocol cannot run without CeFi custodians (Copper/Ceffu/Anchorage/Kraken) and CEX hedging venues (Binance ~50%, Bybit, OKX, Deribit, Bitget); ~70-89% of TVS depends on off-chain operators whose failure can impair principal beyond the ~$62M reserve fund.",
+    "short_headline": "CeFi-dependent: custodians + CEX hedge",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core USDe contract (0x4c9EDD5852cd905f086C759E8383e09bff1E68B3) is a vanilla immutable ERC20 with minter role; the actual backing/hedging logic lives off-chain at custodians and CEXes, not on-chain. Mint/redeem pricing relies on CeFi exchange feeds (Binance, Bybit, OKX, Deribit, BitMEX, Bitget) cross-checked by Pyth and Redstone — no Chainlink."
+        },
+        {
+          "code": "A2",
+          "text": "Off-chain operators reporting INTO the protocol: (a) Ethena Labs operators who execute hedges and rebalances, (b) custodian attestation providers (Copper, Ceffu, Anchorage Digital, Kraken — monthly attestations), (c) Pyth+Redstone price feeds used as sanity check before every mint/redeem. Multisig actor classes: Dev Multisig 5-of-11 (0x3b0aaf6e...), Reserve Fund 4-of-10 (0x2b5ab59...), sUSDe Payout 3-of-11. None are timelocked per docs."
+        },
+        {
+          "code": "A3",
+          "text": "USDe token has been bridged across many chains via LayerZero OFT, but the canonical mint/redeem and the hedge collateral remain on Ethereum + CEX accounts. Bridge dependency is per-chain user opt-in, not protocol-wide."
+        },
+        {
+          "code": "A4",
+          "text": "Backing composition (Q1 2026, post-Oct-10 deleveraging): perp short positions ~11% (down from majority pre-crash), USDtb (BlackRock BUIDL + USDC) majority share, plus liquid stablecoins. USDtb itself depends on Securitize/BlackRock BUIDL (TradFi RWA) — a failure of BUIDL or Securitize redemption directly impairs USDe collateral. Reserve fund $62M (Mar 2026) entirely held in USDtb + USDtb/USDC LP — single-asset concentration."
+        },
+        {
+          "code": "A5",
+          "text": "DefiLlama forkedFrom: empty for ethena-usde — original design, no fork lineage."
+        },
+        {
+          "code": "A6",
+          "text": "Fallback mechanisms (activation status): (i) LIVE — multi-source oracle sanity check (CeFi+Pyth+Redstone) before mint/redeem; daily/intra-day OES settlement cycles (Copper Clearloop daily; Bybit 2h, OKX 4h, Bitget 4h) cap unsettled PnL; bankruptcy-remote trusts / MPC at custodians; (i) LIVE — $62M reserve fund (~9x LlamaRisk conservative tail). NOT MITIGATED: cannot continue minting/redeeming if a primary OES provider goes offline; cannot rehedge in real-time if a primary CEX (Binance =~50%) suffers ADL/withdrawal halt — Oct 10 2025 saw USDe trade as low as $0.65 on Binance during cascading liquidations + ADL."
+        },
+        {
+          "code": "A7",
+          "text": "Protocol deployed on Ethereum L1 — no additional sequencer/DA dependency beyond substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Protocol REQUIRES Ethena-Labs-operated keepers/traders to maintain delta-neutral hedge: open new shorts, roll funding, rebalance across venues. This is NOT permissionless — only Ethena Labs has API keys/credentials at custodians and CEXes. If the operator goes dark, hedge drift accumulates (gamma exposure to ETH/BTC), funding accrues without rebalancing, and reserve fund depletes (LlamaRisk: 33 days at -10% funding + 0.5% daily redemptions + 10bps slippage). Failure mode is catastrophic, not graceful."
+        },
+        {
+          "code": "A9",
+          "text": "Governance-mutable external dependency surface: Dev Multisig (5/11) owns mainnet contracts and 'can modify contract parameters' per docs — including the ability to add/remove custodians, change OES providers, add new hedge venues, swap oracle sources without disclosed timelock or user exit window. New backing assets (e.g., BNB approved, XRP/HYPE under discussion) and new custodians (Anchorage 2025, Kraken Jan 2026) have been added by governance during the protocol's lifetime — confirming this surface is actively used. No 7-day timelock on these changes documented."
+        }
+      ],
+      "steelman": {
+        "red": "USDe is fundamentally a CeFi product wrapped in an ERC20: ~89% of backing currently sits at off-exchange-settlement custodians (Copper/Ceffu/Anchorage/Kraken) with hedges concentrated ~50% on Binance, where the Oct 10 2025 ADL cascade pushed USDe to $0.65 — a documented principal-risk event driven by a CEX dependency the protocol cannot operate without; the operator (Ethena Labs) holds exclusive access to those venues and can neither be replaced permissionlessly nor pause without user loss if a major venue halts withdrawals.",
+        "orange": "Off-exchange settlement (bankruptcy-remote MPC trusts), daily/intra-day PnL settlement, multi-custodian/multi-venue diversification, BUIDL-backed reserve fund 9x sized vs LlamaRisk tail estimate, and the Bybit Feb 2025 hack (limited to <$30M Ethena exposure) all show the architecture survives single-counterparty failures with bounded loss to unclaimed yield — not principal — leaving the worst case as paused mint/redeem and reserve-fund drawdown rather than insolvency.",
+        "green": "USDe is an immutable ERC20 on Ethereum L1 with no protocol-level oracle dependency for token transfers and no on-chain external contract calls in the core path; users holding USDe in their wallet are unaffected by any CeFi failure and can always redeem secondary-market via DEXes."
+      },
+      "verdict": "Choosing red because the orange steel-man understates two structural facts: (a) the Oct 10 2025 incident on Binance (USDe to $0.65) was not a hypothetical — it demonstrated that loss of CEX liquidity / ADL events directly impair USDe principal value via the hedge leg, not just unclaimed yield; and (b) the keeper/operator role (A8) is exclusive to Ethena Labs — no permissionless actor can re-hedge if Ethena ops go offline, making operator liveness a hard principal-risk dependency. Green is wrong because the immutable ERC20 surface only matters once you hold tokens; the mint/redeem promise (which underpins the peg) is entirely gated on CeFi infrastructure that is verifiably governance-mutable (A9: BNB added, Anchorage/Kraken added 2025-2026, no documented timelock). Impacted-TVS estimate: 70-89% of TVS sits with custodians and CEXes; a coordinated failure of the dominant venue (Binance) compounded with reserve-fund exhaustion (LlamaRisk: 33 days at -10% funding) puts material principal at risk. Module weighting: USDe core ~89% (red), USDtb-backed reserve ~11% (orange — RWA risk concentrated in single fund); weighted overall = red because the red module is dominant and the cross-cutting CEX/custodian dependency is not user-opt-in per market."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.ethena.fi/solution-overview/risks/custodial-risk",
+        "shows": "Ethena explicitly depends on Off-Exchange Settlement (OES) providers; risk categories include accessibility/availability, performance of operational duties, custodian operational failure; bankruptcy-remote trusts / MPC wallets cited as legal mitigation; Copper Clearloop settlement daily.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-overview/risks/exchange-failure-risk",
+        "shows": "Five hedging venues: Binance (50%), Bybit (25%), OKX (15%), Deribit (5%), Bitget (5%); settlement frequencies: Binance/Deribit daily, Bybit 2h, OKX/Bitget 4h; backing 'NEVER deposited to exchanges' but hedge collateral is delegated.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/backing-asset-custody",
+        "shows": "Documents explicitly name Copper and Ceffu as OES providers (with 'not limited to' caveat); five-step OES workflow for mint/redeem.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/use-of-oracles",
+        "shows": "Oracle stack: CeFi exchange feeds (Binance/Bybit/OKX/Deribit/BitMEX/Bitget) primary, Pyth + Redstone as sanity check; no Chainlink dependency. Sanity-check enforced before every mint/redeem request.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/reserve-fund",
+        "shows": "Reserve fund baseline mechanism, USDC/USDT composition originally; controlled by 4-of-10 Ethena Labs multisig.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://gov.ethenafoundation.com/t/reserve-fund-march-2026-update/775",
+        "shows": "Reserve fund Mar 2026 = $62M ($41.98M USDtb + $20.02M USDtb/USDC LP); LlamaRisk conservative tail $7M (down from $23M Feb 2026); fund is ~9x overcapitalized vs current tail risk, prompting proposal to redirect USDtb yield to sUSDe holders.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/key-addresses",
+        "shows": "Dev Multisig 5-of-11 at 0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862 'Owner of Ethena's deployed mainnet smart contracts & able to modify contract parameters'; Reserve Fund 4-of-10 at 0x2b5ab59163a6e93b4486f6055d33ca4a115dd4d5; no documented timelock on these powers.",
+        "chain": "Ethereum",
+        "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "shows": "USDe token contract: immutable (non-proxy) ERC20 with minter role; verified Solidity 0.8.19; admin = 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862. The token contract itself has no external oracle/custodian calls — autonomy risk is in the off-chain mint/redeem pipeline, not in the on-chain transfer surface.",
+        "chain": "Ethereum",
+        "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "shows": "sUSDe staking contract (StakedUSDeV2), non-proxy, role-based access control with DEFAULT_ADMIN_ROLE; ~$2.14B USDe staked.",
+        "chain": "Ethereum",
+        "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://stablecoininsider.org/ethena-usde-q1-2026-report/",
+        "shows": "Bybit Feb 2025 hack: Ethena exposure under $30M (validating OES model survived a CEX hack); Oct 10 2025 flash crash: USDe traded to $0.97 on DEX, $0.65 on Binance, recovered hours; supply contracted from $14B to $5.92B Q1 2026.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://www.theblock.co/post/367943/ethena-greenlights-bnb-for-usde-backing-under-new-framework-signals-possible-xrp-and-hype-onboarding",
+        "shows": "Governance can add new backing assets (BNB approved; XRP, HYPE under discussion) — confirms A9 dependency-surface is governance-mutable in practice.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://app.ethena.fi/dashboards/transparency",
+        "shows": "Four institutional custodians providing monthly attestations: Copper, Ceffu, Anchorage Digital, Kraken (added Jan 23 2026). Independent verifiers: HT Digital, Chaos Labs, LlamaRisk, Chainlink (PoR).",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://www.llamarisk.com/research/ethena-drawdown-methodology-v2",
+        "shows": "Reserve fund depletion model: at -10% funding + 0.5% daily redemptions + 10bps slippage, fund depletes in 33 days — quantifies the keeper/operator-liveness failure mode under sustained negative basis.",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A6: cannot determine whether circuit-breakers exist on the on-chain mint/redeem to halt issuance if oracle sanity check rejects more than N consecutive requests — only that the per-request sanity check is documented.",
+      "A8: Ethena Labs operator runbook for venue failover (which signers can re-key custodian withdrawals if primary ops team is compromised) is not publicly documented.",
+      "A9: precise list of which parameters Dev Multisig 5/11 can change WITHOUT timelock (custodian whitelist? hedge venue whitelist? oracle sources?) — docs say 'modify contract parameters' generically without enumerating the dependency-mutating subset.",
+      "A4: exact current % allocation between BTC perp / ETH perp / liquid stables / USDtb / RWA in Apr 2026 — Q1 2026 report cites the 11% perp figure but does not give the full snapshot table."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs"
+      ],
+      "docs_url": "https://docs.ethena.fi",
+      "audits": [],
+      "governance_forum": "https://gov.ethenafoundation.com",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.ethena.fi/solution-design/key-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+          "role": "Dev Multisig — owner of mainnet contracts, can modify parameters",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2b5ab59163a6e93b4486f6055d33ca4a115dd4d5",
+          "role": "Reserve Fund multisig (4-of-10)",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x71e4f98e8f20c88112489de3dded4489802a3a87",
+          "role": "sUSDe Payout Fund (3-of-11)",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Ethena issues USDe, a synthetic dollar backed by a delta-neutral basket of crypto collateral (ETH/BTC liquid staking and spot) hedged with short perpetual futures on centralized exchanges, plus an increasing share of RWA via USDtb (BlackRock BUIDL + USDC). Yield from funding rates and staking is distributed to sUSDe stakers. The on-chain surface is a vanilla immutable ERC20 + cooldown-based staking vault; the actual stability mechanism is operated off-chain by Ethena Labs at custodians (Copper, Ceffu, Anchorage, Kraken) and CEX hedging venues (Binance, Bybit, OKX, Deribit, Bitget)."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Off-chain custody and hedging failure can impair ~100% of USDe/sUSDe TVS",
+    "short_headline": "Off-chain backing risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The active Mint and Redeem V2 contract on Ethereum calls USDe.mint, USDe.burnFrom, ERC20 safeTransfer/safeTransferFrom on supported collateral assets, WETH.withdraw for WETH minting, route custodian addresses via ETH/ERC20 transfers, and IERC1271 for contract-wallet signature checks; I found no Chainlink/Pyth/Redstone-style on-chain oracle call in the verified source."
+        },
+        {
+          "code": "A2",
+          "text": "Ethena mint/redeem pricing and order construction are off-chain dependencies: the source requires MINTER_ROLE or REDEEMER_ROLE callers and user signatures over order amounts, while the public source README says users receive off-chain prices from Ethena and Ethena's backend submits the signed orders on-chain. Mispricing or backend failure can block mint/redeem or execute at bad quoted amounts."
+        },
+        {
+          "code": "A4",
+          "text": "The USDe backing mechanism is not an isolated opt-in market: Ethena's public source README describes users minting USDe while Ethena opens short perpetual positions and later realizes hedge PnL to support redemptions, and also states that using Ethena requires trust outside code because of the CeFi tie-in. Failure of the collateral custody, exchange, or hedge-management layer propagates to fungible USDe and therefore to sUSDe."
+        },
+        {
+          "code": "A6",
+          "text": "Live on-chain circuit breakers exist in Mint and Redeem V2: per-asset and global max-mint/max-redeem-per-block checks, a GATEKEEPER_ROLE disableMintRedeem path that sets global mint/redeem limits to zero, custodian-route allowlisting, and stable-token price-delta checks. These are live code paths, but they only cap or stop flows; they do not create an on-chain fallback that can make users whole after custodian, exchange, or hedge failure."
+        },
+        {
+          "code": "A7",
+          "text": "The assessed core modules are deployed on Ethereum mainnet, so I found no additional centralized sequencer or DA dependency for the primary USDe mint/redeem and sUSDe staking modules beyond the base-chain substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Ethena's expected performance depends on off-chain operation: the public source README describes Ethena opening equivalent short perpetual positions, sending yield to an insurance fund and then the staking contract, and submitting user mint/redeem orders from its backend. If hedging, exchange access, or the backend stops, yield and orderly redemptions can degrade and principal can be impaired during market moves."
+        },
+        {
+          "code": "A9",
+          "text": "Mint and Redeem V2 exposes autonomy-relevant mutable dependency hooks: DEFAULT_ADMIN_ROLE can add supported collateral assets with token configs and add custodian addresses used in mint routes. That can introduce new ERC20/custodian dependencies, but I did not verify the current DEFAULT_ADMIN_ROLE holder or timelock in this autonomy run, so this finding is not used as the primary red driver."
+        },
+        {
+          "code": "A1",
+          "text": "Submodules and TVS weighting: the USDe mint/redeem/backing module underlies ~100% of economic TVS because the USDe token page shows roughly 5.8B USDe outstanding; the sUSDe staking module holds a large subset of that exposure because the sUSDe contract holds about 2.15B USDe and its constructor asset is USDe. Module A holds ~100% of TVS (grade: red); Module B holds ~37% of USDe supply as a non-additive subset (grade: red); weighted overall = red because the worst unmitigated off-chain backing dependency cross-cuts all USDe and sUSDe."
+        }
+      ],
+      "steelman": {
+        "red": "USDe and sUSDe principal depend on off-chain custodians, exchanges, hedge execution, and Ethena-operated order infrastructure, and the on-chain contracts only pause/cap flows rather than guaranteeing recovery, so the worst failure can affect ~100% of TVS.",
+        "orange": "The strongest orange case is that Ethena has simple verified contracts, no on-chain price-feed dependency, per-block limits, stable-asset sanity checks, custodian route allowlists, and gatekeeper pauses, so some failures may be bounded or become liveness/performance degradation rather than immediate contract-level theft.",
+        "green": "The strongest green case is that if the off-chain basis-trading strategy is treated as the product's intended substrate rather than an external dependency, the Ethereum contracts themselves have few external calls and sUSDe is an ERC4626-style wrapper over USDe."
+      },
+      "verdict": "Choosing red because the red case dominates: Ethena's own source describes USDe as backed by delta-hedged collateral and short perpetual positions handled outside the contracts, the active Mint and Redeem V2 source depends on role-gated/off-chain order flow and custodian routes, and the live fallback mechanisms only cap or pause mint/redeem rather than preserving principal after a custody, exchange, or hedge failure. Module A holds ~100% of TVS (grade: red); Module B holds ~37% of USDe supply as a non-additive subset (grade: red); weighted overall = red because the same off-chain backing dependency reaches all USDe and therefore all sUSDe."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3#code",
+        "shows": "Active Ethena Mint and Redeem V2 contract source: mint, mintWETH, redeem, role gates, global/per-asset per-block limits, disableMintRedeem, addSupportedAsset, addCustodianAddress, ERC20/WETH/USDe/IERC1271 calls.",
+        "chain": "Ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2cc440b721d2cafd6d64908d6d8c4acc57f8afc3#code",
+        "shows": "Legacy Ethena Mint and Redeem V1 contract; Etherscan shows no token holdings and last visible mint/redeem activity in 2024, supporting V2 as the current material mint/redeem module.",
+        "chain": "Ethereum",
+        "address": "0x2cc440b721d2cafd6d64908d6d8c4acc57f8afc3",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "shows": "USDe token page showing verified source, token contract address, and roughly 5.8B USDe outstanding supply/market size.",
+        "chain": "Ethereum",
+        "address": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "shows": "sUSDe token page showing ERC4626 Staked USDe, roughly 2.8B sUSDe supply and multi-billion market size.",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "shows": "sUSDe contract page showing the vault holds about 2.15B USDe and constructor arguments identify USDe as the underlying asset.",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/blob/f3e56d5f06bfef82367d5d5b561398e91d5bebc1/README.md",
+        "shows": "Ethena public source README describing USDe mint/redeem architecture, off-chain Ethena backend order submission, short perpetual hedging, yield flow to staking, gatekeeper/max-per-block mitigations, and the need to trust Ethena outside code due to CeFi integration.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/blob/f3e56d5f06bfef82367d5d5b561398e91d5bebc1/contracts/contracts/EthenaMinting.sol",
+        "shows": "Ethena public Solidity source for mint/redeem flow, custodian allowlist, supported assets, max mint/redeem per block, and gatekeeper disable path.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/code4arena-contest/blob/7ffedb8873c2286930804e1c4feee0410fd0f033/README.md",
+        "shows": "Earlier Ethena contest README describing the same core modules, off-chain price/order flow, stETH plus short perps mechanism, gatekeeper assumptions, and Gnosis Safe ownership model.",
+        "commit": "7ffedb8873c2286930804e1c4feee0410fd0f033",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/resources/audits",
+        "shows": "Pinned audits page listing Zellic, Quantstamp, Spearbit, Pashov, Code4rena, Chaos Labs, and V2 audit coverage for Ethena contracts and economic/risk analysis.",
+        "fetched_at": "2026-04-29T14:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: I did not fully enumerate the current live supported ERC20 collateral set or all custodian route addresses from readContract; the grade uses the verified external-call classes and protocol-wide backing dependency.",
+      "A2: I could not determine the current size, quorum, or membership-selection process for Ethena's off-chain pricing/order backend and role operators from allowed sources.",
+      "A3: I did not verify current non-Ethereum bridge/OFT deployments or their TVL from allowed sources; no bridge dependency is used in the grade because the pinned chain for this assessment is Ethereum and the red driver is the Ethereum backing model.",
+      "A4: I did not reconstruct the current exact backing mix across stETH, stablecoins, USDtb, or other supported assets; the cross-cutting external dependency remains the off-chain custody/hedging layer.",
+      "A5: DeFiLlama forkedFrom was not provided in pinned inputs and was not fetched in this run; no fork-lineage finding is used.",
+      "A9: I did not verify the current DEFAULT_ADMIN_ROLE holder, timelock, or exit-window status for Mint and Redeem V2 addSupportedAsset/addCustodianAddress."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/bbp-public-assets",
+        "https://github.com/ethena-labs/code4arena-contest"
+      ],
+      "docs_url": "https://docs.ethena.fi",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-10"
+        },
+        {
+          "firm": "Quantstamp",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-10-22"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-11-13"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2024-05-23"
+        },
+        {
+          "firm": "Chaos Labs",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2024"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+          "role": "USDe constructor admin and sUSDe owner/rewarder shown in Etherscan constructor arguments",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Ethena issues USDe, a synthetic dollar minted by approved participants against supported collateral while Ethena routes collateral to custodians and maintains offsetting short derivatives positions to target dollar stability. Users can stake USDe into sUSDe to receive a vault share that accrues protocol yield from the backing strategy. The distinctive mechanism is a delta-hedged basis trade rather than fully on-chain overcollateralized lending or an AMM."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Redemptions require off-chain signatures and principal depends on CEX/custodian solvency (~100% TVS impacted)",
+    "short_headline": "Off-chain dependencies gate principal exit",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The EthenaMinting contract interacts with external liquid staking tokens (LSTs) such as Lido's stETH (0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) as primary collateral. A failure or de-peg of these underlying assets directly impacts USDe backing."
+        },
+        {
+          "code": "A2",
+          "text": "The protocol relies on a centralized 'Minter' role to provide off-chain signatures for all minting and redemption actions. Without a valid signature from this Ethena-controlled actor, users cannot interact with the EthenaMinting contract to exit their positions on-chain."
+        },
+        {
+          "code": "A2",
+          "text": "Principal is held in Off-Exchange Settlement (OES) providers (e.g., Copper, Ceffu, Cobo) and mirrored on Centralized Exchanges (CEXs) for delta-hedging. The solvency and liveness of these off-chain custodians and exchanges are critical dependencies for the protocol's principal backing."
+        },
+        {
+          "code": "A3",
+          "text": "USDe is implemented as a LayerZero Omnichain Fungible Token (OFT), introducing a dependency on the LayerZero protocol and its decentralized verifier/executor network for cross-chain transfers."
+        },
+        {
+          "code": "A4",
+          "text": "USDe is a 'receipt of receipt' design where the underlying value is derived from LSTs (stETH) which are themselves dependent on Ethereum's validator set and Lido's governance/node operators."
+        },
+        {
+          "code": "A6",
+          "text": "There is no permissionless on-chain fallback or 'escape hatch' for redemptions if the off-chain Minter service or the OES custodians fail. Redemptions are strictly gated by the Minter signature requirement in EthenaMinting.sol."
+        },
+        {
+          "code": "A8",
+          "text": "The protocol requires active off-chain management (delta-hedging bots) to maintain the neutral exposure. If these bots fail during high volatility, the protocol may become under-collateralized."
+        },
+        {
+          "code": "A9",
+          "text": "The DEFAULT_ADMIN_ROLE (held by a multisig) can hot-swap the MINTER_ROLE and add/remove supported collateral assets without a mandatory on-chain timelock, allowing for the silent introduction of new external dependencies."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol's core functionality (redemption) is gated by a centralized off-chain signature, and its principal is entirely dependent on the solvency of off-chain CEXs and custodians, representing a total lack of on-chain autonomy for user funds.",
+        "orange": "While the protocol has significant off-chain dependencies, the use of regulated OES providers and multiple CEXs diversifies the risk, though the lack of a permissionless exit path remains a material concern for performance and liveness.",
+        "green": "The on-chain contracts correctly account for collateral and USDe supply, and the protocol functions as intended provided the external delta-neutral hedge (which users opt into) remains solvent."
+      },
+      "verdict": "Choosing red because the protocol fails the autonomy test on two critical fronts: (1) redemptions are not permissionless and require a signature from a centralized off-chain 'Minter' (A2, A6), and (2) the principal backing USDe is held in off-chain custodial accounts (OES) and tied to CEX performance, meaning ~100% of TVS is subject to external failure modes that cannot be mitigated or recovered from on-chain."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x2cc440b721d99bd23f74686029307e9116641759#code",
+        "shows": "EthenaMinting contract requiring a Minter signature for redemptions in the redeem() function.",
+        "chain": "Ethereum",
+        "address": "0x2cc440b721d99bd23f74686029307e9116641759"
+      },
+      {
+        "url": "https://ethena-labs.gitbook.io/ethena-labs/solution-overview/solution-design",
+        "shows": "Documentation of the delta-neutral hedge and reliance on OES providers and CEXs.",
+        "fetched_at": "2026-04-29T10:00:00Z"
+      },
+      {
+        "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+        "shows": "List of audits confirming the architecture and the role of the Minter.",
+        "fetched_at": "2026-04-29T10:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c9EDD5852cd30587322a593a0382641b65970C1#code",
+        "shows": "USDe token contract implemented as a LayerZero OFT.",
+        "chain": "Ethereum",
+        "address": "0x4c9EDD5852cd30587322a593a0382641b65970C1"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/ethena-minting"
+      ],
+      "docs_url": "https://ethena-labs.gitbook.io/ethena-labs/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://github.com/ethena-labs/ethena-minting/blob/main/audits/Spearbit_Ethena_Final_Report.pdf",
+          "date": "2023-10"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://cantina.ai/audits/...",
+          "date": "2024-02"
+        }
+      ],
+      "governance_forum": "https://governance.ethena.fi",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x57e114B691Db790C35207b2e685D4A43181e6061",
+        "symbol": "ENA"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/ethena/",
+      "security_contact": "security@ethena.fi",
+      "deployed_contracts_doc": "https://ethena-labs.gitbook.io/ethena-labs/resources/contract-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x2b5a7f99670758986736f8136c8520742fdb5e2d",
+          "role": "Admin Multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Ethena is a synthetic dollar protocol providing a crypto-native solution for money not reliant on traditional banking system infrastructure. It uses delta-hedging of staked Ethereum collateral across centralized exchanges and off-exchange settlement providers to maintain a stable value for its USDe token."
+    }
+  }
+]

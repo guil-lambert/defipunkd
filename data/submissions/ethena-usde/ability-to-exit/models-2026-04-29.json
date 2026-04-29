@@ -1,0 +1,374 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "USDe transfers unpausable and sUSDe unstake is on-chain (cap 90d, currently dynamic 1-7d), but redemption to USDC at par requires KYC whitelist; retail exit depends on secondary-market liquidity.",
+    "short_headline": "Unstake on-chain, par redeem KYC-gated",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Exit functions enumerated across three contracts. USDe (0x4c9EDD...68B3): transfer/transferFrom/burn/burnFrom — standard ERC20, no redemption surface on the token itself. sUSDe StakedUSDeV2 (0x9D39A5...3497): cooldownAssets(uint256), cooldownShares(uint256), unstake(address) which pulls from USDeSilo after cooldown; ERC4626 withdraw()/redeem() are gated off when cooldownDuration > 0. EthenaMinting V2 (0xe3490297...1b62d3): mint(Order,Route,Signature), mintWETH, redeem(Order,Signature) — these are the only paths converting USDe to underlying collateral at par."
+        },
+        {
+          "code": "E2",
+          "text": "Access modifiers diverge sharply by function class. USDe.transfer/burn: no role gate, no pause guard — anyone holding USDe can move or burn it permissionlessly. sUSDe.cooldownAssets/cooldownShares/unstake: callable by any holder; the contract has no Pausable modifier on these, but holders flagged with FULL_RESTRICTED_STAKER_ROLE are blocked from receiving sUSDe (blacklist on the share token, not on the underlying USDe). EthenaMinting.mint/redeem: restricted to addresses with MINTER_ROLE/REDEEMER_ROLE respectively, with benefactor/beneficiary whitelisting; this is the access-control choke point — retail wallets cannot call redeem() directly."
+        },
+        {
+          "code": "E3",
+          "text": "Pause / freeze actor classes: USDe token has no pause function at all (verified via Etherscan read tab — no paused() getter, no PAUSE_ROLE). sUSDe owner is 0x3B0AAF6E6FCd4A7CEEf8c92C32dfeA9E64DC1862 (DEFAULT_ADMIN_ROLE) which can set cooldownDuration up to MAX_COOLDOWN_DURATION = 90 days, redistribute locked balances of FULL_RESTRICTED holders, and grant/revoke BLACKLIST_MANAGER_ROLE — equivalent to an indefinite freeze on a per-address basis but NOT a global pause of unstake. EthenaMinting has a disableMintRedeem() administrative gate; this halts mint+redeem flow, but only affects KYC-whitelisted counterparties since retail had no access path anyway."
+        },
+        {
+          "code": "E4",
+          "text": "Emergency vs governance distinction: I could not pin a separate emergency-multisig actor with a hard time-cap for the sUSDe admin or EthenaMinting admin; the docs describe role-holders abstractly without naming an emergency-only short-term role with auto-expiry. The DEFAULT_ADMIN_ROLE on sUSDe (held by the owner address above) appears to be the unilateral controller for cooldownDuration and blacklist actions with no on-chain timelock visible at the contract level."
+        },
+        {
+          "code": "E5",
+          "text": "Queued-redemption mechanics: sUSDe holders enter a per-user UserCooldown struct (cooldownEnd, underlyingAmount); funds move to the USDeSilo during cooldown and are only released by unstake() after cooldownEnd. Current cooldownDuration in storage is non-zero; Ethena governance moved to a dynamic 1-7 day cooldown effective March 2025 (gov.ethenafoundation.com proposal). Hard cap at the contract level: 90 days (MAX_COOLDOWN_DURATION). No documented daily withdrawal cap; the queue itself is not pausable as a whole, only individual addresses can be FULL_RESTRICTED."
+        },
+        {
+          "code": "E6",
+          "text": "Forced-exit / escape-hatch: there is no permissionless emergency-exit that converts USDe to USDC at par bypassing KYC. The de facto escape hatch is the secondary market (Curve USDe pools, Uniswap, sUSDe ERC4626 unstake → USDe → swap). This means worst-case adversarial-admin scenario for non-KYC users degrades to market-price exit, not stuck capital, AS LONG AS USDe transfers remain unpausable (which they are at the token level — no pause function exists)."
+        },
+        {
+          "code": "E7",
+          "text": "Frontend independence verified: cooldownAssets/cooldownShares/unstake on sUSDe are public functions callable directly from Etherscan's Write tab or any wallet/script — confirmed by ABI inspection on 0x9D39A5...3497. USDe transfers are ERC20-standard. Mint/redeem on EthenaMinting requires off-chain signed Order with KYC-whitelisted benefactor address, so the on-chain function is reachable but useless without a pre-existing whitelist relationship — frontend is not the gate, KYC is."
+        }
+      ],
+      "steelman": {
+        "red": "Par redemption to USDC requires KYC whitelist enforced at the EthenaMinting role layer; non-whitelisted retail holders have NO contract path to convert USDe to underlying collateral and are entirely dependent on third-party AMM liquidity that can dry up in a stress event (UST-style depeg), and the DEFAULT_ADMIN_ROLE on sUSDe is a single owner address with no visible timelock that can extend cooldown to 90 days and blacklist individual holders.",
+        "orange": "USDe is a standard ERC20 with no pause/blacklist function at all so token transfers cannot be frozen, sUSDe unstake is on-chain and time-bounded with a hard 90-day cap (currently 1-7 days dynamic), and the worst-case exit for non-KYC users is secondary-market price impact rather than locked capital — but redemption at par is gated by off-chain KYC whitelisting which is a meaningful exit constraint.",
+        "green": "The token contract itself is non-upgradable with no pause and no blacklist on transfers, cooldown is currently 1-7 days well under the 7-day green threshold, claims of finalized cooldowns (unstake after cooldownEnd) are not pause-gated by any role, and exit functions are directly callable on-chain without any frontend dependency."
+      },
+      "verdict": "Choosing orange because the green steel-man ignores the par-redemption KYC gate (the USDC conversion path is role-restricted at the EthenaMinting contract — verified MINTER_ROLE/REDEEMER_ROLE access control on 0xe3490297...1b62d3) which means non-whitelisted retail must rely on secondary-market liquidity, and the red steel-man overstates impact because USDe.transfer has no pause/blacklist (verified absence of paused() and blacklist functions on 0x4c9EDD...68B3) so holders can always reach a DEX, and sUSDe unstake claims are not pause-gated post-cooldown — the realistic exit is on-chain but at potentially-non-par price, which is the orange profile."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "shows": "USDe token contract: standard ERC20, Ownable2Step, mint() restricted to designated minter, no pause function, no blacklist on transfer, renounceOwnership disabled, not a proxy",
+        "chain": "Ethereum",
+        "address": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "shows": "sUSDe StakedUSDeV2 vault: ERC4626 with cooldownAssets/cooldownShares/unstake, owner 0x3B0AAF6E6FCd4A7CEEf8c92C32dfeA9E64DC1862 holds DEFAULT_ADMIN_ROLE, MAX_COOLDOWN_DURATION=90 days, blacklist roles FULL_RESTRICTED/SOFT_RESTRICTED, USDeSilo for cooled funds",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xe3490297a08d6fc8da46edb7b6142e4f461b62d3",
+        "shows": "EthenaMinting V2: mint(Order,Route,Signature) and redeem(Order,Signature) gated by MINTER_ROLE/REDEEMER_ROLE; benefactor/beneficiary whitelisting; disableMintRedeem() admin halt; no proxy pattern",
+        "chain": "Ethereum",
+        "address": "0xe3490297a08d6fc8da46edb7b6142e4f461b62d3",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions",
+        "shows": "DEFAULT_ADMIN_ROLE controls cooldownDuration up to 90 days, can call rescueTokens (excluding USDe) and redistributeLockedAmounts; BLACKLIST_MANAGER_ROLE assigns FULL/SOFT restricted staker roles; rewarder transfers USDe rewards",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/resources/faq",
+        "shows": "All addresses must be whitelisted by Ethena Protocol after KYC/AML to mint/redeem USDe directly; US users excluded from the application; redemption is permissioned at the contract role layer",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions",
+        "shows": "Two issuer entities (Ethena GmbH for EEA, Ethena BVI for non-EEA from Jan 2025); redemption conditional on possession of USDe, no Terms violation, no regulator/court action restricting redemption — explicit legal off-ramp risk",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://gov.ethenafoundation.com/t/proposal-adopt-a-dynamic-cooldown-period-for-susde-unstaking/759",
+        "shows": "Governance proposal (effective March 2025) introducing dynamic cooldown 1-7 days based on USDe reserve liquid stablecoin balance; replaces static 7-day cooldown",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      },
+      {
+        "url": "https://github.com/code-423n4/2023-10-ethena-findings/issues/198",
+        "shows": "Code4rena finding documenting that when cooldownDuration > 0 the ERC4626 withdraw/redeem are disabled and only cooldownAssets/cooldownShares paths are usable — confirms architectural separation of request placement vs claim",
+        "fetched_at": "2026-04-29T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: actor class of the sUSDe DEFAULT_ADMIN_ROLE owner 0x3B0AAF6E6FCd4A7CEEf8c92C32dfeA9E64DC1862 — could not confirm whether this is an EOA, a 2-of-3 multisig, or a Safe with governance signers without an additional explorer probe of the address itself; affects whether the 90-day cooldown extension is unilateral or multisig-gated",
+      "E4: whether EthenaMinting has a separate emergency-scoped time-capped role distinct from the standard admin — the disableMintRedeem() function actor and any auto-expiry timer not enumerated in the surfaced ABI excerpt",
+      "E5: whether per-block or per-day cumulative withdrawal caps exist on sUSDe.unstake or in the USDeSilo — not visible in the documented function set",
+      "E6: whether any permissionless redemption tier exists for jurisdictions outside EEA/BVI coverage or for amounts below a KYC threshold — docs are silent, redemption appears to be uniformly KYC-gated"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs"
+      ],
+      "docs_url": "https://docs.ethena.fi",
+      "audits": [],
+      "governance_forum": "https://gov.ethenafoundation.com",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3B0AAF6E6FCd4A7CEEf8c92C32dfeA9E64DC1862",
+          "role": "sUSDe StakedUSDeV2 owner / DEFAULT_ADMIN_ROLE (sets cooldownDuration up to 90d, blacklist control)",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Ethena issues USDe, a synthetic dollar collateralized by delta-neutral basis trades (long spot ETH/BTC/SOL hedged with short perpetual futures on CEXes). Yield from funding rates and staked-ETH rewards is paid to sUSDe holders via an ERC4626 vault with a 1-7 day dynamic unstake cooldown (90-day contract cap). Direct mint/redeem at par is restricted to KYC-whitelisted counterparties via the EthenaMinting contract; retail users acquire and exit USDe through secondary markets (Curve, Uniswap) or via the sUSDe vault."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "USDe redemption is operator-mediated and can be disabled with no on-chain expiry",
+    "short_headline": "Operator-gated exits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The deployed exit surfaces checked were EthenaMintingV2.redeem(Order,Signature) for USDe-to-collateral redemption, and StakedUSDeV2.withdraw, redeem, cooldownAssets, cooldownShares, and unstake for sUSDe-to-USDe exit. USDe burn/burnFrom destroys USDe but does not return backing, so it was not treated as an exit."
+        },
+        {
+          "code": "E2",
+          "text": "EthenaMintingV2.redeem is external but restricted by onlyRole(REDEEMER_ROLE), nonReentrant, per-asset and global max-redeem-per-block checks, and order verification. StakedUSDeV2.withdraw and redeem require ensureCooldownOff, cooldownAssets and cooldownShares require ensureCooldownOn, and unstake checks cooldownEnd or cooldownDuration==0 without a role modifier."
+        },
+        {
+          "code": "E3",
+          "text": "The pause-equivalent control for USDe redemption is cap-based: DEFAULT_ADMIN_ROLE can set global/per-asset redeem caps, and GATEKEEPER_ROLE can set global mint and redeem caps to zero via disableMintRedeem, with no auto-expiry in the deployed source. Constructor evidence identifies 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862 as the admin, and Etherscan identifies that address as an Ethena Safe multisig; Ethena's repository describes the admin multisig as 7-of-10."
+        },
+        {
+          "code": "E4",
+          "text": "The emergency path is GATEKEEPER_ROLE.disableMintRedeem, which can only disable mint/redeem and remove hot roles; the governance/admin path is DEFAULT_ADMIN_ROLE, which can set redeem caps, manage roles, and later re-enable. The deployed source does not impose a time cap on either the zero-cap state or role removal."
+        },
+        {
+          "code": "E5",
+          "text": "sUSDe exits are queued when cooldownDuration is nonzero: cooldownAssets/cooldownShares burn shares into the USDeSilo and set cooldownEnd to block.timestamp plus cooldownDuration, while setCooldownDuration is admin-only and capped by MAX_COOLDOWN_DURATION=90 days. I found no sUSDe daily withdrawal cap in the checked staking source, but USDe collateral redemption has per-block caps that admin/gatekeeper can zero."
+        },
+        {
+          "code": "E6",
+          "text": "I found no permissionless forced-exit or escape-hatch that lets a USDe holder redeem backing if the Ethena redeemer role, backend order flow, whitelist, or redeem caps are unavailable. The repository describes secondary-market sale as the alternative for large or unavailable direct redemptions, not an on-chain forced exit."
+        },
+        {
+          "code": "E7",
+          "text": "The deployed contracts are verified on Etherscan and expose the relevant write functions directly, so sUSDe exit and authorized USDe redemption transactions can be submitted without Ethena's frontend; however USDe redemption itself still requires a REDEEMER_ROLE caller and a valid signed order flow."
+        }
+      ],
+      "steelman": {
+        "red": "USDe collateral redemption requires an authorized REDEEMER_ROLE operator and can be disabled indefinitely by zeroing redeem caps, so users cannot unilaterally exit to backing under adversarial admin/operator conditions.",
+        "orange": "sUSDe holders have on-chain cooldown and claim functions, finalized unstake claims are not explicitly pause-gated in StakedUSDeV2, and the documented staking cooldown is capped at 90 days rather than unbounded.",
+        "green": "A narrow view limited only to normal, unrestricted sUSDe-to-USDe unstaking would show direct Etherscan-callable functions and no separate frontend dependency."
+      },
+      "verdict": "Choosing red because the main USDe redemption path is not permissionless: EthenaMintingV2.redeem is only callable by REDEEMER_ROLE, requires signed order verification, and the admin/gatekeeper controls can set redeem capacity to zero with no source-level expiry, while no permissionless forced redemption path was found."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xe3490297a08d6fc8da46edb7b6142e4f461b62d3",
+        "shows": "Deployed Ethena Mint and Redeem V2 contract on Ethereum; constructor ties USDe to 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3 and sets _admin to 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862; source exposes redeem, cap setters, disableMintRedeem, role checks, and order verification.",
+        "chain": "Ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "fetched_at": "2026-04-29T03:53:38Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "shows": "Deployed StakedUSDeV2 contract on Ethereum; verified source lists withdraw, redeem, unstake, cooldownAssets, cooldownShares, setCooldownDuration, MAX_COOLDOWN_DURATION=90 days, and blacklist/restriction logic.",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "fetched_at": "2026-04-29T03:53:38Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "shows": "Deployed USDe ERC-20 token contract on Ethereum, used as the asset in StakedUSDeV2 and the token burned by EthenaMintingV2 redemption.",
+        "chain": "Ethereum",
+        "address": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "fetched_at": "2026-04-29T03:53:38Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+        "shows": "Etherscan labels the admin address used by the assessed contracts as Ethena multisig wallets and identifies it as a Safe smart account.",
+        "chain": "Ethereum",
+        "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+        "fetched_at": "2026-04-29T03:53:38Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/blob/main/README.md",
+        "shows": "Ethena repository README describes USDe mint/redeem as Ethena-backend-submitted EIP-712 orders, the gatekeeper disable mechanism, sUSDe cooldown up to 90 days, restriction roles, and a 7-of-10 Gnosis Safe ownership model.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T03:53:38Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/role-verification/blob/main/main.py",
+        "shows": "Ethena role-verification repository identifies the tracked EthenaMinting and StakedUSDeV2 contract addresses and the roles it scans, including DEFAULT_ADMIN_ROLE, REDEEMER_ROLE, GATEKEEPER_ROLE, BLACKLIST_MANAGER_ROLE, and restriction roles.",
+        "commit": "7e9b9c5d2f2f7d169d3a82a1fb7a1d0f945f4c4a",
+        "fetched_at": "2026-04-29T03:53:38Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/resources/audits",
+        "shows": "Ethena audits index lists Zellic, Quantstamp, Spearbit, Pashov, Code4rena, and Chaos Labs reports with report links and dates.",
+        "fetched_at": "2026-04-29T03:53:38Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/bbp-public-assets",
+        "https://github.com/ethena-labs/role-verification"
+      ],
+      "docs_url": "https://ethena-labs.gitbook.io/ethena-labs",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://596495599-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsBsPyff5ft3inFy9jyjt%2Fuploads%2FGZbd1DrrG3YmnTlJnTHa%2FEthena%20-%20Zellic%20Audit%20Report%20Draft.pdf?alt=media&token=2e65890c-6724-49b7-97f4-6d2223ba086e",
+          "date": "2023-07-05"
+        },
+        {
+          "firm": "Quantstamp",
+          "url": "https://596495599-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsBsPyff5ft3inFy9jyjt%2Fuploads%2F17Ucep7IYMBZ6mAHGLyw%2FEthena%20Final%20Report%20%281%29.pdf?alt=media&token=51a6a101-516e-4984-8360-14daf860a961",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://596495599-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsBsPyff5ft3inFy9jyjt%2Fuploads%2FsX7xO54StGnS6RlZM0Qa%2FSpearbit%20_Ethena_v2_Final_report-ethena__1_.pdf?alt=media&token=d0968065-7e4d-4661-b53f-a1d5181c30bd",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://596495599-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsBsPyff5ft3inFy9jyjt%2Fuploads%2FJHbdthPqKCPoZFzrpryW%2Fv2-audit.pdf?alt=media&token=68bbdbae-4fcf-4e90-ad20-8c4d6a5a29a0",
+          "date": "2024-05-23"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+          "role": "DEFAULT_ADMIN_ROLE / owner multisig for EthenaMintingV2 and StakedUSDeV2",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Ethena issues USDe, a synthetic dollar minted against crypto collateral and maintained through delta-hedged backing positions. Qualified users mint and redeem USDe through signed RFQ-style orders submitted on-chain by Ethena operators, while holders can stake USDe into sUSDe to receive a yield-bearing ERC-4626-style vault token. sUSDe exits burn shares into an escrow silo and require a cooldown before claiming USDe."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Redemption requires whitelisting and off-chain protocol signatures",
+    "short_headline": "Whitelisted exit with off-chain dependency",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The primary exit function for converting USDe to collateral is redeem() in the EthenaMinting contract. For sUSDe holders, the exit path involves cooldownAssets() or cooldownShares() followed by unstake() after a timer expires."
+        },
+        {
+          "code": "E2",
+          "text": "The redeem() function in EthenaMinting is protected by the onlyRole(REDEEMER_ROLE) modifier and the whenNotPaused guard. The cooldownAssets() function in StakedUSDeV2 is protected by the whenNotPaused guard but does not require a whitelist role for sUSDe holders to return to USDe."
+        },
+        {
+          "code": "E3",
+          "text": "The EthenaMinting contract can be paused indefinitely by the DEFAULT_ADMIN_ROLE or PAUSE_ROLE, both held by the Ethena admin multisig (0x2b0730533298960823393088788f93c75d059503). There is no on-chain mechanism to force an unpause or a maximum pause duration."
+        },
+        {
+          "code": "E5",
+          "text": "The sUSDe contract implements a cooldown period (currently 7 days) via the cooldownDuration variable. This duration can be modified by the admin up to a MAX_COOLDOWN_DURATION of 90 days."
+        },
+        {
+          "code": "E7",
+          "text": "The redeem() function in EthenaMinting requires an EIP-712 signature from the protocol's backend (MINTER_ROLE). This creates a hard dependency on Ethena's off-chain infrastructure; users cannot redeem USDe for collateral directly on-chain if the backend is unavailable or refuses to sign."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol-level exit from USDe to collateral is restricted to whitelisted actors and requires a mandatory off-chain signature from the protocol's backend, preventing permissionless redemption.",
+        "orange": "While USDe redemption is gated, the sUSDe staking contract provides a documented 7-day cooldown for users to reclaim USDe, and the token's primary exit path is through highly liquid external secondary markets.",
+        "green": "The gated redemption model is a necessary security and stability feature for a delta-neutral synthetic dollar, and the protocol has functioned as intended through multiple high-volatility events."
+      },
+      "verdict": "Choosing red because the primary mechanism for exiting the protocol (redeeming USDe for collateral) is not permissionless; it requires the caller to hold the REDEEMER_ROLE (whitelisting) and provide an EIP-712 signature generated by Ethena's off-chain minting service, which directly violates the requirement for an on-chain, non-custodial exit path."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x2cc440b721d2ddcc35178a936d62178440b14d26#code",
+        "shows": "EthenaMinting contract showing redeem() function with onlyRole(REDEEMER_ROLE) and signature requirements.",
+        "chain": "Ethereum",
+        "address": "0x2cc440b721d2ddcc35178a936d62178440b14d26"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9D39A5DE30e57443BfF2A8307A412039037CC7D8#code",
+        "shows": "StakedUSDeV2 contract showing cooldown mechanism and MAX_COOLDOWN_DURATION of 90 days.",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A412039037CC7D8"
+      },
+      {
+        "url": "https://ethena-labs.gitbook.io/ethena-labs/solution-overview/minting-and-redemption",
+        "shows": "Official documentation confirming that users must receive a signed order from Ethena's minting service to redeem USDe.",
+        "fetched_at": "2026-04-29T10:00:00Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/ethena-core/blob/cf3e90b6653846665799796f2a68648394c6d830/contracts/EthenaMinting.sol",
+        "shows": "Source code for EthenaMinting confirming the signature and role-based access control for redemptions.",
+        "commit": "cf3e90b6653846665799796f2a68648394c6d830"
+      }
+    ],
+    "unknowns": [
+      "E4: No distinction between emergency and governance pause paths was found in the contract code; both appear to use the same standard Pausable logic."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/ethena-core"
+      ],
+      "docs_url": "https://ethena-labs.gitbook.io/ethena-labs/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-08"
+        }
+      ],
+      "governance_forum": "https://governance.ethena.fi/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x57e114B691Db790C35207b2e685D4A43181e6061",
+        "symbol": "ENA"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/ethena/",
+      "security_contact": "security@ethena.fi",
+      "deployed_contracts_doc": "https://ethena-labs.gitbook.io/ethena-labs/solution-overview/solution-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x2b0730533298960823393088788f93c75d059503",
+          "role": "Admin Multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Ethena is a synthetic dollar protocol providing a crypto-native solution for money not reliant on traditional banking system infrastructure. It uses delta-neutral hedging of staked Ethereum collateral across centralized and decentralized exchanges to maintain the USDe peg and generate yield for sUSDe holders."
+    }
+  }
+]

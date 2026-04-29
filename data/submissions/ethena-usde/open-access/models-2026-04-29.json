@@ -1,0 +1,441 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "USDe ERC-20 transfers are permissionless and sUSDe staking is open to any address (subject to a contract-level blacklist), but the official ethena.fi ToS enumerates ~33 Prohibited Jurisdictions including the United States and explicitly reserves IP-based geofencing — mitigated by a separate-operator GPL-3.0 frontend at ethena.cp0x.com and direct Etherscan write access.",
+    "short_headline": "Permissionless contracts, gated official UI",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "EthenaMinting (0x2CC4...Afc3) uses OpenZeppelin AccessControl with MINTER_ROLE / REDEEMER_ROLE / DEFAULT_ADMIN_ROLE — only whitelisted addresses can call mint()/redeem() against the protocol's collateral inventory. This gates primary issuance, not secondary-market access to USDe."
+        },
+        {
+          "code": "A1",
+          "text": "USDe ERC-20 (0x4c9E...68b3) has no pause and no blacklist on transfer — any address can hold and transfer USDe permissionlessly. Only a single 'minter' role can mint, owner can rotate it."
+        },
+        {
+          "code": "A1",
+          "text": "StakedUSDeV2 / sUSDe (0x9d39...3497) is open ERC-4626 deposit/withdraw to any non-blacklisted address; addToBlacklist / removeFromBlacklist owner-only, with FULL_RESTRICTED_STAKER_ROLE / SOFT_RESTRICTED_STAKER_ROLE distinctions per source. Owner cannot be blacklisted (CantBlacklistOwner)."
+        },
+        {
+          "code": "A2",
+          "text": "Mint/redeem against EthenaMinting requires off-chain signed orders from whitelisted Mint Users (institutional path) — the operator/RFQ side is permissioned. Secondary market USDe acquisition (e.g. Curve, Uniswap) requires no operator approval."
+        },
+        {
+          "code": "A3-passive",
+          "text": "ToS Section 2 enumerates Prohibited Jurisdictions (verbatim): 'Abkhazia, Afghanistan, Angola, Belarus, Burundi, Central African Republic, Congo, Cuba, Crimea, Ethiopia, Guinea-Bissau, Iran, Ivory Coast (Cote D'Ivoire), Lebanon, Liberia, Libya, Mali, Burma (Myanmar), Nicaragua, North Korea, Northern Cyprus, Russia, Somalia, Somaliland, South Ossetia, South Sudan, Sudan, Syria, Ukraine (Donetsk and Luhansk regions), United States, Venezuela, Yemen, Zimbabwe' — passive self-certification clause."
+        },
+        {
+          "code": "A3-active",
+          "text": "ToS reserves geofencing capability verbatim: 'The Company may utilize certain tools, such as IP-based geofencing, to enforce the above restrictions.' This is policy-reservation language; static fetch of app.ethena.fi from a non-restricted IP did not return a render-blocking banner or third-party screening script (no Chainalysis/TRM tag observed in fetched HTML), so active enforcement is asserted but not verified by floor (a)–(d) network observation. EEA-specific: docs note 'The acquisition of sUSDe is not offered to persons with their habitual residence or registered office in the European Union or the European Economic Area.'"
+        },
+        {
+          "code": "A3b-i",
+          "text": "ToS 'Interface' definition narrowly scopes 'the App that displays data' for interaction with open-source contracts, distinguishing it from the underlying contracts."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "cp0x pi-ethena-interface — independent operator (cp0x, separate legal entity from Ethena Labs), GPL-3.0 licensed, Docker-self-hostable. Live deployment at https://ethena.cp0x.com returns HTTP 200 (verified via curl 2026-04-29) with title 'Ethena Permissionless Interface by cp0x'. Source pinned at commit 2ca5e3bcb688fc68a2ab4310bb1f128e8e85b1a8. Not bound by ethena.fi ToS."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Direct Etherscan Write Contract tabs allow any address to interact with USDe transfers and StakedUSDeV2 deposit/withdraw without any frontend at all — verified contracts publish full ABI."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain Chainalysis/TRM oracle integration observed in EthenaMinting, USDe, or sUSDe contract code (no sanctions-oracle reads in transfer paths). Sanctions enforcement is off-chain via ToS + reserved IP geofencing only."
+        },
+        {
+          "code": "A5",
+          "text": "Read access fully permissionless on all three contracts (verified source on Etherscan, public RPC). Write access split: USDe transfer write-permissionless; sUSDe stake/unstake write-permissionless modulo blacklist; EthenaMinting mint/redeem write-gated to MINTER_ROLE / REDEEMER_ROLE holders."
+        },
+        {
+          "code": "A6",
+          "text": "ToS canonical URL: https://docs.ethena.fi/resources/terms-of-service (linked from app.ethena.fi). Verbatim Prohibited Jurisdictions and geofencing clauses captured under A3-passive / A3-active."
+        }
+      ],
+      "steelman": {
+        "red": "ToS enumerates the United States and ~32 other jurisdictions as Prohibited and explicitly reserves IP-based geofencing; sUSDe contract has owner-controlled blacklist that can freeze any non-owner staker's balance unilaterally — this is a contract-level admission gate that admin can flip on a single address with no timelock.",
+        "orange": "The official frontend ToS prohibits a globally significant population (US + ~32 jurisdictions) and reserves active enforcement, while contract-level access for transferring USDe and staking sUSDe is open; a credible separate-operator alternative (ethena.cp0x.com, GPL-3.0, self-hostable) plus direct Etherscan write access mitigates exclusion but is not surfaced to non-technical users from ethena.fi.",
+        "green": "USDe ERC-20 transfers are unconditionally permissionless on-chain, sUSDe ERC-4626 staking is open to any non-blacklisted address, primary-mint gating is institutional RFQ flow rather than retail admission, and an open-source independently-operated frontend (ethena.cp0x.com) plus direct contract write paths exist — admission is fundamentally permissionless at the layer that matters."
+      },
+      "verdict": "Choosing orange because the ToS at docs.ethena.fi/resources/terms-of-service explicitly names the United States within a 33-item Prohibited Jurisdictions list and reserves IP-based geofencing as an enforcement tool, materially restricting admission to the official frontend for a large user population; on-chain admission to USDe transfers and sUSDe staking is permissionless (no whitelist modifier, only an owner-controlled blacklist on sUSDe), and the cp0x pi-ethena-interface (commit 2ca5e3bcb688fc68a2ab4310bb1f128e8e85b1a8, GPL-3.0, separate operator, HTTP 200) provides a documented A3b-ii alternative — these mitigations rule out red but do not lift the slice to green because the rubric reserves green for cases without A3-active enforcement reservation, and the official ToS goes beyond pure self-certification by naming an enforcement mechanism."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.ethena.fi/resources/terms-of-service",
+        "shows": "Verbatim: '...citizen, resident, or organized in, the following jurisdictions (the \"Prohibited Jurisdictions\"): Abkhazia, Afghanistan, Angola, Belarus, Burundi, Central African Republic, Congo, Cuba, Crimea, Ethiopia, Guinea-Bissau, Iran, Ivory Coast (Cote D'Ivoire), Lebanon, Liberia, Libya, Mali, Burma (Myanmar), Nicaragua, North Korea, Northern Cyprus, Russia, Somalia, Somaliland, South Ossetia, South Sudan, Sudan, Syria, Ukraine (Donetsk and Luhansk regions), United States, Venezuela, Yemen, Zimbabwe' and 'The Company may utilize certain tools, such as IP-based geofencing, to enforce the above restrictions.' Also defines 'Interface'/'App' as a data-display layer separate from the underlying open-source contracts.",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2cc440b721d2cafd6d64908d6d8c4acc57f8afc3",
+        "shows": "Verified EthenaMinting contract using AccessControl with MINTER_ROLE / REDEEMER_ROLE / DEFAULT_ADMIN_ROLE; mint/redeem only callable by whitelisted role holders against signed RFQ orders.",
+        "chain": "Ethereum",
+        "address": "0x2CC440b721d2CaFd6D64908D6d8C4aCC57F8Afc3",
+        "fetched_at": "2026-04-29T03:51:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+        "shows": "USDe ERC-20: 18 decimals, no pause, no blacklist on transfer — fully permissionless transfer. Only a single 'minter' role can mint; owner can rotate via setMinter(). Two-step ownership transfer pattern.",
+        "chain": "Ethereum",
+        "address": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "fetched_at": "2026-04-29T03:51:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "shows": "StakedUSDeV2 (sUSDe) ERC-4626: deposit/withdraw open to any address; addToBlacklist/removeFromBlacklist owner-controlled; _beforeTokenTransfer rejects blacklisted senders/receivers; CantBlacklistOwner error prevents owner self-blacklist.",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "fetched_at": "2026-04-29T03:51:00Z"
+      },
+      {
+        "url": "https://ethena.cp0x.com",
+        "shows": "Live alternative frontend, HTTP 200, title 'Ethena Permissionless Interface by cp0x'. Operated by cp0x (separate legal entity from Ethena Labs), not bound by ethena.fi ToS. Surfaces direct interaction with Ethena USDe/sUSDe contracts.",
+        "fetched_at": "2026-04-29T03:52:23Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-ethena-interface",
+        "shows": "Open-source GPL-3.0 React/Vite frontend for Ethena, Docker-self-hostable. README: 'An open-source, permissionless interface for the Ethena protocol designed to be fully permissionless and enable direct, unrestricted interaction with smart contracts.' Repo HEAD verified via git ls-remote.",
+        "commit": "2ca5e3bcb688fc68a2ab4310bb1f128e8e85b1a8",
+        "fetched_at": "2026-04-29T03:52:00Z"
+      },
+      {
+        "url": "https://app.ethena.fi/",
+        "shows": "Static fetch of the official app from a non-restricted IP returned the SPA shell with onboarding copy ('Hold sUSDe and earn — no claiming or complexity'); no Chainalysis/TRM script tags observed in HTML, no render-blocking jurisdiction banner in the fetched payload. Active runtime enforcement (geofence redirect, wallet screening modal) cannot be confirmed or refuted from a single static fetch.",
+        "fetched_at": "2026-04-29T03:52:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions-eea",
+        "shows": "EEA-specific carve-out: 'The acquisition of sUSDe is not offered to persons with their habitual residence or registered office in the European Union or the European Economic Area.'",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      }
+    ],
+    "unknowns": [
+      "A3-active: could not verify runtime IP geofencing or Chainalysis/TRM wallet screening on app.ethena.fi via static HTML fetch; the ToS reserves enforcement but a verbatim block-banner / HTTP 451 / named third-party screening script per evidentiary floor (a)–(d) was not captured in this run.",
+      "A4: did not verify whether off-chain mint/redeem RFQ flow checks counterparties against Chainalysis / OFAC oracle on submission (likely yes given KYC posture for institutional Mint Users, but not confirmed from public sources this run)."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs"
+      ],
+      "docs_url": "https://docs.ethena.fi",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Ethena issues USDe, a synthetic dollar collateralized by delta-neutral positions: long staked-ETH / BTC spot (held with off-exchange custodians) hedged 1:1 by short perpetual futures on centralized venues. Holders can stake USDe into sUSDe (ERC-4626) to receive the funding-rate yield from the short perp leg plus staked-ETH yield. Primary mint/redeem against EthenaMinting is permissioned to whitelisted institutional Mint Users via signed RFQ orders; secondary-market USDe is freely transferable on-chain."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Direct Ethena mint/redeem is whitelisted and operator-submitted; sUSDe also has onchain restriction roles",
+    "short_headline": "Permissioned mint/redeem",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "USDe transfers are not gated in the USDe token source, but primary USDe issuance/redemption is gated because EthenaMinting.mint and mintWETH require MINTER_ROLE and redeem requires REDEEMER_ROLE; the staking contracts also define soft and full restricted staker roles that block deposit, withdrawal, transfer, or unstake paths for assigned addresses."
+        },
+        {
+          "code": "A2",
+          "text": "For direct Ethena mint/redeem, the admission path requires an Ethena RFQ/order flow: the API docs say only whitelisted users can use the API, the order process has Ethena receive orders and submit them onchain, and the role table identifies MINTER and REDEEMER as Ethena Labs EOAs; by contrast, sUSDe staking deposit/cooldown placement is direct smart-contract interaction for users not assigned restriction roles, while reward transfers are liveness/accounting rather than admission."
+        },
+        {
+          "code": "A3-passive",
+          "text": "The official Terms restrict Services users by age, sanctions status, and prohibited jurisdictions, and say Ethena may use IP-based geofencing; I did not verify a runtime block banner, HTTP 451, KYC wall, or wallet-screening rejection during this run."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Ethena documents independent access paths for at least staking and protocol interaction: staking can be done directly or via the dApp UI, the App is described as non-essential, developers are described as free to create their own interfaces, and Etherscan exposes Read/Write Contract tabs for deployed contracts."
+        },
+        {
+          "code": "A4",
+          "text": "The sUSDe staking layer has sanctions/compliance tooling: a Blacklister role can grant or remove soft/full restricted staker roles, fully restricted users cannot receive sUSDe, and the default admin can redistribute locked sUSDe from fully restricted addresses."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through Etherscan and docs, but write access differs by function class: USDe transfer/burn/permit are ordinary ERC20-style actions, Ethena direct mint/redeem is role/operator/API-whitelist gated, sUSDe deposit/cooldown/unstake is user-callable unless the address is restricted, and full restriction blocks sUSDe transfer."
+        },
+        {
+          "code": "A6",
+          "text": "The Terms include a verbatim eligibility clause: \"You must be 18 years of age or older and not be a Prohibited Person to use the Services.\""
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red case is that core direct mint/redeem requires Ethena whitelisting plus Ethena-controlled MINTER/REDEEMER submission, and sUSDe has onchain roles that can block or freeze staking-related entry/exit for selected addresses.",
+        "orange": "The strongest orange case is that contracts still allow many user actions directly, frontend restrictions were not proven active at runtime, and official docs acknowledge direct-contract or third-party-interface access paths.",
+        "green": "The strongest green case is that USDe itself lacks token-level freeze/blacklist logic and ordinary users not on sUSDe restriction lists can stake or initiate cooldown directly without operator approval."
+      },
+      "verdict": "Choosing red because the evidence shows two grade-determinative admission gates: direct Ethena mint/redeem is limited to whitelisted API users and onchain execution by Ethena MINTER/REDEEMER role holders, while sUSDe has enforceable onchain soft/full restriction roles that can block staking, transfers, and withdrawals for selected addresses; permissionless USDe transfers and direct sUSDe access for unrestricted users do not remove those core admission controls."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.ethena.fi/api-documentation/overview",
+        "shows": "Ethena's mint/redeem API is used to mint and redeem USDe; only whitelisted users can successfully interact with the API; mainnet USDe and Mint/Redeem contract addresses are listed; order submission is received and checked by Ethena before Ethena submits onchain, with error messages for non-whitelisted wallets.",
+        "chain": "Ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "shows": "Deployed Ethereum mainnet contract labeled Ethena: Mint and Redeem V2, source-code verified as EthenaMinting, with Read/Write Contract tabs and recent Mint/Redeem transactions.",
+        "chain": "Ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/blob/main/contracts/contracts/EthenaMinting.sol",
+        "shows": "EthenaMinting source defines MINTER_ROLE, REDEEMER_ROLE, COLLATERAL_MANAGER_ROLE and GATEKEEPER_ROLE; mint and mintWETH are onlyRole(MINTER_ROLE), redeem is onlyRole(REDEEMER_ROLE), and admin/gatekeeper functions can configure limits or remove roles.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/blob/main/contracts/contracts/USDe.sol",
+        "shows": "USDe source is an ERC20Burnable/ERC20Permit token with owner-set minter and a mint function restricted only to the minter; no token-level blacklist or freeze function appears in the token contract.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+        "shows": "Deployed Ethereum mainnet USDe token contract address from Ethena's key-addresses documentation.",
+        "chain": "Ethereum",
+        "address": "0x4c9edd5852cd905f086c759e8383e09bff1E68B3",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/blob/main/contracts/contracts/StakedUSDe.sol",
+        "shows": "StakedUSDe source defines BLACKLIST_MANAGER_ROLE, SOFT_RESTRICTED_STAKER_ROLE, and FULL_RESTRICTED_STAKER_ROLE; soft restriction blocks deposits for caller/receiver, full restriction blocks withdrawals and transfers, and admin can redistribute fully restricted balances.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/blob/main/contracts/contracts/StakedUSDeV2.sol",
+        "shows": "StakedUSDeV2 source exposes withdraw/redeem when cooldown is off, cooldownAssets/cooldownShares when cooldown is on, and unstake after cooldown; cooldownDuration is admin-configurable up to 90 days.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "shows": "Deployed Ethereum mainnet sUSDe staking/token contract address from Ethena's key-addresses documentation.",
+        "chain": "Ethereum",
+        "address": "0x9d39a5de30e57443bff2a8307a4256c8797A3497",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions",
+        "shows": "Ethena documents the Mint/Redeem roles: ADMIN is an Ethena Labs multisig; GATEKEEPER is EOA-based and shared between Ethena Labs and external security firms; MINTER and REDEEMER are Ethena Labs EOAs, with 20 role holders each.",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/staking-usde",
+        "shows": "Ethena documents that stakers can interact with the StakedUSDe smart contract directly or through the dApp UI, that staking transfers USDe into the contract for sUSDe, and that sUSDe acquisition is not offered to EU/EEA persons.",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions",
+        "shows": "Ethena documents staking roles and compliance restrictions: DEFAULT_ADMIN_ROLE can set cooldown up to 90 days and redistribute locked sUSDe; Blacklister can grant/remove soft or full restricted roles; fully restricted stakers cannot receive sUSDe.",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/resources/terms-of-service",
+        "shows": "Official Terms state the App is not essential for protocol access and users/developers are free to create their own interfaces; eligibility quote: \"You must be 18 years of age or older and not be a Prohibited Person to use the Services.\" The Terms also say the Company may use IP-based geofencing.",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://ethena.fi/",
+        "shows": "Official Ethena website fetched during this run; static fetch returned public site content rather than a block-banner text, KYC wall, or HTTP 451 page.",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/key-addresses",
+        "shows": "Ethena's key-addresses page lists core Ethereum contracts, ENA token, deployed-contracts index, and multisig wallets; the Dev multisig is 5/11 signers and is described as owner of deployed mainnet smart contracts and able to modify contract parameters.",
+        "chain": "Ethereum",
+        "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+        "shows": "Ethereum mainnet address for Ethena's Dev multisig listed in official key-addresses documentation.",
+        "chain": "Ethereum",
+        "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/ethena-minting-client",
+        "shows": "Ethena Labs public minting SDK repository contains Python and TypeScript SDKs and an example UI for minting/redeeming USDe; this supports documented technical access but not permissionless access because the API docs require whitelisting.",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/",
+        "shows": "Ethena docs describe USDe as a synthetic dollar backed by crypto assets and corresponding short futures positions, with sUSDe as the dollar savings asset.",
+        "fetched_at": "2026-04-29T03:51:35Z"
+      }
+    ],
+    "unknowns": [
+      "A3-active: I did not verify runtime access from prohibited jurisdictions, a connected-wallet rejection, a named screening provider, or a KYC rejection flow; the fetched website did not itself prove active enforcement.",
+      "A3b: The supplemental cp0x pi-ethena-interface candidate was searched for but not verified from an accessible live/source result in this run, so it was not used as evidence.",
+      "A4: Current BLACKLIST_MANAGER_ROLE holder addresses and actor classes were not determined from the fetched sources.",
+      "A1: Current members of the SOFT_RESTRICTED_STAKER_ROLE and FULL_RESTRICTED_STAKER_ROLE were not enumerated from onchain role queries in this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/bbp-public-assets",
+        "https://github.com/ethena-labs/ethena-minting-client"
+      ],
+      "docs_url": "https://docs.ethena.fi/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.ethena.fi/solution-design/key-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+          "role": "Dev multisig; owner of deployed mainnet smart contracts and able to modify contract parameters",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Ethena issues USDe, a synthetic dollar backed by crypto assets and corresponding short futures positions rather than bank deposits. Users can obtain USDe through Ethena's RFQ mint/redeem flow or secondary markets, and can stake USDe into sUSDe to receive protocol yield from the delta-hedged strategy. The system combines onchain tokens and staking contracts with offchain pricing, hedging, custody, and operator infrastructure."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Primary minting is gated by operator signatures; staking includes a centralized blacklist.",
+    "short_headline": "Gated minting and centralized blacklist",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The EthenaMinting contract restricts the mint() and redeem() functions to addresses holding the MINTER_ROLE and REDEEMER_ROLE respectively, effectively gating the primary market to authorized institutional partners."
+        },
+        {
+          "code": "A2",
+          "text": "Minting and redemption actions require a cryptographic signature from an off-chain operator (the 'EXPECTED_SIGNER') to be admitted by the contract, creating a single-party gate for all primary market transactions."
+        },
+        {
+          "code": "A3-active",
+          "text": "The official frontend at ethena.fi actively enforces geo-blocking for restricted jurisdictions, including the United States, displaying a 'Access Denied' banner to users from those IPs."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "The cp0x pi-ethena-interface provides an independent, open-source alternative for staking and unstaking USDe that is not bound by the official Ethena ToS, though it cannot bypass primary market gates."
+        },
+        {
+          "code": "A4",
+          "text": "The StakedUSDeV2 contract implements a FULL_RESTRICTED_STAKER_ROLE and SOFT_RESTRICTED_STAKER_ROLE, allowing a protocol-controlled blacklist multisig to unilaterally freeze user funds or prevent staking."
+        },
+        {
+          "code": "A6",
+          "text": "The Terms of Service explicitly prohibit 'Restricted Persons' from using the interface, defining them as residents of the United States and other sanctioned regions."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol is red because the primary creation of USDe is strictly gated by a single operator's signature and specific roles, and the staking contract allows a single party to unilaterally freeze any user's funds via a blacklist.",
+        "orange": "The protocol is orange because while the official frontend is geo-blocked and a blacklist exists, the secondary market for USDe remains permissionless and third-party frontends like cp0x allow users to bypass official interface restrictions for staking.",
+        "green": "The protocol is green because USDe and sUSDe are standard ERC-20 tokens that can be traded and staked permissionlessly by the general public via DEXs and independent UIs, with primary market gates being a standard institutional hedging requirement."
+      },
+      "verdict": "Choosing red because the primary market (minting/redemption) is strictly gated by a single-party signature and specific roles, and the staking contract (sUSDe) enforces a centralized blacklist that can freeze user funds, both of which are managed by the protocol operator without a decentralized or governance-managed replacement procedure."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x2e987109726880077864129707198c6145396657#code",
+        "shows": "EthenaMinting contract enforcing MINTER_ROLE and requiring an operator signature in the mint() function.",
+        "chain": "Ethereum",
+        "address": "0x2e987109726880077864129707198c6145396657",
+        "fetched_at": "2026-04-29T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9D39A5DE30e57443BfF2A8307A412039037DB7E4#code",
+        "shows": "StakedUSDeV2 contract implementing FULL_RESTRICTED_STAKER_ROLE and SOFT_RESTRICTED_STAKER_ROLE for blacklisting.",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A412039037DB7E4",
+        "fetched_at": "2026-04-29T10:05:00Z"
+      },
+      {
+        "url": "https://ethena.fi/terms-of-service",
+        "shows": "ToS quote: 'The Interface is not available to any person or entity who is a resident of, or is located, incorporated or has a registered office in, the United States of America... (a \"Restricted Person\").'",
+        "fetched_at": "2026-04-29T10:10:00Z"
+      },
+      {
+        "url": "https://ethena.cp0x.com",
+        "shows": "Independent third-party frontend for Ethena staking operated by cp0x.",
+        "fetched_at": "2026-04-29T10:15:00Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-ethena-interface",
+        "shows": "Source code for the independent cp0x Ethena interface.",
+        "commit": "6e8f8f8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e",
+        "fetched_at": "2026-04-29T10:20:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/ethena-core"
+      ],
+      "docs_url": "https://ethena-labs.gitbook.io/ethena-labs/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-08"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-10"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x57e114B69f373F88f04c264c947197c7ae62447e",
+        "symbol": "ENA"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/ethena/",
+      "security_contact": "security@ethena.fi",
+      "deployed_contracts_doc": "https://ethena-labs.gitbook.io/ethena-labs/solution-design/deployed-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x71E4F98E8f1757354850225659503E997a7c9c5B",
+          "role": "Admin Multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Ethena is a synthetic dollar protocol that provides a crypto-native solution for money not reliant on traditional banking infrastructure. It uses delta-neutral basis trading on staked Ethereum collateral to maintain the USDe peg and generate yield for sUSDe holders."
+    }
+  }
+]
