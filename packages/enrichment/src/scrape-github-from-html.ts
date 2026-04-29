@@ -10,7 +10,12 @@
  * to github.com/trailofbits is not the protocol's own repo.
  */
 
-const HREF_GITHUB_RE = /(?:https?:)?\/\/github\.com\/([A-Za-z0-9][A-Za-z0-9_.-]*?)(?:\/([A-Za-z0-9][A-Za-z0-9_.-]*?))?(?=["'\s)>?#,;]|$)/g;
+// Stop the URL at the first character that can't appear in an org/repo
+// segment. This is intentionally broader than a simple href-quote lookahead
+// because github links also show up inside JSON-in-HTML
+// (e.g. `\"github\":\"https://github.com/paxosglobal\"`) where the
+// terminator is a backslash. Any non-[A-Za-z0-9_.-] terminates a segment.
+const HREF_GITHUB_RE = /(?:https?:)?\/\/github\.com\/([A-Za-z0-9][A-Za-z0-9_.-]*?)(?:\/([A-Za-z0-9][A-Za-z0-9_.-]*?))?(?=[^A-Za-z0-9_.\-/]|$)/g;
 
 const AUDITOR_ORGS = new Set([
   "trailofbits", "spearbit", "sherlock-protocol", "code-423n4", "openzeppelin",

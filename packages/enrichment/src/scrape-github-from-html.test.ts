@@ -48,6 +48,14 @@ describe("extractGithubRepos", () => {
     const html = `git clone https://github.com/foo/bar.git, see also`;
     expect(extractGithubRepos(html)).toContainEqual({ org: "foo", repo: "bar" });
   });
+  it("captures urls inside HTML-embedded JSON with backslash-escaped quotes", () => {
+    const html = `<script>{"social":{"github":"https://github.com/paxosglobal"}}</script>`;
+    expect(extractGithubRepos(html)).toContainEqual({ org: "paxosglobal", repo: null });
+  });
+  it("captures urls in escaped-quote JSON like a Next.js __NEXT_DATA__ payload", () => {
+    const html = `\\"github\\":\\"https://github.com/paxosglobal\\"`;
+    expect(extractGithubRepos(html)).toContainEqual({ org: "paxosglobal", repo: null });
+  });
 });
 
 describe("findDocsLink", () => {
