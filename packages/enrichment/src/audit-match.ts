@@ -66,6 +66,11 @@ const STOP_TOKENS = new Set([
   "depin", "rwa", "sonic", "looped", "wrapped",
   "fund", "funds", "prize", "prizes", "raffle",
   "review", "reviewed",
+  "reserve", "reserves", "reserved",
+  "treasury", "vault", "deposit", "deposits", "savings",
+  "crypto", "cryptos", "cryptocurrency",
+  "asset", "assets",
+  "v6", "v7", "v8",
 ]);
 
 const MIN_STRONG_TOKEN_LEN = 4;

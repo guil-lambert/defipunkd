@@ -4,7 +4,7 @@ import { firmFromUrl, isMatch, tokenize } from "./audit-match.js";
 
 describe("tokenize", () => {
   it("splits and lowercases", () => {
-    expect(tokenize("Trail-of-Bits Reserve Protocol")).toEqual(["trail", "bits", "reserve"]);
+    expect(tokenize("Trail-of-Bits Pendle Yield Protocol")).toEqual(["trail", "bits", "pendle"]);
   });
   it("drops short and stop tokens", () => {
     expect(tokenize("Aave V3 Protocol")).toEqual(["aave"]);
@@ -18,8 +18,8 @@ describe("isMatch", () => {
   it("matches on a strong shared token", () => {
     expect(
       isMatch(
-        { slug: "reserve", name: "Reserve Protocol" },
-        { tokens: ["reserveprotocol", "solidity400", "reserve"] },
+        { slug: "pendle", name: "Pendle Finance" },
+        { tokens: ["pendle", "v2", "core"] },
       ),
     ).toBe(true);
   });

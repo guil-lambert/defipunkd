@@ -23,6 +23,10 @@ pnpm --filter @defipunkd/enrichment scrape-github-from-website -- --only-with-au
 # 5. Pull github links out of audit PDFs and HTML index pages.
 pnpm --filter @defipunkd/enrichment extract-github-from-audits -- --apply
 
+# 6. Promote the discovered audit URLs into overlay audit_links so registry
+#    consumers see the richer set instead of just DefiLlama's.
+pnpm --filter @defipunkd/enrichment merge-audit-links-to-overlays -- --apply
+
 # Inspect what's left.
 pnpm --filter @defipunkd/enrichment audits-without-github
 ```
@@ -133,6 +137,28 @@ pnpm --filter @defipunkd/enrichment scrape-github-from-website -- --slug falcon-
 ```
 
 JSONL log of every attempt → `data/auditors/scrape-github.log.jsonl`.
+
+### `merge-audit-links-to-overlays` — promote richer audit set
+
+The `extract-audits` step writes the union of (DefiLlama links + matched
+auditor-repo URLs) to `data/enrichment/<slug>/audits.json` with full
+firm/date metadata. That file is the canonical structured source — but
+registry consumers reading a `Protocol` see only the snapshot's
+`audit_links`, which is just DefiLlama.
+
+This script promotes the URL set into the overlay layer so the merged
+registry view is honest. For each protocol whose `audits.json` has more
+URLs than the snapshot, write the union into the overlay's `audit_links`
+and update `audit_count` to match. The full structured metadata stays in
+`audits.json` for callers that want firm/date.
+
+```bash
+pnpm --filter @defipunkd/enrichment merge-audit-links-to-overlays            # dry run
+pnpm --filter @defipunkd/enrichment merge-audit-links-to-overlays -- --apply
+```
+
+Like the other writers, this script never overwrites an existing curated
+`audit_links` value.
 
 ### `extract-github-from-audits` — tier 3
 
