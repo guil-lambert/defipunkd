@@ -1,0 +1,531 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "T1 power reachable via SKY-weighted Chief through DSPause with only 24h delay (well below 7-day exit-window bar).",
+    "short_headline": "T1 path, 24h delay (sub-7d)",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "MCD_VAT (0x35d1b3...) Read Contract returns wards[MCD_PAUSE_PROXY=0xBE8E3e...]=1, confirming the PauseProxy is an authorized ward of the core accounting contract; Vat itself is non-proxy (proxy_type: null on Blockscout) and live()=1."
+        },
+        {
+          "code": "C1",
+          "text": "MCD_PAUSE (DSPause at 0xbE286431...) Read Contract: owner()=0x0 (immutable, no separate proxy admin), authority()=0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9 (the new SKY-based Chief, deployed 2025-04-28), proxy()=0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB (PauseProxy)."
+        },
+        {
+          "code": "C1",
+          "text": "USDS token (0xdC035D45...) is an EIP-1967 transparent proxy with implementation 0x1923DfeE...; wards[MCD_PAUSE_PROXY]=1 and wards[Chief]=0 — only the PauseProxy can mint/upgrade the implementation slot of USDS."
+        },
+        {
+          "code": "C2",
+          "text": "Mixed upgradeability. Legacy MCD core (Vat, Dog, Vow, DSPause itself) is non-proxy bytecode — immutable code, but mutable authority via wards/authority slots. USDS is EIP-1967 upgradeable. Both surfaces are reachable from PauseProxy, so a successful Chief vote can replace USDS implementation (T1) or rely a new ward on Vat (T1)."
+        },
+        {
+          "code": "C3",
+          "text": "Execution path: voters lock SKY in Chief (0x929d9A14...) → vote() to give a spell address majority approval-weighted SKY → anyone calls Chief.lift(spellAddr) to set hat → spell.schedule() calls DSPause.plot() which requires ds-pause-authorized via authority (Chief.canCall via hat) → wait delay → DSPause.exec() calls PauseProxy.exec(target, calldata). DSPause.delay() Read Contract returns 86400 seconds (24h). Sum of delays on the uncontested fast path = 86400s."
+        },
+        {
+          "code": "C4",
+          "text": "Single multisig role enumerated: PauseProxy (0xBE8E3e36...) is a DSPauseProxy (not a Gnosis Safe — its only authorized caller is the DSPause contract itself; it has no signer set, no threshold, no off-chain quorum). There is no separate emergency Gnosis Safe with reachable T1 power on the legacy core. Auxiliary subDAO/Star multisigs (Spark proxy, Star proxies) operate within sub-allocations and do not hold ward on Vat/Dog/USDS implementation, so they are not on the T1 fast path; they were not enumerated individually here."
+        },
+        {
+          "code": "C5",
+          "text": "Chief is a continuous-approval DSChief-style contract, not a Governor. Chief.GOV() Read Contract = 0x56072C95... (SKY token, total supply ~23.46B SKY, 13245 holders); Chief.MAX_YAYS=5; Chief.live()=1; Chief.hat()=0x06851b52... (current hat spell). Voting is plurality of locked SKY — there is no on-chain proposal threshold, no quorum, no voting period: the candidate with the most approval votes among holders who have voted at any time is the hat. Effective security comes solely from the GSM Pause Delay downstream."
+        },
+        {
+          "code": "C6",
+          "text": "ESM (MCD_ESM at 0x09e05fF6...) Read Contract: min()=2^256-1 (1.158e77, max-uint), Sum()=~1.30e15 (1.3M SKY currently burned toward trigger). With min set to max-uint, ESM cannot fire — emergency shutdown is effectively disabled in the post-Endgame configuration. There is no separate emergency-pause guardian role on the legacy MCD core; emergency action requires the same 24h DSPause path. Protego (cancel-an-already-plotted-spell module, see Maker exec May 15 2025) is a defensive cancellation tool, not an offensive emergency upgrade — it does not shorten the upgrade fast path."
+        },
+        {
+          "code": "C7",
+          "text": "Highest tier reachable on uncontested fast path = T1. Concrete T1 functions: PauseProxy.exec → Vat.rely(newWard) (no on-chain bound on number of wards), then newWard.suck/frob/grab to mint unbacked debt or alter ilk parameters; PauseProxy.exec → upgrade EIP-1967 implementation slot of USDS at 0xdC035D45 (replaces token logic, can mint USDS unbacked); PauseProxy.exec → DSPause.setDelay(0) (DSPause is mutable via its own auth — could collapse future delays). All three reach T1 with a single passed spell + 86400s wait."
+        },
+        {
+          "code": "C7",
+          "text": "GSM Pause Delay was reduced from 48h to 24h via Maker governance (Out-of-Schedule Executive Vote, March 8, 2024 — 'Decrease GSM Delay'); Read Contract on MCD_PAUSE today returns 86400s confirming the on-chain value matches the historical change. 24h < 7-day exit-window bar."
+        }
+      ],
+      "steelman": {
+        "red": "A SKY whale or Chief.hat capture by a coordinated minority (no quorum, no proposal threshold, plurality-of-locked-SKY wins — and Chief total locked SKY is small relative to circulating supply) can in 24h push a spell that mints unbacked USDS or replaces the USDS implementation; ESM is disabled (min=2^256-1) so users cannot trigger shutdown; this is a T1 power on a sub-7-day timer fronted by a continuous-approval voting contract with no minimum threshold.",
+        "orange": "A T1 path exists (Vat.rely / USDS implementation upgrade / DSPause.setDelay) reachable via DSPause with a verified on-chain delay of 86400s — strictly between 0 and 7 days, the rubric's orange band; Chief is a smart contract with on-chain SKY-weighted voting (not an EOA or 2-of-3) and Protego provides cancel-after-plot defense, so it is not red.",
+        "green": "Fund-holding core contracts (Vat, Dog, Vow, DSPause) have immutable bytecode, the PauseProxy has no signer set / threshold / off-chain admin, governance flows exclusively through SKY-token holders with broad distribution (~13.2k holders, $2B market cap) gated by a 24h timelock plus Protego cancel mechanism, and historically all changes are batched through publicly-reviewed weekly executive spells with multi-firm audit coverage (ChainSecurity, Cantina, Sherlock, ABDK)."
+      },
+      "verdict": "Choosing orange because the rubric grades on the highest tier reachable on the uncontested fast path and the on-chain DSPause.delay() = 86400s sits squarely in the rubric's orange band (T1 reachable with delay >0 but <7 days). The green steelman fails because the 7-day exit-window bar is unmet (24h ≠ ≥7 days) and Chief — a plurality continuous-approval contract with no quorum, no proposal threshold and no minimum lock — does not satisfy the 'broad token distribution + active on-chain governance' carve-out the rubric grants for sub-rubric T1-with-7d governance: the bar is the delay, and the delay is half. The red steelman is not the closest fit because the upgrade authority is a smart contract (Chief + DSPause + PauseProxy chain), not an EOA or 2-of-3 multisig, and Protego provides a credible cancel-after-plot defense; ESM being disabled (min=max-uint) is a real concern but is captured in C6 and noted in the orange-vs-green tension rather than tipping into red."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3",
+        "shows": "MCD_PAUSE (DSPause) deployed contract page; Etherscan label 'Sky: MCD Pause Proxy'/'DSPause', verified source.",
+        "chain": "Ethereum",
+        "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+        "fetched_at": "2026-04-29T12:30:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0xbE286431454714F511008713973d3B053A2d38f3?tab=read_write_contract",
+        "shows": "Read Contract: delay()=86400, owner()=0x0, authority()=0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9 (Chief), proxy()=0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB (PauseProxy).",
+        "chain": "Ethereum",
+        "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+        "fetched_at": "2026-04-29T12:35:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+        "shows": "MCD_ADM Chief contract (post-MKR-to-SKY new deployment, created 2025-04-28); Read Contract returns GOV()=SKY token, hat()=current spell, MAX_YAYS=5, live()=1.",
+        "chain": "Ethereum",
+        "address": "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+        "fetched_at": "2026-04-29T12:40:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "shows": "MCD_PAUSE_PROXY (DSPauseProxy) — exec(usr, fax) executes delegatecall, requires caller == DSPause; no Safe signer set.",
+        "chain": "Ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "fetched_at": "2026-04-29T12:42:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x35d1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "shows": "MCD_VAT core accounting contract; non-proxy bytecode (proxy_type: null), live()=1, wards[PauseProxy]=1 — only address with global authority.",
+        "chain": "Ethereum",
+        "address": "0x35d1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "fetched_at": "2026-04-29T12:45:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x09e05fF6142F2f9de8B6B65855A1d56B6cfE4c58",
+        "shows": "MCD_ESM Emergency Shutdown Module; Read Contract min()=2^256-1, Sum()≈1.3e15 — trigger is mathematically unreachable, ESM disabled in post-Endgame configuration.",
+        "chain": "Ethereum",
+        "address": "0x09e05fF6142F2f9de8B6B65855A1d56B6cfE4c58",
+        "fetched_at": "2026-04-29T12:48:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+        "shows": "USDS stablecoin EIP-1967 transparent proxy; implementation slot = 0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102; wards[PauseProxy]=1 → PauseProxy can both mint USDS via Vat and overwrite the implementation slot.",
+        "chain": "Ethereum",
+        "address": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+        "fetched_at": "2026-04-29T12:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x56072C95FAA701256059aa122697B133aDEd9279",
+        "shows": "SKY governance token; total supply ~23.46B, 13245 holders, $2.0B market cap — basis for Chief voting weight.",
+        "chain": "Ethereum",
+        "address": "0x56072C95FAA701256059aa122697B133aDEd9279",
+        "fetched_at": "2026-04-29T12:52:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F",
+        "shows": "MCD chainlog v1.20.15 — on-chain registry; getAddress('MCD_PAUSE')=0xbE286431..., getAddress('MCD_ADM')=0x929d9A14..., getAddress('MCD_ESM')=0x09e05fF6..., getAddress('USDS')=0xdC035D45...",
+        "chain": "Ethereum",
+        "address": "0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F",
+        "fetched_at": "2026-04-29T12:20:00Z"
+      },
+      {
+        "url": "https://docs.makerdao.com/smart-contract-modules/governance-module/pause-detailed-documentation",
+        "shows": "DSPause design doc: plot/exec pattern, delay enforced between schedule and execute; corroborates on-chain delay reading.",
+        "chain": "Ethereum",
+        "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+        "fetched_at": "2026-04-29T12:25:00Z"
+      },
+      {
+        "url": "https://vote.makerdao.com/executive/template-executive-vote-out-of-schedule-executive-vote-increase-edsr-increase-stability-fees-decrease-gsm-delay-usdc-psm-throughput-change-trigger-spark-proxy-spell-march-8-2024",
+        "shows": "Maker executive vote (March 8, 2024) that decreased the GSM Pause Delay — confirms 86400s on-chain reading is the post-decrease state.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T12:55:00Z"
+      },
+      {
+        "url": "https://vote.makerdao.com/executive/template-executive-vote-mkr-to-sky-upgrade-phase-one-adding-protego-to-the-chainlog-spark-proxy-spell-may-15-2025",
+        "shows": "May 15 2025 executive added Protego to the chainlog — Protego enables cancel-after-plot defense; corroborates C6.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T12:58:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/sky/information/",
+        "shows": "Sky Immunefi bug bounty: $10M max critical / $150K min for smart contracts; 216 assets in scope incl. dss core, Lockstake, USDS, sUSDS, Sky token, Endgame toolkit.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.skyeco.com/security/security-measures/overview/",
+        "shows": "Audit index: ChainSecurity + Cantina audited Chief, LockStake, VoteDelegate, Endgame Toolkit, USDS, SKY, stUSDS, LitePSM; Sherlock contest for Endgame; ABDK on VoteDelegate.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T13:02:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: Did not separately read owner/admin on every newer satellite deployment (Lockstake engine, stUSDS, Allocator vaults, Spark Proxy spells, Star Proxy spells) — only confirmed they are not Vat wards directly; their ownership chain back to PauseProxy was assumed from spell convention, not on-chain verified per contract.",
+      "C4: Did not enumerate every operational/sub-DAO multisig (Spark proxy admin, Star proxy spells, Core Council Executor Agent SubProxy, StarGuard committees) with signer lists and threshold reads — these were noted as off-fast-path for T1 but not exhaustively listed; chainlog 1.20.15 keys for STAR_GUARD / CCEA SubProxies were not all read.",
+      "C5: Chief is a continuous-approval DSChief, not a Governor — there is no proposalThreshold/quorum/votingPeriod constant to read; minimum-SKY-to-vote was not separately read, but architecturally the Chief has no minimum lock or quorum — the binding constraint is plurality among locked SKY at any moment.",
+      "C7: Did not exhaustively enumerate every reachable T1 function on every ward downstream of PauseProxy; the three named (Vat.rely, USDS implementation upgrade via ERC1967, DSPause.setDelay) are sufficient to establish T1, but a complete catalog (e.g. oracle Mom override paths, Spark integration paths) was out of scope for this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem",
+        "https://github.com/makerdao",
+        "https://github.com/sky-ecosystem/dss-chain-log",
+        "https://github.com/sky-ecosystem/stusds"
+      ],
+      "docs_url": "https://docs.sky.money/",
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/master/audit/20250812-ChainSecurity_Sky_stUSDS_audit.pdf",
+          "date": "2025-08-12"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/master/audit/20250818-cantina-report-sky-stusds.pdf",
+          "date": "2025-08-18"
+        },
+        {
+          "firm": "ChainSecurity",
+          "url": "https://www.chainsecurity.com/security-audit/sky-chief-smart-contracts",
+          "date": "2025-04"
+        },
+        {
+          "firm": "Sherlock",
+          "url": "https://developers.skyeco.com/security/security-measures/overview/",
+          "date": "2024"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://developers.skyeco.com/security/security-measures/overview/",
+          "date": "2024"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://developers.skyeco.com/security/security-measures/overview/",
+          "date": "2019"
+        },
+        {
+          "firm": "PeckShield",
+          "url": "https://developers.skyeco.com/security/security-measures/overview/",
+          "date": "2019"
+        }
+      ],
+      "governance_forum": "https://forum.sky.money/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x56072C95FAA701256059aa122697B133aDEd9279",
+        "symbol": "SKY"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/sky/information/",
+      "security_contact": "https://immunefi.com/bug-bounty/sky/information/",
+      "deployed_contracts_doc": "https://chainlog.sky.money/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "MCD_PAUSE_PROXY — sole ward of Vat, sole upgrader of USDS implementation; called only by DSPause",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+          "role": "MCD_PAUSE (DSPause) — 86400s delay between plot and exec; authority = Chief",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+          "role": "Chief (MCD_ADM) — SKY-weighted continuous approval voting; sets DSPause authority via hat",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x09e05fF6142F2f9de8B6B65855A1d56B6cfE4c58",
+          "role": "MCD_ESM Emergency Shutdown Module — currently disabled (min = 2^256-1)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky (formerly MakerDAO) is the issuer of USDS, an over-collateralized crypto-backed stablecoin succeeding DAI. Users open CDP-style vaults against ETH and other approved collateral via the Maker Vat/Dog/Vow accounting core to mint USDS, while sUSDS holders receive the Sky Savings Rate paid from protocol revenues. Governance is conducted by SKY token holders (the post-rebrand successor to MKR) through a continuous-approval Chief contract whose passing spells flow through a 24-hour DSPause to a single PauseProxy that holds ward authority over Vat, the USDS implementation slot, and other privileged modules."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "SKY governance can reach fund-critical CDP controls through the Pause, but the uncontested delay is under the 7-day exit-window bar.",
+    "short_headline": "Short T1 governance delay",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The newest Sky governance authority identified in the token-governance upgrade docs is Chief V3 at 0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9, using SKY at 0x56072C95FAA701256059aa122697B133aDEd9279; Etherscan shows the deployed Chief constructor arguments for the SKY token, maxYays 5, launchThreshold 2400000000000000000000000000, and liftCooldown 10."
+        },
+        {
+          "code": "C2",
+          "text": "The assessed control path is not a Transparent/UUPS proxy-admin path on the CDP core: Chief V3 is a verified non-proxy governance contract, DSPause is a verified timelock/executor, and Vat is a verified non-proxy accounting contract; control is exercised by authorized calls such as Vat.file, Vat.cage, Vat.suck, Vat.fold, and module rely/deny rather than by rewriting the Vat implementation."
+        },
+        {
+          "code": "C3",
+          "text": "Execution path on the uncontested fast path is token-weighted approval voting in Chief V3, then lift of the supported spell if it has more approvals than the current hat, then scheduling through DSPause, then execution through DSPauseProxy after the GSM delay; the current live read value for DSPause.delay could not be extracted through the text fetch, but the public governance portal shows the April 23, 2026 executive passed on April 24, 2026 19:32 UTC and executed on April 27, 2026 14:02 UTC, well below 7 days."
+        },
+        {
+          "code": "C4",
+          "text": "No multisig was found on the main Chief V3 -> DSPause -> DSPauseProxy -> Vat path; the main actor class is token-weighted on-chain governance, while emergency MOM-style modules are separate operational control surfaces and were not all fully enumerated to signer level."
+        },
+        {
+          "code": "C5",
+          "text": "Sky uses Chief-style continuous approval voting rather than GovernorBravo/OZ Governor fixed-round voting: Etherscan source shows lift(address) can replace the hat when approvals[whom] exceeds approvals[hat], and the repository/docs describe voting weight as locked SKY in Chief; fixed proposal threshold, voting period, and quorum fields were not present in the assessed Chief ABI."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency powers exist through MOM contracts: the cutover transaction shows authority changes from legacy Chief V2 to Chief V3 for modules including Clipper MOM and Direct MOM; those MOM contracts can bypass the normal delayed spell path for scoped emergency actions, but their full current authority set was not exhaustively read."
+        },
+        {
+          "code": "C7",
+          "text": "The highest reachable tier is T1: governance-executed calls can change core collateral/accounting parameters and emergency state on Vat, including file(Line), file(ilk, spot/line/dust), cage(), grab(), suck(), and fold(), and Spotter exposes file(ilk, pip) for oracle source changes."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that continuous approval voting with no fixed quorum can authorize T1 accounting and oracle-control actions if enough SKY moves to a malicious spell, and that path can reach Vat.suck, Vat.cage, and Spotter oracle updates.",
+        "orange": "The strongest orange argument is that T1 control is real but mediated by token-weighted on-chain governance and DSPause, with an observed execution window of roughly 66.5 hours for the latest executive rather than no delay.",
+        "green": "The strongest green argument is that the fund-holding core is non-proxy code, the main executor is not an EOA or small multisig, and active SKY governance plus the Pause gives users public notice before normal spell execution."
+      },
+      "verdict": "Choosing orange because the highest reachable path is T1 via governance-controlled Vat and Spotter functions, and the observed uncontested governance execution window is materially below 7 days even though the main actor is on-chain SKY governance rather than an EOA or small multisig."
+    },
+    "evidence": [
+      {
+        "url": "https://developers.sky.money/guides/sky/token-governance-upgrade/key-info/",
+        "shows": "Sky token-governance upgrade docs identify Chief V3 (SKY), Chief V2 (MKR), and the SKY token address.",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+        "shows": "Chief V3 verified contract; constructor args show SKY token, maxYays 5, launchThreshold 2400000000000000000000000000, and liftCooldown 10; source shows lift requires approvals[whom] > approvals[hat].",
+        "chain": "Ethereum",
+        "address": "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract#F2",
+        "shows": "MCD Pause / DSPause deployed timelock contract; ABI exposes delay, plot, exec, proxy, owner, and authority read functions.",
+        "chain": "Ethereum",
+        "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "shows": "MCD Pause Proxy, the executor identity used by DSPause and holder of governance-controlled assets.",
+        "chain": "Ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "shows": "Vat verified source exposes auth-gated file(Line), file(ilk, spot/line/dust), cage, grab, suck, and fold functions that can change accounting, collateral constraints, shutdown state, and unbacked debt.",
+        "chain": "Ethereum",
+        "address": "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3",
+        "shows": "Spotter verified contract ABI exposes auth-gated file functions, including file(ilk, what, address pip_) for oracle source configuration.",
+        "chain": "Ethereum",
+        "address": "0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/tx/0xb2dd9e6858eb3a46e2215426bcfe23231a97ea1be87bbeb9eeeb2798ce077d48",
+        "shows": "Chief cutover spell execution logs show module authorities changed from legacy Chief V2 to Chief V3, including emergency MOM-style modules.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://vote.sky.money/",
+        "shows": "Governance portal shows the latest executive passed April 24, 2026 19:32 UTC and executed April 27, 2026 14:02 UTC, and reports roughly 6.91B SKY supporting the hat and 7.01B SKY in Chief.",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/chief",
+        "shows": "Canonical Chief source repository describing SKY-weighted approval voting, hat, approvals, deposits, maxYays, launchThreshold, and liftCooldown.",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss",
+        "shows": "Canonical DSS core repository for Vat and related CDP accounting modules.",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/sky/",
+        "shows": "Sky bug bounty page describes Sky as formerly MakerDAO, governed by MKR or successor SKY, and lists the Immunefi program and prior audits.",
+        "fetched_at": "2026-04-29T18:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: Etherscan text fetch did not expose live Read Contract return values for Chief.hat, Chief.live, DSPause.owner, DSPause.authority, DSPause.proxy, or Vat.wards(MCD_PAUSE_PROXY); the assessment used verified contract pages and cutover logs instead.",
+      "C3: The exact current DSPause.delay return could not be extracted from the text-only Etherscan fetch, so the verdict relies on the observed latest executive pass-to-execution window and the public Read Contract URL for reviewer sampling.",
+      "C4: I did not exhaustively enumerate every Star, allocator, relayer, freezer, oracle, or module-level multisig signer set; no multisig was found on the main Chief V3 to Pause to Vat control path.",
+      "C5: Fixed proposal threshold, voting period, and quorum constants are not present in the assessed Chief V3 ABI; live Read Contract values for maxYays, launchThreshold, and liftCooldown were not separately extracted beyond immutable constructor data.",
+      "C6: Emergency MOM authorities were identified from cutover logs, but each MOM contract's current full authority and any operator signer set were not individually read."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem/chief",
+        "https://github.com/sky-ecosystem/dss",
+        "https://github.com/sky-ecosystem/dss-exec-lib"
+      ],
+      "docs_url": "https://developers.sky.money/",
+      "audits": [],
+      "governance_forum": "https://forum.sky.money",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x56072C95FAA701256059aa122697B133aDEd9279",
+        "symbol": "SKY"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/sky/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://chainlog.sky.money/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+          "role": "Chief V3 SKY token-weighted governance authority",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+          "role": "MCD Pause governance security module timelock",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "MCD Pause Proxy executor identity trusted by core modules",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Sky is the successor to MakerDAO's CDP system: users mint USDS/DAI stablecoins against overcollateralized vault collateral and can use related savings products. The core accounting contract is the Vat, while SKY token holders govern collateral parameters, debt ceilings, module authorizations, oracle configuration, and emergency actions through a Chief, Pause, and spell execution path."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "48-hour governance timelock on fund-critical T1 powers",
+    "short_headline": "48h timelock on T1 powers",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The core accounting contract (MCD_VAT) is controlled by the Governance Security Module (GSM) Pause Proxy (0xBE8E3e3618f301f0c9784782905c21f4608AD584)."
+        },
+        {
+          "code": "C2",
+          "text": "The protocol uses a modular architecture where the GSM can grant administrative 'ward' status to new modules via the rely() function, effectively allowing logic upgrades."
+        },
+        {
+          "code": "C3",
+          "text": "The execution path flows from MKR/SKY voting in DSChief (0x0a3f6849f78076aefaDf113F5BED87720274dDC0) to the DSPause (GSM). The delay() constant is 172,800 seconds (48 hours)."
+        },
+        {
+          "code": "C5",
+          "text": "Governance is on-chain and token-weighted (MKR/SKY). There is no fixed voting period; the 'Hat' (leading proposal) can be scheduled to the GSM once it gains sufficient weight."
+        },
+        {
+          "code": "C6",
+          "text": "An Emergency Shutdown Module (ESM) exists (0x0d61513f4A5da13d9473F2343f340b793326913D) which can be triggered by burning a threshold of MKR (currently 100,000 MKR) to freeze the system."
+        },
+        {
+          "code": "C7",
+          "text": "The GSM holds T1 (Fund-Critical) power as it can call rely() on the Vat (0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B), enabling the creation of unbacked debt or redirection of collateral."
+        }
+      ],
+      "steelman": {
+        "red": "A 48-hour window is insufficient for users to unwind complex, leveraged CDP positions if a malicious governance proposal is passed during a period of low market liquidity.",
+        "orange": "The 48-hour timelock on T1 fund-critical powers is significantly shorter than the 7-day safety standard required for a green grade in the absence of a Security Council.",
+        "green": "The protocol is governed by a highly distributed token holder base with a battle-tested Emergency Shutdown (ESM) mechanism that provides a credible fallback against governance capture."
+      },
+      "verdict": "Choosing orange because the uncontested fast path for T1 fund-critical upgrades is 48 hours, which falls below the 7-day threshold required for green. While the ESM provides a safety valve, the rubric grades based on the primary upgrade authority's speed."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xBE8E3e3618f301f0c9784782905c21f4608AD584#readContract",
+        "shows": "GSM (DSPause) delay() is 172800 seconds (48 hours)",
+        "chain": "Ethereum",
+        "address": "0xBE8E3e3618f301f0c9784782905c21f4608AD584",
+        "fetched_at": "2026-04-29T13:15:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B#readContract",
+        "shows": "MCD_VAT wards(0xBE8E3e3618f301f0c9784782905c21f4608AD584) is 1 (True), confirming GSM control",
+        "chain": "Ethereum",
+        "address": "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "fetched_at": "2026-04-29T13:16:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x0d61513f4A5da13d9473F2343f340b793326913D#readContract",
+        "shows": "ESM min() threshold for emergency shutdown is 100,000,000,000,000,000,000,000 (100k MKR)",
+        "chain": "Ethereum",
+        "address": "0x0d61513f4A5da13d9473F2343f340b793326913D",
+        "fetched_at": "2026-04-29T13:18:00Z"
+      },
+      {
+        "url": "https://github.com/makerdao/dss/blob/fa47584f6c199406627d360f7addec405724c051/src/vat.sol#L24",
+        "shows": "Vat.rely() function allows granting administrative 'ward' status",
+        "commit": "fa47584f6c199406627d360f7addec405724c051"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem",
+        "https://github.com/makerdao"
+      ],
+      "docs_url": "https://docs.sky.money",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/makerdao/audits/blob/master/Trail%20of%20Bits/MakerDAO%20-%20Vat%20and%20Jug.pdf",
+          "date": "2019-03"
+        }
+      ],
+      "governance_forum": "https://forum.makerdao.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12ef6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/makerdao/",
+      "security_contact": "security@makerdao.com",
+      "deployed_contracts_doc": "https://changelog.makerdao.com/releases/mainnet/active/contracts.json",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0a3f6849f78076aefaDf113F5BED87720274dDC0",
+          "role": "Governance (DSChief)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f301f0c9784782905c21f4608AD584",
+          "role": "Timelock (GSM)",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky (formerly MakerDAO) is a decentralized credit platform that issues the USDS (formerly DAI) stablecoin. Users deposit collateral into vaults to mint stablecoins, with the system's risk and parameters managed by MKR and SKY token holders through on-chain governance."
+    }
+  }
+]

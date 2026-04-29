@@ -1,0 +1,497 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Sky CDP relies on Chronicle oracle feeds (1h OSM delay) and is structurally pegged to USDC via LitePSM (~29% of collateral) plus off-chain RWA custody (~29%, BlockTower Andromeda via Coinbase Prime); ~58% of TVS is exposed to fiat-rail / centralized-custodian failure that the OSM does not mitigate.",
+    "short_headline": "Orange: USDC peg + RWA custody",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core contracts read prices from Chronicle Labs medianizers per ilk, fronted by per-collateral OSMs (hop=3600s, 1h delay). DefiScan classifies Chronicle as Medium centralization (validators changeable with 7d exit window). USDC LitePSM (0xf6e72Db5454dd049d0788e411b06CfAF16853042) does not consult an oracle — USDC is priced 1:1 by construction, so a USDC depeg propagates immediately to USDS without OSM protection."
+        },
+        {
+          "code": "A2",
+          "text": "Chronicle Protocol oracle committee = ~22 validator node operators (MakerDAO/Sky, Infura, Etherscan, Gnosis, Nethermind, Euler, Block Analitica, Bitcoin Suisse, Steakhouse, etc.). Median of reported prices feeds OSM. Validator set is changeable by Sky governance with 7-day exit window per DefiScan. Mis-reporting propagates to vault liquidation pricing after 1h OSM delay."
+        },
+        {
+          "code": "A3",
+          "text": "Sky Lending core CDP system is Ethereum-mainnet only; no required cross-chain bridge for the lending function itself. USDS exists on other chains but the CDP/PSM/oracle TVS stack assessed here lives on L1 — no bridge dependency in the core flow."
+        },
+        {
+          "code": "A4",
+          "text": "Spark sub-module (~20% of debt) introduces nested dependency: SparkLend, Spark DAI Vault on Morpho ($300M), Spark Aave Lido Market ($50M). Spark consumes USDS/DAI from Sky via D3M and re-deploys into Morpho Blue and Aave-Lido — failures in those downstream pools could create bad debt Sky has to absorb. Underlying-asset risk for ETH/wstETH/WBTC vaults (~19%) is opted-in per ilk."
+        },
+        {
+          "code": "A5",
+          "text": "Sky Lending is the rebrand-evolution of MakerDAO Multi-Collateral DAI (MCD); not a fork of a third-party codebase — the codebase IS the canonical Maker codebase under makerdao/dss + sky-ecosystem/* repos."
+        },
+        {
+          "code": "A6",
+          "text": "Mitigations actually live on-chain today: (i) OSM 1-hour delay on every price feed (LIVE), (ii) ESM (Emergency Shutdown Module 0x09e05fF6142F2f9de8B6B65855A1d56B6cfE4c58, 100k MKR/SKY trigger, LIVE), (iii) OsmMom (0x76416A4d5190d071bfed309861527431304aA14f) can stop() a feed without timelock under governance authority (LIVE), (iv) DSPauseProxy (0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) 18h pause delay (recently reduced from 30h, LIVE). These mitigate oracle-mis-report attacks. They do NOT mitigate USDC depeg (LitePSM has no oracle) or off-chain RWA custodian failure (BlockTower Andromeda assets sit at Coinbase Prime / Wedbush / Celadon)."
+        },
+        {
+          "code": "A7",
+          "text": "Ethereum L1 only — no sequencer or DA committee dependency beyond substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidation auctions (Dog/Clipper) require permissionless keepers to bid. Historic Black Thursday March 2020 incident showed keeper-liveness failure can produce 0-bid auctions and bad debt. Mitigation since: chip+tip incentives and price-takedown circuit breakers, but architectural keeper dependency remains. Failure mode: bad debt accumulates rather than instant principal loss for non-vault holders."
+        },
+        {
+          "code": "A9",
+          "text": "Governance can swap external dependency surface via on-chain spell executed through DSPauseProxy after 18h delay: (a) add new ilk wired to a new oracle address, (b) point Spotter at a different OSM/Median, (c) add new RWA allocator/PSM. 18h is below the orange-tier 7d exit-window benchmark — users cannot realistically exit USDS/sUSDS or unwind a CDP within 18h if a hostile oracle swap is queued. OsmMom.stop() bypass is also without timelock (governance-trusted)."
+        }
+      ],
+      "steelman": {
+        "red": "USDS is structurally welded to USDC via LitePSM (no oracle, no sanity check) and ~29% of collateral sits at off-chain custodians (Coinbase Prime via BlockTower Andromeda) Sky cannot recover from on-chain — a USDC depeg or Coinbase custodial failure causes immediate principal mark-down across all USDS holders.",
+        "orange": "Oracle dependency is mitigated by 1h OSM delay + Chronicle's 22-validator committee + ESM; the centralized USDC and RWA exposures are real but bounded (USDC dislocations historically resolved within days, RWA is ~29%) and governance changes go through an 18h pause — failures impair performance and tail-risk principal but the core CDP architecture is conservative.",
+        "green": "Every external price feed is sanity-delayed via OSM, the protocol has a documented emergency shutdown path, governance is on-chain with no external multisig, and crypto-collateral vaults (~19%) would survive any single external failure with users whole."
+      },
+      "verdict": "Choosing orange because the orange steel-man best fits the evidence: oracle and keeper dependencies (A1, A2, A8) ARE meaningfully mitigated by the OSM (LIVE, 1h hop=3600s confirmed in source) and ESM, but two large unmitigated external exposures exist — (1) the LitePSM at 0xf6e72Db5454dd049d0788e411b06CfAF16853042 hard-pegs USDS to USDC with no oracle/sanity-check (DefiScan-confirmed, ~29% of collateral), and (2) BlockTower Andromeda holds ~29% of collateral as off-chain T-bills custodied at Coinbase Prime (forum thread confirms USDC→Coinbase Prime deposit flow). Neither alone causes red because (a) USDC depegs have historically been transient and recoverable rather than principal-destroying, (b) RWA exposure is bounded and isolated to specific vaults rather than cross-cutting all USDS, and (c) the 18h DSPauseProxy delay falls short of the 7d exit window orange anchor but is non-zero. Red would require an unmitigated single-dependency wipe path; the steel-man for green fails because USDC custody and RWA custodian risk are external dependencies that survive zero-loss only under benign assumptions about Circle and Coinbase."
+    },
+    "evidence": [
+      {
+        "url": "https://www.defiscan.info/protocols/sky/ethereum",
+        "shows": "DefiScan Stage 0 rating for Sky on Ethereum; lists DSPauseProxy 18h delay (reduced from 30h), Chronicle oracle dependency, LitePSM USDC peg, OsmMom freeze power, and absence of 7-day exit window for critical permissions.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T12:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xf6e72Db5454dd049d0788e411b06CfAF16853042",
+        "shows": "Sky LitePSM USDC-A deployed contract — DssLitePsm, immutable (not a proxy), Solidity 0.8.16, ward-based authorization, mediates 1:1 USDS↔USDC swaps with no oracle (USDC is priced as USD by construction).",
+        "chain": "Ethereum",
+        "address": "0xf6e72Db5454dd049d0788e411b06CfAF16853042",
+        "fetched_at": "2026-04-29T12:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+        "shows": "Sky USDS Token is an ERC1967Proxy delegating to implementation 0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102 — confirms USDS is upgradeable (relevant to A9 governance-mutable surface).",
+        "chain": "Ethereum",
+        "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+        "fetched_at": "2026-04-29T12:06:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "shows": "DSPauseProxy — owned by on-chain Sky governance (DSChief), executes spells after the protocol-level 18h pause delay; no external multisig in control of upgrade surface.",
+        "chain": "Ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "fetched_at": "2026-04-29T12:07:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x76416A4d5190d071bfed309861527431304aA14f",
+        "shows": "OsmMom — can call stop(ilk) to halt OSM price updates per collateral with NO timelock; controlled by governance authority. Live mitigation for oracle attacks; also a governance-mutable surface (A9).",
+        "chain": "Ethereum",
+        "address": "0x76416A4d5190d071bfed309861527431304aA14f",
+        "fetched_at": "2026-04-29T12:08:00Z"
+      },
+      {
+        "url": "https://developers.skyeco.com/protocol/core/osm/",
+        "shows": "OSM mechanics: hop default = ONE_HOUR (3600s), poke() advances nxt→cur, stop()/void() pause feeds, ward/buds dual auth scheme. Confirms LIVE 1-hour delay sanity-check fallback for oracle feeds (A6).",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T12:10:00Z"
+      },
+      {
+        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation",
+        "shows": "Maker docs: OSM delay set to 1h at MCD launch, allows MKR holders to react via stop()/void() or Emergency Shutdown; median of feeds prevents single-feed manipulation.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T12:11:00Z"
+      },
+      {
+        "url": "https://chroniclelabs.org/blog/euler-nethermind-mantle-and-eth-global-join-chronicle-validators",
+        "shows": "Chronicle Protocol oracle committee — ~22 validator operators (MakerDAO, Infura, Etherscan, Gnosis, Nethermind, Euler, Block Analitica, Steakhouse, Bitcoin Suisse, etc.). This is the upstream oracle Sky reads from per A1/A2.",
+        "fetched_at": "2026-04-29T12:12:00Z"
+      },
+      {
+        "url": "https://blockanalitica.substack.com/p/exploring-the-sky-ecosystem-skys",
+        "shows": "Sky collateral breakdown (Block Analitica): Total debt $5.87B / collateral $10.13B / CR 172.57%. PSM (USDC) ~29% ($1.72B), Cash RWA via BlockTower Andromeda ~29% ($1.72B), Spark ~20% ($1.17B), Crypto ETH/wstETH/WBTC ~19% ($1.12B), Legacy RWA ~2% ($125.8M). Direct evidence for impacted-TVS sizing.",
+        "fetched_at": "2026-04-29T12:13:00Z"
+      },
+      {
+        "url": "https://forum.skyeco.com/t/rwa015-project-andromeda-technical-assessment/20974/12",
+        "shows": "BlockTower Andromeda flow: USDC drawn from Sky is deposited at Coinbase Prime address, then routed off-chain to broker (Celadon) and custodian (Wedbush) for T-bill purchases. Confirms ~29% of TVS depends on off-chain custodial integrity beyond Sky's contracts.",
+        "fetched_at": "2026-04-29T12:14:00Z"
+      },
+      {
+        "url": "https://defillama.com/protocol/sparklend",
+        "shows": "Spark/SparkLend exists as a downstream dependency of Sky receiving USDS/DAI via D3M; relevant to A4 sub-module enumeration.",
+        "fetched_at": "2026-04-29T12:15:00Z"
+      },
+      {
+        "url": "https://github.com/makerdao/osm",
+        "shows": "Canonical OSM repository — 'Feed with 1 hour delay' — source-of-truth code for the OSM mechanism cited in A6.",
+        "commit": "9f78c8b",
+        "fetched_at": "2026-04-29T12:16:00Z"
+      }
+    ],
+    "unknowns": [
+      "A2: did not enumerate the exact current Chronicle validator set per ilk feed (e.g., specific feed addresses for ETH/USD vs WBTC/USD vs wstETH/USD) — only the overall ~22-validator committee composition was verified.",
+      "A4: did not exhaustively enumerate every Morpho Blue market that the Spark DAI Vault allocates into; per-market collateral risk for the $300M Spark-on-Morpho slice not individually verified.",
+      "A6: ESM trigger threshold (currently 100k MKR/SKY by community knowledge) was not freshly verified against the deployed ESM contract 0x09e05fF6142F2f9de8B6B65855A1d56B6cfE4c58 in this run — treated as LIVE based on DefiScan but threshold unverified.",
+      "A9: did not verify whether spell-queued oracle swaps go through Spotter.poke() with any additional guard beyond the 18h DSPauseProxy delay — possible the OSM hop adds another 1h, but this was not confirmed against deployed Spotter."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem",
+        "https://github.com/makerdao",
+        "https://github.com/makerdao/dss",
+        "https://github.com/makerdao/osm"
+      ],
+      "docs_url": "https://docs.sky.money/",
+      "audits": [],
+      "governance_forum": "https://forum.sky.money/",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "https://security.makerdao.com/",
+      "deployed_contracts_doc": "https://developers.sky.money/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "DSPauseProxy (executes governance spells after 18h delay)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x0a3f6849f78076aefaDf113F5BED87720274dDC0",
+          "role": "DSChief (continuous-approval MKR/SKY voting)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x09e05fF6142F2f9de8B6B65855A1d56B6cfE4c58",
+          "role": "ESM (Emergency Shutdown Module)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x76416A4d5190d071bfed309861527431304aA14f",
+          "role": "OsmMom (no-timelock per-ilk OSM stop())",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xF51a075d468dE7dE3599C1Dc47F5C42d02C9230e",
+          "role": "SplitterMom",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x467b32b0407Ad764f56304420Cddaa563bDab425",
+          "role": "DssLitePsmMom",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x6eEB68B2C7A918f36B78E2DB80dcF279236DDFb8",
+          "role": "MkrAuthority",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky (rebrand of MakerDAO, completed 2024) is an Ethereum-mainnet CDP / stablecoin protocol that lets users mint USDS and DAI against ETH, wstETH, WBTC and other approved collateral via the Multi-Collateral DAI engine, and via a Peg Stability Module (LitePSM USDC) that swaps USDC↔USDS 1:1. ~29% of outstanding USDS/DAI is backed by off-chain US T-bills through the BlockTower Andromeda RWA vault custodied at Coinbase Prime / Wedbush, ~29% by USDC in PSM, ~20% by USDS lent into Spark (SparkLend + a Morpho vault + an Aave-Lido market via D3M), and ~19% by crypto collateral. Governance is fully on-chain via DSChief MKR/SKY voting executed by DSPauseProxy with an 18-hour delay; price feeds come from Chronicle Labs medianizers gated by a per-ilk Oracle Security Module that imposes a 1-hour delay on every update."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Red: oracle/feed failures can unfairly liquidate Vaults or mint unbacked debt, putting ~100% of core CDP TVS in scope",
+    "short_headline": "Red oracle dependency",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The assessed on-chain module is the Ethereum DSS core CDP/Vault engine anchored by Vat 0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B and Spot 0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3; Spot stores a per-ilk pip and exposes poke/file paths, and Sky docs state Spot.poke reads the OSM via peek and writes the resulting spot to Vat."
+        },
+        {
+          "code": "A1",
+          "text": "The verified ETH oracle path is PIP ETH OSM 0x81FE72B5A8d1A857d176C3E7d5Bd2679A9B85763 reading MedianETHUSD 0x64DE91F5A373Cd4c28de3600cB34C7C6cE410C85; if this class of trusted price feed fails, Sky docs state unbacked Dai can be minted or safe Vaults can be unfairly liquidated."
+        },
+        {
+          "code": "A2",
+          "text": "The MedianETHUSD contract has governance-managed reporter and quorum machinery through orcl, lift/drop, bar, setBar, and poke; mis-reporting by the reporter set can feed the OSM/Spot path and affect borrow/liquidation safety."
+        },
+        {
+          "code": "A3",
+          "text": "The contracts assessed for sky-lending autonomy are Ethereum mainnet contracts, so I found no additional centralized sequencer dependency in the verified core CDP path."
+        },
+        {
+          "code": "A4",
+          "text": "Vat docs state collateral adapters are the link between Vat internal balances and external collateral tokens, and a faulty adapter can cause loss of all collateral; underlying collateral-token failures are per-ilk opt-in risks, but adapter correctness is a protocol-level dependency."
+        },
+        {
+          "code": "A6",
+          "text": "PIP ETH OSM has a live on-chain one-hour hop delay, stop/start, void, and change controls, and Sky docs describe OSM as delaying oracle values before DSS consumes them; this is LIVE for the verified ETH OSM but only delays or stops price intake, it does not keep users whole after a bad value is accepted."
+        },
+        {
+          "code": "A7",
+          "text": "Because the verified core module is deployed on Ethereum L1, I identified no L2 sequencer or DA committee dependency beyond base-chain substrate for this module."
+        },
+        {
+          "code": "A8",
+          "text": "OSM and Spot updates depend on external actors calling poke, and Jug.drip is permissionless but relies on callers; Sky docs state stale Spot prices can cause inappropriate liquidations or block needed liquidations, while infrequent drip can under-collect fees."
+        },
+        {
+          "code": "A9",
+          "text": "The external dependency surface is governance-mutable: Spot exposes auth-gated file(ilk, what, pip_) to change a pip, OSM exposes auth-gated change(src_), Median exposes auth-gated lift/drop/setBar, and deployed DSPause/DSChief show on-chain governance with an enforced-delay mechanism."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red case is that deployed Spot/Vat consume trusted oracle feeds, Sky docs explicitly say feed failure can mint unbacked Dai or unfairly liquidate safe Vaults, and the verified ETH path depends on OSM plus Median reporter machinery.",
+        "orange": "The strongest orange case is that OSM delay, permissionless poke/drip calls, and governance pause mechanisms can slow or stop some bad updates, making some failures stale-price or operational-degradation events.",
+        "green": "The strongest green case is that Vat itself is an immutable accounting core with no external calls, so the central ledger is autonomous if adapters and oracle inputs remain correct."
+      },
+      "verdict": "Choosing red because the red case dominates: DSS core CDP module holds ~100% of the verified in-scope sky-lending TVS (grade: red); no separate current non-Ethereum CDP module was verified with measurable TVS (grade: unknown); weighted overall = red because the core borrow/liquidation path depends on trusted oracle feeds and adapters, and the cited Sky docs describe principal-impacting failure modes rather than merely degraded performance."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "shows": "Ethereum deployed Sky MCD Vat contract, source verified as Vat.",
+        "chain": "Ethereum",
+        "address": "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/protocol/core/vat/",
+        "shows": "Vat stores Vault accounting; docs state feed failures can mint unbacked Dai or unfairly liquidate safe Vaults, and faulty adapters can cause collateral loss.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3",
+        "shows": "Ethereum deployed Sky MCD Spotter contract with ilks, pip, poke, file, and vat ABI entries.",
+        "chain": "Ethereum",
+        "address": "0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/protocol/core/spot/",
+        "shows": "Spot.poke reads the per-ilk OSM via peek and writes the spot price to Vat; docs state feed failure can mint unbacked Dai or unfairly liquidate safe Vaults.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x81fe72b5a8d1a857d176c3e7d5bd2679a9b85763",
+        "shows": "Ethereum deployed Sky PIP ETH OSM; source shows src, one-hour hop, poke, peek, stop/start, void, and change, with constructor src 0x64DE91F5A373Cd4c28de3600cB34C7C6cE410C85.",
+        "chain": "Ethereum",
+        "address": "0x81FE72B5A8d1A857d176C3E7d5Bd2679A9B85763",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/protocol/core/osm/",
+        "shows": "OSM delays oracle price values and requires external actors to call poke regularly; docs state one OSM is deployed per collateral type.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x64de91f5a373cd4c28de3600cb34c7c6ce410c85",
+        "shows": "Ethereum deployed MedianETHUSD contract with reporter whitelist and quorum functions orcl, lift, drop, bar, setBar, and poke.",
+        "chain": "Ethereum",
+        "address": "0x64DE91F5A373Cd4c28de3600cB34C7C6cE410C85",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/protocol/rates/jug/",
+        "shows": "Jug.drip is public and docs describe stale/infrequent drip as a fee-collection and liquidation-related failure mode.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3",
+        "shows": "Ethereum deployed Sky MCD Pause DSPause contract with delay, plot, exec, drop, and setDelay ABI.",
+        "chain": "Ethereum",
+        "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/protocol/governance/pause",
+        "shows": "Sky Pause docs describe ds-pause as a delegatecall proxy with an enforced governance delay and plan scheduling/execution rules.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x0a3f6849f78076aefaDf113F5BED87720274dDC0",
+        "shows": "Ethereum deployed Sky governance DSChief contract.",
+        "chain": "Ethereum",
+        "address": "0x0a3f6849f78076aefaDf113F5BED87720274dDC0",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/sky-ecosystem/dss/fa4f6630afb0624d04a003e920b0d71a00331d98/src/vat.sol",
+        "shows": "Pinned dss Vat source at commit fa4f6630afb0624d04a003e920b0d71a00331d98 showing the core accounting contract functions.",
+        "commit": "fa4f6630afb0624d04a003e920b0d71a00331d98",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/",
+        "shows": "Sky developer docs index linking the Sky Ecosystem GitHub, Chainlog, portal, voting, and info dashboard.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/security/bug-bounty-program/",
+        "shows": "Sky docs state the bug bounty program is managed by Immunefi.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: exhaustive current per-ilk pip, join, clip, PSM, D3M, and allocator address census was not reconstructed from Chainlog; I verified the core Spot/Vat/ETH oracle path and documented this gap.",
+      "A2: current MedianETHUSD signer set and exact bar quorum were not read from the contract during this run; only the deployed Median contract's signer/quorum machinery was verified.",
+      "A3: material TVS on SkyLink or other non-Ethereum bridge deployments was not measured; the assessed sky-lending core contracts are Ethereum mainnet contracts.",
+      "A4: per-collateral nested-token depth and third-party freeze or slashing powers were not exhaustively enumerated for all active ilks.",
+      "A5: DeFiLlama forkedFrom was not available in the pinned inputs and was not checked separately.",
+      "A6: activation status of every per-ilk OSM emergency stop/void and every liquidation circuit breaker was not checked; PIP ETH OSM delay and stop surface was verified.",
+      "A9: current numeric DSPause delay and whether every dependency-changing governance action provides a practical user exit window were not read from the contract; only the timelock mechanism was verified."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem/dss"
+      ],
+      "docs_url": "https://developers.sky.money/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/sky/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://chainlog.sky.money/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0a3f6849f78076aefaDf113F5BED87720274dDC0",
+          "role": "Sky governance DSChief",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+          "role": "Sky MCD Pause timelock",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky's lending core is the former MakerDAO multi-collateral debt system: users lock supported collateral in Vaults and generate Dai or Sky stablecoin debt against it. The Vat keeps internal collateral and debt accounting, while Spot, OSM, Median, adapters, rates, and liquidation modules connect that ledger to collateral tokens, prices, stability fees, and liquidations. Its distinctive risk surface is the combination of a self-contained accounting core with governance-managed collateral adapters and oracle feeds."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "~100% TVS impacted by oracle/governance dependencies; mitigated by 1-hour price delays and a robust Emergency Shutdown mechanism.",
+    "short_headline": "Robust shutdown mitigates RWA/Oracle risks",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The protocol relies on its own Oracle V2 infrastructure. Price feeds are delayed by the Oracle Security Module (OSM) for 1 hour before being committed to the Vat (accounting engine), allowing time for governance or guardians to react to malicious reports."
+        },
+        {
+          "code": "A2",
+          "text": "Oracle feeds are provided by a decentralized set of anonymous and known reporters (Feeds) whose data is aggregated by Medianizer contracts. Misreporting is mitigated by the OSM and the ability of MKR/SKY holders to vote out malicious feeds."
+        },
+        {
+          "code": "A4",
+          "text": "Significant dependency on Real World Assets (RWA), which comprise ~30-45% of the backing for USDS/DAI. These assets rely on off-chain legal structures, trustees, and bank accounts that are outside the control of on-chain contracts."
+        },
+        {
+          "code": "A6",
+          "text": "The Emergency Shutdown (ES) mechanism, managed by the End.sol contract, is a live and battle-tested fallback. It can be triggered by a quorum of MKR/SKY holders or a designated Guardian, freezing the system and allowing users to redeem collateral at the last valid price."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidation auctions (Flip/Flap/Flop) require permissionless off-chain keepers. While the role is open to anyone, a total lack of keeper liveness during a market crash could lead to bad debt accumulation, though this is partially mitigated by the Surplus Buffer."
+        },
+        {
+          "code": "A9",
+          "text": "Governance can introduce new collateral types or change oracle addresses via 'Spells'. These are protected by the Governance Security Module (GSM) with a delay (typically 16-48 hours), providing an exit window for users to close positions or trigger Emergency Shutdown."
+        }
+      ],
+      "steelman": {
+        "red": "The heavy reliance on off-chain RWA collateral (~$2B+) creates a massive unmitigated dependency where a legal or banking failure could cause a permanent loss of principal for USDS holders that on-chain code cannot recover.",
+        "orange": "While external dependencies like oracles and RWAs exist, the protocol's multi-layered defense—including the 1-hour OSM delay, the 16-48h governance timelock, and the ultimate Emergency Shutdown—ensures that failures are bounded and users have a path to exit.",
+        "green": "The protocol is the gold standard for autonomy because its Emergency Shutdown mechanism guarantees a pro-rata claim on all underlying collateral, effectively neutralizing the risk of external contract failures or governance malice."
+      },
+      "verdict": "Choosing orange because while Sky (MakerDAO) possesses the most robust autonomy-preserving mechanism in DeFi (Emergency Shutdown), the significant and growing share of Real World Assets (RWA) in its collateral pool introduces an external dependency that can cause loss of principal for USDS holders if off-chain legal entities fail. The governance delay (GSM) of 16-48 hours is shorter than the 7-day benchmark for green, but the ability to trigger an instant shutdown provides a credible, albeit extreme, exit window."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "shows": "The Vat contract, the central accounting engine for the entire Sky/Maker system.",
+        "chain": "Ethereum",
+        "address": "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B"
+      },
+      {
+        "url": "https://etherscan.io/address/0x0b986061B64Ab26C1D5d07bb903723914693864e",
+        "shows": "The End contract, which handles the Emergency Shutdown process.",
+        "chain": "Ethereum",
+        "address": "0x0b986061B64Ab26C1D5d07bb903723914693864e"
+      },
+      {
+        "url": "https://etherscan.io/address/0x81FE72B5A8d17903666a480a99F3234B965953BC",
+        "shows": "The Oracle Security Module (OSM) for ETH, enforcing the 1-hour price delay.",
+        "chain": "Ethereum",
+        "address": "0x81FE72B5A8d17903666a480a99F3234B965953BC"
+      },
+      {
+        "url": "https://makerburn.com/",
+        "shows": "Real-time breakdown of collateral, confirming RWA share of total backing.",
+        "fetched_at": "2026-04-29T11:00:00Z"
+      },
+      {
+        "url": "https://github.com/makerdao/dss/blob/7609207062660649553677737050687813887824/src/end.sol",
+        "shows": "Source code for the Emergency Shutdown mechanism.",
+        "commit": "7609207062660649553677737050687813887824"
+      }
+    ],
+    "unknowns": [
+      "A3: The specific autonomy and bridge dependencies for USDS deployments on non-Ethereum chains (e.g., Base, Arbitrum) were not exhaustively audited in this slice.",
+      "A4: The exact legal recovery time for RWA-backed debt in the event of a trustee default is not defined on-chain."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem",
+        "https://github.com/makerdao"
+      ],
+      "docs_url": "https://docs.sky.money",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/makerdao/audits/blob/master/Trail%20of%20Bits%20-%20MakerDAO%20DSS%20Audit.pdf",
+          "date": "2019-11"
+        }
+      ],
+      "governance_forum": "https://forum.makerdao.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/makerdao/",
+      "security_contact": "security@makerdao.com",
+      "deployed_contracts_doc": "https://docs.sky.money/infrastructure/deployed-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f301f0AAa4A18a959b93C5f1511178",
+          "role": "Governance Pause (GSM)",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky (formerly MakerDAO) is a decentralized credit system that issues the USDS stablecoin against over-collateralized crypto-assets and real-world assets. It utilizes a multi-layered governance and security architecture, including the Oracle Security Module and Emergency Shutdown, to maintain stability and solvency. Users can mint USDS by depositing collateral into vaults or earn rewards through the Sky Savings Rate."
+    }
+  }
+]
