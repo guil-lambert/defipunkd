@@ -94,6 +94,7 @@ function loadAudits(repoRoot: string, slug: string): AuditFileEntry[] {
 interface Plan {
   slug: string;
   snapshotUrls: string[];
+  snapshotCount: number;
   unionUrls: string[];
   added: string[]; // urls in union that weren't in snapshot
 }
@@ -109,7 +110,13 @@ function buildPlan(p: ProtocolSnapshot, audits: AuditFileEntry[]): Plan | null {
   if (unionSet.size === snapshotSet.size) return null;
   const unionUrls = [...unionSet].sort();
   const added = unionUrls.filter((u) => !snapshotSet.has(u));
-  return { slug: p.slug, snapshotUrls, unionUrls, added };
+  return {
+    slug: p.slug,
+    snapshotUrls,
+    snapshotCount: p.audit_count ?? 0,
+    unionUrls,
+    added,
+  };
 }
 
 async function main(): Promise<void> {
@@ -177,7 +184,16 @@ async function main(): Promise<void> {
       continue;
     }
     overlay.audit_links = plan.unionUrls;
-    overlay.audit_count = plan.unionUrls.length;
+    // Only override audit_count when the new count actually differs from
+    // the snapshot's. DefiLlama's audit_count and audit_links.length are
+    // independent fields — the count can already match our union length
+    // even when the URL set is smaller, in which case writing it triggers
+    // an identity-overlay warning at registry build time.
+    if (plan.snapshotCount !== plan.unionUrls.length) {
+      overlay.audit_count = plan.unionUrls.length;
+    } else if ("audit_count" in overlay && overlay.audit_count === plan.snapshotCount) {
+      delete overlay.audit_count;
+    }
     writeFileSync(path, `${JSON.stringify(overlay, null, 2)}\n`);
     nWritten++;
   }
