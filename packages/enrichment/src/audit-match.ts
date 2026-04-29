@@ -11,14 +11,61 @@
 
 /** Generic noise tokens that show up in too many protocol/audit names to be discriminative. */
 const STOP_TOKENS = new Set([
+  // Generic suffixes / corporate.
   "protocol", "finance", "network", "labs", "lab", "dao", "foundation",
-  "the", "of", "and", "for", "by",
+  "the", "of", "and", "for", "by", "with",
   "security", "review", "audit", "audits", "report", "reports", "final", "draft",
   "contest", "findings", "competition",
   "v1", "v2", "v3", "v4", "v5",
   "io", "xyz", "fi", "co", "com",
   "smart", "contract", "contracts",
-  "defi", "crypto",
+  "defi", "crypto", "web3",
+  // DeFi product-category words. These tokenize too many protocol names to
+  // anchor a match on their own (e.g. "bridge" matches every bridge audit
+  // against every bridge protocol). Removing them forces matches to land on
+  // the project-specific name token instead.
+  "bridge", "bridges",
+  "staking", "stake", "stakes", "restaking", "lst", "lrt",
+  "vesting", "vest",
+  "lending", "lend", "borrow", "borrowing",
+  "swap", "swaps", "exchange", "exchanges", "dex", "dexes", "amm",
+  "perp", "perps", "perpetual", "perpetuals",
+  "vault", "vaults",
+  "yield", "yields", "farm", "farming",
+  "liquidity", "lp", "pool", "pools",
+  "derivatives", "options", "futures",
+  "stable", "stables", "stablecoin", "stablecoins",
+  "oracle", "oracles",
+  "treasury", "governance",
+  "token", "tokens", "erc20", "erc721", "erc1155",
+  "nft", "nfts",
+  "gaming", "gamefi", "game", "games",
+  "wallet", "wallets",
+  "router", "factory",
+  "creator", "creators", "rewards", "reward",
+  // Chain / L2 / network names.
+  "ethereum", "eth",
+  "arbitrum", "optimism", "polygon", "base", "solana", "sol",
+  "bitcoin", "btc", "avalanche", "avax", "fantom", "ftm",
+  "binance", "bsc", "bnb", "tron", "near", "celo", "gnosis",
+  "starknet", "zksync", "scroll", "linea", "blast", "mantle",
+  "sui", "aptos", "cosmos", "polkadot", "cardano",
+  "chain", "chains", "mainnet", "testnet",
+  "l1", "l2", "layer", "layer1", "layer2", "evm", "zk", "zkevm",
+  "native", "cross",
+  // Org/role words common in audit titles.
+  "offchain", "onchain",
+  // More noisy product-name words seen in false-positive clusters.
+  "liquid", "money", "cash", "trade", "trades", "trading", "trader",
+  "generic", "infrastructure", "mitigation", "update", "upgrade",
+  "app", "apps", "platform", "system", "engine", "core",
+  "global", "labs",
+  "collective", "hub",
+  "market", "markets", "marketplace",
+  "capital", "credit", "loan", "loans",
+  "depin", "rwa", "sonic", "looped", "wrapped",
+  "fund", "funds", "prize", "prizes", "raffle",
+  "review", "reviewed",
 ]);
 
 const MIN_STRONG_TOKEN_LEN = 4;
