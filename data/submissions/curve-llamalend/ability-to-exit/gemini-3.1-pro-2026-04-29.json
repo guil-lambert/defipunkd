@@ -1,0 +1,104 @@
+{
+  "schema_version": 3,
+  "slug": "curve-llamalend",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-29T20:00:00.000Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-29",
+  "model": "gemini-3.1-pro",
+  "chat_url": "https://gemini.google.com/share/a83024e46b8a",
+  "grade": "green",
+  "headline": "Permissionless exit via repayment, liquidation, or share redemption with no administrative pause functions",
+  "short_headline": "Permissionless exits with no pause",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "User-facing exit functions include Controller.repay (0x371fd8e6), Controller.remove_collateral (0x2e4af52a), Controller.liquidate (0x0710285c) for borrowers, and Vault.redeem/Vault.withdraw for lenders."
+      },
+      {
+        "code": "E2",
+        "text": "Verified source code for Controller and Vault (Vyper 0.3.10) shows no pause-related modifiers (e.g., whenNotPaused) or whitelists on exit functions."
+      },
+      {
+        "code": "E3",
+        "text": "There is no PAUSE_ROLE or pause() function in the Controller, AMM, or Vault contracts; the Sub-DAO (0xb7400d) can only adjust parameters like borrowing discounts."
+      },
+      {
+        "code": "E4",
+        "text": "No distinction between emergency/governance pauses exists as the core exit logic lacks a pausing mechanism entirely."
+      },
+      {
+        "code": "E5",
+        "text": "Lender redemptions are standard ERC-4626; while subject to liquidity (utilization), there are no administrative withdrawal caps or pausable queues."
+      },
+      {
+        "code": "E6",
+        "text": "The self-liquidation path (liquidate(self, ...)) provides a permanent, permissionless escape hatch to close loans and recover residual collateral."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions are standard public/external functions callable directly on-chain via Etherscan or hardware wallets without frontend reliance."
+      }
+    ],
+    "steelman": {
+      "red": "If the vault is 100% utilized, lenders are effectively 'locked' until borrowers repay or interest accrues, which could be framed as a lack of immediate exit.",
+      "orange": "The Emergency Multisig's ability to set borrowing discounts to extreme values could theoretically disincentivize or complicate the math for borrower exits.",
+      "green": "The protocol is entirely non-custodial and lacks any administrative pause or whitelist mechanism, ensuring borrowers and lenders can always interact with the smart contracts to exit."
+    },
+    "verdict": "Choosing green because the verified contract source code (Vyper 0.3.10) lacks any pause functionality (pause(), toggle_pause()) for both the Controller and Vault, and self-liquidation provides a guaranteed permissionless exit path for borrowers regardless of admin state."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0#code",
+      "shows": "OneWayLendingFactory and associated market logic (Controller/Vault) lack pause mechanisms.",
+      "chain": "Ethereum",
+      "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "fetched_at": "2026-04-28T22:30:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+      "shows": "Audit coverage of LlamaLend (Curve Lending) architecture and exit paths.",
+      "fetched_at": "2026-04-28T22:30:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "Quantstamp",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+        "date": "2024-03"
+      }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/curve/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/crvUSD/lend/deployments/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Curve LlamaLend is a lending protocol that utilizes the LLAMMA (Lending-Liquidating AMM Algorithm) to provide 'soft-liquidations,' converting collateral into a borrowed asset incrementally as prices fall. It allows for permissionless market creation and isolated lending pools, typically using crvUSD as the borrowed asset. The architecture focuses on minimizing permanent losses during volatile market conditions through its unique AMM-based liquidation mechanism."
+  }
+}

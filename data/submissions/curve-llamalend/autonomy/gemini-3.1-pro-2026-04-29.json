@@ -1,0 +1,108 @@
+{
+  "schema_version": 3,
+  "slug": "curve-llamalend",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-29T20:00:00.000Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-29",
+  "model": "gemini-3.1-pro",
+  "chat_url": "https://gemini.google.com/share/b73f1279a2da",
+  "grade": "green",
+  "headline": "Immutable architecture with internal TWAMM oracles eliminates external price feed dependencies; ~0% TVS impacted by external contract failure.",
+  "short_headline": "Zero external dependencies for core operation",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "LlamaLend uses an internal AMM-based oracle system (LLAMMA). The `pool_price_oracle` used by Controllers (e.g., in `OneWayLendingFactory`) is typically a Curve TWAMM read from the paired LLAMMA or Curve pool, removing reliance on external feeds like Chainlink for core liquidations."
+      },
+      {
+        "code": "A2",
+        "text": "There are no off-chain committees or oracle networks reporting into the core lending logic; prices are derived natively from on-chain liquidity pools."
+      },
+      {
+        "code": "A5",
+        "text": "LlamaLend is part of the curve-stablecoin repository, sharing lineage with the crvUSD protocol."
+      },
+      {
+        "code": "A6",
+        "text": "The LLAMMA (Lending Liquidating AMM Algorithm) serves as a continuous on-chain liquidation mechanism, acting as an internal 'circuit breaker' that converts collateral to the borrowed asset as prices move, rather than relying on external liquidator liveness to prevent bad debt."
+      },
+      {
+        "code": "A8",
+        "text": "While liquidations are permissionless, the 'soft liquidation' (deleveraging) occurs automatically via the AMM's internal logic as traders arbitrage the bands, reducing dependency on specific bot liveness for principal safety."
+      },
+      {
+        "code": "A9",
+        "text": "Core contracts (AMM, Controller, Vault) are immutable once deployed via `create_minimal_proxy_to`. The Factory admin (Sub-DAO) can change implementation addresses for FUTURE markets via `set_implementations` (0xd786d593), but cannot silently swap dependencies in existing, active markets."
+      }
+    ],
+    "steelman": {
+      "red": "If a specific market were to use a malformed or manipulatable Curve pool as its price source, the principal in that isolated market could be at risk.",
+      "orange": "The Emergency Multisig (5-of-9) can execute parameter changes that might affect performance, though it cannot seize assets.",
+      "green": "The system is architecturally autonomous, utilizing immutable code and internal oracles that ensure external protocol failures or oracle outages do not impact user principal."
+    },
+    "verdict": "Choosing green because the protocol effectively internalizes its most critical dependency (price discovery) through the LLAMMA mechanism and ensures that existing market dependencies cannot be modified by governance due to the immutable nature of the deployed proxies."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0#code",
+      "shows": "OneWayLendingFactory implementation using Vyper 0.3.10 and immutable market deployment logic.",
+      "chain": "Ethereum",
+      "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "fetched_at": "2026-04-29T10:20:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin/blob/master/contracts/lending/OneWayLendingFactory.vy",
+      "shows": "The set_implementations function (0xd786d593) only impacts future deployments.",
+      "commit": "808608f02901c0f16f5c889659b844f2d348a27d"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+      "shows": "Audit confirmation of the internal oracle and LLAMMA liquidation logic.",
+      "fetched_at": "2026-04-29T10:20:00Z"
+    }
+  ],
+  "unknowns": [
+    "A7: Specific sequencer uptime requirements for LlamaLend deployments on Arbitrum/Fraxtal were not verified on-chain in this L1-focused slice."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "Quantstamp",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+        "date": "2024-05"
+      }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/curve-fi/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/lending/deployments/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Curve LlamaLend is an isolated lending protocol that utilizes the LLAMMA (Lending Liquidating AMM Algorithm) to provide 'soft liquidations.' It allows users to borrow assets against collateral that is automatically rebalanced into the borrowed asset during price drops, minimizing the risk of discrete liquidation events and bad debt."
+  }
+}
