@@ -50,10 +50,21 @@ const BOILERPLATE_ORGS = new Set([
   "fortawesome", "fontawesome",
 ]);
 
+// First path-segment slugs that GitHub itself reserves for site navigation,
+// product pages, and chrome. Fetching a github.com page in HTML mode returns
+// these as a header/footer/nav menu; without filtering they leak into
+// extracted "repo" lists. Match what's actually visible on github.com.
 const RESERVED_PATHS = new Set([
   "login", "signup", "join", "sponsors", "settings", "notifications",
   "issues", "pulls", "marketplace", "explore", "topics", "trending",
   "features", "pricing", "about", "blog", "site", "readme",
+  "enterprise", "team", "security", "solutions", "partners",
+  "resources", "customer-stories", "accelerator", "collections",
+  "premium-support", "trust-center", "why-github", "mcp",
+  "fluidicon.png", "apple-touch-icon.png", "manifest.json",
+  "edu", "education", "students", "teachers",
+  "advisories", "codespaces", "copilot", "actions",
+  "open-source", "events", "newsroom", "stars",
 ]);
 
 export interface ExtractedRepo {

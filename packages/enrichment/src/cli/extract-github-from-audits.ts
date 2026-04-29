@@ -3,11 +3,14 @@
  * defipunkd-extract-github-from-audits
  *
  * Tier 3 of the github-recovery pipeline. For every active protocol with no
- * github (in either snapshot or overlay) and at least one PDF audit
- * reference, download the audit PDFs, extract text from the first few pages
- * with `pdftotext`, and grep for `github.com/<org>/<repo>` URLs. The first
- * page or two of every Trail of Bits / Spearbit / Sherlock report cites the
- * exact repo + commit audited, so this is ground-truth.
+ * github (in either snapshot or overlay) and at least one audit reference,
+ * fetch the audit and grep for `github.com/<org>/<repo>` URLs. PDFs are
+ * downloaded and run through `pdftotext`; non-PDF URLs (typically docs
+ * pages that index multiple audits, e.g. m0's docs.m0.org/portal/.../audits)
+ * are fetched as HTML and parsed with the same regex helper used by the
+ * tier-2 website scrape. PDFs are tried first because they cite the exact
+ * audited repo + commit; HTML index pages are a fallback that captures the
+ * "audit aggregator" pattern many large protocols use.
  *
  * PDFs are cached under `.cache/audit-pdfs/<sha256>.{pdf,txt}` keyed by URL
  * hash so re-runs are cheap. Concurrency is capped at 4 because each slug
@@ -158,6 +161,40 @@ function isPdfUrl(url: string): boolean {
   return /\.pdf(?:[?#]|$)/i.test(url);
 }
 
+async function fetchHtmlWithCache(
+  url: string,
+  cacheDir: string,
+  timeoutMs: number,
+): Promise<{ ok: true; htmlPath: string; html: string } | { ok: false; error: string }> {
+  const hash = createHash("sha256").update(url).digest("hex").slice(0, 24);
+  const htmlPath = join(cacheDir, `${hash}.html`);
+  if (existsSync(htmlPath)) {
+    return { ok: true, htmlPath, html: readFileSync(htmlPath, "utf8") };
+  }
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,*/*",
+      },
+      redirect: "follow",
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return { ok: false, error: `http ${res.status}` };
+    const html = await res.text();
+    if (html.length < 200) return { ok: false, error: `body too small (${html.length}B)` };
+    writeFileSync(htmlPath, html);
+    return { ok: true, htmlPath, html };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function fetchPdfWithCache(
   url: string,
   cacheDir: string,
@@ -211,10 +248,10 @@ function pdfToText(pdfPath: string, pages: number): { ok: true; text: string } |
 
 interface SlugResult {
   slug: string;
-  status: "found" | "no_pdfs" | "all_failed" | "empty";
+  status: "found" | "no_audits" | "all_failed" | "empty";
   repos: ExtractedRepo[];
   source_url: string | null;
-  attempts: Array<{ url: string; outcome: string }>;
+  attempts: Array<{ url: string; kind: "pdf" | "html"; outcome: string }>;
 }
 
 async function processSlug(
@@ -223,44 +260,69 @@ async function processSlug(
   cacheDir: string,
   opts: CliOptions,
 ): Promise<SlugResult> {
-  // Newest audits first — they reference the most current repo.
-  const candidates = audits
-    .filter((a) => isPdfUrl(a.url))
-    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
-    .slice(0, opts.maxAudits);
+  // Newest audits first — they reference the most current repo. Process
+  // PDFs ahead of HTML pages: a PDF cites the exact repo + commit audited,
+  // while an HTML index page lists everything (often correct but noisier).
+  const sorted = [...audits].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  const pdfs = sorted.filter((a) => isPdfUrl(a.url)).slice(0, opts.maxAudits);
+  const htmlPages = sorted.filter((a) => !isPdfUrl(a.url)).slice(0, opts.maxAudits);
 
-  if (candidates.length === 0) {
-    return { slug: p.slug, status: "no_pdfs", repos: [], source_url: null, attempts: [] };
+  if (pdfs.length === 0 && htmlPages.length === 0) {
+    return { slug: p.slug, status: "no_audits", repos: [], source_url: null, attempts: [] };
   }
 
   const attempts: SlugResult["attempts"] = [];
-  for (const audit of candidates) {
+
+  for (const audit of pdfs) {
     const fetched = await fetchPdfWithCache(audit.url, cacheDir, opts.timeoutMs);
     if (!fetched.ok) {
-      attempts.push({ url: audit.url, outcome: `fetch:${fetched.error}` });
+      attempts.push({ url: audit.url, kind: "pdf", outcome: `fetch:${fetched.error}` });
       continue;
     }
     const text = pdfToText(fetched.pdfPath, opts.pages);
     if (!text.ok) {
-      attempts.push({ url: audit.url, outcome: `pdftotext:${text.error}` });
+      attempts.push({ url: audit.url, kind: "pdf", outcome: `pdftotext:${text.error}` });
       continue;
     }
     const repos = extractGithubRepos(text.text);
     if (repos.length > 0) {
-      attempts.push({ url: audit.url, outcome: `found:${repos.length}` });
-      return {
-        slug: p.slug,
-        status: "found",
-        repos,
-        source_url: audit.url,
-        attempts,
-      };
+      attempts.push({ url: audit.url, kind: "pdf", outcome: `found:${repos.length}` });
+      return { slug: p.slug, status: "found", repos, source_url: audit.url, attempts };
     }
-    attempts.push({ url: audit.url, outcome: "no-github-on-pages" });
+    attempts.push({ url: audit.url, kind: "pdf", outcome: "no-github-on-pages" });
   }
 
-  // Distinguish "all PDFs unfetchable" from "we read text but found nothing".
-  const allFailed = attempts.every((a) => a.outcome.startsWith("fetch:") || a.outcome.startsWith("pdftotext:"));
+  for (const audit of htmlPages) {
+    // Special case: a github.com URL fetched as HTML returns GitHub's own
+    // page chrome (nav, footer, marketing). Don't fetch — the repo identity
+    // is already in the URL path. Run the same extractor on the URL string
+    // so the existing reserved-paths and auditor-org filters apply.
+    if (/^https?:\/\/github\.com\//i.test(audit.url)) {
+      const repos = extractGithubRepos(audit.url);
+      if (repos.length > 0) {
+        attempts.push({ url: audit.url, kind: "html", outcome: `found:${repos.length}` });
+        return { slug: p.slug, status: "found", repos, source_url: audit.url, attempts };
+      }
+      attempts.push({ url: audit.url, kind: "html", outcome: "github-url-filtered" });
+      continue;
+    }
+    const fetched = await fetchHtmlWithCache(audit.url, cacheDir, opts.timeoutMs);
+    if (!fetched.ok) {
+      attempts.push({ url: audit.url, kind: "html", outcome: `fetch:${fetched.error}` });
+      continue;
+    }
+    const repos = extractGithubRepos(fetched.html);
+    if (repos.length > 0) {
+      attempts.push({ url: audit.url, kind: "html", outcome: `found:${repos.length}` });
+      return { slug: p.slug, status: "found", repos, source_url: audit.url, attempts };
+    }
+    attempts.push({ url: audit.url, kind: "html", outcome: "no-github-on-page" });
+  }
+
+  // Distinguish "everything unfetchable" from "we read content but found nothing".
+  const allFailed = attempts.every(
+    (a) => a.outcome.startsWith("fetch:") || a.outcome.startsWith("pdftotext:"),
+  );
   return {
     slug: p.slug,
     status: allFailed ? "all_failed" : "empty",
@@ -322,7 +384,7 @@ async function main(): Promise<void> {
       .filter((p) => !hasGithub(p, opts.repoRoot))
       .filter((p) => (p.tvl ?? 0) >= opts.minTvl)
       .map((p) => ({ p, audits: loadAudits(opts.repoRoot, p.slug) }))
-      .filter(({ audits }) => audits.some((a) => isPdfUrl(a.url)));
+      .filter(({ audits }) => audits.length > 0);
     candidates.sort((a, b) => (b.p.tvl ?? -1) - (a.p.tvl ?? -1));
   }
 
@@ -394,7 +456,7 @@ async function main(): Promise<void> {
   }
 
   console.error(
-    `[extract-github-from-audits] done: ${nFound} found, ${nEmpty} read-but-empty, ${nAllFailed} all-pdfs-failed` +
+    `[extract-github-from-audits] done: ${nFound} found, ${nEmpty} read-but-empty, ${nAllFailed} all-fetches-failed` +
       (opts.apply ? ` · ${nWritten} overlays written, ${nSkipped} skipped (already curated)` : ` · log → ${logPath}`),
   );
 }
