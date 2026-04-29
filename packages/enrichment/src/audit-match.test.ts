@@ -47,6 +47,40 @@ describe("isMatch", () => {
       ),
     ).toBe(true);
   });
+  it("rejects when both sides have versions but they don't agree", () => {
+    expect(
+      isMatch(
+        { slug: "uniswap-v3", name: "Uniswap V3" },
+        { tokens: ["uniswap", "core"], raw_name: "uniswap-v4-core" },
+      ),
+    ).toBe(false);
+  });
+  it("matches when both sides have the same version", () => {
+    expect(
+      isMatch(
+        { slug: "uniswap-v3", name: "Uniswap V3" },
+        { tokens: ["uniswap", "core"], raw_name: "uniswap-v3-core" },
+      ),
+    ).toBe(true);
+  });
+  it("matches when only the audit has a version (parent protocol)", () => {
+    // Aave parent (no version in slug/name) should still get all v3/v4 audits.
+    expect(
+      isMatch(
+        { slug: "aave", name: "Aave" },
+        { tokens: ["aave"], raw_name: "aave-v4" },
+      ),
+    ).toBe(true);
+  });
+  it("matches when only the protocol has a version (versionless audit)", () => {
+    // Aave-v3 should still get a generic "Aave Lens" audit with no v in name.
+    expect(
+      isMatch(
+        { slug: "aave-v3", name: "Aave V3" },
+        { tokens: ["aave", "lens"], raw_name: "aave-lens" },
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("firmFromUrl", () => {

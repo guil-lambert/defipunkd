@@ -96,7 +96,7 @@ function buildForProtocol(p: ProtocolSnapshot, auditorIndex: AuditorEntry[]): Au
   }
 
   for (const entry of auditorIndex) {
-    if (!isMatch({ slug: p.slug, name: p.name }, entry)) continue;
+    if (!isMatch({ slug: p.slug, name: p.name }, { tokens: entry.tokens, raw_name: entry.raw_name })) continue;
     const key = `${entry.firm.toLowerCase()}|${entry.url}`;
     merged.set(key, {
       firm: entry.firm,

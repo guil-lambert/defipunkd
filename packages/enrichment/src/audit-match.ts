@@ -75,6 +75,22 @@ const STOP_TOKENS = new Set([
 
 const MIN_STRONG_TOKEN_LEN = 4;
 
+const VERSION_RE = /\bv([1-9]|1[0-9])\b/gi;
+
+/**
+ * Pulls out explicit `vN` version markers from a string. Returns lowercase
+ * versions like "v3", "v4". Used to gate fuzzy matches: if BOTH the protocol
+ * and the audit name carry a version, they must agree.
+ */
+export function extractVersions(input: string): Set<string> {
+  if (!input) return new Set();
+  const out = new Set<string>();
+  for (const m of input.toLowerCase().matchAll(VERSION_RE)) {
+    out.add(`v${m[1]}`);
+  }
+  return out;
+}
+
 export function tokenize(input: string): string[] {
   if (!input) return [];
   const lowered = input.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
@@ -95,21 +111,49 @@ export interface MatchInput {
 
 export interface AuditTokens {
   tokens: string[];
+  /**
+   * Optional raw audit name (filename / contest slug) used for version
+   * detection. The auditor index stores this as `raw_name`; tests can pass
+   * it directly. When omitted, version gating is skipped.
+   */
+  raw_name?: string;
 }
 
 /**
  * Returns true when the protocol and audit share at least one non-stop token
  * of length ≥ 4. Short tokens are required to match exactly via the same
  * tokenization but, on their own, are not sufficient to anchor a match.
+ *
+ * Version gate: if both the protocol (slug or name) and the audit raw_name
+ * mention an explicit `vN` version, the version sets must intersect. This
+ * prevents an `aave-v4` audit from matching `aave-v3`, while still letting
+ * the Aave parent (no version) match either child.
  */
 export function isMatch(protocol: MatchInput, audit: AuditTokens): boolean {
   const protoTokens = new Set([...tokenize(protocol.slug), ...tokenize(protocol.name)]);
   if (protoTokens.size === 0) return false;
   const auditSet = new Set(audit.tokens);
+  let tokenHit = false;
   for (const t of protoTokens) {
-    if (t.length >= MIN_STRONG_TOKEN_LEN && auditSet.has(t)) return true;
+    if (t.length >= MIN_STRONG_TOKEN_LEN && auditSet.has(t)) {
+      tokenHit = true;
+      break;
+    }
   }
-  return false;
+  if (!tokenHit) return false;
+  // Version gate.
+  const protoVersions = new Set([
+    ...extractVersions(protocol.slug),
+    ...extractVersions(protocol.name),
+  ]);
+  const auditVersions = audit.raw_name ? extractVersions(audit.raw_name) : new Set<string>();
+  if (protoVersions.size > 0 && auditVersions.size > 0) {
+    for (const v of protoVersions) {
+      if (auditVersions.has(v)) return true;
+    }
+    return false;
+  }
+  return true;
 }
 
 /** Infer auditor firm from a URL host. Returns null when nothing recognizable. */
