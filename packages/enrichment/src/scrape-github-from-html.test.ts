@@ -56,6 +56,13 @@ describe("extractGithubRepos", () => {
     const html = `\\"github\\":\\"https://github.com/paxosglobal\\"`;
     expect(extractGithubRepos(html)).toContainEqual({ org: "paxosglobal", repo: null });
   });
+  it("strips trailing periods from URLs that PDF text wrapped at a sentence", () => {
+    // pdftotext output: "...audited by https://github.com/trailofbits. The..."
+    const text = `audited by https://github.com/trailofbits. The scope was`;
+    // After stripping the trailing period, the org normalizes to
+    // "trailofbits" and the auditor filter kicks in.
+    expect(extractGithubRepos(text)).toEqual([]);
+  });
 });
 
 describe("findDocsLink", () => {

@@ -18,11 +18,29 @@
 const HREF_GITHUB_RE = /(?:https?:)?\/\/github\.com\/([A-Za-z0-9][A-Za-z0-9_.-]*?)(?:\/([A-Za-z0-9][A-Za-z0-9_.-]*?))?(?=[^A-Za-z0-9_.\-/]|$)/g;
 
 const AUDITOR_ORGS = new Set([
-  "trailofbits", "spearbit", "sherlock-protocol", "code-423n4", "openzeppelin",
+  "trailofbits", "spearbit", "sherlock-protocol", "sherlock-audit",
+  "code-423n4", "openzeppelin",
   "consensys", "consensysdiligence", "certora", "quantstamp", "halborn",
   "peckshield", "chainsecurity", "zellic", "ackeeblockchain", "hacken",
   "runtime-verification", "runtimeverification", "sigmaprime", "sigp",
   "mixbytes", "statemind",
+  "cantinaxyz", "code4rena", "macrofeb", "macro",
+  "guardianaudits", "guardian-audits",
+  "pashov-audit-group", "pashov",
+  "yacademy",
+  "shieldify-security", "shieldify",
+  "veridise",
+  "blocksec", "blocksecteam",
+  "extropy-io", "extropyio",
+  "zenith-security",
+  "nethermindeth",
+  "shellboxes",
+  "iosiro",
+  "kupia-secure",
+  "0xguard",
+  "secureum",
+  "least-authority",
+  "leastauthority",
 ]);
 
 const BOILERPLATE_ORGS = new Set([
@@ -47,11 +65,16 @@ export interface ExtractedRepo {
 export function extractGithubRepos(html: string): ExtractedRepo[] {
   const seen = new Map<string, ExtractedRepo>();
   for (const m of html.matchAll(HREF_GITHUB_RE)) {
-    const org = m[1]!;
+    // Strip trailing period — pdftotext wraps URLs at sentence boundaries
+    // and the regex's segment class includes `.`, so a trailing `.` from the
+    // surrounding prose can leak into the capture (e.g. "trailofbits.").
+    const org = m[1]!.replace(/\.+$/, "");
+    if (!org) continue;
     let repo: string | null = m[2] ?? null;
-    if (RESERVED_PATHS.has(org.toLowerCase())) continue;
-    if (BOILERPLATE_ORGS.has(org.toLowerCase())) continue;
-    if (AUDITOR_ORGS.has(org.toLowerCase())) continue;
+    const orgLower = org.toLowerCase();
+    if (RESERVED_PATHS.has(orgLower)) continue;
+    if (BOILERPLATE_ORGS.has(orgLower)) continue;
+    if (AUDITOR_ORGS.has(orgLower)) continue;
     if (repo) {
       // Strip common trailing decorations that the regex may have absorbed.
       repo = repo.replace(/[.,)]+$/, "");
