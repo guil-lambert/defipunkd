@@ -1,0 +1,105 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  extractGithubRepos,
+  extractRootHost,
+  findDocsLink,
+} from "./scrape-github-from-html.js";
+
+describe("extractGithubRepos", () => {
+  it("pulls org/repo from an href", () => {
+    const html = `<a href="https://github.com/aave-dao/aave-v3-origin">repo</a>`;
+    expect(extractGithubRepos(html)).toEqual([
+      { org: "aave-dao", repo: "aave-v3-origin" },
+    ]);
+  });
+  it("dedupes multiple references to the same repo", () => {
+    const html = `
+      <a href="https://github.com/morpho-org/morpho-blue">a</a>
+      <a href="https://github.com/morpho-org/morpho-blue/blob/main/README.md">b</a>
+    `;
+    const out = extractGithubRepos(html);
+    expect(out).toContainEqual({ org: "morpho-org", repo: "morpho-blue" });
+  });
+  it("filters out auditor org links", () => {
+    const html = `
+      <a href="https://github.com/trailofbits/publications">audit</a>
+      <a href="https://github.com/falconfin/contracts">repo</a>
+    `;
+    expect(extractGithubRepos(html)).toEqual([
+      { org: "falconfin", repo: "contracts" },
+    ]);
+  });
+  it("filters out boilerplate / reserved paths", () => {
+    const html = `
+      <a href="https://github.com/login">login</a>
+      <a href="https://github.com/features">features</a>
+      <a href="https://github.com/realorg/realrepo">repo</a>
+    `;
+    expect(extractGithubRepos(html)).toEqual([
+      { org: "realorg", repo: "realrepo" },
+    ]);
+  });
+  it("captures org-only links when no repo path is present", () => {
+    const html = `<a href="https://github.com/aave">aave</a>`;
+    expect(extractGithubRepos(html)).toEqual([{ org: "aave", repo: null }]);
+  });
+  it("strips .git and trailing punctuation from repo names", () => {
+    const html = `git clone https://github.com/foo/bar.git, see also`;
+    expect(extractGithubRepos(html)).toContainEqual({ org: "foo", repo: "bar" });
+  });
+  it("captures urls inside HTML-embedded JSON with backslash-escaped quotes", () => {
+    const html = `<script>{"social":{"github":"https://github.com/paxosglobal"}}</script>`;
+    expect(extractGithubRepos(html)).toContainEqual({ org: "paxosglobal", repo: null });
+  });
+  it("captures urls in escaped-quote JSON like a Next.js __NEXT_DATA__ payload", () => {
+    const html = `\\"github\\":\\"https://github.com/paxosglobal\\"`;
+    expect(extractGithubRepos(html)).toContainEqual({ org: "paxosglobal", repo: null });
+  });
+  it("captures org/repo when the URL continues with a /blob or /pull suffix", () => {
+    // Regression: `/` after the repo should terminate the capture, not
+    // prevent it. Previously this whole match silently failed.
+    const html = `<a href="https://github.com/THORWallet/TGT-TITN-merge-contracts/pull/2">PR</a>`;
+    expect(extractGithubRepos(html)).toContainEqual({
+      org: "THORWallet",
+      repo: "TGT-TITN-merge-contracts",
+    });
+  });
+  it("captures org/repo from a /blob/branch/file.sol code permalink", () => {
+    const html = `<a href="https://github.com/aave-dao/aave-v3-origin/blob/main/contracts/Pool.sol#L42">link</a>`;
+    expect(extractGithubRepos(html)).toContainEqual({
+      org: "aave-dao",
+      repo: "aave-v3-origin",
+    });
+  });
+  it("strips trailing periods from URLs that PDF text wrapped at a sentence", () => {
+    // pdftotext output: "...audited by https://github.com/trailofbits. The..."
+    const text = `audited by https://github.com/trailofbits. The scope was`;
+    // After stripping the trailing period, the org normalizes to
+    // "trailofbits" and the auditor filter kicks in.
+    expect(extractGithubRepos(text)).toEqual([]);
+  });
+});
+
+describe("findDocsLink", () => {
+  it("finds docs.<host>", () => {
+    const html = `<a href="https://docs.aave.com/developers">docs</a>`;
+    expect(findDocsLink(html, "aave.com")).toBe("https://docs.aave.com/developers");
+  });
+  it("finds gitbook subdomain when no docs.* link exists", () => {
+    const html = `<a href="https://example.gitbook.io/whitepaper">docs</a>`;
+    expect(findDocsLink(html, "example.com")).toBe("https://example.gitbook.io/whitepaper");
+  });
+  it("returns null when nothing matches", () => {
+    expect(findDocsLink("<p>nothing</p>", "example.com")).toBe(null);
+  });
+});
+
+describe("extractRootHost", () => {
+  it("returns the root domain", () => {
+    expect(extractRootHost("https://app.aave.com/markets")).toBe("aave.com");
+  });
+  it("returns null on malformed input", () => {
+    expect(extractRootHost("not a url")).toBe(null);
+  });
+});

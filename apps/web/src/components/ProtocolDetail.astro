@@ -35,6 +35,27 @@ const githubProvTag = useMetaGithub ? "defi@home" : (prov.github ?? null);
 const useMetaAudits = metadata?.audits && metadata.audits.length > 0 && prov.audit_links !== "curated";
 const auditsProvTag = useMetaAudits ? "defi@home" : auditsProv;
 
+// Build a unified {firm, url, date} list for the structured render path.
+// Priority: defi@home metadata → enrichment audits.json (the same auditor
+// index that powers audit_links, but with firm/date) → fall back below to
+// the bare URL list. The fallback is only hit when neither structured
+// source exists.
+type StructuredAudit = { firm: string | null; url: string; date: string | null };
+let structuredAudits: StructuredAudit[] | null = null;
+if (useMetaAudits) {
+  structuredAudits = metadata!.audits!.map((a) => ({
+    firm: a.firm ?? null,
+    url: a.url,
+    date: a.date ?? null,
+  }));
+} else if (enrichment.audits && enrichment.audits.audits.length > 0) {
+  structuredAudits = enrichment.audits.audits.map((a) => ({
+    firm: a.firm,
+    url: a.url,
+    date: a.date,
+  }));
+}
+
 const upgradeabilityLabel: Record<string, string> = {
   immutable: "Immutable",
   upgradeable: "Upgradeable",
@@ -201,13 +222,13 @@ const navLinks = [
         <div class="field">
           <dt>Audits</dt>
           <dd>
-            {useMetaAudits ? (
+            {structuredAudits ? (
               <details>
-                <summary class="clickable">{metadata!.audits!.length} audit{metadata!.audits!.length === 1 ? "" : "s"}</summary>
+                <summary class="clickable">{structuredAudits.length} audit{structuredAudits.length === 1 ? "" : "s"}</summary>
                 <ul class="bare audits">
-                  {metadata!.audits!.map((a) => (
+                  {structuredAudits.map((a) => (
                     <li>
-                      <a href={a.url} class="link" rel="noreferrer" target="_blank">{a.firm}</a>
+                      <a href={a.url} class="link" rel="noreferrer" target="_blank">{a.firm ?? auditorDomain(a.url) ?? a.url}</a>
                       {a.date && <span class="muted"> {EM_DASH} {a.date}</span>}
                     </li>
                   ))}
