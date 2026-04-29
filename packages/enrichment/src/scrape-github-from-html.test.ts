@@ -56,6 +56,22 @@ describe("extractGithubRepos", () => {
     const html = `\\"github\\":\\"https://github.com/paxosglobal\\"`;
     expect(extractGithubRepos(html)).toContainEqual({ org: "paxosglobal", repo: null });
   });
+  it("captures org/repo when the URL continues with a /blob or /pull suffix", () => {
+    // Regression: `/` after the repo should terminate the capture, not
+    // prevent it. Previously this whole match silently failed.
+    const html = `<a href="https://github.com/THORWallet/TGT-TITN-merge-contracts/pull/2">PR</a>`;
+    expect(extractGithubRepos(html)).toContainEqual({
+      org: "THORWallet",
+      repo: "TGT-TITN-merge-contracts",
+    });
+  });
+  it("captures org/repo from a /blob/branch/file.sol code permalink", () => {
+    const html = `<a href="https://github.com/aave-dao/aave-v3-origin/blob/main/contracts/Pool.sol#L42">link</a>`;
+    expect(extractGithubRepos(html)).toContainEqual({
+      org: "aave-dao",
+      repo: "aave-v3-origin",
+    });
+  });
   it("strips trailing periods from URLs that PDF text wrapped at a sentence", () => {
     // pdftotext output: "...audited by https://github.com/trailofbits. The..."
     const text = `audited by https://github.com/trailofbits. The scope was`;
