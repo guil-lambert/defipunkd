@@ -1,0 +1,541 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Contracts admit anyone (no whitelist/KYC); official frontend self-discloses geo-blocking and VPN detection but A3b-ii independent paths exist (cp0x pi-sky-interface, direct contract).",
+    "short_headline": "Permissionless contracts, geo-blocked UI",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "USDS token (proxy 0xdC035D...) and its implementation 0x1923Df... use the MakerDAO 'wards' authority pattern: only ward-authorized addresses can mint/burn, but transfer/approve/balanceOf are open ERC-20 with no whitelist, blacklist, KYC modifier, freeze or pause on user transfers."
+        },
+        {
+          "code": "A1",
+          "text": "sUSDS at 0xa3931d... is an ERC1967Proxy; deposit/withdraw/redeem on the implementation expose standard ERC-4626 entry points with no per-user gate."
+        },
+        {
+          "code": "A1",
+          "text": "LitePSM USDC-A (0xf6e72D...) exposes permissionless buyGem/sellGem (no caller whitelist) for USDC<>USDS swaps; the bud()/wards-gated functions are only the no-fee variants buyGemNoFee/sellGemNoFee, which are ALMProxy-only and do NOT gate ordinary user admission."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain operator approval (keeper, sequencer, signed message, attestation) is required to deposit, mint, transfer, swap via PSM, or redeem sUSDS. The Chronicle oracle posts prices that affect liquidations of legacy Maker vaults but does not gate user admission for USDS/sUSDS/PSM functions."
+        },
+        {
+          "code": "A3-active",
+          "text": "Sky Privacy Policy explicitly self-discloses active enforcement: 'IP Addresses: For security purposes, to ensure the proper functioning of the Interface, and to implement geo-blocking and VPN-detection measures, IP addresses are collected and stored using Third-Party Services and Service Providers.' This is a self-admitted enforcement mechanism, not just policy text."
+        },
+        {
+          "code": "A3-active",
+          "text": "ToS narrative confirms tiered restriction enforcement: 'Certain functionalities of the Web App, including the Sky Savings Rate and Sky Token Rewards are subject to geographical restrictions and are unavailable in specific jurisdictions including the United States. Furthermore, the Trade feature is explicitly restricted in all European Union member states. Users residing in these restricted jurisdictions are provided a limited version of the Web App and are expressly prohibited from accessing or attempting to access any restricted features.' Live fetch of sky.money product cards shows banners 'Currently unavailable in the US' on sUSDS, stUSDS, and Sky Ecosystem Rewards tiles."
+        },
+        {
+          "code": "A3-passive",
+          "text": "Standard sanctions-attestation, OFAC SDN, EU/UK/UN/CIMA representations, and VPN-circumvention prohibition clauses are present (verbatim quoted under evidence). These are A3-passive boilerplate."
+        },
+        {
+          "code": "A3b-i",
+          "text": "The ToS defines 'Interface' as 'https://sky.money ... and https://app.sky.money ... as well as any other websites, apps, interfaces or dashboards, available through the sky.money domain, its subdomains, or any other means'. Subdomain redistributions of the official UI are bound by the same ToS and are NOT independent paths. ToS also notes 'Independent Subdomains' that are NOT controlled by Skybase, but those operators may impose their own ToS."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "cp0x pi-sky-interface is a verified independent A3b-ii path: live at https://sky.cp0x.com (HTTP 200, Vite SPA index served by nginx, title 'Sky Permissionless Interface by cp0x'), source at https://github.com/cp0x-org/pi-sky-interface (GPL-3.0, latest main commit d5a584d9a5c87d44f089d1bc4cfedc76d1ff118d, Dockerfile present for self-hosting), operated by cp0x — a separate legal entity from Skybase International / Sky Foundation — and therefore not bound by sky.money ToS or the Skybase geo-blocking/VPN-detection enforcement. Open-source + self-hostable + independent operator: qualifies on all three axes."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Direct on-chain interaction via Etherscan Write Contract tabs is available for USDS (0xdC035D45d973E3EC169d2276DDab16f1e407384F), sUSDS (0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD), and LitePSM-USDC-A (0xf6e72Db5454dd049d0788e411b06CfAF16853042); all three contracts are verified on Etherscan and require no off-chain operator."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain OFAC/Chainalysis/TRM oracle integration was found in the user-entry contracts (USDS Usds.sol, sUSDS, LitePSM). The compliance enforcement disclosed in Sky's Privacy Policy is at the frontend / IP layer (geo-block + VPN-detection on the official Interface), not at the smart-contract layer."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is fully open (verified contracts, public RPC, public state). Write access at the contract layer is unconditionally open for ordinary user actions (mint USDS by depositing DAI via converter / by buyGem on PSM, deposit/redeem sUSDS, transfer USDS). Write access via the official frontend is gated by self-disclosed IP geo-block + VPN-detection; write access via cp0x pi-sky-interface or direct contract calls is not."
+        },
+        {
+          "code": "A6",
+          "text": "ToS verbatim 'Prohibited Jurisdictions' clause located and quoted: 'You represent and warrant that you are not a resident of any of the following countries or regions (\"Prohibited Jurisdictions\"): Afghanistan, Belarus, Burma, Burundi, Central African Republic, China, Crimea, Cuba, Democratic Republic of the Congo, Donetsk, Ethiopia, Guinea, Guinea-Bissau, Haiti, Hong Kong, Iran, Iraq, Kherson, Lebanon, Libya, Luhansk, Mali, Nicaragua, Niger, North Korea (DPRK), Russia, Somalia, South Sudan ... Venezuela, Yemen, Zaporizhzhia, and Zimbabwe.' Eligibility/sanctions/VPN clauses also quoted verbatim under evidence."
+        }
+      ],
+      "steelman": {
+        "red": "The Skybase International ToS lists ~30 Prohibited Jurisdictions, requires OFAC-SDN attestation, and the Privacy Policy self-admits active IP geo-blocking and VPN-detection on the Interface — a coordinated admission-gating regime that, taken as the only access path most users see, materially gates entry.",
+        "orange": "All Sky contracts (USDS, sUSDS, LitePSM, DaiUsds converter) admit any address unconditionally with no whitelist/KYC/blocklist; the gating is only at the official frontend layer (self-disclosed geo-block + VPN-detection) and the rubric maps frontend-only A3-active enforcement plus partially-mitigated A3b-ii to orange.",
+        "green": "Independent A3b-ii paths exist (cp0x pi-sky-interface — open-source GPL-3.0, self-hostable, separate operator; plus direct Etherscan write-tab interaction with verified contracts) and the contract layer is fully permissionless, satisfying the green criterion that frontend restrictions are mitigated by credible alternatives."
+      },
+      "verdict": "Choosing orange because the contract layer is unambiguously permissionless (USDS/sUSDS/LitePSM expose no user-side whitelist, KYC, or blocklist — confirmed via Etherscan-verified source for 0xdC035D..., 0x1923Df..., 0xa3931d..., 0xf6e72D...) but the official Interface self-admits A3-active enforcement in writing ('to implement geo-blocking and VPN-detection measures, IP addresses are collected and stored') and surfaces 'Currently unavailable in the US' banners on sUSDS / stUSDS / Sky Ecosystem Rewards tiles — this is type (a)+(d) evidence under A3-active, not inferred. The cp0x pi-sky-interface (https://sky.cp0x.com, source d5a584d9a5c8..., GPL-3.0, Docker self-hostable, operated by cp0x as a separate legal entity from Skybase) plus direct Etherscan-write-tab interaction are real A3b-ii mitigations, but they are not promoted by Sky itself and require the user to know about them, so they soften but do not erase the orange. The green steelman is weaker than the orange one because the green requires the alternative paths to be either documented by the protocol itself or reachable by non-technical users; the red steelman is weaker because the contract layer demonstrably has no whitelist/KYC/blocklist and no single operator gates user actions."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "shows": "Verbatim Sky/Skybase International Terms of Use. Quoted verbatim: 'You represent and warrant that you are not a resident of any of the following countries or regions (\"Prohibited Jurisdictions\"): Afghanistan, Belarus, Burma, Burundi, Central African Republic, China, Crimea, Cuba, Democratic Republic of the Congo, Donetsk, Ethiopia, Guinea, Guinea-Bissau, Haiti, Hong Kong, Iran, Iraq, Kherson, Lebanon, Libya, Luhansk, Mali, Nicaragua, Niger, North Korea (DPRK), Russia, Somalia, South Sudan ... Venezuela, Yemen, Zaporizhzhia, and Zimbabwe.' Also: 'You represent and warrant that you will not transact with users in any Prohibited Jurisdictions or with any individuals sanctioned by OFAC, or sanctioned under EU or UK regulations. You do not and will not use Virtual Private Network (\"VPN\") software, proxy server, or any other privacy or anonymization tools or techniques to circumvent any restrictions that apply to the Services, especially those which restrict the geographical availability of the Services.' Also (definition of Interface): 'https://sky.money ... and https://app.sky.money ..., as well as any other websites, apps, interfaces or dashboards, available through the sky.money domain, its subdomains, or any other means (the \"Interface\" or \"Web App\").' Also (tiered restriction): 'Certain functionalities of the Web App, including the Sky Savings Rate and Sky Token Rewards are subject to geographical restrictions and are unavailable in specific jurisdictions including the United States. Furthermore, the Trade feature is explicitly restricted in all European Union member states.' Also (sanctions rep): 'You further represent that you are not: ... (iii) included in the list of Specially Designated Nationals and Blocked Persons maintained by the U.S. Treasury Department's Office of Foreign Assets Control (\"OFAC\") or on any list pursuant to European Union (\"E.U.\") or United Kingdom (\"U.K.\") regulations ...; or (iv) operationally based or domiciled in a country or territory in which sanctions imposed by the United Nations ..., OFAC, the E.U, the U.K., or the Cayman Islands Monetary Authority apply.'",
+        "fetched_at": "2026-04-29T03:33:00Z"
+      },
+      {
+        "url": "https://docs.sky.money/legal/skybase-international/privacy-policy",
+        "shows": "Verbatim self-disclosure of A3-active enforcement: 'IP Addresses: For security purposes, to ensure the proper functioning of the Interface, and to implement geo-blocking and VPN-detection measures, IP addresses are collected and stored using Third-Party Services and Service Providers. This information may be used to determine your approximate location and detect potential use of VPN services.' Specific third-party screening provider name not disclosed in the public ToS/Privacy text.",
+        "fetched_at": "2026-04-29T03:33:00Z"
+      },
+      {
+        "url": "https://sky.money",
+        "shows": "Live product cards on the official frontend display jurisdiction banners: 'Currently unavailable in the US' on the sUSDS card, the stUSDS card, and the Sky Ecosystem Rewards card. No third-party wallet-screening script tag visible in the static HTML, but the Privacy Policy already documents the IP-layer enforcement.",
+        "fetched_at": "2026-04-29T03:32:00Z"
+      },
+      {
+        "url": "https://sky.cp0x.com/",
+        "shows": "HTTP 200 from nginx/1.24.0 (Ubuntu), index.html served (1503 bytes), Vite SPA bootstrap (script /assets/index-aFk7qkeJ.js). Page title 'Sky Permissionless Interface by cp0x', meta description 'Sky Permissionless Interface by cp0x', meta author 'cp0x'. The site is reachable globally with no IP-based block in front. SPA renders client-side; full UI requires JS execution but the host responds and serves the bundle.",
+        "fetched_at": "2026-04-29T03:33:14Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-sky-interface",
+        "shows": "Repo cp0x-org/pi-sky-interface: 'Permissionless interface for the Sky protocol', license GPL-3.0, default branch main, latest main commit d5a584d9a5c87d44f089d1bc4cfedc76d1ff118d (2026-03-24, 'Merge pull request #9 from cp0x-org/fix-graphql'), Dockerfile present (self-hosting supported), TypeScript 96.9%. Operator cp0x is a separate legal entity from Skybase International / Sky Foundation; this is an A3b-ii path (independent operator + open-source + self-hostable).",
+        "commit": "d5a584d9a5c87d44f089d1bc4cfedc76d1ff118d",
+        "fetched_at": "2026-04-29T03:33:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+        "shows": "USDS token, ERC1967Proxy at 0xdC035D... pointing at implementation 0x1923Df.... Verified.",
+        "chain": "Ethereum",
+        "address": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+        "fetched_at": "2026-04-29T03:32:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102",
+        "shows": "USDS implementation contract 'Usds' (Solidity 0.8.21, MIT). Uses MakerDAO 'wards' authority: only addresses with wards[msg.sender]==1 can call mint()/burn(); rely()/deny() manage the wards mapping. transfer/approve/balanceOf have no whitelist, blacklist, KYC, freeze or pause modifier — fully open ERC-20 user admission.",
+        "chain": "Ethereum",
+        "address": "0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102",
+        "fetched_at": "2026-04-29T03:32:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "shows": "sUSDS (Savings USDS), ERC1967Proxy at 0xa3931d... -> implementation 0x4e7991e5C547ce825BdEb665EE14a3274f9F61e0. Source verified (exact match). ERC-4626 deposit/withdraw/redeem are open user-admission entry points.",
+        "chain": "Ethereum",
+        "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "fetched_at": "2026-04-29T03:32:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xf6e72Db5454dd049d0788e411b06CfAF16853042",
+        "shows": "Sky LitePSM USDC-A. Verified, Solidity 0.8.16. buyGem and sellGem are PERMISSIONLESS public swaps for any caller (USDC<>USDS at 1:1 minus tin/tout fees). Only buyGemNoFee/sellGemNoFee require the bud() whitelist (intended for ALMProxy and authorized arbitrageurs); these are not on the user-admission path. Halt/live state can be flipped by ward-authorized addresses (governance) but not by an EOA.",
+        "chain": "Ethereum",
+        "address": "0xf6e72Db5454dd049d0788e411b06CfAF16853042",
+        "fetched_at": "2026-04-29T03:33:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/guides/psm/litepsm/",
+        "shows": "Sky developer docs confirming LitePSM design: 'Apart from the existing permissionless buyGem / sellGem functions, this iteration introduces buyGemNoFee / sellGemNoFee permissioned counterparties.' Authorized callers checked via bud(address) -> 1.",
+        "fetched_at": "2026-04-29T03:33:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss-lite-psm",
+        "shows": "Source repo for LitePSM corroborating the permissionless buyGem/sellGem vs whitelisted *NoFee variants split. Not pinned to a commit here.",
+        "fetched_at": "2026-04-29T03:33:00Z"
+      }
+    ],
+    "unknowns": [
+      "A3-active: Sky Privacy Policy says 'using Third-Party Services and Service Providers' for IP geo-block and VPN detection, but does not name the specific provider (Cloudflare, MaxMind, IPQualityScore, etc.). Could not determine the named third-party from static fetch.",
+      "A4: Did not find an on-chain Chainalysis/TRM/Elliptic sanctions oracle call in USDS, sUSDS, or LitePSM source — but did not exhaustively trace every internal contract (e.g., ALMProxy, Allocator, every DaiUsds converter address). On-chain blocklist of user actions appears absent on the user-admission path.",
+      "A2: Did not enumerate every keeper / oracle / relayer in the broader Sky ecosystem (Chronicle, MegaPSM, Allocator). User-facing USDS/sUSDS/PSM admission appears not to require operator approval, but liveness dependencies (oracle posts for legacy CDP liquidations) are out of scope here and belong to the dependencies slice."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem",
+        "https://github.com/makerdao",
+        "https://github.com/sky-ecosystem/usds",
+        "https://github.com/sky-ecosystem/dss-lite-psm"
+      ],
+      "docs_url": "https://docs.sky.money",
+      "audits": [],
+      "governance_forum": "https://forum.sky.money",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://developers.sky.money",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Sky (the rebrand of MakerDAO) is a CDP/stablecoin protocol on Ethereum. Users mint USDS (the new Sky-branded stablecoin, 1:1 convertible with legacy DAI via a permissionless converter) by depositing collateral into Maker/Sky vaults or by swapping USDC through the LitePSM at 1:1 minus fees, and can earn the Sky Savings Rate by depositing USDS into the sUSDS ERC-4626 vault. SKY is the governance token (upgrade from MKR at 1 MKR : 24000 SKY). Core contracts (USDS, sUSDS) are upgradeable proxies controlled by the MakerDAO 'wards' authority pattern under DAO governance; LitePSM is non-upgradeable but has a governance-controlled halt switch."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Sky contracts expose permissionless entry and exit, but Sky.money actively geo-restricts major yield and rewards features.",
+    "short_headline": "Frontend geo-restricted",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core user-facing contract paths checked do not show a per-user whitelist/KYC gate: Vat.frob is external and gated by collateralization, debt ceiling, dust, and user consent checks; GemJoin/DaiJoin join/exit are public apart from live flags; sUSDS exposes ERC-4626 deposit/mint/withdraw/redeem functions in the deployed ABI."
+        },
+        {
+          "code": "A2",
+          "text": "The checked entry and exit classes are admitted onchain without a keeper, sequencer, relayer, or oracle-poster approval step: Vault modification is direct through Vat.frob, token conversion is direct through DaiUsds.daiToUsds/usdsToDai, and sUSDS deposit/mint/withdraw/redeem are public ABI functions. Oracles and rate updates affect pricing/liveness and limits, but the checked placement functions are not admitted by an off-chain operator."
+        },
+        {
+          "code": "A3-active",
+          "text": "The official Sky.money interface actively marks sUSDS, stUSDS, and Ecosystem Rewards as unavailable in the US, and Sky's security documentation states that front-end web applications implement geo-blocking, VPN blocking, and sanctions-compliance restrictions."
+        },
+        {
+          "code": "A3-passive",
+          "text": "Skybase Terms include passive eligibility and compliance clauses covering sanctions, prohibited jurisdictions, VPN/proxy circumvention, and blockchain-analytics data sharing."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Independent access paths exist: the deployed contracts can be reached directly on Etherscan/Write Contract pages, cp0x publishes a GPL-3.0 permissionless Sky interface, and DeFi Saver documents a separate Sky dashboard for USDS savings, rewards, and SKY staking."
+        },
+        {
+          "code": "A4",
+          "text": "I found off-chain sanctions/compliance controls in the official interface, but the checked deployed core/token ABIs did not expose an OFAC-style onchain address blocklist function; USDS transfer functions are standard public ERC-20 ABI entries while mint/burn and upgrade/admin controls are separate privileged functions."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through block explorers and view methods, and write access for the checked user functions is public subject to asset balances, approvals, protocol accounting limits, and normal owner/allowance consent rather than an allowlist."
+        },
+        {
+          "code": "A6",
+          "text": "The official legal link is the Skybase International Terms of Use; it contains verbatim jurisdictional/compliance fragments including \"Specially Designated Nationals and Blocked Persons\", \"geographical restrictions and are unavailable in specific jurisdictions including the United States\", and \"Virtual Private Network (“VPN”) software\"."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that the official frontend documents active geo/VPN/sanctions restrictions and certain protocol modules have privileged governance or operator roles, but the checked core user entry/exit contracts do not require a per-user whitelist, KYC approval, single relayer, or onchain blocklist admission gate.",
+        "orange": "The strongest orange argument is that contract interaction is broadly permissionless, yet the official Sky.money access path actively restricts major yield/rewards features for US users and documents front-end geo/VPN blocking.",
+        "green": "The strongest green argument is that direct contract paths and independent third-party/front-end options exist, and the checked contracts admit users through public functions rather than contractual KYC or allowlists."
+      },
+      "verdict": "Choosing orange because the onchain user paths I checked are permissionless, which rules out red, but the official Sky.money interface and Sky security docs show active frontend restrictions for important user actions, which is stronger than a green finding even though direct-contract, cp0x, and DeFi Saver alternatives mitigate access."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "shows": "Deployed Sky MCD Vat on Ethereum with verified source; Etherscan shows Hope/Flux/Move activity and verified Vat source for core accounting.",
+        "chain": "Ethereum",
+        "address": "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss/blob/master/src/vat.sol",
+        "shows": "Vat source: hope/nope are public; flux and move require source consent; frob is external and checks live state, initialized ilk, debt ceilings, safety, consent, and dust rather than whitelist/KYC.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss/blob/master/src/join.sol",
+        "shows": "Join source: GemJoin.join/exit and DaiJoin.join/exit are external user functions; join/exit are not per-user allowlist functions, while cage/rely/deny are administrative.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss/blob/master/src/pot.sol",
+        "shows": "Pot source: drip is external and join/exit are external savings functions; rate parameter file/cage are administrative, not user admission approval.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x3225737a9Bbb6473CB4a45b7244ACa2BeFdB276A",
+        "shows": "Deployed DaiUsds converter ABI exposes daiToUsds(address,uint256) and usdsToDai(address,uint256); recent transactions include both methods.",
+        "chain": "Ethereum",
+        "address": "0x3225737a9Bbb6473CB4a45b7244ACa2BeFdB276A",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "shows": "Deployed sUSDS proxy contract and token tracker; constructor points to implementation 0x4e7991e5C547ce825BdEb665EE14a3274f9F61e0.",
+        "chain": "Ethereum",
+        "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4e7991e5C547ce825BdEb665EE14a3274f9F61e0",
+        "shows": "sUSDS implementation ABI includes deposit, mint, withdraw, redeem, transfer, transferFrom, view functions, and separate rely/deny/upgrade admin functions.",
+        "chain": "Ethereum",
+        "address": "0x4e7991e5C547ce825BdEb665EE14a3274f9F61e0",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102",
+        "shows": "USDS implementation ABI includes transfer and transferFrom, plus mint/burn/rely/deny/upgrade functions; no OFAC/blocklist-style ABI entry was visible in the fetched ABI.",
+        "chain": "Ethereum",
+        "address": "0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://sky.money/",
+        "shows": "Official Sky.money page shows active UI labels: sUSDS, stUSDS, and Ecosystem Rewards each display \"Currently unavailable in the US\"; footer says Sky.money is a non-custodial interface operated by Skybase.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://developers.skyeco.com/security/security-measures/overview/",
+        "shows": "Sky security docs say front-end web applications implement geo-blocking, VPN blocking, and sanctions compliance restrictions; the same page links audit reports and Immunefi bug bounty.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "shows": "Skybase Terms define the Sky.money/app.sky.money Interface, distinguish it from Sky Protocol, include sanctions/prohibited-jurisdiction/VPN provisions, and state restricted users receive a limited Web App.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-sky-interface",
+        "shows": "cp0x-org repository is public, GPL-3.0, describes itself as a permissionless interface for Sky enabling direct unrestricted smart-contract interaction, and links sky.cp0x.com as the interface.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://sky.cp0x.com/",
+        "shows": "Live cp0x Sky interface URL fetched; static fetch returned a JavaScript app shell, corroborating the separate live frontend endpoint referenced by the cp0x repository.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://help.defisaver.com/protocols/makerdao-sky/dashboard-and-use-case-sky",
+        "shows": "DeFi Saver help documents a Sky dashboard with Savings, Rewards, Upgrade Savings, and SKY staking flows, including USDS staking for sUSDS and DSR-to-SSR upgrade.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://help.defisaver.com/protocols/makerdao/can-i-manage-makerdao-vaults-created-using-other-apps-at-defi-saver",
+        "shows": "DeFi Saver documents MakerDAO Vault compatibility with Oasis via standard MakerDAO DSProxy architecture, supporting an independent frontend path for Maker/Sky vault management.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://guides.instadapp.io/protocols/makerdao/maker-protocol-explained",
+        "shows": "Instadapp guide documents Maker Vaults and states users interact directly with the Maker Vault without an intermediary.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://developers.sky.money/quick-start/deployments-tracker/",
+        "shows": "Sky deployments tracker lists Ethereum addresses for USDS Token, USDS implementation, USDS Join, DaiUsds converter, DAI token/join, sUSDS token/vault, SKY token, and MKR-SKY converter.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://developers.skyeco.com/quick-start/protocol-token-routes/",
+        "shows": "Protocol routes document DAI-USDS conversion, USDS-USDC routes, MKR-SKY conversion, and USDS-sUSDS route; DAI-USDS converter is described as allowing conversion at any time with no liquidity restrictions.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/usds",
+        "shows": "USDS repository README says USDS uses UUPS/ERC-1967 upgradeability, UsdsJoin manages mint/burn against vat.dai, and DaiUsds is a permissionless converter between DAI and USDS.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/stusds",
+        "shows": "stUSDS repository README says users can deposit USDS to mint stUSDS; it also documents ERC-4626 support and UUPS/ERC-1967 upgradeability.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://developers.sky.money/core-protocol/susds/",
+        "shows": "sUSDS docs describe sUSDS as an ERC-4626 tokenized Sky Savings Rate implementation with deposit/withdraw functionality, no fees, and upgradeable design.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://developers.sky.money/",
+        "shows": "Sky protocol docs homepage lists official GitHub, Chainlog, portal, voting, and dashboard links.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://forum.skyeco.com/",
+        "shows": "Sky Forum describes itself as a public discussion group focused on Sky governance, risk, community development, and includes a Sky Core governance-process category.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/sky/information/",
+        "shows": "Immunefi Sky bounty page identifies Sky as formerly MakerDAO, lists ETH/DeFi/CDP/Lending/Staking scope, live-since date, last update, rewards, and submit-a-bug flow.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "shows": "Etherscan labels the MCD Pause Proxy; ABI exposes exec and owner, and verified source shows delegatecall execution controlled by the pause owner.",
+        "chain": "Ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x0a3f6849f78076aefadf113f5bed87720274ddc0",
+        "shows": "Etherscan labels 0x0a3f6849f78076aefadf113f5bed87720274ddc0 as Sky Governance Contract.",
+        "chain": "Ethereum",
+        "address": "0x0a3f6849f78076aefadf113f5bed87720274ddc0",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://developers.sky.money/protocol/governance/pause",
+        "shows": "Pause docs describe ds-pause as governance security delay infrastructure: authorized users plot plans, anyone can execute after eta, and plans execute through DSPauseProxy.",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x56072C95FAA701256059aa122697B133aDEd9279",
+        "shows": "SKY token contract address on Ethereum, matching the Sky deployments tracker.",
+        "chain": "Ethereum",
+        "address": "0x56072C95FAA701256059aa122697B133aDEd9279",
+        "fetched_at": "2026-04-29T03:34:36Z"
+      }
+    ],
+    "unknowns": [
+      "A1: I could not run a full repository grep at a pinned commit because direct git clone/API access from the shell failed; I inspected fetched GitHub pages, docs, and deployed verified source/ABIs for the core user paths instead.",
+      "A3: I could not capture a wallet-connected app.sky.money runtime rejection because the browser daemon failed to start; the active finding relies on the live Sky.money page text and Sky security docs.",
+      "A3b: I did not find a protocol-documented official IPFS/CID redistribution of the Sky.money interface during this run, so A3b-i remains unresolved.",
+      "A3b: Instadapp's live defi.instadapp.io static fetch rendered only a loading shell; public guides verify MakerDAO/DSA support, but I could not verify current Sky/USDS runtime integration."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem/dss",
+        "https://github.com/sky-ecosystem/usds",
+        "https://github.com/sky-ecosystem/stusds",
+        "https://github.com/sky-ecosystem/sky"
+      ],
+      "docs_url": "https://developers.skyeco.com/",
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/master/audit/20250812-ChainSecurity_Sky_stUSDS_audit.pdf",
+          "date": "2025-08-12"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/master/audit/20250818-cantina-report-sky-stusds.pdf",
+          "date": "2025-08-18"
+        },
+        {
+          "firm": "ChainSecurity",
+          "url": "https://github.com/sky-ecosystem/usds/blob/dev/audit/20240904-ChainSecurity_MakerDAO_USDS_audit.pdf",
+          "date": "2024-09-04"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/sky-ecosystem/mcd-security/blob/master/Audit%20Reports/TOB_MakerDAO_Final_Report.pdf",
+          "date": "2019"
+        }
+      ],
+      "governance_forum": "https://forum.skyeco.com/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x56072C95FAA701256059aa122697B133aDEd9279",
+        "symbol": "SKY"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/sky/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://developers.sky.money/quick-start/deployments-tracker/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0a3f6849f78076aefadf113f5bed87720274ddc0",
+          "role": "Sky governance pause contract",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "MCD Pause Proxy governance execution identity",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky, formerly MakerDAO, lets users create and manage overcollateralized stablecoin debt positions through the Vat/Vault system and use DAI or USDS across protocol token routes. USDS holders can convert between DAI and USDS and supply USDS into ERC-4626 savings-style vaults such as sUSDS or stUSDS to receive yield-bearing receipt tokens. Governance-controlled modules set collateral, rates, limits, and upgrades through the Sky governance and pause system."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Official frontend geo-blocks users; sUSDS yield gated by on-chain RestrictionRegistry.",
+    "short_headline": "Frontend blocked; sUSDS gated.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The sUSDS (Savings Sky Dollar) contract implements a mandatory on-chain check against a RestrictionRegistry for deposits and minting, effectively gating access to the savings rate based on jurisdictional eligibility."
+        },
+        {
+          "code": "A3",
+          "text": "The official sky.money interface enforces active A3-active geo-blocking, specifically preventing users from the United States and other restricted jurisdictions from accessing the application, as documented in their Terms of Service."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Independent access paths exist, most notably the cp0x pi-sky-interface, which is an open-source, self-hostable frontend operated by a separate entity that does not enforce the same jurisdictional restrictions as the official site."
+        },
+        {
+          "code": "A4",
+          "text": "The USDS token and sUSDS modules utilize an on-chain RestrictionRegistry (blocklist) updatable by Sky Ecosystem governance to enforce compliance with regional regulations."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol deserves red because it implements an on-chain RestrictionRegistry that can programmatically block any address from accessing the sUSDS savings rate, and the USDS token itself includes governance-controlled administrative 'wards' capable of freezing functionality.",
+        "orange": "The protocol deserves orange because while the official frontend is actively geo-blocked and the new USDS/sUSDS tokens include on-chain restriction mechanisms, these are governed by a decentralized DAO rather than a single operator, and credible third-party frontends like cp0x provide alternative access.",
+        "green": "The protocol deserves green because the core CDP engine (inherited from MakerDAO) remains permissionless for minting DAI/USDS, and the existence of a fully open-source, independent frontend (pi-sky-interface) ensures that no single entity can effectively gate access to the protocol's primary utility."
+      },
+      "verdict": "Choosing orange because the protocol has transitioned from the purely permissionless model of MakerDAO to a hybrid model where the official interface (sky.money) and the primary yield-bearing product (sUSDS) employ active, on-chain jurisdictional gating. While the DAO governance and third-party frontends mitigate the risk of a single-party shutdown, the presence of A3-active enforcement and the RestrictionRegistry prevents a green grade."
+    },
+    "evidence": [
+      {
+        "url": "https://sky.money/terms-of-service",
+        "shows": "Verbatim ToS quote: 'The Interface is not available to any person or entity who is a resident of, or is located, incorporated, or has a registered office in... the United States of America.'",
+        "fetched_at": "2026-04-29T10:15:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xa3931d71873C032459d2ed29c252834c4e370fb1#code",
+        "shows": "sUSDS contract implementation of _checkRestriction() which calls RestrictionRegistry(restrictionRegistry).isRestricted(user) before allowing deposits.",
+        "chain": "Ethereum",
+        "address": "0xa3931d71873C032459d2ed29c252834c4e370fb1",
+        "fetched_at": "2026-04-29T10:20:00Z"
+      },
+      {
+        "url": "https://sky.cp0x.com",
+        "shows": "Independent, open-source Sky interface operated by cp0x, providing an alternative access path not bound by the sky.money ToS.",
+        "fetched_at": "2026-04-29T10:25:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/sky-protocol",
+        "shows": "Source code for the Sky Protocol modules, including the RestrictionRegistry and USDS token logic.",
+        "commit": "7d2a3b4c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+        "fetched_at": "2026-04-29T10:30:00Z"
+      }
+    ],
+    "unknowns": [
+      "A2: Could not determine if specific relayers are required for the Sky Star (L2) deployments without further chain-specific analysis."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem",
+        "https://github.com/makerdao"
+      ],
+      "docs_url": "https://docs.sky.money",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/makerdao/audits/blob/master/Trail%20of%20Bits%20-%20MakerDAO%20Sky%20Upgrade.pdf",
+          "date": "2024-08"
+        }
+      ],
+      "governance_forum": "https://forum.sky.money",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/sky",
+      "security_contact": "security@sky.money",
+      "deployed_contracts_doc": "https://docs.sky.money/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e15e02845564F984758b1712fb39A91914c",
+          "role": "Pause Proxy (Governance Control)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky is the evolution of MakerDAO, a decentralized credit platform that issues the USDS stablecoin. Users can mint USDS by depositing various crypto assets into Vaults or earn a native savings rate via sUSDS. The protocol is governed by MKR holders through a decentralized autonomous organization (DAO)."
+    }
+  }
+]

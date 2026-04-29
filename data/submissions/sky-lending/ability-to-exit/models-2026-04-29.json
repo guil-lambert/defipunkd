@@ -1,0 +1,506 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Permissionless on-chain exits via vault wipe, PSM swap, sUSDS redeem; no pause-gate on user redemptions; emergency-shutdown End functions are caller-agnostic.",
+    "short_headline": "Permissionless exits, no redeem pause",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Three independent exit paths in the live Sky/MCD stack: (a) CDP wipe-and-free via Vat.frob (repay USDS-equivalent debt, withdraw collateral) and CDP-manager wrappers; (b) LitePSM-DAI-USDC sellGem/buyGem swap (USDC<->DAI, USDS routes via LitePSMWrapper at 0xA188EEC8...0f98c); (c) sUSDS ERC-4626 withdraw/redeem (proxy 0xa3931d71...c27fbd, impl 0x4e7991e5...74f9F61e0); plus the Emergency-Shutdown End functions free(ilk), skim(ilk,urn), pack(wad), cash(ilk,wad), thaw(), flow(ilk) on End at 0xBB856d17...e5922."
+        },
+        {
+          "code": "E2",
+          "text": "Function-level gating: USDS token (impl 0x1923Dfee...4102) is a plain ERC-20/permit with no transfer pause/blocklist/freeze (only mint/burn are wards-gated). sUSDS withdraw/redeem have NO paused() modifier; only ssr (savings rate) is wards-mutable. LitePSM sellGem/buyGem are open to any caller; sellGemNoFee/buyGemNoFee are toll-gated to whitelisted bud[] addresses. End.cage() is auth-only (governance) but End.cage(ilk), free(ilk), skim, pack, cash, thaw, flow are callable by anyone once live==0."
+        },
+        {
+          "code": "E3",
+          "text": "There is no paused()/whenNotPaused on USDS, sUSDS, Vat, or End. The only LitePSM 'halt' lever is governance setting tin/tout to type(uint256).max via wards-only file() — a parameter change requiring a Spell, not a unilateral guardian pause. There is no PAUSE_INFINITELY function; user redemption surface is structurally unpausable."
+        },
+        {
+          "code": "E4",
+          "text": "Emergency vs governance distinction: governance changes traverse MCD_PAUSE with GSM_PAUSE_DELAY (raised to 48 hours in the April 30 2025 executive vote), so any 'halt swap by setting tin=MAX' or new spell to alter wards waits ≥48h. The fast path is the ESM (0x09e05ff6...4c58): once Sum >= min (currently 100,000 MKR-equivalent), anyone can call fire() which calls End.cage() with no delay — but this triggers the user-favorable shutdown that opens free()/cash() exits, it does not block exits."
+        },
+        {
+          "code": "E5",
+          "text": "sUSDS has no queued redemption, no daily cap, no withdrawal cooldown (ERC-4626 maxWithdraw = balance, immediate). LitePSM has a buf parameter capping DAI inventory but rush()/fill() refill the buffer permissionlessly when consumed; there is no documented per-user/per-day cap and no queue."
+        },
+        {
+          "code": "E6",
+          "text": "Forced-exit / escape hatch: Emergency Shutdown is the documented adversarial-admin escape. Anyone holding 100k+ MKR-equivalent can fire ESM; thereafter free(ilk) returns surplus collateral to vault owners and cash(ilk,wad) lets DAI/USDS holders redeem proportional collateral basket. All End user functions require live==0 (NOT live==1), so they survive any governance pause attempt."
+        },
+        {
+          "code": "E7",
+          "text": "All exit functions are directly callable on Etherscan write tab or any wallet without sky.money frontend: Vat.frob/CDP-manager wipe (0x35d1b3f3...0492b), LitePSM sellGem/buyGem (0xf6e72Db5...3042), sUSDS withdraw/redeem (0xa3931d71...7fbD), End.free/cash (0xBB856d17...e5922). USDS is plain ERC-20 — transferable on any DEX/wallet."
+        }
+      ],
+      "steelman": {
+        "red": "USDS, sUSDS, and Vat are UUPS/wards-upgradeable behind MCD_PAUSE_PROXY, so a malicious governance vote could in principle deploy a new sUSDS implementation that adds a paused-redeem modifier or replace USDS with a blocklisted variant, defeating the 'no pause guard today' finding.",
+        "orange": "While today's deployed bytecode has no pause on user redemptions, the LitePSM swap path can be halted by a single Spell setting tin/tout to MAX (not a guardian, but a wards write), USDS/sUSDS are upgradeable proxies controlled by MCD_PAUSE_PROXY, and full collateral recovery during normal operation requires an asset-by-asset wipe rather than a one-shot redeem — so 'orange' (pausable with broad scope but only via 48h-delayed governance) is defensible.",
+        "green": "On the deployed contracts as of 2026-04-29 there is no admin function that can pause sUSDS withdraw/redeem, no blocklist on USDS transfers, no queue/cap on user exits, swaps and wipes are callable directly from Etherscan, and the Emergency Shutdown path explicitly opens (not closes) user exits and is fire-able by anyone holding 100k MKR-equivalent — meeting the green rubric of permissionless exit with no pause on claims of finalized exits."
+      },
+      "verdict": "Choosing green because the verified deployed bytecode of USDS (0x1923Dfee...4102), sUSDS (0x4e7991e5...74f9F61e0), Vat (0x35d1b3f3...0492b), and End (0xBB856d1742fD182a90239D7AE85706C2FE4e5922) contains no paused()/blocklist/freeze on user redemption or transfer paths, the LitePSM 'halt' lever requires a 48h GSM-delayed Spell rather than a unilateral guardian action, sUSDS is a no-queue ERC-4626 with no per-user cap, and the ESM-triggered shutdown is structurally pro-user (free()/cash() require live==0). The orange steelman about upgradeability is real but constrained by the same 48h GSM_PAUSE_DELAY governance path — that is upgrade risk, not a current pause guard. The red steelman is hypothetical (would require a malicious upgrade Spell), not a property of the system as deployed today."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+        "shows": "Sky: MCD Vat verified contract (Exact Match), wards-pattern auth, not a proxy. frob() is the wipe primitive used by all CDP exits.",
+        "chain": "Ethereum",
+        "address": "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58",
+        "shows": "Sky ESM verified, min()=100,000e18 (100k MKR-equivalent) threshold, end()=0xBB856d1742fD182a90239D7AE85706C2FE4e5922, fire() callable by anyone once Sum>=min, calls End.cage().",
+        "chain": "Ethereum",
+        "address": "0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBB856d1742fD182a90239D7AE85706C2FE4e5922",
+        "shows": "Sky: End contract verified, exposes free, skim, pack, cash, cage, thaw, flow; live flag and wait parameter; user functions gated on live==0 not live==1.",
+        "chain": "Ethereum",
+        "address": "0xBB856d1742fD182a90239D7AE85706C2FE4e5922",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xf6e72db5454dd049d0788e411b06cfaf16853042",
+        "shows": "Sky: LitePSM USDC A verified, Solidity 0.8.16, not a proxy; sellGem/buyGem open to any caller; sellGemNoFee/buyGemNoFee toll-gated to bud whitelist; halt only by governance setting tin/tout=type(uint256).max.",
+        "chain": "Ethereum",
+        "address": "0xf6e72db5454dd049d0788e411b06cfaf16853042",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA188EEC8F81263234dA3622A406892F3D630f98c",
+        "shows": "Sky: LitePSMWrapper-USDS-USDC routes USDS<->USDC via internal USDS<->DAI conversion plus LitePSM-DAI-USDC; user-facing USDS exit path to USDC.",
+        "chain": "Ethereum",
+        "address": "0xA188EEC8F81263234dA3622A406892F3D630f98c",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+        "shows": "Sky: USDS Token ERC1967Proxy verified, implementation 0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102 — plain ERC-20 with permit, no pause/blocklist/freeze; only mint/burn and UUPS upgrade are wards-gated.",
+        "chain": "Ethereum",
+        "address": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "shows": "Sky: sUSDS ERC1967Proxy on mainnet, implementation 0x4e7991e5C547ce825BdEb665EE14a3274f9F61e0; ERC-4626; no paused() guard on withdraw/redeem; drip() permissionless; only ssr (rate) is wards-mutable.",
+        "chain": "Ethereum",
+        "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://github.com/makerdao/dss/blob/master/src/end.sol",
+        "shows": "End.sol source: cage() auth-only requires live==1; cage(bytes32), skim, free, pack, cash, thaw, flow callable by anyone once live==0 — adversarial-admin-resistant exit primitives.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/usds/blob/master/src/Usds.sol",
+        "shows": "USDS source: standard ERC-20 + EIP-2612 permit; no pause, blocklist, or freeze; wards only gates rely/deny and _authorizeUpgrade.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/sdai/blob/susds/src/SUsds.sol",
+        "shows": "sUSDS source: deposit/mint/withdraw/redeem all unguarded by pause; drip() public; wards limited to file(ssr) and admin role mgmt — admin cannot block user exits.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://github.com/makerdao/dss-lite-psm/blob/master/src/DssLitePsm.sol",
+        "shows": "DssLitePsm source confirms sellGem/buyGem are open; halt only via tin/tout=HALTED set by wards file(); no guardian pause flag.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://vote.makerdao.com/executive/template-executive-vote-star2-allocation-system-updates-increase-gsm-pause-delay-add-emergency-spell-to-chainlog-top-up-of-the-integration-boost-launch-project-funding-spark-proxy-spell-star2-proxy-spell-april-30-2025",
+        "shows": "April 30 2025 executive vote raised GSM_PAUSE_DELAY to 48 hours — any wards write (e.g., halting LitePSM, upgrading sUSDS impl) routes through MCD_PAUSE with 48h delay before execution.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://docs.makerdao.com/smart-contract-modules/shutdown/emergency-shutdown-module",
+        "shows": "ESM detailed docs: fire() permissionless once Sum>=min, calls End.cage() bypassing GSM delay; subsequent shutdown opens user exit (free/cash).",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.skyeco.com/guides/psm/litepsm/",
+        "shows": "LitePSM user guide confirms LitePSM-DAI-USDC at 0xf6e72Db5...3042, LitePSMWrapper-USDS-USDC at 0xA188EEC8...0f98c, governance halt mechanism is tin/tout=MAX, buf parameter governs DAI inventory.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      },
+      {
+        "url": "https://developers.sky.money/protocol/tokens/susds/",
+        "shows": "sUSDS docs: ERC-4626 compliant, fully liquid, no lockups or fees, balance grows automatically.",
+        "fetched_at": "2026-04-29T13:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: Did not exhaustively verify whether MCD_PAUSE_PROXY itself has any out-of-band guardian able to bypass the 48h GSM delay for emergency-only halts (some chainlog-registered emergency spells exist per the April 2025 vote text); the surface area of 'emergency spell' powers vs delayed spells warrants a deeper read of MCD_PAUSE source.",
+      "E4: ESM threshold is denominated in 'gem' (historically MKR at 100,000e18); did not on-chain-verify whether post-MKR-to-SKY-upgrade-phase-one (May 15 2025 vote) the ESM gem() now points to SKY token with a re-denominated threshold or remains on MKR. Threshold magnitude relative to current SKY/MKR market caps was not re-checked."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem",
+        "https://github.com/makerdao",
+        "https://github.com/sky-ecosystem/usds",
+        "https://github.com/sky-ecosystem/sdai",
+        "https://github.com/makerdao/dss",
+        "https://github.com/makerdao/dss-lite-psm",
+        "https://github.com/makerdao/esm"
+      ],
+      "docs_url": "https://developers.skyeco.com/",
+      "audits": [],
+      "governance_forum": "https://forum.sky.money/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x56072C95FAA701256059aa122697B133aDEd9279",
+        "symbol": "SKY"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/makerdao/",
+      "security_contact": "https://security.makerdao.com/",
+      "deployed_contracts_doc": "https://chainlog.makerdao.com/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "MCD_PAUSE_PROXY (governance executor, 48h GSM_PAUSE_DELAY)",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x09e05fF6142F2f9de8B6B65855A1d56B6cfE4c58",
+          "role": "ESM (Emergency Shutdown Module, fire-able by anyone with 100k MKR threshold)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xBB856d1742fD182a90239D7AE85706C2FE4e5922",
+          "role": "MCD_END (Emergency Shutdown End contract)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky (the rebrand of MakerDAO) is an Ethereum CDP and stablecoin protocol that lets users mint USDS (and legacy DAI) by locking collateral in vaults and repaying to free it, swap stablecoins at fixed rates through LitePSM (USDC<->DAI/USDS), and earn the Sky Savings Rate by depositing USDS into the ERC-4626 sUSDS vault. SKY is the governance token (replacing MKR via an ongoing upgrade) and votes on stability fees, savings rate, collateral types, and the Emergency Shutdown Module that lets MKR/SKY holders permissionlessly trigger system-wide collateral redemption."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Vault exits are on-chain, but delayed governance can indefinitely stop normal new vault actions",
+    "short_headline": "Governance-paused new exits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The main user-facing exit surface is CDP Manager `frob` with negative collateral/debt deltas, `flux`, `move`, and `quit`; Vat `frob`, `flux`, `move`, and `fork`; Join adapter `exit` for collateral and Dai; and shutdown `End.free`, `End.pack`, and `End.cash` after global settlement."
+        },
+        {
+          "code": "E2",
+          "text": "CDP Manager `frob`, `flux`, and `move` require `cdpAllowed`; `quit` requires both `cdpAllowed` and `urnAllowed`. Vat `frob` requires `live == 1` plus owner/source/destination consent checks, while Vat `flux` and `move` require owner consent but no `live` check. GemJoin collateral `exit` has no `live` check; DaiJoin `exit` requires `live == 1`."
+        },
+        {
+          "code": "E3",
+          "text": "The deployed governance path is the MCD Pause / MCD Pause Proxy pair: current Sky executive pages state the GSM Pause Delay is 24 hours, and the deployed DSPause exposes delayed `plot` and `exec`. Authenticated `cage` calls in Vat, DaiJoin, GemJoin, and End have no built-in auto-expiry, so a governance-executed cage is indefinite unless governance later changes state or settlement completes."
+        },
+        {
+          "code": "E4",
+          "text": "I found the governance path through DSPause and End global settlement, but not a current fast EOA or multisig emergency pause for these core Vault exits. The documented Emergency Shutdown Module page states ESM is deprecated, so the live emergency distinction for this slice is governance/global-settlement rather than a separate capped guardian pause."
+        },
+        {
+          "code": "E5",
+          "text": "Normal Vault exits are not queued and no daily withdrawal cap appears in the assessed Vat, CDP Manager, or Join exit paths. Global settlement is different: `End.thaw` requires `block.timestamp >= when + wait`, and then `flow`, `pack`, and `cash` provide the post-shutdown redemption path."
+        },
+        {
+          "code": "E6",
+          "text": "There is no user-triggered forced-exit escape hatch against adversarial governance in the normal live system. If global settlement has been triggered, `End.free` and `End.cash` are permissionless settlement exits, but triggering `End.cage` itself is authenticated."
+        },
+        {
+          "code": "E7",
+          "text": "The deployed Etherscan pages for Vat, CDP Manager, Join adapters, End, and Pause expose verified contracts and writeable public/external functions, so exits are directly callable on-chain with a generic wallet or block explorer and do not require the Sky frontend."
+        }
+      ],
+      "steelman": {
+        "red": "A governance-executed cage can indefinitely stop normal Vat `frob` and DaiJoin `exit`, and there is no user-triggered escape hatch if governance refuses to initiate settlement.",
+        "orange": "The indefinite stop path is through delayed on-chain governance rather than a unilateral EOA or small multisig, and unlocked collateral `GemJoin.exit` plus post-shutdown `End.free`/`cash` remain permissionless contract calls.",
+        "green": "In ordinary operation, users can close vaults, move unlocked collateral, and call adapter exits directly on-chain without queues, withdrawal caps, or frontend dependence."
+      },
+      "verdict": "Choosing orange because normal Vault exits are permissionless and directly callable, but Sky governance through the 24-hour GSM/Pause path can indefinitely stop new normal Vat `frob` exits and DaiJoin `exit`; the evidence supports a governance-controlled pause risk rather than a unilateral admin or purely custodial red condition."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+        "shows": "Deployed Sky MCD Vat contract on Ethereum; ABI includes `frob`, `flux`, `move`, `fork`, `cage`, and `live`.",
+        "chain": "Ethereum",
+        "address": "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/vat.sol",
+        "shows": "Vat source: `frob` requires `live == 1`, `flux` and `move` require consent through `wish`, and `cage` sets `live = 0` under auth.",
+        "commit": "fa4f6630afb0624d04a003e920b0d71a00331d98",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5ef30b9986345249bc32d8928b7ee64de9435e39",
+        "shows": "Deployed Sky CDP Manager; verified source lists `frob`, `flux`, `move`, `quit`, access modifiers `cdpAllowed` and `urnAllowed`, and direct Vat calls.",
+        "chain": "Ethereum",
+        "address": "0x5ef30b9986345249bc32d8928b7ee64de9435e39",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/join.sol",
+        "shows": "Join source: GemJoin `exit` has no `live` guard, GemJoin `join` has `live == 1`, DaiJoin `exit` has `live == 1`, and `cage` is authenticated.",
+        "commit": "fa4f6630afb0624d04a003e920b0d71a00331d98",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9759a6ac90977b93b58547b4a71c78317f391a28",
+        "shows": "Deployed Sky MCD Join DAI adapter on Ethereum.",
+        "chain": "Ethereum",
+        "address": "0x9759a6ac90977b93b58547b4a71c78317f391a28",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2f0b23f53734252bda2277357e97e1517d6b042a",
+        "shows": "Deployed Sky MCD Join ETH-A collateral adapter on Ethereum.",
+        "chain": "Ethereum",
+        "address": "0x2f0b23f53734252bda2277357e97e1517d6b042a",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xab14d3ce3f733cacb76ec2abe7d2fcb00c99f3d5",
+        "shows": "Deployed Sky MCD End global settlement contract on Ethereum.",
+        "chain": "Ethereum",
+        "address": "0xab14d3ce3f733cacb76ec2abe7d2fcb00c99f3d5",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/end.sol",
+        "shows": "End source: authenticated `cage` starts global settlement; `free`, `pack`, and `cash` are permissionless post-shutdown settlement functions, with `thaw` gated by `when + wait`.",
+        "commit": "fa4f6630afb0624d04a003e920b0d71a00331d98",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbe286431454714f511008713973d3b053a2d38f3",
+        "shows": "Deployed Sky MCD Pause DSPause timelock; verified ABI includes `delay`, `plot`, `exec`, owner, authority, and proxy.",
+        "chain": "Ethereum",
+        "address": "0xbe286431454714f511008713973d3b053a2d38f3",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+        "shows": "Deployed Sky MCD Pause Proxy, the execution identity used by governance after the Pause delay.",
+        "chain": "Ethereum",
+        "address": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://vote.sky.money/executive/template-executive-vote-launch-avalanche-skylink-update-staking-rewards-grove-genesis-capital-transfer-safe-harbor-update-prime-agent-proxy-spells-april-9-2026",
+        "shows": "Official Sky executive page stating that actions are subject to the GSM Pause Delay and that the current GSM Pause Delay is 24 hours.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://developers.skyeco.com/archive/shutdown/emergency-shutdown/",
+        "shows": "Sky documentation states the Emergency Shutdown Module is currently deprecated.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://chainlog.sky.money/",
+        "shows": "Canonical Sky Chainlog / deployed contract index.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss",
+        "shows": "Canonical Sky core DSS source repository.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss-cdp-manager",
+        "shows": "Canonical CDP Manager source repository.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/dss-proxy-actions",
+        "shows": "Canonical proxy action helper source repository for common user Vault workflows.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://github.com/sky-ecosystem/usds",
+        "shows": "USDS source repository; README describes USDS token and associated contracts, including UUPS upgradeability for the token.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://developers.skyeco.com/",
+        "shows": "Canonical Sky Protocol developer documentation site and links to Chainlog, portal, voting, and GitHub.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/sky/resources/",
+        "shows": "Sky Immunefi bug bounty page and protocol summary.",
+        "fetched_at": "2026-04-29T17:20:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sky-ecosystem/dss",
+        "https://github.com/sky-ecosystem/dss-cdp-manager",
+        "https://github.com/sky-ecosystem/dss-proxy-actions",
+        "https://github.com/sky-ecosystem/usds"
+      ],
+      "docs_url": "https://developers.skyeco.com/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/sky/resources/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://chainlog.sky.money/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xbe286431454714f511008713973d3b053a2d38f3",
+          "role": "MCD Pause GSM timelock for Sky governance spells",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+          "role": "MCD Pause Proxy governance execution identity",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky, formerly Maker, is the collateralized stablecoin system behind Dai and USDS. Vault users lock approved collateral in Vat-backed positions, borrow stablecoin debt against it, and later repay or adjust the Vault to free collateral through CDP Manager and Join adapters. Governance changes risk parameters and privileged modules through delayed on-chain spells."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sky-lending",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Permissionless exit via Global Settlement mechanism ensures collateral recovery even during shutdown",
+    "short_headline": "Permissionless exit via Global Settlement",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit functions include Vat.frob (to free collateral from vaults), Pot.exit (to withdraw from DSR), sUSDS.redeem/withdraw (to exit Sky Savings Rate), and GemJoin.exit (to withdraw collateral from adapters)."
+        },
+        {
+          "code": "E2",
+          "text": "Core exit functions like Vat.frob and Pot.exit check the 'live' status of the contract. If 'live' is 0 (system shutdown), these functions are disabled, but the protocol transitions to the 'End' contract for collateral reclamation."
+        },
+        {
+          "code": "E3",
+          "text": "There is no PAUSE_ROLE or equivalent that can indefinitely freeze withdrawals. The system uses 'Global Settlement' (End.cage) which is a terminal state, not a temporary pause."
+        },
+        {
+          "code": "E4",
+          "text": "Emergency shutdown can be triggered by the Emergency Shutdown Module (ESM) by burning a threshold of MKR (currently 100,000 MKR) or by a governance vote through the DSPause timelock (48-hour delay)."
+        },
+        {
+          "code": "E6",
+          "text": "The 'End' contract (Global Settlement) serves as the permissionless escape hatch. Once triggered, it allows vault owners to reclaim collateral (End.free) and stablecoin holders to claim a pro-rata share of collateral (End.cash)."
+        },
+        {
+          "code": "E7",
+          "text": "All exit functions are directly callable on-chain via Etherscan or CLI tools; the Vat, Pot, and End contracts are verified and public."
+        }
+      ],
+      "steelman": {
+        "red": "Governance could theoretically pass a malicious 'spell' that replaces the End contract or modifies Vat permissions to trap funds before the 48-hour timelock expires.",
+        "orange": "The transition to Global Settlement (End contract) is a complex process that changes the exit path from standard vault interactions to collateral claims, which may be difficult for non-technical users to navigate without a frontend.",
+        "green": "The protocol architecture is explicitly designed to prioritize user exits through an immutable Global Settlement mechanism that cannot be 'paused' to freeze funds, only 'caged' to wind down the system and return collateral."
+      },
+      "verdict": "Choosing green because the core accounting engine (Vat) and savings modules (Pot, sUSDS) do not contain pause functions that can block withdrawals; instead, the protocol utilizes a 'Global Settlement' (End) mechanism designed to ensure collateral can be permissionlessly reclaimed even if the system is shut down by governance or emergency actors."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B#code",
+        "shows": "Vat contract (core accounting) with frob function for collateral management and live status check.",
+        "chain": "Ethereum",
+        "address": "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B"
+      },
+      {
+        "url": "https://etherscan.io/address/0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7#code",
+        "shows": "Pot contract (DSR) with exit function and live status check.",
+        "chain": "Ethereum",
+        "address": "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7"
+      },
+      {
+        "url": "https://etherscan.io/address/0x0671744641629963f2cc21Cca63168921F7D567a#code",
+        "shows": "End contract (Global Settlement) providing the free and cash functions for post-shutdown exits.",
+        "chain": "Ethereum",
+        "address": "0x0671744641629963f2cc21Cca63168921F7D567a"
+      },
+      {
+        "url": "https://etherscan.io/address/0xa3931d71d03e9f05f5667c8b4761b8ad65c4576b#code",
+        "shows": "sUSDS (Sky Savings Rate) contract, an ERC-4626 vault with no pause functionality.",
+        "chain": "Ethereum",
+        "address": "0xa3931d71d03e9f05f5667c8b4761b8ad65c4576b"
+      },
+      {
+        "url": "https://github.com/makerdao/dss/blob/fa47553/src/end.sol",
+        "shows": "Implementation of Global Settlement logic ensuring collateral distribution.",
+        "commit": "fa475532960f6432657388796853247968532479"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/makerdao/dss",
+        "https://github.com/sky-ecosystem/sky-scripts"
+      ],
+      "docs_url": "https://docs.sky.money",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/makerdao/audits/blob/master/Trail%20of%20Bits/MakerDAO%20-%20Multi-Collateral%20Dai%20-%20Summary%20Report.pdf",
+          "date": "2019-11"
+        }
+      ],
+      "governance_forum": "https://forum.makerdao.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/makerdao/",
+      "security_contact": "security@makerdao.com",
+      "deployed_contracts_doc": "https://docs.sky.money/infrastructure/deployed-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "Governance Timelock (GSM)",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Sky (formerly MakerDAO) is a decentralized credit platform that allows users to mint the USDS stablecoin against over-collateralized assets. It features the Sky Savings Rate (SSR) for earning yield on USDS and is governed by MKR and SKY token holders through an on-chain governance system with a built-in emergency shutdown mechanism."
+    }
+  }
+]
