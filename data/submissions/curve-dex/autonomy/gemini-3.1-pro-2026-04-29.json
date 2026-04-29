@@ -1,0 +1,110 @@
+{
+  "schema_version": 3,
+  "slug": "curve-dex",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "gemini-3.1-pro",
+  "chat_url": "https://gemini.google.com/share/0eefc7ce0cd2",
+  "grade": "green",
+  "headline": "Core AMM logic is immutable and math-contained; oracle dependencies are minimized or possess on-chain sanity checks. Impacted TVS: <1%.",
+  "short_headline": "Immutable core with internal pricing",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Curve StableSwap pools (e.g., 3pool) utilize internal invariant math (StableSwap invariant) rather than external price feeds for swapping. For CryptoSwap (Tricrypto), the protocol uses an internal 'Price Oracle' which is an EMA of internal trades, not an external call."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain committees report price data into the core AMM contracts. While the DAO (A2) can influence parameters, the trade execution logic does not rely on external reporter liveness for solvency."
+      },
+      {
+        "code": "A3",
+        "text": "Deployments on L2s (Arbitrum, Optimism) rely on canonical L1-L2 bridges. While sequencer failure (A7) could pause the L2 instance, the Ethereum L1 instance (~70% of TVS) has no bridge dependency."
+      },
+      {
+        "code": "A5",
+        "text": "The protocol is the original implementation of StableSwap and CryptoSwap; it is not forked from another protocol."
+      },
+      {
+        "code": "A6",
+        "text": "Tricrypto-ng uses a 'price_oracle' method that smooths internal price movements, acting as a circuit breaker against flash-loan price manipulation without needing an external fallback."
+      },
+      {
+        "code": "A7",
+        "text": "L2 deployments (e.g., Arbitrum) are subject to sequencer liveness. However, the majority of TVS resides on Ethereum L1 where this risk is zero."
+      },
+      {
+        "code": "A8",
+        "text": "Curve does not require keepers for core swapping. Incentivized third-party arbitrageurs maintain price peg parity, but their absence does not freeze user principal or funds."
+      },
+      {
+        "code": "A9",
+        "text": "The Curve DAO can add new pool factories, but cannot retroactively change the logic of deployed, immutable pool contracts to introduce external dependencies."
+      }
+    ],
+    "steelman": {
+      "red": "If the DAO multisig or voting process were compromised, they could potentially point new factory-created pools to malicious price providers, though existing pools remain safe.",
+      "orange": "Sequencer downtime on L2 deployments could temporarily freeze access to a material minority of the protocol's total TVS.",
+      "green": "The core AMM pools are immutable and price themselves using internal math and trade history, ensuring that no external contract failure can cause the theft of user principal."
+    },
+    "verdict": "Choosing green because the protocol's primary mechanism for swaps and liquidity provision (the StableSwap and CryptoSwap invariants) is mathematically self-contained and implemented in immutable contracts, resulting in an impacted TVS of effectively 0% from external contract failures."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/curvefi/curve-contract/blob/master/contracts/pool-templates/stable_ng/CurveStableSwapNG.vy",
+      "shows": "Implementation of internal price discovery via invariant math without external oracle calls.",
+      "commit": "8de56417537b0687f547952a65492d3f7f07e5e3",
+      "fetched_at": "2026-04-28T14:20:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xb9fc157394af804a3578134a6585c0dc9cc990d4#code",
+      "shows": "The StableSwap-NG Factory contract which deploys immutable pool instances.",
+      "chain": "Ethereum",
+      "address": "0xB9fC157394Af804a3578134A6585C0dc9cc990d4",
+      "fetched_at": "2026-04-28T14:25:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf",
+      "shows": "Audit verifying internal price oracle logic and safety against external manipulation.",
+      "fetched_at": "2026-04-28T14:30:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf",
+        "date": "2023-11"
+      }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/curve-finance/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Curve is a decentralized exchange optimized for low-slippage swaps between assets of similar value, such as stablecoins or liquid staking derivatives. It utilizes a unique StableSwap invariant for correlated assets and a CryptoSwap moving-average internal oracle for volatile pairs. The protocol is governed by a DAO where users lock CRV tokens for veCRV to vote on 'gauges' that direct token emissions to specific liquidity pools."
+  }
+}

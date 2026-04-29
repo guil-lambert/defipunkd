@@ -1,0 +1,99 @@
+{
+  "schema_version": 3,
+  "slug": "curve-dex",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "gemini-3.1-pro",
+  "chat_url": "https://gemini.google.com/share/7de99edd5668",
+  "grade": "green",
+  "headline": "Curve DEX allows permissionless, non-custodial exits via direct contract interaction.",
+  "short_headline": "Permissionless, non-custodial exits.",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Core exit functions include 'remove_liquidity', 'remove_liquidity_one_coin', 'remove_liquidity_imbalance', and 'remove_liquidity_wrap' within the StableSwap and CryptoSwap pool contracts."
+      },
+      {
+        "code": "E2",
+        "text": "Exit functions do not contain 'whenNotPaused' or equivalent access modifiers that restrict liquidity withdrawal, allowing users to call them directly."
+      },
+      {
+        "code": "E3",
+        "text": "While pools can be paused by the Emergency DAO (5-of-9 multisig) to halt swaps/deposits, existing liquidity withdrawals remain functional in standard Curve pool designs."
+      },
+      {
+        "code": "E4",
+        "text": "Emergency DAO has pause capabilities for pool interactions, but does not possess the authority to block liquidity withdrawal functions."
+      },
+      {
+        "code": "E5",
+        "text": "There is no inherent redemption queue or daily withdrawal cap for standard liquidity providers in Curve's core AMM architecture."
+      },
+      {
+        "code": "E6",
+        "text": "The mechanism is natively permissionless; users interact directly with pool contracts, making the protocol inherently resistant to censorship."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are public and callable via any standard Ethereum wallet or block explorer interface without requiring the Curve frontend."
+      }
+    ],
+    "steelman": {
+      "red": "The protocol could be deemed red if one assumes that a complex governance failure or emergency DAO action could theoretically lead to a temporary UI-level blockage or unforeseen contract interaction barrier.",
+      "orange": "The protocol could be deemed orange because certain pool parameters are configurable by the DAO, and the presence of any pause mechanism, however restricted, introduces a non-zero surface for operational disruption.",
+      "green": "The protocol is green because liquidity providers retain direct, permissionless, and non-pauseable access to withdraw their underlying assets via on-chain contract calls, entirely independent of the Curve DAO or frontend."
+    },
+    "verdict": "Choosing green because Curve's architecture treats liquidity withdrawal as a fundamental, non-pauseable primitive, and users have direct, permissionless access to execute these functions on-chain without any frontend or admin intervention requirement."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xB9fC157394Af804a3578134A6585C0dc9cc990d4#code",
+      "shows": "StableSwap Factory implementation showing withdrawal functions lacking pause modifiers.",
+      "chain": "Ethereum",
+      "address": "0xB9fC157394Af804a3578134A6585C0dc9cc990d4",
+      "fetched_at": "2026-04-28T18:00:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/references/overview/",
+      "shows": "Documentation confirming the non-custodial and permissionless nature of Curve pools.",
+      "fetched_at": "2026-04-28T18:05:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf",
+        "date": "2024-02"
+      }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/curvefinance/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Curve DEX is a decentralized exchange optimized for low-slippage swaps between assets that are pegged to the same value, such as stablecoins. It utilizes an automated market maker (AMM) algorithm specifically designed for liquidity efficiency. The protocol is governed by a DAO that uses the CRV token to manage protocol parameters and treasury assets."
+  }
+}

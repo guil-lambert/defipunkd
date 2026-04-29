@@ -1,0 +1,120 @@
+{
+  "schema_version": 3,
+  "slug": "curve-dex",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "gemini-3.1-pro",
+  "chat_url": "https://gemini.google.com/share/3ae48a087b89",
+  "grade": "green",
+  "headline": "Core pools are immutable and lack upgrade paths; parameter changes gated by 7-day DAO votes.",
+  "short_headline": "Immutable pools; 7-day governance",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The StableSwap NG Factory (0xB9fC157394Af804a3578134A6585C0dc9cc990d4) and CryptoSwap Tricrypto NG Factory (0x0c0e5f2fF0ff18a3be9b835635039256dC4B4963) define the Curve DAO Ownership Agent (0x40907540d8a6C65c637785e8f8B742ae6b0b9968) as their admin."
+      },
+      {
+        "code": "C2",
+        "text": "Core AMM liquidity pools deployed by the factories are immutable smart contracts with no upgrade mechanism. The upgradeability of the protocol overall is 'mixed', as the factories themselves and certain routing/periphery infrastructure can be modified or updated by governance, but the contracts holding user funds are fixed upon deployment."
+      },
+      {
+        "code": "C3",
+        "text": "The execution path for protocol changes flows through the Aragon Voting contract (0xE478de485ad2fe566d49342Cbd03E49ed7DB3356). Proposals are subject to a 7-day voting period (voteTime: 604800 seconds). There is no mandatory post-vote timelock; execution via the Ownership Agent happens immediately upon finalization of a successful vote."
+      },
+      {
+        "code": "C4",
+        "text": "The Emergency DAO (0x467947EE34aF926cF1DCac093870f613C96B1E0c) is a 5-of-9 Gnosis Safe multisig composed of protocol insiders and trusted community members. It holds specific operational and protective powers, notably the ability to call `kill_me` on pools, but it does not hold upgrade rights or the ability to confiscate funds."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance operates via Aragon, utilizing time-locked CRV (veCRV) for voting weight. The standard voting duration is 1 week. Exact read-contract validation for current quorum and proposal threshold constants was deferred."
+      },
+      {
+        "code": "C6",
+        "text": "Emergency powers are separated from the main upgrade path. The 5-of-9 Emergency DAO holds the `kill_me` role. When activated on a pool, this disables further deposits and swaps, functioning as an emergency pause, but it strictly leaves withdrawal (`remove_liquidity`) functions open."
+      },
+      {
+        "code": "C7",
+        "text": "The highest power tier reachable on the core pools is T2 (Economically Material). Governance can adjust parameters like swap fees (within bounded ranges, e.g., max 1%) and alter fee-receiving addresses. T1 (Fund-Critical) powers are unreachable because the pools holding user funds are immutable and have no admin function that can drain reserves, pause withdrawals, or alter core swap math."
+      }
+    ],
+    "steelman": {
+      "red": "If the DAO voting parameters could be bypassed or if periphery routers could be forced to infinitely approve malicious contracts without user opt-in, funds could be exposed instantly.",
+      "orange": "The absence of a dedicated post-vote execution timelock means users must actively monitor ongoing 7-day Aragon votes to exit before execution, offering no buffer window once a vote officially passes.",
+      "green": "Because the core liquidity pools are strictly immutable, T1 fund-extraction powers are mechanically impossible, and all reachable T2 parameter adjustments are gated by a transparent 7-day governance voting period."
+    },
+    "verdict": "Choosing green because T1 fund-critical powers are unreachable via the immutable pool architecture, and the highest reachable tier (T2 parameter adjustments) requires clearing a 7-day token-weighted governance vote, providing sufficient exit notice for users."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xB9fC157394Af804a3578134A6585C0dc9cc990d4#readContract",
+      "shows": "StableSwap NG Factory contract reading admin() as the Ownership Agent (0x40907540d8a6C65c637785e8f8B742ae6b0b9968)",
+      "chain": "Ethereum",
+      "address": "0xB9fC157394Af804a3578134A6585C0dc9cc990d4"
+    },
+    {
+      "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356#readContract",
+      "shows": "Aragon DAO Voting contract enforcing a 604800 second (7-day) voteTime parameter",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c#readProxy",
+      "shows": "Emergency DAO multisig deployed as a 5-of-9 Gnosis Safe",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c"
+    }
+  ],
+  "unknowns": [
+    "C5-quorum: Did not fetch exact current Aragon minAcceptQuorumPct from storage slot during this run.",
+    "C5-threshold: Did not fetch exact current Aragon supportRequiredPct from storage slot during this run."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf",
+        "date": "2023-06"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20StableSwapNG%20Security%20Audit%20Report.pdf",
+        "date": "2023-11"
+      }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Curve is a decentralized exchange (DEX) optimized for highly efficient swaps between stablecoins and correlated assets. It utilizes an automated market maker (AMM) model with isolated, immutable liquidity pools. The protocol is governed by a DAO where users lock CRV tokens to participate in governance, direct token emissions, and adjust pool parameters."
+  }
+}
