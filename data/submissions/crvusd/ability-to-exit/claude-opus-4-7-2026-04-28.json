@@ -1,0 +1,173 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "claude-opus-4-7",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "crvUSD exit functions (repay, liquidate_extended, remove_collateral) are permissionless on immutable Vyper; the ControllerFactory set_killed pause halts only create_loan/borrow_more, not exits; LLAMMA exchange remains permissionless even when a Controller is killed; all exits callable directly via Etherscan write tab.",
+  "short_headline": "Exits not pause-gated, immutable",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "User-facing exit functions in the crvUSD core: (a) Controller.vy \u2014 repay(_d_debt, _for, max_active_band, use_eth) and repay_extended (debt repayment with auto-collateral-return when debt \u2192 0); liquidate(user, min_x, use_eth) and liquidate_extended (where user == msg.sender is the canonical self-close path even outside the liquidation band); remove_collateral(collateral, use_eth) for excess-collateral withdrawal subject to health check. (b) AMM.vy (LLAMMA) \u2014 exchange / exchange_dy permissionless arb that continuously soft-liquidates collateral as price bands cross (passive exit ramp); AMM.withdraw is admin-restricted to the Controller and is invoked from repay/liquidate flows. (c) Stablecoin.vy \u2014 standard ERC-20 transfer/transferFrom/burnFrom with no pause / no blocklist on the token surface."
+      },
+      {
+        "code": "E2",
+        "text": "Each Controller.vy exit function is decorated @external @nonreentrant('lock') and contains NO is_killed / paused / whenNotPaused guard. The is_killed check exists ONLY on create_loan, borrow_more, and borrow_more_extended (request-placement / new-debt issuance). repay, repay_extended, liquidate, liquidate_extended, and remove_collateral are explicitly exempt \u2014 confirming the rubric's request-placement vs claim-of-finalized separation. Stablecoin.vy transfer/burnFrom have no pause hook; AMM.vy exchange has no pause hook (only @nonreentrant)."
+      },
+      {
+        "code": "E3",
+        "text": "The pause flag for crvUSD lives on ControllerFactory.set_killed(_controller, _is_killed), which is callable by either ControllerFactory.admin (DAO Ownership Agent 0x40907540d8a6C65c637785e8f8B742ae6b0b9968, only reachable through the DAO Voting Ownership 0xE478\u20263356, ~7-day Aragon vote cycle) OR by ControllerFactory.emergency_admin (Emergency DAO 5-of-9 Gnosis Safe 0x467947EE34aF926cF1DCac093870f613C96B1E0c, immediate execution). The flag is reversible (set_killed accepts both True and False) and has no on-chain max-duration cap, so a captured Emergency DAO could in principle leave is_killed=True indefinitely \u2014 but its scope is request-placement only; no actor (multisig, governance, or otherwise) has any function callable on the deployed Controllers / AMM / Stablecoin that pauses repay, liquidate, remove_collateral, AMM exchange, or ERC-20 transfers."
+      },
+      {
+        "code": "E4",
+        "text": "Two-tier pause separation present: Emergency DAO multisig (0x467947EE\u20261E0c) has immediate-execution authority but bounded scope (set_killed for new-mint halt, fee zeroing on AMMs, narrow safety knobs). DAO Voting Ownership (0xE478\u20263356) has wide scope but ~7-day delay through Aragon Voting \u2192 Ownership Agent. Critically, neither tier can pause user exits on existing positions: the entire pause surface is constrained to request-placement / new-debt issuance, not claim-of-finalized."
+      },
+      {
+        "code": "E5",
+        "text": "Not applicable: crvUSD has no exit queue, no daily-withdrawal cap, no requestWithdrawal pattern. Repayment is synchronous \u2014 calling repay with the position's debt amount returns collateral in the same transaction. Self-liquidation via liquidate_extended is also synchronous. There is no maximum-queue-duration to document."
+      },
+      {
+        "code": "E6",
+        "text": "Forced-exit / escape-hatch is structurally guaranteed by three independent layers: (i) immutable Vyper deployment of Controller / AMM / Stablecoin / ControllerFactory (no upgrade slot, no proxy admin) \u2014 no actor can swap exit-function logic; (ii) absence of any pause guard on repay / liquidate / remove_collateral so even a maximally hostile pause (is_killed=True forever) leaves exits open; (iii) LLAMMA's continuous soft-liquidation via permissionless AMM.exchange \u2014 even under oracle-pause or controller-kill, arbitrageurs can keep converting collateral \u2194 crvUSD inside price bands, providing a passive exit ramp that does not require any admin signature."
+      },
+      {
+        "code": "E7",
+        "text": "Frontend independence confirmed: Stablecoin (0xf939\u2026b4E), ControllerFactory (0xa920\u20269635), and the per-market Controllers/AMMs are verified Vyper on Etherscan with the standard generated ABI. repay, liquidate_extended, remove_collateral, AMM exchange, and ERC-20 transfer/burnFrom are accessible directly through Etherscan's Write Contract tab and any generic wallet (MetaMask / Safe / Rabby / Frame) constructing raw transactions; no off-chain authorization, signed message, allowlist, or API key is involved."
+      }
+    ],
+    "steelman": {
+      "red": "set_killed has no on-chain time cap and is reversible, so a captured Emergency DAO multisig could keep Controllers paused indefinitely; combined with an indefinite ability to set fees and parameters, a hostile admin could degrade the borrowing surface materially.",
+      "orange": "Although exits themselves are gateless, the indefinite-duration pause on new-debt issuance and the fact that the Emergency DAO is a 5-of-9 multisig (not a time-locked governance vote) means request-placement on the deposit/borrow side could be unilaterally frozen forever, which deserves an orange on the broader 'admin-pause-with-broad-scope' criterion.",
+      "green": "Every crvUSD exit function (repay, repay_extended, liquidate, liquidate_extended, remove_collateral) is permissionless on immutable Vyper with no is_killed / paused guard; existing borrowers can always close their position regardless of admin action; LLAMMA exchange remains permissionless during any pause; Etherscan-direct invocation works without the curve.finance frontend \u2014 this is the textbook green pattern."
+    },
+    "verdict": "Choosing green because the worst-case pause (Emergency DAO sets is_killed=True indefinitely on every Controller) cannot block any user from exiting an existing position \u2014 repay, liquidate(self,\u2026), liquidate_extended, and remove_collateral are not gated by is_killed in Controller.vy at curvefi/curve-stablecoin@c65baa3e, and LLAMMA AMM.exchange remains permissionless. The orange steelman correctly flags the deposit-side risk but mis-targets it onto the exit slice; that concern belongs to the open-access / control slices. The red steelman overstates the worst case: even an indefinite pause is restricted to request-placement, not claim-of-finalized, so it does not satisfy the red rule 'ANY actor can pause CLAIMS of finalized exits indefinitely'. Block-explorer evidence on the Stablecoin (0xf939\u2026b4E), ControllerFactory (0xa920\u20269635), and Emergency DAO (0x467947\u20261E0c) corroborate the source-level finding."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "shows": "crvUSD Stablecoin (Stablecoin.vy) on Mainnet \u2014 verified Vyper, Read/Write Contract tabs accessible; transfer/transferFrom/burnFrom standard ERC-20 with no global pause, freeze, or blocklist on the token surface",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "shows": "crvUSD ControllerFactory \u2014 verified Vyper; the contract that holds set_killed / is_killed (the only pause toggle in the crvUSD system); admin slot resolves to DAO Ownership Agent and emergency_admin to the Emergency DAO multisig; the pause flag affects only Controllers' create_loan / borrow_more, not exits",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO 5-of-9 Gnosis Safe \u2014 has emergency_admin authority on ControllerFactory.set_killed; bounded scope demonstrated by historical use (kill_me on incident-affected DEX pools, set_killed on Controllers during incidents) \u2014 never used to halt user repayments or withdrawals because the contracts do not expose such a function",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent \u2014 admin of ControllerFactory; only reachable through Voting (Ownership) at 0xE478\u20263356 on a ~7-day Aragon vote cycle; can call set_killed but cannot bypass the request-placement-only scope of the flag",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "shows": "DAO Voting (Ownership) Aragon contract \u2014 the only governance route to call admin-only functions on the Ownership Agent; ~7-day vote-then-execute cycle; cannot upgrade Controller / AMM / Stablecoin (immutable Vyper, no proxy)",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "Source for Controller.vy (repay, repay_extended, liquidate, liquidate_extended, remove_collateral are @external @nonreentrant('lock') with NO is_killed guard; only create_loan / borrow_more / borrow_more_extended check the kill flag); AMM.vy (LLAMMA exchange permissionless, withdraw admin-restricted to Controller); ControllerFactory.vy (set_killed callable by admin OR emergency_admin, scope bounded to request-placement); Stablecoin.vy (no pause on transfer/burnFrom)",
+      "commit": "c65baa3ec9bf4b9afda12f8148503ad088a5efd8",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+      "shows": "MixBytes crvUSD audit (May 2023) \u2014 describes the set_killed/is_killed design and confirms its scope is halting new minting only; centralization-risks section enumerates admin levers (MonetaryPolicy parameter changes, AMM A/fee bounds, debt_ceiling) that affect economics but not borrowers' ability to repay-and-withdraw existing positions",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/user/security/risks/crvusd",
+      "shows": "Curve's user-facing risk doc for crvUSD \u2014 confirms that user positions can always be repaid/closed permissionlessly and that the pause is bounded to new minting; documents Emergency DAO scope",
+      "fetched_at": "2026-04-27T11:31:00Z"
+    }
+  ],
+  "unknowns": [
+    "E2-live-source: did not freshly re-fetch Controller.vy / AMM.vy / ControllerFactory.vy from GitHub raw or Etherscan in this run; line-level guard verification relies on the prior Claude curve-dex run's pinned commit c65baa3e and on model knowledge of the repo. The structural claim (no is_killed guard on repay/liquidate/remove_collateral) is consistent across all known crvUSD revisions, but a fresh per-line audit was not performed this turn.",
+    "E3-live-onchain: did not re-read ControllerFactory.admin() and ControllerFactory.emergency_admin() storage slots on 0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635 in this run; values cited (DAO Ownership Agent / Emergency DAO multisig) come from the prior run and DefiLlama-pinned address book.",
+    "E3-market-census: did not enumerate factory.controllers(i) and individually verify each per-market Controller (sfrxETH, wstETH, WBTC, WETH, sUSDe, tBTC, etc.) for an absent is_killed guard on its exits; the architectural invariant is enforced by the shared Controller.vy template, but a per-market explorer walk was not performed.",
+    "E4-emergency-signers: did not re-pull current Gnosis Safe owners / threshold from 0x467947EE34aF926cF1DCac093870f613C96B1E0c to validate the 5-of-9 figure for this run; the prior governance-doc claim is referenced, not freshly verified."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-aragon-voting",
+      "https://github.com/curvefi/curve-js",
+      "https://github.com/curvefi/security-incident-reports"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+        "date": "2023-05"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+        "date": "2024-04"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20StableSwapNG%20Security%20Audit%20Report.pdf",
+        "date": "2024-01"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf",
+        "date": "2023-06"
+      }
+    ],
+    "governance_forum": "https://gov.curve.finance/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/curve/",
+    "security_contact": "https://github.com/curvefi/security-incident-reports",
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "DAO Voting (Ownership) \u2014 Aragon vote, ~7-day cycle; only path to non-emergency admin actions; cannot upgrade immutable crvUSD core contracts",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent \u2014 admin of ControllerFactory; can call set_killed on any Controller (halts new-mint only); reachable only via DAO Voting Ownership",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO 5-of-9 Gnosis Safe \u2014 emergency_admin of ControllerFactory; can call set_killed immediately; scope bounded to request-placement, cannot pause exits or upgrade contracts",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "crvUSD is Curve Finance's overcollateralized CDP stablecoin: users deposit volatile collateral (sfrxETH, wstETH, WBTC, WETH, sUSDe, tBTC, etc.) into a per-market Controller and mint crvUSD against it. The distinctive mechanism is LLAMMA \u2014 a Lending-Liquidating AMM that continuously soft-liquidates collateral across price bands rather than triggering a single hard-liquidation event, smoothing borrower losses and providing a passive exit ramp. Each Controller is an immutable Vyper deployment; the only pause toggle (ControllerFactory.set_killed, callable by the DAO Ownership Agent or the Emergency DAO 5-of-9 multisig) halts new-debt issuance only, leaving repay/liquidate/remove_collateral permanently open."
+  }
+}

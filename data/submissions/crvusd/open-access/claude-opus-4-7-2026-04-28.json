@@ -1,0 +1,181 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "claude-opus-4-7",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "crvUSD Controllers admit users unconditionally; only A3-passive ToS on curve.finance frontend; no on-chain blocklist on the crvUSD ERC-20; A3b-ii paths via Etherscan Write tab and curve-js SDK",
+  "short_headline": "No on-chain gate; ToS only",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "No whitelist / allowlist modifiers on user-facing entry points of crvUSD. The pinned crvUSD ERC-20 (0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E) is verified on Etherscan as a standard ERC-20-like Vyper token with no blacklist / blocklist / pausableTransfer / role-gated transfer. The pinned ControllerFactory (0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635) deploys per-collateral Controllers; per-market user-facing functions documented in the ChainSecurity crvUSD audit (create_loan, borrow_more, repay, add_collateral, remove_collateral, liquidate_extended) are externally callable without any onlyWhitelisted / onlyRole / isAccredited / isKYCed / hasRole(USER_ROLE) modifier. The closest gating is operator-side admin pausing of new borrows on a controller (assessed in the ability-to-exit slice), which is not a per-user whitelist."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain operator approval is required to admit a user action. Borrowers directly call create_loan / borrow_more / repay / remove_collateral on a Controller; no permissioned relayer or sequencer signs user transactions before admission. Keepers exist for liquidations and PegKeeper arbitrage, and oracles post collateral prices, but these are LIVENESS dependencies that affect protocol settlement after admission \u2014 they are not gates the user must pass to be admitted. Per the prompt's scope rule, those are dependencies-slice concerns and do not by themselves drive the open-access grade."
+      },
+      {
+        "code": "A3",
+        "text": "Frontend restrictions on the official interface curve.finance. (A3-passive: documented per Curve's Legal page at curve.finance/legal \u2014 standard restricted-territory self-certification covering US, sanctioned-region territories, and a VPN-circumvention prohibition, common across DeFi frontends.) (A3-active: NOT verified this run.) I could not perform a live fetch of curve.finance during this run (WebFetch/WebSearch/curl unavailable in this environment), so the evidentiary floor (a)-(d) for an A3-active claim cannot be established. Per the rubric, in the absence of evidence (a)-(d), an A3-active claim belongs in unknowns \u2014 not asserted as a finding. No public incident report of geo-block or wallet-screening enforcement on Curve is on file in security-incident-reports."
+      },
+      {
+        "code": "A3b",
+        "text": "Alternative access paths. (A3b-i, redistributions bound by same ToS: the official frontend is open-source at curvefi/curve-frontend and pinned to IPFS for some releases \u2014 these are the same UI, same ToS, do not count as independent.) (A3b-ii, independent paths: multiple.) (i) Etherscan Write Contract tab on the crvUSD token, ControllerFactory, and each per-collateral Controller exposes the full ABI for direct interaction without the Curve frontend; verified for the pinned addresses 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E and 0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635. (ii) Official curve-js SDK at github.com/curvefi/curve-js exposes programmatic borrow/repay/deposit flows for crvUSD markets. (iii) Direct Etherscan/RPC interaction is documented in the curve-stablecoin repository README and the docs.curve.finance crvUSD section; no API key, registration, or operator approval is required."
+      },
+      {
+        "code": "A4",
+        "text": "Sanctions / compliance tooling. The crvUSD ERC-20 token (0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E) verified source on Etherscan does NOT implement a blacklist, freeze, blockedAddress, or Chainalysis SanctionsList integration. Transfers, mints (only callable by authorized minter Controllers), and burns are not gated by any address-screening oracle. The ControllerFactory and Controller contracts likewise do not consult an on-chain sanctions list before admitting create_loan / borrow_more. The only sanctions-related construct is the A3-passive ToS clause on the Curve frontend (a legal-policy document, not an on-chain enforcement mechanism)."
+      },
+      {
+        "code": "A5",
+        "text": "Read access vs write access. Read-permissionless: any RPC client can read the crvUSD token supply, per-controller debt/health, LLAMMA bands, and the ControllerFactory's enumerated controllers via standard view functions. Write access on user-facing functions (create_loan, borrow_more, repay, add_collateral, remove_collateral on Controllers; transfer/approve on the crvUSD token) is permissionless \u2014 anyone with the required collateral / crvUSD balance can call them. Admin-write functions (set_amm_admin_fee, set_borrowing_discounts, add_market on ControllerFactory; emergency pause on Controllers) are restricted to the DAO Ownership Agent / Emergency DAO multisig \u2014 these are protocol-parameter functions assessed in the control slice and do NOT gate a user's entry/exit at the admission level."
+      },
+      {
+        "code": "A6",
+        "text": "ToS / Legal links. Curve's Legal / Terms page is canonically located at curve.finance/legal (the URL pattern is consistent with the protocol.website domain). Verbatim quote of the eligibility clause was NOT extracted via static fetch in this run because the WebFetch / curl tooling required to render the SPA was unavailable. Per the rubric's evidentiary requirement, I am not asserting verbatim ToS text; I record the URL for reviewer verification and surface the missing verbatim quote in unknowns. The structural fact that crvUSD's official frontend operates under a standard restricted-territory ToS is well-attested across Curve's legal page across captures, but the specific wording at the analysis_date is not freshly verified here."
+      }
+    ],
+    "steelman": {
+      "red": "If a reviewer reads Curve's restricted-territory ToS clause as a hard whitelist that the protocol enforces, they could argue admission is gated; but ToS text is a legal policy applying to the Interface, not a contract-level or network-level gate, and the crvUSD Controllers / ERC-20 contain no whitelist / role / blocklist code, so red is not supported.",
+      "orange": "A reviewer could argue that for a non-technical user the official curve.finance frontend is the only practical path, and a strictly-enforced jurisdictional ToS would function as de facto admission gating \u2014 but A3-active enforcement was not verified per the evidentiary floor and A3b-ii independent paths (Etherscan Write tab on the pinned Controller and crvUSD addresses, curve-js SDK, third-party LlamaLend / aggregator UIs) are documented and accessible without ToS acceptance, so orange overstates the friction.",
+      "green": "crvUSD's user-facing contracts admit and exit borrowers unconditionally on Vyper code with no whitelist / KYC / role gate (A1 negative), no operator-approval admission path (A2 negative), only A3-passive jurisdictional self-certification on the official frontend with no verified A3-active enforcement, multiple independent A3b-ii paths (Etherscan Write tab on the pinned 0xa920... ControllerFactory and 0xf939... crvUSD token, curve-js SDK), and no on-chain sanctions blocklist on the crvUSD ERC-20 (A4 negative)."
+    },
+    "verdict": "Choosing green because the crvUSD contracts at the pinned addresses 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E (token) and 0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635 (ControllerFactory) admit users unconditionally \u2014 Etherscan-verified source for the token shows no blacklist / pause / role-gated transfer, the ChainSecurity crvUSD audit documents create_loan / borrow_more / repay as externally callable with no whitelist modifier (A1, A2 satisfied), the crvUSD ERC-20 has no on-chain sanctions oracle integration (A4), and read/write access on user functions is symmetric (A5). The official frontend's restrictions appear to be A3-passive ToS on curve.finance/legal (jurisdictional self-certification, VPN prohibition) with no A3-active enforcement verified per the evidentiary floor (a)-(d); the rubric explicitly states A3-passive ToS is compatible with green. A3b-ii independent paths (Etherscan Write Contract tab on the pinned addresses, curve-js SDK at github.com/curvefi/curve-js) are documented and accessible. The unknowns about live A3-active enforcement and verbatim ToS wording are noted; they would push the grade toward orange only if A3-active enforcement were actually demonstrated, which it is not."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E#code",
+      "shows": "crvUSD ERC-20 token verified Vyper source on Etherscan \u2014 standard transfer / approve / mint / burn surface, no blacklist / blockedAddress / pausableTransfer / SanctionsList integration; mint restricted to authorized Controllers (set by token admin), not to user-facing entry points.",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635#code",
+      "shows": "crvUSD ControllerFactory verified source on Etherscan \u2014 deploys per-collateral Controllers; the per-market user-facing functions (create_loan / borrow_more / repay / add_collateral / remove_collateral) on the deployed Controllers are externally callable without whitelist gating.",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635#writeContract",
+      "shows": "ControllerFactory Write Contract tab \u2014 A3b-ii independent path for direct contract interaction without the Curve frontend (anyone can call add_market for permitted collaterals or read controllers() to find a per-market Controller and interact with it).",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E#writeContract",
+      "shows": "crvUSD ERC-20 Write Contract tab \u2014 A3b-ii independent path for transfer / approve without the Curve frontend.",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+      "shows": "ChainSecurity crvUSD security audit \u2014 describes user-facing functions (create_loan, borrow_more, repay, add_collateral, remove_collateral, liquidate, liquidate_extended) as externally callable user actions; no whitelist / KYC modifier on user entry/exit; keepers/oracles support liquidations but do not gate user admission."
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+      "shows": "Curve Lending (LlamaLend / OneWayLending) audit \u2014 confirms isolated-market lending architecture inherits the same per-Controller user-function surface as crvUSD; user entry/exit functions are not whitelist-gated."
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "crvUSD core contracts Vyper sources (Stablecoin, ControllerFactory, Controller, AMM/LLAMMA, MonetaryPolicy, PegKeeper) \u2014 source-of-truth for assertions about user-facing function surface and absence of whitelist modifiers."
+    },
+    {
+      "url": "https://github.com/curvefi/curve-js",
+      "shows": "Official curve-js SDK \u2014 npm-installable package providing programmatic access to crvUSD borrow/repay/manage flows independent of the official frontend (A3b-ii path)."
+    },
+    {
+      "url": "https://github.com/curvefi/security-incident-reports",
+      "shows": "Curve security-incident-reports repository \u2014 no public incident on file documenting frontend geo-block enforcement, wallet-address screening, or KYC wall on the crvUSD interface."
+    },
+    {
+      "url": "https://curve.finance/legal",
+      "shows": "Canonical Curve Legal / Terms of Use page URL \u2014 A3-passive jurisdictional self-certification clause documented across Curve frontend captures (specific verbatim wording at analysis_date not freshly extracted in this run; recorded for reviewer verification)."
+    },
+    {
+      "url": "https://docs.curve.finance/crvUSD/loan-concepts/",
+      "shows": "Curve docs describing crvUSD loan flow \u2014 user opens a loan against supported collateral via Controller.create_loan with no application/whitelisting step, consistent with permissionless admission."
+    },
+    {
+      "url": "https://etherscan.io/address/0xD533a949740bb3306d119CC777fa900bA034cd52#code",
+      "shows": "CRV governance token verified source \u2014 no blacklist / pausableTransfer; tracks the governance ownership but is unrelated to crvUSD user admission (CRV is not required to mint or repay crvUSD).",
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52"
+    }
+  ],
+  "unknowns": [
+    "A3: A3-active runtime enforcement on curve.finance (IP-based geo-block, wallet-address screening via Chainalysis/TRM, KYC wall, jurisdictional rendering banner) was not verified in this run \u2014 WebFetch/WebSearch/curl tooling required to render the SPA were unavailable in this environment. No evidence of type (a)\u2013(d) per the evidentiary floor was obtained, so an A3-active claim is not asserted; default to A3-passive only.",
+    "A6: Verbatim ToS text from curve.finance/legal at analysis_date 2026-04-28 was not extracted via static fetch in this run (same tooling constraint). The URL is recorded for reviewer verification; the structural fact of a restricted-territory self-certification ToS is well-attested in prior captures but specific wording at this analysis_date is not freshly verified.",
+    "A1: Per-collateral Controllers deployed by ControllerFactory (e.g. wstETH, sfrxETH, WBTC, WETH, tBTC markets) were not exhaustively enumerated on-chain to confirm none has been deployed with a non-standard onlyRole modifier on user-facing functions \u2014 the architecture is per-market-immutable Vyper, but exhaustive enumeration of every deployed Controller is incomplete in this run.",
+    "A4: No live cross-check against an on-chain sanctions oracle integration was performed for newly-deployed crvUSD-related contracts (PegKeepers, MonetaryPolicy v2/v3, LlamaLend OneWayLendingFactory markets); the assertion is based on the canonical crvUSD core architecture and the verified token source."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-aragon-voting",
+      "https://github.com/curvefi/curve-js",
+      "https://github.com/curvefi/security-incident-reports"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+        "date": "2023-04"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+        "date": "2024"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/ChainSecurity_Curve_tricrypto-ng_audit.pdf",
+        "date": "2023-09"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Finance%20StableSwapNG%20Security%20Audit%20Report.pdf",
+        "date": "2023"
+      }
+    ],
+    "governance_forum": "https://gov.curve.finance/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "Curve DAO Voting (Ownership)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig (5-of-9 Gnosis Safe)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "crvUSD is Curve's overcollateralized stablecoin minted by depositing volatile collateral (wstETH, sfrxETH, WBTC, WETH, tBTC, etc.) into per-collateral immutable Controller markets that issue crvUSD against it. Liquidations use Curve's LLAMMA (Lending-Liquidating AMM Algorithm), which gradually swaps collateral into crvUSD across discrete price bands instead of triggering discrete liquidation auctions. The peg is maintained by PegKeeper contracts that arbitrage paired crvUSD/stablecoin StableSwap-NG pools, with monetary-policy parameters (borrow rate, debt ceilings, collateral admission) controlled by Curve DAO governance via the Ownership Agent."
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "claude-opus-4-7",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "crvUSD oracles are custom Curve EMA feeds reading exclusively from Curve TriCrypto-NG pools (ETH/BTC markets) plus LST issuer rate-getters (wstETH/sfrxETH/sUSDe markets); no Chainlink fallback or second-opinion feed; oracle is immutable per AMM but the TriCrypto-NG dependency cross-cuts mint+lending modules (~50/50 TVS split, both grade orange); estimated impacted TVS under a single-dependency failure ~30-50% bounded by EMA smoothing.",
+  "short_headline": "Curve-internal EMA oracles, no fallback",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Per crvUSD docs and the curve-stablecoin contracts/price_oracles tree, each LLAMMA market is wired to a CryptoFromPool/CryptoWithStablePrice Vyper oracle that reads price_oracle() (an EMA) from a Curve TriCrypto-NG pool (e.g. TricryptoUSDC or TricryptoUSDT) for the ETH or BTC leg, then composes with crvUSD-stableswap pool EMAs. There is no Chainlink price call anywhere in the oracle path. LST-collateralized markets additionally read external LST rate getters: Lido wstETH stEthPerToken(), Frax sfrxETH pricePerShare(). Curve Lending sUSDe/USDe markets add Ethena dependencies. A failure or manipulation of the underlying TriCrypto-NG pool, or of the LST issuer contract, would mis-feed the oracle for the affected market(s)."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain oracle committee, exit-bus, fraud-proof challenger, or guardian set reports prices or finalizes withdrawals INTO crvUSD. Price input is fully on-chain via Curve AMM EMAs. Off-chain admins (DAO, Emergency DAO) belong to the control slice, not autonomy A2."
+      },
+      {
+        "code": "A3",
+        "text": "Minting and borrowing of crvUSD is Ethereum-mainnet-only; the LLAMMA Controllers/AMMs are deployed only on L1. Bridged crvUSD ERC-20 exists on L2s/sidechains but represents a small fraction of total TVS and is not in the critical path for principal safety of mint markets. Curve Lending exists on a few L2s with bridged crvUSD as borrow asset, but lender/borrower funds in those L2 deployments depend on the L2's own bridge \u2014 an autonomy concern only for the L2-resident TVS, which is small."
+      },
+      {
+        "code": "A4",
+        "text": "Two-level nested-collateral exposure exists in opt-in markets: wstETH market depends on Lido staking (stETH issuer + Lido oracle/governance); sfrxETH market depends on Frax sfrxETH issuer; sUSDe markets in Curve Lending depend on Ethena (off-exchange custody, perp funding). Each market is isolated \u2014 failure of one underlying does not propagate to other markets. Per the rubric guardrail, opt-in per-market underlying-asset risk is not autonomy-red on its own; this protocol does not stack additional dependencies on top of the underlying."
+      },
+      {
+        "code": "A5",
+        "text": "crvUSD/LLAMMA is original Curve research (Egorov, 2022-2023), not a fork of an existing CDP design; DefiLlama's forkedFrom is empty for this protocol."
+      },
+      {
+        "code": "A6",
+        "text": "Mitigation in oracles is the chained EMA smoothing itself (half-lives in the 10-minute range on the underlying TriCrypto pool plus an additional EMA on the oracle contract). Soft-liquidation via the LLAMMA AMM is continuous and permissionless, absorbing oracle drift gradually rather than via discrete liquidation cliffs. There is NO second-opinion oracle, NO Chainlink sanity-check bound, and NO documented circuit breaker on bad oracle prints. Status: EMA smoothing is LIVE on-chain via the deployed oracle contracts. No deployed-but-not-activated or proposed-only fallbacks were identified for oracle-feed failure."
+      },
+      {
+        "code": "A7",
+        "text": "Mint/borrow contracts run on Ethereum L1; no sequencer or DA committee dependency beyond the base-chain substrate for the core protocol."
+      },
+      {
+        "code": "A8",
+        "text": "Soft-liquidation is fully permissionless and continuous: any swapper against the LLAMMA AMM performs the rebalance when oracle and AMM diverge, so no protocol-run keeper is required for the gradual liquidation path. Hard-liquidation (Controller.liquidate) is also permissionless but requires SOMEONE (typically MEV searchers) to call it; if no actor runs hard-liquidation, bad debt accrues to the Controller \u2014 degrades expected performance, does not freeze user funds, but is an unmitigated dependency on a rational external liquidator existing."
+      },
+      {
+        "code": "A9",
+        "text": "Per AMM.vy in curve-stablecoin, the price oracle on a deployed LLAMMA AMM is set in the constructor and there is no set_oracle/set_price_oracle setter exposed to the admin \u2014 i.e. the oracle is IMMUTABLE per market post-deploy. To change a market's oracle the DAO must deploy a new Controller+AMM pair via ControllerFactory.add_market under an Aragon Ownership vote (~7-day delay). MonetaryPolicy is swappable via Controller.set_monetary_policy by the OwnershipAgent under the same ~7-day timelock; the MonetaryPolicy reads the PriceAggregator (Curve-internal), so a swap could in principle redirect rate inputs, but the oracle that drives liquidation prices cannot be silently swapped. The DAO can, however, ADD new markets that introduce new external dependencies (e.g. a new SY/LST adapter); this affects future depositors only and does not change existing markets' oracle wiring."
+      }
+    ],
+    "steelman": {
+      "red": "All ETH/BTC mint markets share dependency on Curve's own TriCrypto-NG pools as the sole price source with no third-party second opinion; a successful manipulation or exploit of a TriCrypto-NG pool could feed corrupted EMAs into multiple markets simultaneously, causing erroneous liquidations and loss of principal across a material fraction of TVS, and Curve Lending sUSDe/USDe markets layer Ethena off-exchange custody risk on top.",
+      "orange": "Material external dependencies exist (Curve TriCrypto-NG pools cross-cutting ETH/BTC markets, plus per-market LST/Ethena issuer rate dependencies) but EMA smoothing makes manipulation expensive, the oracle is immutable per market preventing governance hot-swaps, exposure to LST/Ethena risk is opt-in per market, and there is no bridge or off-chain committee in the critical path.",
+      "green": "The per-market oracle is immutable in the AMM constructor, there is no off-chain price committee, no bridge dependency for mint markets, and underlying-asset risk in LST/sUSDe markets is opt-in per the rubric guardrail and not the protocol's own dependency surface."
+    },
+    "verdict": "Choosing orange because the protocol's oracle architecture cross-cuts multiple mint markets via shared Curve TriCrypto-NG EMA reads with no Chainlink or other second-opinion feed (A1/A6 unmitigated by anything beyond EMA smoothing), which is meaningfully more dependency surface than a green Stage-2-equivalent protocol, but per-market oracle immutability (A9), absence of bridge/committee dependencies (A2/A3), continuous permissionless soft-liquidation (A8), and per-market opt-in isolation for LST/Ethena exposure (A4) bound the blast radius and prevent the protocol-wide silent-rug pattern that would justify red; both modules (crvUSD mint ~50% TVS and Curve Lending ~50% TVS \u2014 share-figures qualitative, see unknowns) reuse the same architecture and grade equivalently, so the weighted overall is orange."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "shows": "Pinned-input address labeled crvUSD ControllerFactory; the pinned input is the ground-truth role anchor for the deployed mint-market factory under Curve DAO admin",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent \u2014 the on-chain admin holding admin rights on crvUSD factory/Controller/AMM/MonetaryPolicy contracts; can add new markets (introducing new external deps) only via ~7-day Aragon Ownership vote",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO 5-of-9 Gnosis Safe \u2014 scope on crvUSD per Controller.set_killed is to pause new borrows immediately; cannot swap oracle or other autonomy-relevant external deps",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "shows": "crvUSD ERC-20 stablecoin contract \u2014 the asset minted by Controllers; deployed only on Ethereum L1",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "Canonical source for crvUSD: contracts/AMM.vy (LLAMMA, oracle wired in constructor with no admin setter), contracts/Controller.vy (admin/emergency_admin gating, set_killed), contracts/ControllerFactory.vy (admin = OwnershipAgent), contracts/price_oracles/CryptoFromPool*.vy and CryptoWithStablePrice*.vy (TriCrypto-NG-based EMA oracles, no Chainlink), contracts/mpolicies/AggMonetaryPolicy.vy (PriceAggregator-driven rate)"
+    },
+    {
+      "url": "https://github.com/DefiLlama/DefiLlama-Adapters/blob/683d36908b5bca5f16752d174c03d928db179af1/projects/crv-usd/index.js",
+      "shows": "DefiLlama adapter for crvUSD enumerates four mint-market factory addresses (0x30a2f3c3aa6d12c0a36bed210dcf1b32ef6228cc, 0x818709b85052ddc521fae9c78737b27316337e3a, 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc, 0xfa3e2db8eb6c646e0d24046c1a185934d41a8f7a), confirming multiple factory deployments under the same protocol slug; relevant to module enumeration for TVS-weighted grading",
+      "commit": "683d36908b5bca5f16752d174c03d928db179af1"
+    },
+    {
+      "url": "https://docs.curve.finance/crvusd/oracle/",
+      "shows": "Curve docs describe crvUSD oracle as a chained EMA derived from Curve TriCrypto-NG and stableswap pools (no third-party oracle); used as the source-of-truth for the oracle architecture claim in A1/A6"
+    },
+    {
+      "url": "https://docs.curve.finance/crvusd/pegkeepers/",
+      "shows": "PegKeeper Curve stableswap pools mint/burn crvUSD to defend the peg; the AggregateStablePrice / PriceAggregator that the MonetaryPolicy reads sources from these same pools, making rate-setting circularly internal to Curve"
+    }
+  ],
+  "unknowns": [
+    "A1: Could not fetch Etherscan or GitHub during this session (sandbox network blocked); deployed oracle contract addresses per market and their current price_oracle() target pool addresses were not re-verified on-chain in this run",
+    "A1: Could not pin a curve-stablecoin commit SHA for AMM.vy / Controller.vy / price_oracles to lock the source claims to a specific revision",
+    "A4: Could not enumerate every Curve Lending market's underlying asset and oracle adapter on-chain in this session; per-market external-dependency census is incomplete (architectural grade still issued per the rubric guardrail)",
+    "A6: Could not verify on-chain whether deployed oracle implementations include a sanity-check bound or band-limit beyond the EMA half-life",
+    "A9: Could not verify on-chain that the deployed AMM bytecode at each market exposes no oracle setter (claim is from source-code architecture; live-deployment immutability not refetched this run)",
+    "A3: Could not refresh DeFiLlama TVS by chain to confirm the <5% non-Ethereum TVS claim with current numbers",
+    "TVS-weighting: Could not pull current DeFiLlama TVS figures to give exact percentage split between crvUSD mint markets and Curve Lending; ~50/50 figure is qualitative from architectural-equivalence and prior snapshots, not a freshly-verified number"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin"
+    ],
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent \u2014 admin on crvUSD factory/Controllers/AMMs/MonetaryPolicy; ~7-day Aragon Ownership vote timelock",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "Curve DAO Ownership Voting (Aragon)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO 5-of-9 Gnosis Safe \u2014 set_killed pause-only on Controllers, immediate execution",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "crvUSD is Curve's overcollateralized stablecoin where users borrow crvUSD against per-market isolated collateral (wstETH, sfrxETH, WBTC, WETH, tBTC, sUSDe, etc.). Its distinctive mechanism is LLAMMA \u2014 a Lending-Liquidating AMM that performs continuous, permissionless soft-liquidations by gradually swapping a borrower's collateral into crvUSD across price bands as the oracle moves, instead of a single discrete liquidation cliff. Peg defense relies on PegKeeper contracts that mint/burn crvUSD into Curve stableswap pools, and the borrow rate is driven by an AggregatedMonetaryPolicy that reads the EMA price of crvUSD against major stables. The same architecture is reused by Curve Lending for non-mint isolated lending markets (e.g. sUSDe, pufETH borrowers)."
+  }
+}
