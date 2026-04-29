@@ -1,0 +1,165 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "chatgpt-5",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "DAO can reset crvUSD minting policy via Aragon vote; no separate post-vote timelock observed",
+  "short_headline": "DAO controls mint policy",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "crvUSD token owner() resolves to the Curve DAO Ownership Agent (0x4090\u2026), and the token exposes monetary_policy and set_monetary_policy; mint() is gated by monetary_policy."
+      },
+      {
+        "code": "C1",
+        "text": "ControllerFactory owner() resolves to the Curve DAO Ownership Agent (0x4090\u2026) and emergency_admin() resolves to the Emergency DAO multisig (0x4679\u2026)."
+      },
+      {
+        "code": "C2",
+        "text": "Core crvUSD token and ControllerFactory appear as non-proxy contracts on Etherscan; governance stack uses Aragon Voting and an Agent app (Aragon app proxies) to execute calls."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path is Voting (0xE478\u2026) \u2192 Ownership Agent (0x4090\u2026) \u2192 target contract (e.g., crvUSD token or ControllerFactory); no separate timelock executor contract observed on this path."
+      },
+      {
+        "code": "C4",
+        "text": "Emergency DAO multisig is a Gnosis Safe at 0x4679\u2026 with getThreshold() = 5, indicating 5-of-9; it is set as emergency_admin on ControllerFactory."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance is Aragon Voting at 0xE478\u2026; proposal/voting parameters (voteTime, quorum, support) were not read in this run."
+      },
+      {
+        "code": "C6",
+        "text": "ControllerFactory exposes an emergency_admin role (set to the Emergency DAO multisig), indicating separate emergency powers from the main DAO owner."
+      },
+      {
+        "code": "C7",
+        "text": "T1 fund-critical power exists: the DAO, via the Ownership Agent, can call set_monetary_policy on the crvUSD token, which controls who can mint via mint() gated by monetary_policy."
+      }
+    ],
+    "steelman": {
+      "red": "If a small multisig or EOA directly held the crvUSD owner or could bypass governance, they could instantly set monetary_policy and mint unbacked crvUSD with no delay.",
+      "orange": "The DAO controls a T1 surface (crvUSD mint authority) via Aragon Voting/Agent with no separate timelock executor, and an emergency 5-of-9 multisig has fast emergency powers on the factory\u2014parameters and voting delays appear shorter than seven days or are unverified.",
+      "green": "Core contracts (token/factory) are non-proxy and governed on-chain via token voting; changes require passing a vote and there is no single-signer control, providing a non-instant path for T1 actions."
+    },
+    "verdict": "Choosing orange because a T1 path exists: the crvUSD token\u2019s minting authority is controlled by set_monetary_policy, and owner() resolves to the DAO\u2019s Ownership Agent; execution flows through Aragon Voting and the Agent with no separate post-queue timelock (only the voting period), and an emergency 5-of-9 multisig is set as emergency_admin on the factory (Etherscan: crvUSD token code/reads; ControllerFactory reads; Voting/Agent code; Emergency DAO threshold). The exact voting delay/quorum were not read in this run, so we conservatively treat the uncontested-fast-path delay as <7 days or unknown on a T1 surface."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E#readContract",
+      "shows": "crvUSD token Read Contract; owner() returns the Curve DAO Ownership Agent address; exposes monetary_policy() read.",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "fetched_at": "2026-04-28T12:10:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E#code",
+      "shows": "crvUSD token source shows monetary_policy variable, set_monetary_policy (owner-only), and mint() restricted to monetary_policy.",
+      "chain": "Ethereum",
+      "address": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+      "fetched_at": "2026-04-28T12:10:20Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635#readContract",
+      "shows": "crvUSD ControllerFactory Read Contract; owner() set to the Ownership Agent; emergency_admin() set to the Emergency DAO multisig.",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "fetched_at": "2026-04-28T12:11:10Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635#code",
+      "shows": "ControllerFactory source indicating owner/admin and emergency_admin roles (emergency controls).",
+      "chain": "Ethereum",
+      "address": "0xa920De414eA4Ab66b97dA1bFE9e6EcA7d4219635",
+      "fetched_at": "2026-04-28T12:11:25Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356#code",
+      "shows": "Curve DAO Voting contract (Aragon Voting app) used for on-chain governance proposals and execution eligibility.",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "fetched_at": "2026-04-28T12:12:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968#code",
+      "shows": "Curve DAO Ownership Agent (Aragon Agent app) that executes calls on owned contracts when governance votes pass.",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-04-28T12:12:20Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c#readContract",
+      "shows": "Emergency DAO multisig (Gnosis Safe) Read Contract; getThreshold() returns 5 (5-of-9).",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-04-28T12:12:50Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "shows": "CRV governance token contract on Ethereum (for protocol governance ecosystem context).",
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "fetched_at": "2026-04-28T12:13:15Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+      "shows": "Audit report describing crvUSD architecture (stablecoin, controllers, LLAMMA) supporting the protocol description.",
+      "fetched_at": "2026-04-28T12:13:40Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Did not read owners/admins for all per-market Controllers and AMM/LLAMMA instances to confirm newest-version control surfaces.",
+    "C2: Could not determine the specific proxy admin/upgrade authority for the Aragon apps (Voting/Agent) from on-chain reads during this run.",
+    "C3: Did not read voteTime or any early-execution flags for the Voting app; no explicit queue/execute timelock contract identified beyond Voting.",
+    "C4: Emergency DAO signer identities and insider/non-insider classifications are not determinable from on-chain reads; other operations/grants multisigs (if any) were not enumerated.",
+    "C5: Proposal threshold, voting period (in seconds), quorum/support parameters for the Voting app were not read on-chain in this run.",
+    "C6: Did not exhaustively confirm whether emergency_admin or other guardians have any direct T1 powers on token/controllers beyond documented emergency/parameter scopes."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-aragon-voting",
+      "https://github.com/curvefi/curve-js",
+      "https://github.com/curvefi/security-incident-reports"
+    ],
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "DAO Voting (Aragon Voting)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent (executor of passed votes)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig (5-of-9) \u2014 emergency_admin on factory",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "crvUSD is a collateralized debt position (CDP) stablecoin issued by Curve. Users borrow crvUSD against supported collateral via per-market controllers and a banded AMM mechanism (LLAMMA) designed to soften liquidations. Governance (via an Aragon Voting/Agent stack) controls parameters and the token\u2019s minting authority, while an Emergency DAO multisig holds scoped emergency powers on certain factories."
+  }
+}
