@@ -1,0 +1,82 @@
+{
+  "schema_version": 3,
+  "slug": "curve-llamalend",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "claude-opus-4-7",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "Could not verify on-chain control surface — web access blocked in this run",
+  "short_headline": "Web fetch blocked",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Did not read admin/owner/future_admin from any deployed contract on-chain. WebFetch, WebSearch, and outbound curl were all permission-blocked in this session, and no local clone of curvefi/curve-stablecoin or cached Etherscan responses are present in the working directory. Pinned inputs (OneWayLendingFactory at 0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0, DAO Voting at 0xE478de485ad2fe566d49342Cbd03E49ed7DB3356, Ownership Agent at 0x40907540d8a6C65c637785e8f8B742ae6b0b9968, Emergency DAO Safe at 0x467947EE34aF926cF1DCac093870f613C96B1E0c) are not by themselves evidence — Hard Rule 1 forbids relying on training-data recollections of who admins them today."
+      },
+      {
+        "code": "C2",
+        "text": "Did not verify proxy / immutable status of the OneWayLendingFactory, the deployed Controller / Vault / AMM implementations, or the Aragon Voting / Agent contracts. Cannot confirm whether the Voting contract is itself an upgradable Aragon kernel-proxied app or whether the lending implementations are immutable — both are required to classify upgradeability."
+      },
+      {
+        "code": "C3",
+        "text": "Did not walk the execution path Voting → Agent → target. Did not read MIN_TIME_BETWEEN_OPERATIONS or any equivalent delay constant on the Ownership Agent. Cannot quote an uncontested-fast-path delay in seconds, which is required by C3 and used as the basis for the green/orange/red threshold."
+      },
+      {
+        "code": "C4",
+        "text": "Did not enumerate signers, threshold, or affiliations of the Emergency DAO 5-of-9 Safe at 0x467947EE34aF926cF1DCac093870f613C96B1E0c, and did not check for additional multisigs (parameter committees, gauge admins, killable-pool guardians). Cannot evaluate the multisig against the Security Council bar (≥7 signers, ≥51% threshold, ≥50% non-insider, all signers publicly named)."
+      },
+      {
+        "code": "C5",
+        "text": "Did not read minAcceptQuorumPct, supportRequiredPct, voteTime, or the voting token from the Aragon Voting contract. Did not verify the CRV token's role as the locked governance token (veCRV) feeding the Voting app. Cannot quote proposal threshold or quorum from on-chain reads."
+      },
+      {
+        "code": "C6",
+        "text": "Did not verify the EmergencyDAO's scope on-chain or its time cap. Cannot distinguish whether it can pause LlamaLend markets, kill markets, or only perform legacy actions on Curve pools."
+      },
+      {
+        "code": "C7",
+        "text": "Cannot classify the highest power tier reachable on the uncontested fast path. Without C1–C6 reads, I cannot cite a specific function (set_implementations, set_admin, kill, pause, set_fee, etc.) bounded by an on-chain check, which is required to assign T1 / T2 / T3 / T4."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Returning grade=\"unknown\" because all seven CONTROL checklist items remain unverified. WebFetch, WebSearch, and outbound curl were permission-blocked in this session, no local source clone of curvefi/curve-stablecoin is present in the working directory at /tmp/defipunkd_v2/repo, and the prompt's Hard Rule 1 explicitly forbids relying on training-data recollections of admin addresses, timelock values, multisig signers, or governance parameters. The pinned address book identifies the actors but does not by itself establish the call graph, the delay constants, or which addresses currently hold which powers — those require Read Contract reads that I could not perform. Per Hard Rule 3, the conservative output is grade=\"unknown\" with unknowns[] enumerating every checklist item that was not resolved."
+  },
+  "evidence": [],
+  "unknowns": [
+    "C1: Did not read admin() / owner() / future_admin() on OneWayLendingFactory (0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0) or any deployed LlamaLend Controller/Vault/AMM — WebFetch blocked, no local source clone available.",
+    "C1: Did not identify the latest LlamaLend market deployments (Controller / Vault / AMM addresses) and read their admin/factory references on-chain.",
+    "C2: Did not verify whether the Aragon Voting at 0xE478de485ad2fe566d49342Cbd03E49ed7DB3356 is itself a kernel-proxied upgradable app, and whether the Curve DAO Ownership Agent at 0x40907540d8a6C65c637785e8f8B742ae6b0b9968 is upgradable.",
+    "C2: Did not verify whether OneWayLendingFactory and the LlamaLend implementations (controller_implementation, vault_implementation, amm_implementation, price_oracle_impl, monetary_policy_impl) are immutable or hold an admin-replaceable implementation slot, and did not name a concrete function on any upgradable surface that reaches a T1/T2 power on user funds.",
+    "C3: Did not read MIN_TIME_BETWEEN_OPERATIONS / getMinTime() / equivalent delay constants on the Ownership Agent or any executor — cannot state an uncontested-fast-path delay in seconds.",
+    "C3: Did not walk the full Voting → Agent → target call chain and record each stage's address, delay, and storage slot.",
+    "C4: Did not enumerate the 9 signer addresses on the Emergency DAO Safe (0x467947EE34aF926cF1DCac093870f613C96B1E0c), classify them as insider vs non-insider, or confirm threshold = 5 from getThreshold() on-chain.",
+    "C4: Did not search for additional multisigs (parameter / gauge / incentives committees) with reachable scope to LlamaLend markets.",
+    "C5: Did not read minAcceptQuorumPct, supportRequiredPct, voteTime (Ownership Voting period in seconds), proposal-creation threshold (often a CreateLockMin / minBalance lower bound on veCRV), or token() from the Aragon Voting contract; cannot cite governance-flow numerics from a Read Contract URL.",
+    "C5: Did not confirm CRV (0xD533a949740bb3306d119CC777fa900bA034cd52) is the underlying token of the veCRV escrow that feeds the Voting app, or read the VotingEscrow address.",
+    "C6: Did not verify the EmergencyDAO's time cap / scope on-chain or in docs — cannot distinguish whether it can only freeze legacy Curve pools or also act on LlamaLend Controllers/Vaults/AMMs.",
+    "C7: Cannot classify the highest tier reachable on the uncontested fast path. Concrete function names (e.g. set_implementations on the factory, kill / set_killed on Controllers, set_fee / set_admin_fee, oracle replacement paths) and their access modifiers were not read on-chain, so any tier assignment would be unsupported."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-aragon-voting",
+      "https://github.com/curvefi/curve-js",
+      "https://github.com/curvefi/security-incident-reports"
+    ],
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": null
+  }
+}

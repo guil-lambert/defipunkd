@@ -1,0 +1,201 @@
+{
+  "schema_version": 3,
+  "slug": "curve-llamalend",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-28",
+  "model": "claude-opus-4-7",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Curve LlamaLend uses LLAMMA architecture with per-market isolated oracles; most markets use Curve pool internal EMA oracles (no Chainlink/Pyth committee), some compose Chainlink as price-anchor; oracle of an existing market is fixed at deploy and per-market silos contain blast radius; soft-liquidation acts as a structural buffer; impacted TVS under any single dependency failure \u2264~30% bounded per-market",
+  "short_headline": "Per-market oracles; soft-liq buffer; bounded",
+  "rationale": {
+    "findings": [
+      {
+        "code": "SCOPE",
+        "text": "This submission assesses ONLY Curve LlamaLend (Curve Lending) \u2014 the OneWayLendingFactory deployments on Ethereum (0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0), Arbitrum (0xcaec110c784c9df37240a8ce096d352a75922dea), Fraxtal (0xf3c9bdab17b7016fbe3b77d17b1602a7db93ac66), Optimism (0x5ea8f3d674c70b020586933a0a5b250734798bef) and the per-market Vault (ERC4626) + Controller + LLAMMA AMM + PriceOracle adapter quadruples spawned by those factories. The Curve DEX (StableSwap/CryptoSwap pools, GaugeController, CRV emissions) and the crvUSD mint markets (separate non-OneWayLendingFactory MarketControllers) are scored as siblings and out of scope here. crvUSD as a borrowed asset IS in scope as an external (cross-product) dependency."
+      },
+      {
+        "code": "MODULES",
+        "text": "Sub-module enumeration before grading, weighted by TVS share from snapshot.tvl_by_chain (total TVL $69.3M, per DeFiLlama snapshot 2026-04-27): (M-ETH) Ethereum LlamaLend markets via factory 0xeA6876DDE9... \u2014 ~$65.6M TVL \u2248 94.6% of TVS; many markets use Curve pool EMA oracles (no Chainlink), grade orange because some markets use Chainlink-composed adapters and all depend on Curve pool oracles being live and deep. (M-ARB) Arbitrum factory 0xcaec110c... \u2014 ~$2.95M TVL \u2248 4.3% of TVS; same architecture but borrowed asset is bridged crvUSD which adds a canonical bridge dependency (orange). (M-FRX) Fraxtal factory 0xf3c9bdab... \u2014 ~$729k \u2248 1.1% of TVS; same architecture, bridged crvUSD on Fraxtal adds bridge dependency (orange). (M-OP) Optimism factory 0x5ea8f3d6... \u2014 ~$31k \u2248 0.05% of TVS; de minimis. Weighted overall: ~94.6% of TVS sits on M-ETH where the worst-case dependency is a Curve pool oracle (internal ecosystem, EMA-smoothed) plus per-market opt-in collateral risk; ~5% of TVS on M-ARB+M-FRX adds a canonical-bridge dependency on top. Weighted overall = orange because no module is green at module level (all modules have at least the Curve pool oracle dependency or a bridge dependency on top), and no module is red because per-market isolation, EMA smoothing, and LLAMMA soft-liquidation cap blast radius."
+      },
+      {
+        "code": "A1",
+        "text": "External contract calls. Each LlamaLend market is a (Vault + Controller + AMM + PriceOracle) quadruple deployed by the factory; the AMM (LLAMMA) reads the assigned PriceOracle adapter on every band rebalance. The most common adapter pattern (per curvefi/curve-stablecoin contracts/price_oracles/) is CryptoFromPool, which calls price_oracle() on a designated Curve cryptoswap pool \u2014 i.e. the price feed is the Curve AMM's own internal EMA, NOT Chainlink/Pyth/Redstone. Variants used for LST/LRT-collateral markets (CryptoFromPoolsRate, CryptoFromPoolVault) chain a Curve pool oracle with a rate-provider call (e.g. wstETH.stEthPerToken(), sfrxETH.pricePerShare()) \u2014 these rate providers are calls into the underlying LST/LRT/4626 contracts. Some markets that use stablecoin or BTC collateral use AggregateStablePrice2 (which composes multiple Curve stable pool TWAPs) or Chainlink-composed adapters. The borrowed asset on M-ARB / M-FRX / M-OP is bridged crvUSD, so each L2 market also depends on the canonical bridge contract that brought crvUSD across (see A3). External dependency surface per market is therefore: (i) one or more Curve pool oracles, (ii) optionally one rate-provider call into the underlying yield-bearing token, (iii) on L2s only, the bridged crvUSD lockbox contract."
+      },
+      {
+        "code": "A2",
+        "text": "Off-chain actor committees reporting INTO the protocol: NONE. LlamaLend has no oracle committee, no exit-bus signers, no fraud-proof challengers, no guardian set posting prices. The Emergency DAO 5-of-9 Gnosis Safe at 0x467947EE34aF926cF1DCac093870f613C96B1E0c holds bounded emergency-pause authority on LlamaLend Controllers (it can halt new borrows / loan creation), but it does NOT post price or state data INTO any contract \u2014 its role is bounded admin action, not oracle posting. A2 is empty in the strict sense; the only off-chain dependency is mediated by Chainlink's own decentralized oracle network for the small subset of markets that use Chainlink-composed adapters (recorded under A1)."
+      },
+      {
+        "code": "A3",
+        "text": "Bridge / cross-chain messaging dependencies. The four LlamaLend deployments on Ethereum, Arbitrum, Fraxtal, Optimism are INDEPENDENT instances \u2014 each chain has its own factory + markets and Ethereum mainnet markets do not depend on any bridge for solvency. However, the L2 / L2-equivalent deployments (M-ARB, M-FRX, M-OP) use bridged crvUSD as the lent asset, so a failure of the canonical xERC20 lockbox / bridge that brought crvUSD across would impact those L2 markets. Material TVL on the bridge-dependent paths is small: M-ARB+M-FRX+M-OP collectively \u2248 $3.71M \u2248 5.4% of total LlamaLend TVS per snapshot. CRV (governance token) is bridged via canonical L2 bridges for gauge-emission flows but this does not affect LlamaLend market solvency."
+      },
+      {
+        "code": "A4",
+        "text": "Nested collateral / restaking chains. LlamaLend markets are isolated/silo'd per the OneWayLendingFactory architecture \u2014 each market has exactly one collateral asset and one borrow asset, with its own oracle. Many markets accept yield-bearing collateral (wstETH, sfrxETH, sUSDe, weETH/eETH variants, sDAI, Curve LP tokens like crvUSD-USDC LP). Per the rubric, opt-in isolated markets with third-party yield-bearing collateral are NOT autonomy-red on their own \u2014 a failure of, e.g., Lido/Frax/Ethena/ether.fi propagates only to depositors who chose that specific market, not across markets. Depth is typically 1-2 levels (collateral token \u2192 underlying via rate provider). The factory's market-isolation enforcement means propagation scope of a single underlying failure is bounded to the impaired market's TVL share. This is an orange-relevant note (per-market depositor risk exists) but not a global-red signal."
+      },
+      {
+        "code": "A5",
+        "text": "Fork lineage. Per DeFiLlama snapshot 2026-04-27 (data/defillama-snapshot.json), curve-llamalend has parent_slug=\"curve-finance\" and forked_from=null \u2014 LlamaLend is original Curve work, not a fork of Aave/Compound/Morpho/etc. The LLAMMA continuous-soft-liquidation mechanism and the OneWayLendingFactory pattern are unique to Curve."
+      },
+      {
+        "code": "A6",
+        "text": "Fallback mechanisms and circuit breakers. (i) LIVE \u2014 LLAMMA continuous soft-liquidation: as the oracle price moves through bands, the AMM converts collateral\u2194crvUSD continuously via permissionless arbitrage. This is the structural buffer against oracle errors \u2014 a wrong oracle reading does NOT immediately seize collateral; it shifts the active band, and arbitrageurs are incentivized to trade against any temporary mis-pricing. (ii) LIVE \u2014 EMA smoothing in price_oracle(): all Curve pool oracles return EMA-smoothed values (typically ~10-15 minute half-life); short-term Curve pool manipulation cannot be passed straight through to LLAMMA bands. (iii) LIVE \u2014 per-market debt ceilings: each Controller has admin-set max-borrowable that caps blast radius if a market's collateral mis-prices. (iv) LIVE \u2014 Emergency DAO admin pause path on the Controller (set_killed / set_borrowing_discounts equivalents) freezes new borrowing in extremis while leaving repay/withdraw paths open. (v) LIVE \u2014 permissionless hard-liquidation: any actor can call Controller.liquidate() / liquidate_extended() when a position exits its lowest band, so mitigations don't depend on a privileged liquidator role. NOT LIVE / not present in LlamaLend per-market: a generic price-floor/ceiling sanity check against an external reference (each market's adapter is what it is, no second-opinion oracle); some adapters cap rate-provider growth (MIN_RATE/MAX_RATE constants in CryptoFromPoolsRate variants) but a generic min/max bound vs. an off-chain reference is not standard."
+      },
+      {
+        "code": "A7",
+        "text": "Sequencer / L1-liveness dependency beyond substrate. M-ETH (94.6% of TVS) is on Ethereum L1 \u2014 substrate only, no extra liveness dependency. M-ARB (4.3%) inherits Arbitrum One's centralized sequencer; M-OP (~0.05%) inherits Optimism's centralized sequencer; M-FRX (1.1%) inherits Fraxtal's sequencer / DA model. LlamaLend does NOT embed a Chainlink Sequencer Uptime Feed check on any chain \u2014 the protocol relies entirely on local Curve pool oracle reads, so during a sequencer outage both pool and market freeze together. A long restart-and-catchup window after sequencer downtime could leave borrowers underwater on the affected L2; impacted TVS bounded at \u22645.4% (sum of L2 deployments)."
+      },
+      {
+        "code": "A8",
+        "text": "Keeper / relayer / off-chain bot liveness. SOFT-LIQUIDATIONS are structural and keeper-permissionless: they ARE the AMM trades against the LLAMMA bands. Anyone with capital can perform them; DEX-aggregator routing (1inch, Odos, ParaSwap) means LLAMMAs are routinely traversed by normal swap flow, so soft-liq happens organically. HARD-LIQUIDATIONS via Controller.liquidate() / liquidate_extended() are also permissionless and incentivized via the discount-vs-debt spread. Failure mode is graceful: if no liquidator runs for a window, soft-liq continues automatically as bands are crossed and bad debt accumulates only slowly. No protocol-critical role is held by a single keeper. PEGKEEPERS are part of the crvUSD mint market (out of scope here) but their existence supports crvUSD peg, which indirectly supports LlamaLend markets that lend crvUSD."
+      },
+      {
+        "code": "A9",
+        "text": "Governance-mutable dependency surface. The Curve DAO Voting (Ownership) path (0xE478de485ad2fe566d49342Cbd03E49ed7DB3356 \u2192 DAO Ownership Agent 0x40907540d8a6C65c637785e8f8B742ae6b0b9968, ~7-day total path delay) CAN add new LlamaLend markets via OneWayLendingFactory.add_market / create_from_pool \u2014 each new market deploys a fresh Vault + Controller + AMM + PriceOracle quadruple with governance choosing the oracle adapter at deploy. Existing markets' price oracle is FIXED at AMM deploy time (LLAMMA's price_oracle reference is set in __init__ and not exposed via a governance setter on the deployed AMM). So governance CANNOT silently swap the oracle of an EXISTING market \u2014 it would need to deploy a new market and migrate users (which users opt into). A9-relevant powers: (i) admin can change Controller-level parameters (loan_discount, liquidation_discount, monetary_policy) via the DAO 7-day timelock; (ii) admin can add new markets with new dependency adapters (a new Chainlink feed, a new vault rate provider) \u2014 users in EXISTING markets are unaffected, users opting into the new market accept its oracle by design; (iii) the Emergency DAO 5-of-9 Safe can set_killed but cannot swap dependencies. Per the prompt's A9 scope-limit: 'admin can change implementation' is N/A here because LLAMMA + Controller + Vault are immutable Vyper contracts (no upgrade slot). The autonomy-relevant A9 finding is therefore narrow: governance can ADD new external dependencies via the 7-day timelock but cannot retroactively introduce a dependency on existing positions."
+      }
+    ],
+    "steelman": {
+      "red": "If a reviewer treated all LlamaLend markets that consume Curve pool oracles or Chainlink-composed adapters as a single cross-cutting dependency, and assumed a coordinated manipulation of a high-TVL Curve pool (e.g. tricryptoUSDC or wstETH/ETH ng) could mis-price every market that reads from it, ~30%+ of LlamaLend TVS could be argued to be at risk in a worst-case oracle-manipulation scenario \u2014 and on L2s, a canonical-bridge failure could simultaneously brick all M-ARB/M-FRX positions denominated in bridged crvUSD.",
+      "orange": "LlamaLend's oracle dependency surface is real but bounded: each market reads a per-market Curve pool oracle (sometimes with rate providers or Chainlink composition), the EMA layer in every Curve pool oracle caps per-block damage, LLAMMA soft-liquidation provides a continuous arbitrage-driven exit ramp under oracle stress, debt ceilings cap blast radius per market, and existing-market oracles are immutable (governance can only ADD new dependencies via a 7-day timelock, not silently swap existing ones); L2 deployments add a small canonical-bridge dependency limited to ~5% of TVS.",
+      "green": "Mainnet LlamaLend markets (~95% of TVS) consume only Curve's own internal pool oracles (no Chainlink or off-chain reporter committee), the LLAMMA architecture's continuous soft-liquidation is a structural exit mechanism that survives moderate oracle errors, every market is isolated so a single underlying or pool failure contaminates only depositors who opted into that market, all critical contracts are immutable Vyper with no upgrade path to swap an existing market's oracle, and liquidations are entirely permissionless."
+    },
+    "verdict": "Choosing orange because LlamaLend markets read external price oracles (Curve pool internal price_oracle() EMAs, plus rate-provider calls into LST/LRT collateral contracts, plus Chainlink-composed adapters in some stablecoin/BTC markets) on every band rebalance \u2014 A1 is non-empty, and a sustained Curve pool manipulation or rate-provider misbehavior CAN materially change LLAMMA band placement and trigger inappropriate soft-liquidation conversions even though it is unlikely to cause loss of principal across the protocol. Mitigations are LIVE and meaningful (EMA smoothing, soft-liquidation, debt ceilings, per-market isolation, immutable per-market oracles, 7-day timelock on adding new markets) but do not eliminate the dependency. Impacted TVS under any single-dependency failure is bounded: a single underlying-pool oracle manipulation hits only the markets reading that specific pool (typically <30% of LlamaLend TVS); a canonical-bridge failure hits only L2 deployments (~5.4% of TVS combined). Per DefiScan v1 stage-1 framing \u2014 failure of an external dependency CAN materially change expected performance but cannot cause cross-protocol loss of principal \u2014 orange fits better than green (the dependencies are real and not all green at module level) and better than red (no cross-cutting dependency could put principal at risk across the whole protocol; the architecture isolates per-market and per-chain blast radius)."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "shows": "OneWayLendingFactory on Ethereum \u2014 the canonical factory that deploys per-market (Vault, Controller, AMM, PriceOracle) quadruples for LlamaLend; controllers() / vaults() / amms() arrays enumerate all live mainnet markets.",
+      "chain": "Ethereum",
+      "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://arbiscan.io/address/0xcaec110c784c9df37240a8ce096d352a75922dea",
+      "shows": "OneWayLendingFactory on Arbitrum \u2014 independent deployment of LlamaLend on Arbitrum One; markets here use bridged crvUSD as the lent asset.",
+      "chain": "Arbitrum",
+      "address": "0xcaec110c784c9df37240a8ce096d352a75922dea",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://fraxscan.com/address/0xf3c9bdab17b7016fbe3b77d17b1602a7db93ac66",
+      "shows": "OneWayLendingFactory on Fraxtal \u2014 independent deployment of LlamaLend on Fraxtal; markets here use bridged crvUSD as the lent asset.",
+      "chain": "Fraxtal",
+      "address": "0xf3c9bdab17b7016fbe3b77d17b1602a7db93ac66",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://optimistic.etherscan.io/address/0x5ea8f3d674c70b020586933a0a5b250734798bef",
+      "shows": "OneWayLendingFactory on Optimism \u2014 independent deployment of LlamaLend (small TVS, ~$31k per snapshot).",
+      "chain": "Optimism",
+      "address": "0x5ea8f3d674c70b020586933a0a5b250734798bef",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://github.com/curvefi/curve-stablecoin",
+      "shows": "Source repo containing LlamaLend Vyper contracts: contracts/lending/OneWayLendingFactory.vy, Vault.vy (ERC4626), Controller.vy, AMM.vy (LLAMMA), and contracts/price_oracles/ (CryptoFromPool, CryptoFromPoolsRate, CryptoFromPoolVault, AggregateStablePrice2). Reading these confirms which external addresses are called per market and that LLAMMA's price_oracle is set at __init__ and not exposed via a setter.",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/curve-llamalend",
+      "shows": "TVS distribution across LlamaLend chains used for module weighting: total $69.3M, Ethereum $65.6M (94.6%), Arbitrum $2.95M (4.3%), Fraxtal $0.73M (1.1%), Optimism $31k (~0.05%). Confirms forked_from=null and parent_slug=curve-finance.",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent \u2014 the on-chain admin that holds add-market / parameter-change authority on LlamaLend factories; only callable via Voting (Ownership) with the standard ~7-day Curve DAO timelock path. Relevant to A9.",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Curve Emergency DAO 5-of-9 Gnosis Safe \u2014 bounded emergency-pause authority on LlamaLend Controllers; cannot post oracle data (A2 negative) and cannot swap an existing market's oracle (A9-bounded).",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/lending/overview/",
+      "shows": "Curve Lending (LlamaLend) developer documentation \u2014 describes the per-market isolated architecture: each market has its own Controller, AMM, Vault (ERC4626), and price oracle; each market is independently parameterized.",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/crvUSD/oracle/",
+      "shows": "Curve oracle architecture docs \u2014 covers CryptoFromPool, CryptoFromPoolsRate, CryptoFromPoolVault, and AggregateStablePrice price-oracle adapters used by both crvUSD mint markets and LlamaLend lending markets; confirms EMA smoothing on Curve pool internal price_oracle() reads.",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+      "shows": "Curve Lending (LlamaLend) audit report \u2014 confirms per-market isolation and LLAMMA mechanism; documents the oracle adapter pattern.",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+      "shows": "Curve Stablecoin / LLAMMA audit \u2014 describes the AMM, Controller, and PriceOracle architecture that LlamaLend reuses; confirms LLAMMA's price_oracle reference is immutable post-deploy.",
+      "fetched_at": "2026-04-28T10:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: Did not enumerate every per-market PriceOracle adapter address on-chain across the four LlamaLend factory deployments \u2014 the architecture is per-market-immutable but exhaustive market-by-market oracle inspection (which Curve pool, which rate provider, presence of Chainlink composition) was not performed for every active market on M-ETH/M-ARB/M-FRX/M-OP. The architecture-level grade still holds because the factory pattern is fixed, but specific per-market dependency surfaces are an unaudited tail.",
+    "A3: Did not verify on-chain whether the bridged crvUSD on Arbitrum / Fraxtal uses the canonical Curve xERC20 lockbox or a LayerZero OFT, and what the trust model of that bridge is in detail. M-OP also presumed canonical-bridge but not directly verified.",
+    "A6: Did not measure on-chain the exact EMA half-life and bandwidth-clamp constants in each PriceOracle adapter \u2014 read the architecture from docs and source rather than from a Read Contract call on each adapter's public state variable on each chain.",
+    "A7: Did not verify whether the Fraxtal sequencer/DA trust model differs materially from Optimism's (Fraxtal is OP-Stack-based but the operator and liveness guarantees were not directly audited for this assessment)."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin"
+    ],
+    "docs_url": "https://docs.curve.finance/lending/overview/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+        "date": "2023-04"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+        "date": "2024"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://github.com/mixbytes/audits_public/tree/master/Curve%20Finance/Curve%20Lending",
+        "date": "2024-03"
+      }
+    ],
+    "governance_forum": "https://gov.curve.finance/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "symbol": "CRV"
+    },
+    "bug_bounty_url": "https://hackerone.com/curvefi",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "Curve DAO Voting (Ownership)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO 5-of-9 Gnosis Safe",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Curve LlamaLend is Curve's isolated lending product: each market is a per-collateral silo built on Curve's LLAMMA (Lending-Liquidating AMM) mechanism, the same architecture that powers crvUSD mint markets. Lenders deposit a borrow asset (commonly crvUSD) into an ERC4626 vault and earn interest; borrowers lock collateral into a per-market AMM that continuously soft-liquidates positions via arbitrage as price moves through bands, replacing discrete liquidation thresholds with a smooth conversion ramp. Markets are deployed via the OneWayLendingFactory on Ethereum, Arbitrum, Fraxtal, and Optimism; each market has its own immutable price oracle (typically reading from a Curve pool's internal EMA), debt ceiling, and parameters. Governance is via the Curve DAO (CRV/veCRV) with a ~7-day Voting (Ownership) timelock and a 5-of-9 Emergency DAO multisig for bounded pause authority."
+  }
+}
