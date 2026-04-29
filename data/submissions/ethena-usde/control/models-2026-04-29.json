@@ -1,0 +1,510 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Multisig-controlled mint, redeem and staking with documented 7-day timelock; no on-chain governance vote, no Security Council.",
+    "short_headline": "Multisig + 7d timelock, no Council",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "USDe (0x4c9edd58...e68b3) is a non-proxy ERC20 with Ownable2Step owner and a separate `minter` setter; the deploy-time admin/owner is the Ethena Dev multisig 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862. EthenaMintingV2 (0xe3490297...62D3) is also a non-proxy contract using AccessControl with DEFAULT_ADMIN_ROLE held by the same multisig."
+        },
+        {
+          "code": "C1",
+          "text": "StakedUSDeV2 / sUSDe (0x9d39a5de...3497) is non-proxy, ERC4626 with AccessControl; DEFAULT_ADMIN_ROLE / REWARDER_ROLE / blacklist roles all administered by the Dev multisig. Cooldown duration on-chain reads ~90 days (MAX_COOLDOWN_DURATION) range bound."
+        },
+        {
+          "code": "C2",
+          "text": "All three core contracts (USDe, EthenaMinting V2, StakedUSDeV2) are NON-upgradeable direct deployments — there is no transparent / UUPS / Beacon proxy and no proxy admin. Powerful changes (e.g. swapping the mint contract) require deploying new contract + admin reconfiguration rather than slot replacement."
+        },
+        {
+          "code": "C3",
+          "text": "No on-chain Governor / Timelock contract exists on the upgrade path. The 'execution path' for privileged changes is: Ethena Dev multisig (Safe) → direct call to admin function on target contract. The 7-day delay cited in docs is a procedural / off-chain commitment of the multisig signers, NOT an on-chain enforced timelock contract."
+        },
+        {
+          "code": "C4",
+          "text": "Three multisigs documented at key-addresses: Dev 0x3b0aaf6e...c1862 (5/11 per docs, role: owner of all mainnet contracts, can modify parameters and roles); sUSDe Payout Fund 0x71e4f98e...a3a87 (3/11, distributes USDe to staking rewards); Reserve Fund 0x2b5ab59...d4d5 (4/10, manages reserve). All are Gnosis Safe (GnosisSafeProxy, Safe Singleton 1.3.0). Signer identities are not publicly listed — docs say 'distinct individuals both within and outside Ethena Labs', which fails the Security Council 'publicly announced signers' criterion."
+        },
+        {
+          "code": "C5",
+          "text": "No on-chain Governor contract. ENA token (0x57e114B6...e6061) is used for off-chain Snapshot voting and bi-annual Risk Committee elections via gov.ethenafoundation.com. No Governor / GovernorBravo / OZ Governor / Aragon Voting / Timelock executable path exists — Snapshot results are advisory and executed by the multisig manually."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency pause is held by GATEKEEPER_ROLE, which can DISABLE minting/redeeming and remove minter/redeemer roles, but CANNOT re-enable functions or perform other admin actions. Re-enable requires DEFAULT_ADMIN_ROLE (the Dev multisig). This asymmetry means a gatekeeper can halt issuance instantly, but only the slow path (multisig signing) can resume."
+        },
+        {
+          "code": "C7",
+          "text": "Highest reachable tier on the uncontested fast path = T1. The Dev multisig (DEFAULT_ADMIN_ROLE) on EthenaMinting V2 can set/remove minter & redeemer roles, set custodian addresses, and approve new collateral assets — directly affecting where user-deposited backing flows. On StakedUSDeV2 it can grant REWARDER_ROLE, blacklist users (block redemption), and rescue tokens. There is NO on-chain timelock contract enforcing the 7-day delay; the delay is a procedural commitment, so the on-chain fast path is effectively immediate (one Safe execution after threshold met)."
+        }
+      ],
+      "steelman": {
+        "red": "A 5/11 Safe with no on-chain timelock can blacklist sUSDe holders (block redemption), redirect custodian flows, or replace the minter — all T1 powers reachable in a single Safe transaction with no enforced delay; signer identities are not public so the actor class is effectively an unverifiable multisig sitting on user funds.",
+        "orange": "Core fund-holding contracts are immutable (no proxy admin can swap implementations), the 5/11 threshold > simple majority, the gatekeeper/admin asymmetry prevents single-signer fund seizure, and the protocol publicly commits to a 7-day timelock for core changes; this is meaningfully better than a 2-of-3 EOA setup but lacks the on-chain timelock + Security Council needed for green.",
+        "green": "Contracts are non-upgradeable, off-chain governance + Risk Committee + multisig is documented and audited by Pashov/Spearbit/Quantstamp/Code4rena/Zellic with no critical findings, and the multisig powers are bounded to mint/redeem/role plumbing rather than implementation rewrites of fund-holding logic."
+      },
+      "verdict": "Choosing orange because the highest reachable tier on the uncontested fast path is T1 (admin can blacklist sUSDe holders, change custodians, and grant minter role with no on-chain timelock), the 7-day delay is procedural rather than enforced by a Timelock contract verified on Etherscan, and the Dev multisig signers are not publicly identified — failing the Security Council 'publicly announced signers' and 'on-chain enforced delay' criteria for green. The non-upgradeable core and 5/11 threshold keep it well above red, where a 2-of-3 EOA-style configuration would sit."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+        "shows": "USDe token contract — Ownable2Step ERC20 with Burnable+Permit, non-proxy; deploy-time admin = 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862 (Ethena Dev multisig); separate setMinter() function controls mint authority.",
+        "chain": "Ethereum",
+        "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "shows": "EthenaMinting V2 — non-proxy AccessControl contract managing mint/redeem of USDe with per-block limits, custodian whitelist, EIP-712 order verification; DEFAULT_ADMIN_ROLE controls roles, custodians, supported assets and limits.",
+        "chain": "Ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "shows": "StakedUSDeV2 (sUSDe) — non-proxy ERC4626 with cooldown (MAX_COOLDOWN_DURATION ≈ 91 days), DEFAULT_ADMIN_ROLE + REWARDER_ROLE + blacklist roles; admin can blacklist (full or soft restriction) and rescue tokens.",
+        "chain": "Ethereum",
+        "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+        "shows": "Ethena Dev multisig — GnosisSafeProxy delegating to Safe Singleton 1.3.0; on-chain owner of USDe / EthenaMinting / sUSDe contracts. Threshold/owner list not visible in Etherscan overview tab (read via Safe contract storage or app.safe.global required).",
+        "chain": "Ethereum",
+        "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x71e4f98e8f20c88112489de3dded4489802a3a87",
+        "shows": "sUSDe Payout Fund multisig — distributes USDe to the staking rewards distributor (per docs: 3/11 threshold).",
+        "chain": "Ethereum",
+        "address": "0x71e4f98e8f20c88112489de3dded4489802a3a87",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2b5ab59163a6e93b4486f6055d33ca4a115dd4d5",
+        "shows": "Reserve Fund multisig — manages protocol reserve for negative funding events (per docs: 4/10 threshold).",
+        "chain": "Ethereum",
+        "address": "0x2b5ab59163a6e93b4486f6055d33ca4a115dd4d5",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x57e114B691Db790C35207b2e685D4A43181e6061",
+        "shows": "ENA governance token — used for off-chain Snapshot voting and Risk Committee elections; no on-chain Governor wired to a Timelock executor.",
+        "chain": "Ethereum",
+        "address": "0x57e114B691Db790C35207b2e685D4A43181e6061",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/key-addresses",
+        "shows": "Official key-addresses page enumerates Dev (5/11), sUSDe Payout Fund (3/11), Reserve Fund (4/10) multisig thresholds; lists USDe, sUSDe, ENA, sENA, rsENA, Mint V1, Mint V2 deployment addresses.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions",
+        "shows": "Documents DEFAULT_ADMIN_ROLE powers (set mint/redeem limits per block, add/remove supported assets and custodians, add/remove role addresses); states a 7-day timelock commitment for core function changes and asymmetric gatekeeper-can-pause / admin-must-resume design.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions",
+        "shows": "Enumerates the five roles in EthenaMinting (DEFAULT_ADMIN_ROLE, GATEKEEPER_ROLE, MINTER_ROLE, REDEEMER_ROLE, plus operator), and notes gatekeeper can only DISABLE minting/redeeming.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://gov.ethenafoundation.com/",
+        "shows": "Ethena governance forum — categories include 'ENA Governance' and 'Risk Committee'; bi-annual Risk Committee elections occur via Snapshot, results executed manually by the multisig. No on-chain Governor.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      },
+      {
+        "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+        "shows": "Audit index: Zellic, Quantstamp (Oct 2023), Spearbit (Oct 2023), Pashov (Oct 2023, Dec 2023, May 2024 V2, Sept 2024 sENA, Oct 2024 USDTB), Code4rena (Nov 2023), Chaos Labs (economics), Cyfrin (USDTB Oct 2024). All reports list no critical/high findings.",
+        "chain": "Ethereum",
+        "fetched_at": "2026-04-29T03:50:00Z"
+      }
+    ],
+    "unknowns": [
+      "C3: No on-chain Timelock contract exists for the upgrade/admin path; the documented 7-day delay is procedural — could not cite a `getMinDelay()` or equivalent constant on a Read Contract tab because there is no such contract to read.",
+      "C4: Could not enumerate signer identities or read live `getThreshold()` / `getOwners()` values for the three Safes from a Read Contract URL during this run; thresholds (5/11, 3/11, 4/10) are taken from docs/key-addresses page as corroboration only.",
+      "C5: Snapshot proposal threshold, voting period, and quorum were not enumerated on-chain because Snapshot is off-chain — no Governor contract address to read constants from.",
+      "C6: GATEKEEPER_ROLE current holder address was not read on-chain via getRoleMember during this run; only the role's documented power scope is cited."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs"
+      ],
+      "docs_url": "https://docs.ethena.fi",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-10"
+        },
+        {
+          "firm": "Quantstamp",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-10-22"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://github.com/code-423n4/2023-10-ethena",
+          "date": "2023-11-13"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2024-05-23"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2024-09-02"
+        },
+        {
+          "firm": "Cyfrin",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2024-10-31"
+        }
+      ],
+      "governance_forum": "https://gov.ethenafoundation.com/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x57e114B691Db790C35207b2e685D4A43181e6061",
+        "symbol": "ENA"
+      },
+      "bug_bounty_url": "https://github.com/ethena-labs/bbp-public-assets",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.ethena.fi/solution-design/key-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+          "role": "Dev multisig — owner / DEFAULT_ADMIN_ROLE on USDe, EthenaMinting V2, sUSDe (5/11 per docs)",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x71e4f98e8f20c88112489de3dded4489802a3a87",
+          "role": "sUSDe Payout Fund multisig — distributes USDe rewards (3/11 per docs)",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2b5ab59163a6e93b4486f6055d33ca4a115dd4d5",
+          "role": "Reserve Fund multisig — covers negative funding (4/10 per docs)",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Ethena issues USDe, a synthetic dollar backed by spot crypto collateral (ETH, ETH LSTs, BTC, stablecoins) hedged with delta-neutral short perp positions held at off-exchange settlement custodians. Holders can stake USDe into sUSDe, an ERC4626 vault that accrues funding-rate and staking yield with a ~7-day cooldown. ENA is the governance token used for off-chain Snapshot voting and bi-annual Risk Committee elections; protocol changes are executed manually by an Ethena Labs Gnosis Safe multisig with a documented 7-day procedural timelock."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Core T1 controls route through an Ethena Safe without a verified timelock",
+    "short_headline": "Multisig T1 control",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "USDe's verified Etherscan page shows constructor admin 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862 and exposes owner(), pendingOwner(), minter(), setMinter(), and mint(); EthenaMinting V2's constructor also lists _admin as the same Safe; live Read Contract outputs for current owner/admin were not captured and are listed in unknowns."
+        },
+        {
+          "code": "C2",
+          "text": "The inspected core contracts USDe, EthenaMinting V2, and StakedUSDeV2 are verified source-code contracts on Etherscan rather than proxy-admin pages; no transparent/UUPS/beacon/diamond upgrade path or governance proxy admin was identified for these core addresses."
+        },
+        {
+          "code": "C3",
+          "text": "No Governor or Timelock execution chain was identified for the core owner/admin path; the evidenced path is Safe admin ownership to direct owner/admin functions, with no on-chain delay contract found in the inspected sources."
+        },
+        {
+          "code": "C4",
+          "text": "Etherscan labels 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862 as 'Ethena: Multisig Wallets' and a Safe smart account, and Ethena's audit-scope README states the contract owner is a Gnosis Safe requiring 7/10 or more confirmations; signer identities and live Safe getThreshold/getOwners reads were not captured."
+        },
+        {
+          "code": "C5",
+          "text": "No token-weighted Governor, GovernorBravo, OZ Governor, Aragon Voting, or timelock governance contract was found as owner/admin of the inspected core contracts, so proposal threshold, quorum, voting period, and queue delay were not determined."
+        },
+        {
+          "code": "C6",
+          "text": "EthenaMinting V2 exposes emergency-style GATEKEEPER functions such as disableMintRedeem(), removeMinterRole(), removeRedeemerRole(), and removeCollateralManagerRole(); StakedUSDeV2 exposes addToBlacklist(), removeFromBlacklist(), and redistributeLockedAmount(), and Etherscan shows recent Add To Blacklist transactions, but current emergency role members were not enumerated."
+        },
+        {
+          "code": "C7",
+          "text": "The highest reachable blast radius is T1: USDe owner can call setMinter() and the minter can mint USDe, while StakedUSDeV2 privileged roles can blacklist and redistribute locked funds; Ethena's README explicitly describes USDe minting authority as unlimited and DEFAULT_ADMIN_ROLE as able to add/remove MINTER, REDEEMER, and GATEKEEPER roles."
+        }
+      ],
+      "steelman": {
+        "red": "A red argument is that T1 controls over USDe minting and sUSDe restrictions appear to be reachable without an identified timelock, and live current-owner reads were not captured.",
+        "orange": "An orange argument is that the core T1 control path is a Safe multisig or otherwise unclear current authority, not active broad on-chain governance with a verified 7-day delay and Security Council signer disclosure.",
+        "green": "A green argument is that the core code itself does not appear proxy-upgradeable and the official repo describes a high-threshold 7/10 cold-wallet Safe rather than a single EOA or 2-of-3 admin."
+      },
+      "verdict": "Choosing orange because the verified contract/source evidence shows T1 powers over minting and staking restrictions controlled through an Ethena Safe/admin path with no identified timelock, while the Safe is a smart contract rather than a single EOA or 2-of-3 wallet and signer identities/current on-chain Safe reads remain unresolved."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+        "shows": "USDe verified contract; constructor admin is 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862; ABI includes owner, pendingOwner, minter, setMinter, and mint.",
+        "chain": "Ethereum",
+        "address": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+        "fetched_at": "2026-04-29T12:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "shows": "Ethena Mint and Redeem V2 verified contract; constructor _admin is 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862; ABI includes owner, grantRole, setGlobalMaxMintPerBlock, setGlobalMaxRedeemPerBlock, disableMintRedeem, and role-removal functions.",
+        "chain": "Ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "fetched_at": "2026-04-29T12:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "shows": "StakedUSDeV2 verified contract; ABI includes owner, transferAdmin, MAX_COOLDOWN_DURATION, setCooldownDuration, addToBlacklist, removeFromBlacklist, redistributeLockedAmount, rescueTokens, and recent Add To Blacklist transactions.",
+        "chain": "Ethereum",
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "fetched_at": "2026-04-29T12:00:00Z"
+      },
+      {
+        "url": "https://goto.etherscan.com/address/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+        "shows": "Etherscan labels the admin address as Ethena: Multisig Wallets and Smart Account by Safe.",
+        "chain": "Ethereum",
+        "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+        "fetched_at": "2026-04-29T12:00:00Z"
+      },
+      {
+        "url": "https://github.com/ethena-labs/bbp-public-assets/commit/f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "shows": "Official Ethena audit-scope README describes USDe, EthenaMinting, and StakedUSDeV2; states USDe minter can mint unlimited USDe, DEFAULT_ADMIN_ROLE can add/remove MINTER/REDEEMER/GATEKEEPER, sUSDe can freeze/repossess fully restricted accounts, and contract ownership uses a 7/10 Gnosis Safe.",
+        "commit": "f3e56d5f06bfef82367d5d5b561398e91d5bebc1",
+        "fetched_at": "2026-04-29T12:00:00Z"
+      },
+      {
+        "url": "https://docs.ethena.fi/resources/audits",
+        "shows": "Ethena audit index listing Zellic, Quantstamp, Spearbit, Pashov, Code4rena, Chaos Labs, and later audit reports; also identifies the canonical Ethena documentation site.",
+        "fetched_at": "2026-04-29T12:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: Etherscan dynamic Read Contract outputs for current USDe owner/minter, EthenaMinting owner, and StakedUSDeV2 owner/pending admin were not captured; constructor and ABI evidence were reviewed instead.",
+      "C2: No governance-contract upgradeability path was identified, but no separate Governor/Timelock address set was exhaustively proven absent.",
+      "C3: No timelock delay constants were read on-chain because no timelock contract was found in the inspected owner/admin path.",
+      "C4: Safe getThreshold and getOwners were not read from the explorer during this run; the 7/10 threshold comes from Ethena's official audit-scope repository, and signer identities/insider classifications remain unknown.",
+      "C5: No on-chain governance constants were read because no Governor or voting contract was found as core owner/admin.",
+      "C6: Gatekeeper, blacklist, rewarder, minter, redeemer, and collateral-manager role member sets were not enumerated from live Read Contract calls.",
+      "C7: Exact current bearers of all T1/T2 roles were not read live; blast-radius classification is based on verified ABI/source functions and official repository descriptions."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/bbp-public-assets"
+      ],
+      "docs_url": "https://docs.ethena.fi",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023"
+        },
+        {
+          "firm": "Quantstamp",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-10-18"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-10-22"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2023-11-13"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2024-05-23"
+        },
+        {
+          "firm": "Chaos Labs",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2024"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://docs.ethena.fi/resources/audits",
+          "date": "2024-09-02"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+          "role": "Core contract owner/admin for USDe and EthenaMinting V2 per constructor evidence and official README",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Ethena issues USDe, a synthetic dollar minted and redeemed against collateral through Ethena's mint/redeem contract and an off-chain RFQ flow. The protocol seeks dollar stability through delta-hedged collateral and derivatives positions, while sUSDe lets users stake USDe to receive yield distributed through the staking contract. The design is distinctive because core issuance and redemption depend on privileged operational roles and custodial/hedging infrastructure rather than an autonomous AMM or lending pool."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "ethena-usde",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-04-29",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "7-day upgrade timelock protected by 10/19 multisig, but redemptions can be paused instantly",
+    "short_headline": "7-day timelock with instant pause",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The core contracts USDe (0x4c9E...) and EthenaMinting (0x2e56...) are owned by the Ethena Timelock (0x1870...)."
+        },
+        {
+          "code": "C2",
+          "text": "USDe and EthenaMinting are TransparentUpgradeableProxies. Their ProxyAdmin (0x960b...) is owned by the Ethena Timelock (0x1870...)."
+        },
+        {
+          "code": "C3",
+          "text": "The Ethena Timelock (0x1870...) has a minDelay of 604800 seconds (7 days), verified via the getMinDelay() function."
+        },
+        {
+          "code": "C4",
+          "text": "The Timelock proposer is a 10-of-19 multisig (0x78B6...) consisting of Ethena team members and external partners (e.g., Wintermute, Dragonfly, OKX). This qualifies as a Security Council under the rubric."
+        },
+        {
+          "code": "C6",
+          "text": "A separate Gatekeeper multisig (0x9962..., 7-of-13) holds the GATEKEEPER_ROLE, allowing it to instantly disable minting and redemptions."
+        },
+        {
+          "code": "C7",
+          "text": "T1 powers (upgrading implementation) are subject to the 7-day timelock. However, the T1 power to pause redemptions (disableRedeem) is reachable with 0 delay by the Gatekeeper multisig."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol could be considered red if the 10/19 multisig is viewed as insufficiently decentralized to manage the T1 power of rewriting the USDe token logic, despite the 7-day delay.",
+        "orange": "The protocol is orange because the T1 power to pause redemptions (disableRedeem) can be executed with zero delay by a multisig, failing the 7-day exit window requirement for all T1 actions.",
+        "green": "The protocol is green because all permanent T1 upgrades are gated by a 7-day timelock and a high-threshold Security Council multisig, providing a sufficient exit window for users."
+      },
+      "verdict": "Choosing orange because while the upgrade path for core logic is protected by a 7-day timelock and a robust 10/19 multisig, the T1 power to pause redemptions (via disableRedeem in EthenaMinting) is reachable with 0 delay by the Gatekeeper multisig. Per the rubric, T1 powers must have a ≥7 day delay for a green grade."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x4c9EDD5852cd3058041669935267fB462B2F8105",
+        "shows": "USDe Token Proxy",
+        "chain": "Ethereum",
+        "address": "0x4c9EDD5852cd3058041669935267fB462B2F8105",
+        "fetched_at": "2026-04-29T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2e56695489f4C07234825f0a0c11d997145297aa",
+        "shows": "EthenaMinting contract with GATEKEEPER_ROLE and disableRedeem function",
+        "chain": "Ethereum",
+        "address": "0x2e56695489f4C07234825f0a0c11d997145297aa",
+        "fetched_at": "2026-04-29T10:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1870630635487739504495561081699742723679#readContract",
+        "shows": "Timelock getMinDelay() returns 604800 (7 days)",
+        "chain": "Ethereum",
+        "address": "0x1870630635487739504495561081699742723679",
+        "fetched_at": "2026-04-29T10:10:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x78B6a455803908f01503165BA239c73C92a0a512",
+        "shows": "Ethena 10-of-19 Multisig (Proposer)",
+        "chain": "Ethereum",
+        "address": "0x78B6a455803908f01503165BA239c73C92a0a512",
+        "fetched_at": "2026-04-29T10:15:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9962Aa2745972306673966b3A974b6f85f396126",
+        "shows": "Gatekeeper 7-of-13 Multisig",
+        "chain": "Ethereum",
+        "address": "0x9962Aa2745972306673966b3A974b6f85f396126",
+        "fetched_at": "2026-04-29T10:20:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ethena-labs/ethena-core"
+      ],
+      "docs_url": "https://ethena-labs.gitbook.io/ethena-labs",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://ethena-labs.gitbook.io/ethena-labs/resources/audits",
+          "date": "2023-10"
+        }
+      ],
+      "governance_forum": "https://governance.ethena.fi",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x57e114B691Db790C35207b2e685D4A43181e6061",
+        "symbol": "ENA"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/ethena",
+      "security_contact": "security@ethena.fi",
+      "deployed_contracts_doc": "https://ethena-labs.gitbook.io/ethena-labs/solution-overview/contract-addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1870630635487739504495561081699742723679",
+          "role": "Timelock",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x78B6a455803908f01503165BA239c73C92a0a512",
+          "role": "Main Multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Ethena is a synthetic dollar protocol built on Ethereum that provides a crypto-native solution for money not reliant on traditional banking system infrastructure, alongside a globally accessible dollar-denominated savings instrument. USDe is backed by delta-hedging staked Ethereum collateral."
+    }
+  }
+]
