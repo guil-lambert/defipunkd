@@ -21,6 +21,14 @@ export type LandingRow = {
   verifiability_grade: GradeColor;
   autonomy_grade: GradeColor;
   assessment_grades?: Partial<Record<"control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability", GradeColor>>;
+  slice_summary?: Array<{
+    id: "control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability";
+    label: string;
+    grade: GradeColor;
+    headline: string;
+    partial?: boolean;
+  }>;
+  slice_summary_source_name?: string;
   tier?: Tier;
 };
 

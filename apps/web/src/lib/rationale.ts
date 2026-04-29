@@ -13,6 +13,7 @@ export type SliceAssessment = {
   structured?: Rationale;
   strength?: "strong" | "weak";
   models?: string[];
+  models_with_chat_url?: number;
   /** True when at least one submission exists but quorum is not met. UI hides
    * verdict + steel-man and shows an "(N/3 models submitted)" pill instead of a
    * grade chip. */
@@ -20,7 +21,7 @@ export type SliceAssessment = {
   partialModelGrades?: { model: string; grade: GradeColor }[];
 };
 
-function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models"> {
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
   return {
     grade,
@@ -30,6 +31,7 @@ function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "gra
     structured: a.rationale,
     strength: a.strength,
     models: a.models,
+    models_with_chat_url: a.models_with_chat_url,
   };
 }
 

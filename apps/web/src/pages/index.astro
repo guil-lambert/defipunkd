@@ -10,7 +10,8 @@ import { buildNodes, chainTvlFromNodes, tabCountsFromNodes, type LandingRow } fr
 import { verifiabilityGrade } from "../lib/verifiability";
 import { autonomyGrade } from "../lib/autonomy";
 import { deriveTier, type TierInput } from "../lib/tier";
-import type { PizzaSliceId } from "../lib/pizza";
+import { type PizzaSliceId } from "../lib/pizza";
+import { assessProtocol, cexAssessment } from "../lib/rationale";
 
 const protocols = listProtocols();
 const assessments = getAssessments();
@@ -52,6 +53,14 @@ const rows: LandingRow[] = protocols.map((p) => {
     }
   }
   const tier = deriveTier(tierInput);
+  const sliceList = p.category === "CEX" ? cexAssessment() : assessProtocol(p, bySlice, subBySlice);
+  const slice_summary = sliceList.map((s) => ({
+    id: s.id,
+    label: s.label,
+    grade: s.grade,
+    headline: s.short_headline || s.headline || "",
+    partial: s.partial,
+  }));
   return {
     slug: p.slug,
     name: p.name,
@@ -68,9 +77,37 @@ const rows: LandingRow[] = protocols.map((p) => {
     verifiability_grade: verifiabilityGrade(!!(p.github && p.github.length > 0), p.audit_count ?? 0),
     autonomy_grade: autonomyGrade(p.category, p.forked_from),
     assessment_grades,
+    slice_summary,
     tier,
   };
 });
+
+// For parent rows without their own assessments, inherit slice_summary from the
+// largest-TVL child so the hover popover still has meaningful content.
+{
+  const childrenByParent = new Map<string, LandingRow[]>();
+  for (const r of rows) {
+    if (!r.parent_slug) continue;
+    const bucket = childrenByParent.get(r.parent_slug) ?? [];
+    bucket.push(r);
+    childrenByParent.set(r.parent_slug, bucket);
+  }
+  for (const r of rows) {
+    if (!r.is_parent) continue;
+    // Always inherit slice_summary from the largest-TVL child for parents,
+    // since the parent itself does not carry per-slice assessments.
+    const kids = childrenByParent.get(r.slug);
+    if (!kids || kids.length === 0) continue;
+    const best = [...kids].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))[0];
+    if (best) {
+      r.slice_summary = best.slice_summary;
+      r.slice_summary_source_name = best.name;
+      r.verifiability_grade = best.verifiability_grade;
+      r.autonomy_grade = best.autonomy_grade;
+      r.assessment_grades = best.assessment_grades;
+    }
+  }
+}
 
 if (unmapped.size > 0) {
   console.warn(

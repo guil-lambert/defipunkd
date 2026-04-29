@@ -14,6 +14,27 @@
   import TierLegend from "./TierLegend.svelte";
   import { TIER_LABEL, type Tier } from "../lib/tier";
 
+  const SLICE_ORDER: Record<string, number> = {
+    verifiability: 0,
+    control: 1,
+    "ability-to-exit": 2,
+    autonomy: 3,
+    "open-access": 4,
+  };
+
+  const GRADE_BG: Record<string, string> = {
+    red: "oklch(0.62 0.170 22)",
+    orange: "oklch(0.78 0.140 75)",
+    green: "oklch(0.74 0.140 150)",
+    gray: "oklch(0.72 0.015 235)",
+  };
+  const GRADE_FG: Record<string, string> = {
+    red: "#fff",
+    orange: "#1a1208",
+    green: "#081610",
+    gray: "#0d1114",
+  };
+
   type ToggleableTier = Exclude<Tier, "none">;
 
   const DEFAULT_PAGE = 200;
@@ -249,6 +270,9 @@
   {@const pz = pizzaPaths(grades, "sm")}
   {@const initial = row.name.charAt(0).toUpperCase()}
   {@const tier = row.tier ?? "none"}
+  {@const dominantCat = isFamilyHead && row.children
+    ? [...row.children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))[0]?.category
+    : null}
   <tr class:child={isChild}>
     <td class="name-cell" class:child-cell={isChild}>
       <div class="name-inner">
@@ -280,6 +304,43 @@
     </td>
     <td class="pizza-cell">
       <div class="pizza-wrap">
+        <div class="pizza-popover" role="tooltip" aria-hidden="true">
+            <div class="pp-head">
+              <span class="pp-logo" aria-hidden="true">
+                {initial}
+                {#if row.logo}
+                  <img src={row.logo} alt="" loading="lazy" decoding="async" width="28" height="28" />
+                {/if}
+              </span>
+              <div class="pp-name">
+                {row.name}{#if row.slice_summary_source_name}<span class="pp-name-arrow"> → </span><span class="pp-name-child">{row.slice_summary_source_name}</span>{/if}
+              </div>
+            </div>
+            {#if tier !== "none"}
+              <div class="pp-tier">
+                <span class="pp-tier-chip">
+                  <TierMedal tier={tier} size={16} />
+                  <span>{TIER_LABEL[tier]}</span>
+                </span>
+              </div>
+            {/if}
+            {#if dominantCat}
+              <div class="pp-cat">{dominantCat}</div>
+            {/if}
+            {#if row.slice_summary && row.slice_summary.length > 0}
+              <ul class="pp-list">
+                {#each [...row.slice_summary].sort((a, b) => (SLICE_ORDER[a.id] ?? 9) - (SLICE_ORDER[b.id] ?? 9)) as ss}
+                  <li class="pp-row">
+                    <span class="pp-label">{ss.label}</span>
+                    <span class="pp-chip" style:background={GRADE_BG[ss.grade]} style:color={GRADE_FG[ss.grade]}>
+                      {ss.partial ? "tentative" : ss.grade === "gray" ? "unknown" : ss.grade}
+                    </span>
+                    <span class="pp-headline">{ss.headline}</span>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
         <svg width={pz.radius * 2} height={pz.radius * 2} viewBox={`0 0 ${pz.radius * 2} ${pz.radius * 2}`} role="img" aria-label="risk pizza (all unknown)">
           {#each pz.paths as p}
             <a href={`/protocol/${row.slug}`}>
@@ -387,7 +448,7 @@
     color: var(--text-muted);
     font-size: 0.85rem;
   }
-  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .scroll { -webkit-overflow-scrolling: touch; }
   table {
     width: 100%;
     border-collapse: collapse;
@@ -405,6 +466,7 @@
     .scroll {
       margin-left: -1.5rem;
       margin-right: -1.5rem;
+      overflow-x: auto;
     }
     table { table-layout: auto; min-width: 710px; width: max-content; }
     th, td { white-space: nowrap; }
@@ -441,7 +503,7 @@
   tbody tr.child { background: var(--surface); }
   td { padding: 0.45rem 0.6rem; }
   .rank-cell { color: var(--text-muted); }
-  .name-cell.child-cell { padding-left: 2rem; }
+  .name-cell.child-cell { padding-left: calc(0.6rem + 44px + 6px + 1rem); }
   .toggle {
     box-sizing: border-box;
     background: transparent;
@@ -503,11 +565,136 @@
     color: var(--text-muted);
     font-size: 0.7rem;
   }
-  .pizza-cell { padding: 0.2rem 0.6rem; }
+  .pizza-cell { padding: 0.2rem 0.6rem; overflow: visible; }
   .pizza-wrap {
     position: relative;
     display: inline-block;
     line-height: 0;
+  }
+  .pizza-popover {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 8px);
+    transform: translateY(-50%) translateX(-4px);
+    width: 32rem;
+    max-width: 92vw;
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--surface-raised);
+    border-radius: 6px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+    padding: 1.1rem 1.25rem;
+    line-height: 1.35;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 100ms ease-out, transform 100ms ease-out;
+    z-index: 200;
+  }
+  .pizza-wrap:hover .pizza-popover,
+  .pizza-wrap:focus-within .pizza-popover {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+  .pp-head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.55rem;
+    border-bottom: 2px solid var(--brand-oxblood);
+  }
+  .pp-logo {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .pp-logo img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .pp-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .pp-name-arrow { color: var(--text-muted); font-weight: 500; }
+  .pp-name-child { color: var(--accent-link); }
+  .pp-tier { margin-bottom: 0.4rem; }
+  .pp-cat {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-bottom: 0.55rem;
+  }
+  .pp-tier-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+  }
+  .pp-list {
+    list-style: none;
+    padding: 0.4rem 0.5rem;
+    margin: 0;
+    display: grid;
+    gap: 0.55rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-raised);
+    border-radius: 4px;
+  }
+  .pp-row { padding: 0.15rem 0.25rem; }
+  .pp-row {
+    display: grid;
+    grid-template-columns: 6.5rem auto 1fr;
+    gap: 0.5rem;
+    align-items: baseline;
+    font-size: 0.75rem;
+  }
+  .pp-label {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .pp-chip {
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.08rem 0.4rem;
+    border-radius: 999px;
+    justify-self: start;
+    white-space: nowrap;
+  }
+  .pp-headline {
+    color: var(--text);
+    line-height: 1.35;
+    overflow: hidden;
+  }
+  @media (max-width: 720px) {
+    .pizza-popover { display: none; }
   }
   .stage-cell {
     text-align: center;

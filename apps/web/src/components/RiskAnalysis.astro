@@ -17,9 +17,15 @@ const familyMembers = isFamily
   : [];
 const rawSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
 
-const SEVERITY_ORDER: Record<string, number> = { red: 0, orange: 1, green: 2, gray: 3 };
+const SLICE_ORDER: Record<string, number> = {
+  verifiability: 0,
+  control: 1,
+  "ability-to-exit": 2,
+  autonomy: 3,
+  "open-access": 4,
+};
 const slices = [...rawSlices].sort(
-  (a, b) => (SEVERITY_ORDER[a.grade] ?? 9) - (SEVERITY_ORDER[b.grade] ?? 9),
+  (a, b) => (SLICE_ORDER[a.id] ?? 9) - (SLICE_ORDER[b.id] ?? 9),
 );
 const gradedSlices = slices.filter((s) => s.grade !== "gray" || s.partial);
 const graySlices = slices.filter((s) => s.grade === "gray" && !s.partial);
@@ -79,6 +85,7 @@ const auditSlices = slices.map((s) => ({
   prompt: promptFor(s.id as SliceId),
   submitUrl: submitUrl(s.id as SliceId),
   modelCount: s.models?.length ?? 0,
+  modelsWithChatUrl: s.models_with_chat_url ?? 0,
   hasQuorum: (s.models?.length ?? 0) >= QUORUM_MIN && !s.partial,
   isPartial: !!s.partial,
 }));
@@ -166,6 +173,14 @@ function partialPillText(modelCount: number): string {
                   ✓ {a.modelCount}/{a.modelCount} models agree
                 </span>
               )}
+              {a.hasQuorum && (
+                <span
+                  class="audit-chat-url"
+                  title={`${a.modelsWithChatUrl} of ${a.modelCount} runs included a public chat share link (chat_url)`}
+                >
+                  {a.modelsWithChatUrl}/{a.modelCount} with chat share link
+                </span>
+              )}
               {a.isPartial && (
                 <span class="audit-partial" title={`${a.modelCount} of ${QUORUM_MIN} models needed for quorum`}>
                   {a.modelCount}/{QUORUM_MIN} submitted
@@ -203,6 +218,14 @@ function partialPillText(modelCount: number): string {
                   {s.models.length >= 2
                     ? `${s.models.length}/${s.models.length} models agree`
                     : "1 model"}
+                </span>
+              )}
+              {!s.partial && s.models && s.models.length > 0 && (
+                <span
+                  class="consensus consensus-chat-url"
+                  title={`${s.models_with_chat_url ?? 0} of ${s.models.length} runs included a public chat share link (chat_url)`}
+                >
+                  {s.models_with_chat_url ?? 0}/{s.models.length} with chat share link
                 </span>
               )}
               <span class="card-toggle" aria-hidden="true">▸</span>
@@ -474,6 +497,18 @@ function partialPillText(modelCount: number): string {
     background: color-mix(in oklab, var(--grade-green) 8%, transparent);
     white-space: nowrap;
   }
+  .audit-chat-url {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    color: var(--text-muted);
+    border: 1px solid var(--surface-raised);
+    background: transparent;
+    white-space: nowrap;
+  }
+  .consensus-chat-url { color: var(--text-muted); }
 
   .cards {
     list-style: none;

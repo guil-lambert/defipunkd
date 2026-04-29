@@ -50,6 +50,7 @@ export type LoadedAssessment = {
   short_headline?: string;
   rationale: Rationale;
   models: string[];
+  models_with_chat_url: number;
   merged_at?: string;
   human_signoff?: HumanSignoff | null;
   protocol_metadata?: ProtocolMetadata;
@@ -65,7 +66,7 @@ type RawAssessment = {
   merged_at?: string;
   human_signoff?: HumanSignoff | null;
   primary_submission_path: string;
-  merged_from?: Array<{ model: string }>;
+  merged_from?: Array<{ model: string; chat_url?: string | null }>;
   protocol_metadata?: ProtocolMetadata;
 };
 
@@ -151,6 +152,12 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
       const models = Array.from(
         new Set((raw.merged_from ?? []).map((m) => m.model).filter((m) => typeof m === "string" && m.length > 0)),
       );
+      const modelsWithChatUrl = new Set<string>();
+      for (const m of raw.merged_from ?? []) {
+        if (typeof m.model === "string" && m.model.length > 0 && typeof m.chat_url === "string" && m.chat_url.length > 0) {
+          modelsWithChatUrl.add(m.model);
+        }
+      }
 
       bySlice.set(sliceId, {
         slug: raw.slug,
@@ -161,6 +168,7 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         short_headline: raw.short_headline,
         rationale: sub.rationale,
         models,
+        models_with_chat_url: modelsWithChatUrl.size,
         merged_at: raw.merged_at,
         human_signoff: raw.human_signoff ?? null,
         protocol_metadata: raw.protocol_metadata,
