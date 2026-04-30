@@ -93,6 +93,9 @@ const auditSlices = slices.map((s) => ({
   modelsWithChatUrl: s.models_with_chat_url ?? 0,
   hasQuorum: (s.models?.length ?? 0) >= QUORUM_MIN && !s.partial,
   isPartial: !!s.partial,
+  isTentative: !s.partial && !!s.tentative,
+  tentativeReasons: s.tentative_reasons ?? [],
+  grade: s.grade,
 }));
 
 const TAXONOMY_LABEL: Record<string, string> = {
@@ -179,7 +182,14 @@ function partialPillText(modelCount: number): string {
                   ✓ {a.modelCount}/{a.modelCount} models agree
                 </span>
               )}
-              {a.hasQuorum && (
+              {a.hasQuorum && a.isTentative ? (
+                <span
+                  class="audit-tentative"
+                  title={a.tentativeReasons.join("; ")}
+                >
+                  weak {chipLabel(a.grade)} — {a.tentativeReasons.join("; ")}
+                </span>
+              ) : a.hasQuorum && (
                 <span
                   class="audit-chat-url"
                   title={`${a.modelsWithChatUrl} of ${a.modelCount} runs included a public chat share link (chat_url)`}
@@ -302,8 +312,21 @@ function partialPillText(modelCount: number): string {
             <p class="rationale">{s.rationale}</p>
           )}
 
-          {s.partial && (
+          {!s.partial && s.tentative && s.tentative_reasons && s.tentative_reasons.length > 0 && (
+            <div class="tentative-reasons">
+              <span class="tentative-reasons-label">Why is this consensus tentative?</span>
+              <ul class="tentative-reasons-list">
+                {s.tentative_reasons.map((r) => (
+                  <li>{r}</li>
+                ))}
+              </ul>
+              <p class="tentative-reasons-note">A fresh independent run can strengthen (or overturn) the verdict.</p>
+            </div>
+          )}
+
+          {(s.partial || s.tentative) && (
             <div class="partial-cta">
+              <span class="partial-cta-label">Run your own prompt</span>
               <button type="button" class="copy-btn" data-copy-target={`#prompt-partial-${idp}${s.id}`}>Copy prompt</button>
               <a href={submitUrl(s.id as SliceId)} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
               <pre id={`prompt-partial-${idp}${s.id}`} class="prompt-hidden" hidden>{promptFor(s.id as SliceId)}</pre>
@@ -519,6 +542,18 @@ function partialPillText(modelCount: number): string {
     background: color-mix(in oklab, var(--grade-green) 8%, transparent);
     white-space: nowrap;
   }
+  .audit-tentative {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    color: var(--grade-orange);
+    border: 1px dashed color-mix(in oklab, var(--grade-orange) 50%, var(--surface-raised));
+    background: color-mix(in oklab, var(--grade-orange) 8%, transparent);
+    max-width: 100%;
+    white-space: normal;
+  }
   .audit-chat-url {
     font-size: 0.7rem;
     font-weight: 600;
@@ -686,6 +721,46 @@ function partialPillText(modelCount: number): string {
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
+  }
+  .partial-cta-label {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-right: 0.25rem;
+  }
+  .tentative-reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px dashed color-mix(in oklab, var(--grade-orange) 40%, var(--surface-raised));
+    border-radius: 4px;
+    background: color-mix(in oklab, var(--grade-orange) 5%, var(--surface-raised));
+  }
+  .tentative-reasons-label {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tentative-reasons-list {
+    list-style: disc;
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--text);
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .tentative-reasons-list li { margin: 0.1rem 0; }
+  .tentative-reasons-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    font-style: italic;
   }
   .consensus {
     font-size: 0.68rem;

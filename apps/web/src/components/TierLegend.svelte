@@ -12,10 +12,10 @@
   let { selected, onToggle }: Props = $props();
 
   const items: { tier: ToggleableTier; label: string }[] = [
-    { tier: "wood", label: "At least one model submission, no quorum yet" },
-    { tier: "bronze", label: "AI consensus on at least one dimension" },
-    { tier: "silver", label: "AI consensus on all dimensions" },
-    { tier: "gold", label: "Verified by human committee" },
+    { tier: "wood", label: "≥1 submission, no quorum" },
+    { tier: "bronze", label: "Consensus on ≥1 dimension" },
+    { tier: "silver", label: "Weak consensus, all dimensions" },
+    { tier: "gold", label: "Strong consensus, all dimensions" },
   ];
 
   const interactive = $derived(typeof onToggle === "function");
@@ -48,7 +48,7 @@
   .tier-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem 1.25rem;
+    gap: 0.5rem 0.85rem;
     align-items: center;
     color: var(--text-muted);
     font-size: 0.8rem;

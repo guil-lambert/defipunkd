@@ -22,11 +22,14 @@ let tierInput: TierInput | undefined;
 if ((assessments && assessments.size > 0) || (submissions && submissions.size > 0)) {
   tierInput = {};
   if (assessments) {
+    const tentativeBySlice = new Map<string, boolean>();
+    for (const s of headerSlices) tentativeBySlice.set(s.id, !!s.tentative);
     for (const [sliceId, a] of assessments.entries()) {
       tierInput[sliceId as PizzaSliceId] = {
         models: a.models,
         merged_at: a.merged_at,
         human_signoff: a.human_signoff ?? null,
+        tentative: tentativeBySlice.get(sliceId) ?? false,
       };
     }
   }
@@ -307,21 +310,6 @@ const aboutUnknown = !curatedAbout;
   .pizza-slice { cursor: pointer; }
   .pizza-slice path { transition: opacity 150ms ease, transform 150ms ease; transform-origin: 50% 50%; transform-box: fill-box; }
   .pizza:has(.pizza-slice:hover) .pizza-slice:not(:hover) path { opacity: 0.3; }
-  /* Matrix-row hover dims non-matching pizza slices, mirroring slice-hover */
-  .risk-row:has(:global([data-slice-row="control"]:hover)) .pizza-slice:not([data-pizza-slice="control"]) path,
-  .risk-row:has(:global([data-slice-row="ability-to-exit"]:hover)) .pizza-slice:not([data-pizza-slice="ability-to-exit"]) path,
-  .risk-row:has(:global([data-slice-row="autonomy"]:hover)) .pizza-slice:not([data-pizza-slice="autonomy"]) path,
-  .risk-row:has(:global([data-slice-row="open-access"]:hover)) .pizza-slice:not([data-pizza-slice="open-access"]) path,
-  .risk-row:has(:global([data-slice-row="verifiability"]:hover)) .pizza-slice:not([data-pizza-slice="verifiability"]) path {
-    opacity: 0.3;
-  }
-  .risk-row:has(:global([data-slice-row="control"]:hover)) [data-pizza-label="control"],
-  .risk-row:has(:global([data-slice-row="ability-to-exit"]:hover)) [data-pizza-label="ability-to-exit"],
-  .risk-row:has(:global([data-slice-row="autonomy"]:hover)) [data-pizza-label="autonomy"],
-  .risk-row:has(:global([data-slice-row="open-access"]:hover)) [data-pizza-label="open-access"],
-  .risk-row:has(:global([data-slice-row="verifiability"]:hover)) [data-pizza-label="verifiability"] {
-    color: var(--text);
-  }
   .pizza-label {
     position: absolute;
     transform: translate(-50%, -50%);
@@ -423,5 +411,25 @@ const aboutUnknown = !curatedAbout;
     .hero { padding: 0.75rem; gap: 0.9rem; }
     .about-row { grid-template-columns: 1fr; }
     .top-item.tvl .v { font-size: 1.4rem; }
+  }
+</style>
+
+<style is:global>
+  /* Matrix-row hover dims non-matching pizza slices, mirroring pizza→matrix hover.
+     Lives in a global block because [data-slice-row] is rendered by RiskMatrix
+     (different scope), and `:global()` inside `:has()` is not reliably scoped. */
+  .risk-row:has([data-slice-row="control"]:hover) .pizza-slice:not([data-pizza-slice="control"]) path,
+  .risk-row:has([data-slice-row="ability-to-exit"]:hover) .pizza-slice:not([data-pizza-slice="ability-to-exit"]) path,
+  .risk-row:has([data-slice-row="autonomy"]:hover) .pizza-slice:not([data-pizza-slice="autonomy"]) path,
+  .risk-row:has([data-slice-row="open-access"]:hover) .pizza-slice:not([data-pizza-slice="open-access"]) path,
+  .risk-row:has([data-slice-row="verifiability"]:hover) .pizza-slice:not([data-pizza-slice="verifiability"]) path {
+    opacity: 0.3;
+  }
+  .risk-row:has([data-slice-row="control"]:hover) [data-pizza-label="control"],
+  .risk-row:has([data-slice-row="ability-to-exit"]:hover) [data-pizza-label="ability-to-exit"],
+  .risk-row:has([data-slice-row="autonomy"]:hover) [data-pizza-label="autonomy"],
+  .risk-row:has([data-slice-row="open-access"]:hover) [data-pizza-label="open-access"],
+  .risk-row:has([data-slice-row="verifiability"]:hover) [data-pizza-label="verifiability"] {
+    color: var(--text);
   }
 </style>
