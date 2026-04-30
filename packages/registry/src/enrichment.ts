@@ -131,7 +131,7 @@ export interface EnrichmentAuditEntry {
   /** YYYY-MM or YYYY-MM-DD when extractable from the auditor index, else null. */
   date: string | null;
   /** Where the entry came from: DefiLlama's audit_links or our auditor-side index. */
-  source: "defillama" | "auditor-repo";
+  source: "defillama" | "auditor-repo" | "github-aggregator";
   raw_name?: string;
 }
 
