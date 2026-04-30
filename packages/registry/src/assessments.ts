@@ -68,7 +68,7 @@ type RawAssessment = {
   merged_at?: string;
   human_signoff?: HumanSignoff | null;
   primary_submission_path: string;
-  merged_from?: Array<{ model: string; chat_url?: string | null; weight?: number }>;
+  merged_from?: Array<{ model: string; chat_url?: string | null; weight?: number; path?: string }>;
   protocol_metadata?: ProtocolMetadata;
 };
 
@@ -123,32 +123,53 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         continue;
       }
 
-      const hashIdx = raw.primary_submission_path.lastIndexOf("#");
-      const fileRelPath = hashIdx === -1 ? raw.primary_submission_path : raw.primary_submission_path.slice(0, hashIdx);
-      const arrayIndex = hashIdx === -1 ? null : Number(raw.primary_submission_path.slice(hashIdx + 1));
-      const submissionPath = join(repoRoot, fileRelPath);
-      let sub: RawSubmission;
-      try {
-        const parsed = JSON.parse(readFileSync(submissionPath, "utf8")) as RawSubmission | RawSubmission[];
-        if (arrayIndex !== null) {
-          if (!Array.isArray(parsed) || !Number.isInteger(arrayIndex) || arrayIndex < 0 || arrayIndex >= parsed.length) {
-            throw new Error(`array index ${arrayIndex} out of range`);
-          }
-          const indexed = parsed[arrayIndex];
-          if (!indexed) throw new Error(`array index ${arrayIndex} resolved to undefined`);
-          sub = indexed;
-        } else if (Array.isArray(parsed)) {
-          const first = parsed[0];
-          if (!first) throw new Error(`submission file is empty array`);
-          sub = first;
-        } else {
-          sub = parsed;
+      const candidatePaths: string[] = [raw.primary_submission_path];
+      for (const m of raw.merged_from ?? []) {
+        if (typeof m.path === "string" && m.path.length > 0 && !candidatePaths.includes(m.path)) {
+          candidatePaths.push(m.path);
         }
-      } catch (err) {
+      }
+
+      let sub: RawSubmission | null = null;
+      let resolvedFromFallback: string | null = null;
+      for (const candidate of candidatePaths) {
+        const hashIdx = candidate.lastIndexOf("#");
+        const fileRelPath = hashIdx === -1 ? candidate : candidate.slice(0, hashIdx);
+        const arrayIndex = hashIdx === -1 ? null : Number(candidate.slice(hashIdx + 1));
+        const submissionPath = join(repoRoot, fileRelPath);
+        try {
+          const parsed = JSON.parse(readFileSync(submissionPath, "utf8")) as RawSubmission | RawSubmission[];
+          if (arrayIndex !== null) {
+            if (!Array.isArray(parsed) || !Number.isInteger(arrayIndex) || arrayIndex < 0 || arrayIndex >= parsed.length) {
+              throw new Error(`array index ${arrayIndex} out of range`);
+            }
+            const indexed = parsed[arrayIndex];
+            if (!indexed) throw new Error(`array index ${arrayIndex} resolved to undefined`);
+            sub = indexed;
+          } else if (Array.isArray(parsed)) {
+            const first = parsed[0];
+            if (!first) throw new Error(`submission file is empty array`);
+            sub = first;
+          } else {
+            sub = parsed;
+          }
+          if (candidate !== raw.primary_submission_path) resolvedFromFallback = candidate;
+          break;
+        } catch {
+          // try next candidate
+        }
+      }
+
+      if (!sub) {
         console.warn(
-          `[registry] assessment ${slug}/${sliceId} references missing submission ${raw.primary_submission_path}: ${(err as Error).message}`,
+          `[registry] assessment ${slug}/${sliceId} primary submission ${raw.primary_submission_path} and all merged_from fallbacks are missing — skipping`,
         );
         continue;
+      }
+      if (resolvedFromFallback) {
+        console.warn(
+          `[registry] assessment ${slug}/${sliceId} primary ${raw.primary_submission_path} missing; rendered headline from fallback ${resolvedFromFallback}`,
+        );
       }
 
       const models = Array.from(
