@@ -4,7 +4,7 @@ import { isAbsolute, resolve } from "node:path";
 import { PROMPT_VERSION } from "@defipunkd/prompts";
 import { SubmissionSchema } from "../schema";
 import { cleanupSubmission } from "../cleanup";
-import { crossCheck } from "../cross-check";
+import { crossCheck, isPublicChatShareUrl, verifyChatUrlReachable } from "../cross-check";
 import { findRepoRoot, loadSnapshot } from "../repo";
 
 type Report = {
@@ -17,10 +17,11 @@ type Report = {
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const shouldWrite = args.includes("--write");
+  const checkUrls = args.includes("--check-urls");
   const files = args.filter((a) => !a.startsWith("--"));
 
   if (files.length === 0) {
-    console.error("usage: defipunkd-validate <file.json> [<file.json> ...] [--write]");
+    console.error("usage: defipunkd-validate <file.json> [<file.json> ...] [--write] [--check-urls]");
     return 2;
   }
 
@@ -77,6 +78,15 @@ async function main(): Promise<number> {
         const msg = `${prefix}${ci.field}: ${ci.message}`;
         if (ci.severity === "error") report.errors.push(msg);
         else report.warnings.push(msg);
+      }
+
+      if (checkUrls && parsed.data.chat_url && isPublicChatShareUrl(parsed.data.chat_url)) {
+        const reach = await verifyChatUrlReachable(parsed.data.chat_url);
+        if (!reach.ok) {
+          report.errors.push(
+            `${prefix}chat_url: share link did not resolve (${reach.reason}); the URL must return a live page from the provider`,
+          );
+        }
       }
     }
 

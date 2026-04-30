@@ -14,6 +14,44 @@ const PROVIDER_SHARE_HOSTS = [
   "perplexity.ai",
 ];
 
+export type ChatUrlReachability =
+  | { ok: true; status: number }
+  | { ok: false; status: number | null; reason: string };
+
+// Liveness check only: confirms the share URL resolves to *something* on the
+// provider host. Catches typos, dead links, and fabricated IDs on claude.ai
+// (403) and chatgpt.com (404). Does NOT catch tampering on gemini.google.com
+// — the SPA shell returns 200 for any well-formed /share/<anything>, so a
+// bogus Gemini share ID looks identical to a real one over plain HTTP.
+export async function verifyChatUrlReachable(
+  url: string,
+  opts: { fetch?: typeof fetch; timeoutMs?: number } = {},
+): Promise<ChatUrlReachability> {
+  const fetchFn = opts.fetch ?? fetch;
+  const timeoutMs = opts.timeoutMs ?? 10_000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetchFn(url, {
+      method: "GET",
+      redirect: "follow",
+      signal: ctrl.signal,
+      headers: {
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        accept: "text/html,*/*;q=0.5",
+      },
+    });
+    if (res.status >= 200 && res.status < 400) return { ok: true, status: res.status };
+    return { ok: false, status: res.status, reason: `HTTP ${res.status}` };
+  } catch (err) {
+    const reason = (err as Error).name === "AbortError" ? `timeout after ${timeoutMs}ms` : (err as Error).message;
+    return { ok: false, status: null, reason };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function isPublicChatShareUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   try {
