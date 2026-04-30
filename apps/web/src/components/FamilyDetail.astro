@@ -1,0 +1,203 @@
+---
+import type { Protocol } from "@defipunkd/registry";
+import { getAssessments, getSubmissions } from "@defipunkd/registry";
+import { formatTvl, parseHallmarks } from "../lib/format";
+import ProtocolLogo from "./ProtocolLogo.astro";
+import FamilySideNav from "./FamilySideNav.svelte";
+import ProtocolSummary from "./ProtocolSummary.astro";
+import RiskAnalysis from "./RiskAnalysis.astro";
+import StagePreview from "./StagePreview.astro";
+import HallmarksTimeline from "./HallmarksTimeline.astro";
+import TvlSurface from "./TvlSurface.astro";
+import ProtocolReferences from "./ProtocolReferences.astro";
+import DeploymentTabs from "./DeploymentTabs.svelte";
+import { getEnrichment } from "@defipunkd/registry";
+import { deriveTier, type TierInput } from "../lib/tier";
+import { pizzaGradesFor, type PizzaGrades, type PizzaSliceId } from "../lib/pizza";
+import { verifiabilityGrade, type GradeColor } from "../lib/verifiability";
+import { autonomyGrade } from "../lib/autonomy";
+
+interface Props {
+  protocol: Protocol;
+  snapshotGeneratedAt: string;
+  children: Protocol[];
+}
+const { protocol, snapshotGeneratedAt, children } = Astro.props;
+
+// Order children by TVL desc; first one is the default-open deployment.
+const sortedChildren = [...children].sort((a, b) => {
+  const ta = typeof a.tvl === "number" ? a.tvl : -1;
+  const tb = typeof b.tvl === "number" ? b.tvl : -1;
+  if (ta !== tb) return tb - ta;
+  return a.slug.localeCompare(b.slug);
+});
+
+const allAssessments = getAssessments();
+const allSubmissions = getSubmissions();
+
+// Latest merged_at across the family informs the "Updated" stamp.
+let latestQuorumAt: string | null = null;
+for (const child of sortedChildren) {
+  const a = allAssessments.get(child.slug);
+  if (!a) continue;
+  for (const v of a.values()) {
+    if (v.merged_at && (!latestQuorumAt || v.merged_at > latestQuorumAt)) {
+      latestQuorumAt = v.merged_at;
+    }
+  }
+}
+const updatedAt = latestQuorumAt && latestQuorumAt > snapshotGeneratedAt
+  ? latestQuorumAt
+  : snapshotGeneratedAt;
+const updatedSource: "defi@home" | "defillama" = updatedAt === latestQuorumAt ? "defi@home" : "defillama";
+
+// Pool hallmarks across parent + children: families typically carry these on
+// the deployments, not the parent record. Dedupe by (unixTs, description) and
+// sort chronologically.
+const hallmarkSeen = new Set<string>();
+const hallmarks = [protocol, ...sortedChildren]
+  .flatMap((p) => parseHallmarks(p.hallmarks))
+  .filter((h) => {
+    const k = `${h.unixTs}|${h.description}`;
+    if (hallmarkSeen.has(k)) return false;
+    hallmarkSeen.add(k);
+    return true;
+  })
+  .sort((a, b) => a.unixTs - b.unixTs);
+const hasHallmarks = hallmarks.length > 0;
+const sharedSections = [
+  ...(hasHallmarks ? [{ id: "hallmarks", label: "Hallmarks" }] : []),
+  { id: "reference", label: "References" },
+];
+
+const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
+  if (typeof c.tvl !== "number") return acc;
+  return (acc ?? 0) + c.tvl;
+}, null);
+---
+<FamilySideNav
+  client:load
+  deployments={sortedChildren.map((c) => ({ slug: c.slug, name: c.name }))}
+  sharedSections={sharedSections}
+/>
+<main class="detail" id="top">
+  <a href="/" class="back-home" aria-label="Back to DeFiPunk'd">
+    <span class="back-arrow" aria-hidden="true">←</span>
+    <svg class="back-logo" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M3 3h4v2h-2v6h2v2h-4zM13 3h-4v2h2v6h-2v2h4zM7 6h2v2h-2zM7 9h2v2h-2z" fill="currentColor"/>
+    </svg>
+    <span class="back-word">DeFiPunk'<span class="back-mark">d</span></span>
+  </a>
+
+  <header class="head">
+    <div class="title">
+      <ProtocolLogo src={protocol.logo} name={protocol.name} size={40} />
+      <div>
+        <h1>{protocol.name}</h1>
+        <p class="subtitle">
+          {sortedChildren.length} deployment{sortedChildren.length === 1 ? "" : "s"}
+          {aggregateTvl !== null && (<>{" · "}{formatTvl(aggregateTvl)} aggregate TVL</>)}
+          {protocol.category && (<>{" · "}{protocol.category}</>)}
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <section id="deployments" class="deployments">
+    <h2>Deployments</h2>
+    <p class="muted intro">Each deployment is rated independently. Pick one to see its rating, risk analysis, and stage.</p>
+    <DeploymentTabs
+      client:load
+      deployments={sortedChildren.map((c) => {
+        const a = allAssessments.get(c.slug);
+        const s = allSubmissions.get(c.slug);
+        let ti: TierInput | undefined;
+        if ((a && a.size > 0) || (s && s.size > 0)) {
+          ti = {};
+          if (a) for (const [sid, ass] of a.entries()) {
+            ti[sid as PizzaSliceId] = { models: ass.models, merged_at: ass.merged_at, human_signoff: ass.human_signoff ?? null };
+          }
+          if (s) for (const [sid, arr] of s.entries()) {
+            const existing = ti[sid as PizzaSliceId] ?? {};
+            ti[sid as PizzaSliceId] = { ...existing, submissionCount: arr.length };
+          }
+        }
+        const assessmentGrades: PizzaGrades = a
+          ? Object.fromEntries(
+              Array.from(a.entries()).map(([sid, ass]) => [sid, (ass.grade === "unknown" ? "gray" : ass.grade) as GradeColor]),
+            )
+          : {};
+        const grades: PizzaGrades = {
+          ...pizzaGradesFor(
+            c.category,
+            verifiabilityGrade(!!(c.github && c.github.length > 0), c.audit_count ?? 0),
+            autonomyGrade(c.category, c.forked_from),
+          ),
+          ...assessmentGrades,
+        };
+        return {
+          slug: c.slug,
+          name: c.name,
+          category: c.category,
+          tvl: typeof c.tvl === "number" ? c.tvl : null,
+          tier: deriveTier(ti),
+          grades,
+        };
+      })}
+    />
+    {sortedChildren.map((child, i) => (
+      <div
+        id={child.slug}
+        class="deployment-panel"
+        data-slug={child.slug}
+        role="tabpanel"
+        aria-labelledby={`tab-${child.slug}`}
+        hidden={i !== 0}
+      >
+        <ProtocolSummary protocol={child} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} />
+        <RiskAnalysis protocol={child} snapshotGeneratedAt={snapshotGeneratedAt} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} children={[]} idPrefix={child.slug} />
+        <TvlSurface enrichment={getEnrichment(child.slug)} idPrefix={child.slug} />
+        <StagePreview protocol={child} />
+      </div>
+    ))}
+  </section>
+
+  <HallmarksTimeline hallmarks={hallmarks} />
+
+  <ProtocolReferences protocol={protocol} family={sortedChildren} updatedAt={updatedAt} updatedSource={updatedSource} />
+</main>
+
+<style>
+  .detail { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; color: var(--text); scroll-margin-top: 1rem; }
+  .back-home {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.9rem;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.015em;
+    text-decoration: none;
+  }
+  .back-arrow { color: var(--text-muted); font-weight: 500; }
+  .back-logo { width: 1em; height: 1em; flex-shrink: 0; color: var(--brand-oxblood); }
+  .back-word { color: var(--text); }
+  .back-mark { color: var(--brand-oxblood); }
+  .back-home:hover .back-arrow { color: var(--text); }
+  @media (min-width: 1501px) {
+    .back-home { display: none; }
+  }
+  .head { display: flex; gap: 1.5rem; align-items: flex-start; }
+  .title { display: flex; gap: 0.75rem; align-items: center; }
+  h1 { margin: 0; color: var(--text); font-size: 1.75rem; }
+  .subtitle { color: var(--text-muted); margin: 0.25rem 0 0 0; }
+
+  .deployments { margin-top: 2rem; }
+  .deployments > h2 { margin: 0 0 0.25rem 0; color: var(--text); font-size: 2.25rem; scroll-margin-top: 1rem; }
+  .intro { margin: 0 0 1rem 0; }
+  .muted { color: var(--text-muted); }
+
+  .deployment-panel { scroll-margin-top: 1rem; }
+</style>

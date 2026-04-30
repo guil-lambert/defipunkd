@@ -273,6 +273,12 @@
   {@const dominantCat = isFamilyHead && row.children
     ? [...row.children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))[0]?.category
     : null}
+  {@const rowHref = isChild && row.parent_slug
+    ? `/protocol/${row.parent_slug}#${row.slug}`
+    : isFamilyHead ? null : `/protocol/${row.slug}`}
+  {@const auditHref = isChild && row.parent_slug
+    ? `/protocol/${row.parent_slug}#${row.slug}`
+    : isFamilyHead ? null : `/protocol/${row.slug}#audit-yourself`}
   <tr class:child={isChild}>
     <td class="name-cell" class:child-cell={isChild}>
       <div class="name-inner">
@@ -293,7 +299,16 @@
             <img src={row.logo} alt="" loading="lazy" decoding="async" width="20" height="20" />
           {/if}
         </span>
-        <a href={`/protocol/${row.slug}`} class="name-link" title={row.name}>{row.name}</a>
+        {#if rowHref}
+          <a href={rowHref} class="name-link" title={row.name}>{row.name}</a>
+        {:else}
+          <button
+            type="button"
+            class="name-link name-button"
+            title={row.name}
+            onclick={() => { expanded = { ...expanded, [row.slug]: !expanded[row.slug] }; }}
+          >{row.name}</button>
+        {/if}
         {#if isFamilyHead}
           <span class="muted small-pad">({row.children?.length ?? 0})</span>
         {/if}
@@ -343,11 +358,17 @@
           </div>
         <svg width={pz.radius * 2} height={pz.radius * 2} viewBox={`0 0 ${pz.radius * 2} ${pz.radius * 2}`} role="img" aria-label="risk pizza (all unknown)">
           {#each pz.paths as p}
-            <a href={`/protocol/${row.slug}`}>
+            {#if rowHref}
+              <a href={rowHref}>
+                <path d={p.d} fill={p.fill} stroke="#08090c" stroke-width={pz.stroke} stroke-linejoin="round">
+                  <title>{`${p.label} \u2014 ${p.tooltip}`}</title>
+                </path>
+              </a>
+            {:else}
               <path d={p.d} fill={p.fill} stroke="#08090c" stroke-width={pz.stroke} stroke-linejoin="round">
                 <title>{`${p.label} \u2014 ${p.tooltip}`}</title>
               </path>
-            </a>
+            {/if}
           {/each}
           <circle
             cx={pz.radius}
@@ -362,12 +383,19 @@
     </td>
     <td class="stage-cell">
       {#if tier !== "none"}
-        <a class="tt-wrap audit-cta" href={`/protocol/${row.slug}#audit-yourself`} aria-label={`${TIER_LABEL[tier]} — contribute another run`}>
-          <TierMedal tier={tier} size={20} />
-          <span class="tt" role="tooltip">{TIER_LABEL[tier]} · contribute a run</span>
-        </a>
-      {:else}
-        <a class="tt-wrap audit-cta" href={`/protocol/${row.slug}#audit-yourself`} aria-label="Be the first to audit this protocol">
+        {#if auditHref}
+          <a class="tt-wrap audit-cta" href={auditHref} aria-label={`${TIER_LABEL[tier]} — contribute another run`}>
+            <TierMedal tier={tier} size={20} />
+            <span class="tt" role="tooltip">{TIER_LABEL[tier]} · contribute a run</span>
+          </a>
+        {:else}
+          <span class="tt-wrap audit-cta" aria-label={TIER_LABEL[tier]}>
+            <TierMedal tier={tier} size={20} />
+            <span class="tt" role="tooltip">{TIER_LABEL[tier]}</span>
+          </span>
+        {/if}
+      {:else if auditHref}
+        <a class="tt-wrap audit-cta" href={auditHref} aria-label="Be the first to audit this protocol">
           <svg class="audit-plus" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
             <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2" />
             <path d="M10 6 L10 14 M6 10 L14 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -555,6 +583,16 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .name-button {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    color: var(--text);
+  }
+  .name-button:hover { color: var(--accent-link); }
   .muted { color: var(--text-muted); }
   .small-pad { margin-left: 6px; font-size: 0.75rem; }
   .extra-chains {
