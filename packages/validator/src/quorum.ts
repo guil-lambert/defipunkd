@@ -82,9 +82,11 @@ function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): Scored
 
   if (/\(autorun\)/i.test(s.model)) weight += 0.2;
 
-  if (isHallucinationProneModel(s.model)) weight *= 0.25;
+  const hallucinationProne = isHallucinationProneModel(s.model);
+  if (hallucinationProne) weight *= 0.05;
 
-  if (weight < 0.1) weight = 0.1;
+  const floor = hallucinationProne ? 0.0025 : 0.1;
+  if (weight < floor) weight = floor;
   return { submission: s, sourcePath, weight };
 }
 
