@@ -9,8 +9,13 @@ interface Props {
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
   submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
   children?: Protocol[];
+  /** Optional prefix for section/card/anchor IDs. Set to the protocol slug
+   * when this component is rendered alongside siblings (family page) so IDs
+   * remain unique across deployments. */
+  idPrefix?: string;
 }
-const { protocol, snapshotGeneratedAt, assessments, submissions, children = [] } = Astro.props;
+const { protocol, snapshotGeneratedAt, assessments, submissions, children = [], idPrefix = "" } = Astro.props;
+const idp = idPrefix ? `${idPrefix}-` : "";
 const isFamily = protocol.is_parent && children.length > 0;
 const familyMembers = isFamily
   ? [...children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))
@@ -131,7 +136,7 @@ function partialPillText(modelCount: number): string {
   return `${modelCount}/${QUORUM_MIN} model${modelCount === 1 ? "" : "s"} submitted`;
 }
 ---
-<section class="risk-analysis" id="risk-analysis">
+<section class="risk-analysis" id={`${idp}risk-analysis`}>
   <h2>Risk analysis</h2>
   {isFamily ? (
     <div class="family-redirect">
@@ -154,7 +159,7 @@ function partialPillText(modelCount: number): string {
     One card per dimension, sorted by severity. Only <em>Verifiability</em> and <em>Autonomy</em> carry automated signals in Phase 0. See <a href="/methodology#what-is-graded-today" class="link">methodology</a> for scope.
   </p>
 
-  <details class="audit-top" id="audit-yourself">
+  <details class="audit-top" id={`${idp}audit-yourself`}>
     <summary>
       <span class="audit-top-title">Audit a dimension yourself · DEFI@home</span>
       <span class="audit-top-tagline">Contribute an LLM-run assessment — any model, any dimension. Three agreeing runs merge automatically into the public record.</span>
@@ -198,7 +203,7 @@ function partialPillText(modelCount: number): string {
 
   <ol class="cards">
     {gradedSlices.map((s) => (
-      <li id={s.id} class:list={["card", `grade-${s.grade}`, { partial: s.partial }]} style={s.partial ? partialStripeStyle(s) : undefined}>
+      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: s.partial }]} style={s.partial ? partialStripeStyle(s) : undefined}>
         <details class="body card-details">
           <summary class="card-summary">
             <div class="meta">
@@ -235,10 +240,13 @@ function partialPillText(modelCount: number): string {
           {s.structured ? (
             <div class="structured">
               {!s.partial && s.structured.steelman && s.structured.steelman[s.grade as "red" | "orange" | "green"] && (
-                <div class:list={["steelman-chosen", `grade-${s.grade}`]}>
-                  <span class="steelman-label">{TAXONOMY_LABEL[s.grade] ?? "Argument"}</span>
-                  <span class="steelman-text">{s.structured.steelman[s.grade as "red" | "orange" | "green"]}</span>
-                </div>
+                <details class="drawer">
+                  <summary>Steel-man argument</summary>
+                  <div class:list={["steelman-chosen", `grade-${s.grade}`]}>
+                    <span class="steelman-label">{TAXONOMY_LABEL[s.grade] ?? "Argument"}</span>
+                    <span class="steelman-text">{s.structured.steelman[s.grade as "red" | "orange" | "green"]}</span>
+                  </div>
+                </details>
               )}
               {!s.partial && s.structured.verdict && s.structured.verdict.trim().length > 0 && (
                 <details class="drawer">
@@ -376,8 +384,9 @@ function partialPillText(modelCount: number): string {
   });
 
   function openAuditDrawerIfHashed() {
-    if (location.hash !== "#audit-yourself") return;
-    const el = document.getElementById("audit-yourself") as HTMLDetailsElement | null;
+    const h = location.hash.slice(1);
+    if (!h.endsWith("audit-yourself")) return;
+    const el = document.getElementById(h) as HTMLDetailsElement | null;
     if (!el) return;
     el.open = true;
     el.scrollIntoView({ behavior: "smooth", block: "start" });

@@ -1,0 +1,409 @@
+---
+import type { Protocol, ProvenanceTag } from "@defipunkd/registry";
+import { getEnrichment, getProtocolMetadata } from "@defipunkd/registry";
+import { auditorDomain, EM_DASH, formatUtc } from "../lib/format";
+import ProvTag from "./ProvTag.astro";
+
+interface Props {
+  protocol: Protocol;
+  updatedAt: string;
+  updatedSource: "defi@home" | "defillama";
+  /** Optional family members whose reference data should be pooled with the parent. */
+  family?: Protocol[];
+}
+const { protocol, updatedAt, updatedSource, family = [] } = Astro.props;
+const prov = protocol._provenance;
+
+// Pool the parent + children for reference-section purposes. Parent first so
+// curated parent values win on tie-breaks (single-value fields prefer parent).
+const pool = [protocol, ...family];
+const poolMeta = pool.map((p) => ({ p, m: getProtocolMetadata(p.slug), e: getEnrichment(p.slug) }));
+
+function firstNonEmpty<T>(arr: (T | null | undefined)[]): T | null {
+  for (const v of arr) if (v != null && v !== "") return v as T;
+  return null;
+}
+function uniqueBy<T>(arr: T[], key: (x: T) => string): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const x of arr) {
+    const k = key(x);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(x);
+  }
+  return out;
+}
+
+// DeFiLlama's website field sometimes includes a referral path or tracking
+// query (e.g. `https://app.ethena.fi/join/3y20d`). Strip the path when it
+// matches a known referral pattern, and drop tracking query params, so the
+// link always points at the canonical site.
+function cleanWebsite(raw: string): string {
+  try {
+    const u = new URL(raw);
+    const refPath = /^\/(join|r|ref|referral|invite)(\/|$)/i;
+    if (refPath.test(u.pathname)) {
+      u.pathname = "/";
+      u.search = "";
+      u.hash = "";
+    } else {
+      for (const k of Array.from(u.searchParams.keys())) {
+        if (/^(ref|r|referrer|referral|utm_)/i.test(k)) u.searchParams.delete(k);
+      }
+    }
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return raw;
+  }
+}
+
+// Defillama sometimes stores `github` as a bare org slug (e.g. "makerdao")
+// rather than a full URL, which then resolves as a same-origin relative link.
+// Normalize so we always render an absolute github.com link.
+function normalizeGithub(g: string): { url: string; label: string } {
+  let s = g.trim();
+  if (s.startsWith("http://") || s.startsWith("https://")) {
+    const label = s.replace(/^https?:\/\/(www\.)?github\.com\//, "").replace(/\/$/, "") || s;
+    return { url: s, label };
+  }
+  if (s.startsWith("github.com/")) s = s.slice("github.com/".length);
+  s = s.replace(/^\/+/, "").replace(/\/+$/, "");
+  return { url: `https://github.com/${s}`, label: s };
+}
+
+// GitHub: union across the family. Each member's metadata.github wins over its
+// own protocol.github when not curated; pool all of them together, normalize
+// (defillama may store bare org slugs), and dedupe by URL.
+const githubUrls = uniqueBy(
+  poolMeta.flatMap(({ p, m }) => {
+    const useMeta = m?.github && m.github.length > 0 && p._provenance.github !== "curated";
+    return (useMeta ? m!.github! : (p.github ?? [])).map(normalizeGithub);
+  }),
+  (g) => g.url,
+);
+const anyMetaGithub = poolMeta.some(({ p, m }) => m?.github && m.github.length > 0 && p._provenance.github !== "curated");
+const anyProtocolGithubProv = poolMeta.find(({ p }) => p._provenance.github && p._provenance.github !== "curated")?.p._provenance.github ?? null;
+const githubProvTag: ProvenanceTag | "defi@home" | null = anyMetaGithub ? "defi@home" : (anyProtocolGithubProv ?? null);
+
+// Audits: union of structured audits (metadata) + enrichment audits + raw
+// audit_links across every family member, deduped by URL.
+type StructuredAudit = { firm: string | null; url: string; date: string | null; from?: string };
+const structuredCollected: StructuredAudit[] = [];
+const rawCollected: { url: string; from: string }[] = [];
+let anyMetaAudits = false;
+let anyAuditCount = 0;
+let auditsProvFromChain: ProvenanceTag | null = null;
+for (const { p, m, e } of poolMeta) {
+  anyAuditCount += p.audit_count || 0;
+  const pp = p._provenance.audit_links ?? p._provenance.audit_count ?? null;
+  if (pp && !auditsProvFromChain) auditsProvFromChain = pp;
+  const useMetaAudits = m?.audits && m.audits.length > 0 && p._provenance.audit_links !== "curated";
+  if (useMetaAudits) {
+    anyMetaAudits = true;
+    for (const a of m!.audits!) structuredCollected.push({ firm: a.firm ?? null, url: a.url, date: a.date ?? null, from: p.slug });
+  } else if (e.audits && e.audits.audits.length > 0) {
+    for (const a of e.audits.audits) structuredCollected.push({ firm: a.firm, url: a.url, date: a.date, from: p.slug });
+  }
+  for (const u of p.audit_links ?? []) rawCollected.push({ url: u, from: p.slug });
+}
+const structuredAudits = structuredCollected.length > 0 ? uniqueBy(structuredCollected, (a) => a.url) : null;
+const rawAuditLinks = uniqueBy(rawCollected, (r) => r.url);
+const auditsProvTag = anyMetaAudits ? "defi@home" : auditsProvFromChain;
+
+// Single-value family fields: prefer parent, fall back to first child that has one.
+const metadata = {
+  bug_bounty_url: firstNonEmpty(poolMeta.map(({ m }) => m?.bug_bounty_url)),
+  security_contact: firstNonEmpty(poolMeta.map(({ m }) => m?.security_contact)),
+  docs_url: firstNonEmpty(poolMeta.map(({ m }) => m?.docs_url)),
+  governance_forum: firstNonEmpty(poolMeta.map(({ m }) => m?.governance_forum)),
+  voting_token: firstNonEmpty(poolMeta.map(({ m }) => m?.voting_token)),
+  deployed_contracts_doc: firstNonEmpty(poolMeta.map(({ m }) => m?.deployed_contracts_doc)),
+  upgradeability: firstNonEmpty(poolMeta.map(({ m }) => m?.upgradeability)),
+};
+
+const upgradeabilityLabel: Record<string, string> = {
+  immutable: "Immutable",
+  upgradeable: "Upgradeable",
+  mixed: "Mixed (some immutable, some upgradeable)",
+  unknown: "Unknown",
+};
+
+// Website / twitter: prefer parent, else first child that has one. Track which
+// pool member supplied the value so the provenance tag matches.
+const websitePick = poolMeta.find(({ p }) => p.website);
+const website = websitePick?.p.website ? cleanWebsite(websitePick.p.website) : null;
+const websiteProv = websitePick?.p._provenance.website ?? null;
+const twitterPick = poolMeta.find(({ p }) => p.twitter);
+const twitter = twitterPick?.p.twitter ?? null;
+const twitterProv = twitterPick?.p._provenance.twitter ?? null;
+
+const linksSources = Array.from(new Set([
+  website && websiteProv ? websiteProv : null,
+  twitter && twitterProv ? twitterProv : null,
+  githubUrls.length > 0 ? githubProvTag : null,
+  metadata.docs_url ? "defi@home" : null,
+  metadata.governance_forum ? "defi@home" : null,
+].filter((x): x is string => !!x)));
+
+const securitySources = Array.from(new Set([
+  auditsProvTag ?? null,
+  metadata?.bug_bounty_url ? "defi@home" : null,
+  metadata?.security_contact ? "defi@home" : null,
+].filter((x): x is string => !!x)));
+
+const technicalSources = Array.from(new Set([
+  metadata?.voting_token ? "defi@home" : null,
+  metadata?.deployed_contracts_doc ? "defi@home" : null,
+  metadata?.upgradeability ? "defi@home" : null,
+].filter((x): x is string => !!x)));
+
+const provenanceSources = Array.from(new Set([
+  "defillama",
+  updatedSource,
+].filter((x): x is string => !!x)));
+---
+<section id="reference" class="reference-section">
+  <h2>References</h2>
+
+  <div class="group">
+    <div class="group-head">
+      <h3>Links</h3>
+      {linksSources.length > 0 && (
+        <div class="group-sources">
+          {linksSources.map((t) => (<ProvTag tag={t} slug={protocol.slug} />))}
+        </div>
+      )}
+    </div>
+    <dl class="fields two-col">
+      {website && (
+        <div class="field">
+          <dt>Website</dt>
+          <dd><a href={website} class="link" rel="noreferrer" target="_blank">{website}</a></dd>
+        </div>
+      )}
+      {twitter && (
+        <div class="field">
+          <dt>Twitter</dt>
+          <dd><a href={`https://twitter.com/${twitter}`} class="link" rel="noreferrer" target="_blank">@{twitter}</a></dd>
+        </div>
+      )}
+      {githubUrls.length > 0 && (
+        <div class="field">
+          <dt>GitHub</dt>
+          <dd>
+            {githubUrls.length === 1 ? (
+              <a href={githubUrls[0]!.url} class="link" rel="noreferrer" target="_blank">{githubUrls[0]!.label}</a>
+            ) : (
+              <details>
+                <summary class="clickable">{githubUrls.length} repositories</summary>
+                <ul class="bare">
+                  {githubUrls.map((g) => (<li><a href={g.url} class="link" rel="noreferrer" target="_blank">{g.label}</a></li>))}
+                </ul>
+              </details>
+            )}
+          </dd>
+        </div>
+      )}
+      {metadata?.docs_url && (
+        <div class="field">
+          <dt>Docs</dt>
+          <dd><a href={metadata.docs_url} class="link" rel="noreferrer" target="_blank">{metadata.docs_url}</a></dd>
+        </div>
+      )}
+      {metadata?.governance_forum && (
+        <div class="field">
+          <dt>Governance forum</dt>
+          <dd><a href={metadata.governance_forum} class="link" rel="noreferrer" target="_blank">{metadata.governance_forum}</a></dd>
+        </div>
+      )}
+    </dl>
+  </div>
+
+  <div class="group">
+    <div class="group-head">
+      <h3>Security</h3>
+      {securitySources.length > 0 && (
+        <div class="group-sources">
+          {securitySources.map((t) => (<ProvTag tag={t} slug={protocol.slug} />))}
+        </div>
+      )}
+    </div>
+    <dl class="fields two-col">
+      <div class="field">
+        <dt>Audits</dt>
+        <dd>
+          {structuredAudits ? (
+            <details>
+              <summary class="clickable">{structuredAudits.length} audit{structuredAudits.length === 1 ? "" : "s"}</summary>
+              <ul class="bare audits">
+                {structuredAudits.map((a) => (
+                  <li>
+                    <a href={a.url} class="link" rel="noreferrer" target="_blank">{a.firm ?? auditorDomain(a.url) ?? a.url}</a>
+                    {a.date && <span class="muted"> {EM_DASH} {a.date}</span>}
+                    {family.length > 0 && a.from && a.from !== protocol.slug && <span class="muted"> {EM_DASH} {a.from}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : anyAuditCount === 0 && rawAuditLinks.length === 0 ? (
+            <span class="muted">unknown</span>
+          ) : (
+            <details>
+              <summary class="clickable">{anyAuditCount} audit{anyAuditCount === 1 ? "" : "s"}</summary>
+              <ul class="bare audits">
+                {rawAuditLinks.map((l) => (
+                  <li>
+                    <a href={l.url} class="link" rel="noreferrer" target="_blank">{auditorDomain(l.url) ?? l.url}</a>
+                    {family.length > 0 && l.from !== protocol.slug && <span class="muted"> {EM_DASH} {l.from}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </dd>
+      </div>
+      <div class="field">
+        <dt>Bug bounty</dt>
+        <dd>{metadata?.bug_bounty_url ? <a href={metadata.bug_bounty_url} class="link" rel="noreferrer" target="_blank">{metadata.bug_bounty_url}</a> : <span class="muted">unknown</span>}</dd>
+      </div>
+      <div class="field">
+        <dt>Security contact</dt>
+        <dd>{metadata?.security_contact ? <span class="mono">{metadata.security_contact}</span> : <span class="muted">unknown</span>}</dd>
+      </div>
+    </dl>
+  </div>
+
+  {(metadata?.voting_token || metadata?.deployed_contracts_doc || metadata?.upgradeability) && (
+    <div class="group">
+      <div class="group-head">
+        <h3>Technical</h3>
+        {technicalSources.length > 0 && (
+          <div class="group-sources">
+            {technicalSources.map((t) => (<ProvTag tag={t} slug={protocol.slug} />))}
+          </div>
+        )}
+      </div>
+      <dl class="fields two-col">
+        {metadata?.voting_token && (
+          <div class="field">
+            <dt>Voting token</dt>
+            <dd>
+              {metadata.voting_token.symbol && <span class="mono">{metadata.voting_token.symbol} </span>}
+              <span class="mono muted">{metadata.voting_token.chain}:</span>
+              <span class="mono">{metadata.voting_token.address}</span>
+            </dd>
+          </div>
+        )}
+        {metadata?.deployed_contracts_doc && (
+          <div class="field">
+            <dt>Deployed contracts</dt>
+            <dd><a href={metadata.deployed_contracts_doc} class="link" rel="noreferrer" target="_blank">{metadata.deployed_contracts_doc}</a></dd>
+          </div>
+        )}
+        {metadata?.upgradeability && (
+          <div class="field">
+            <dt>Upgradeability</dt>
+            <dd>{upgradeabilityLabel[metadata.upgradeability]}</dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  )}
+
+  <div class="group">
+    <div class="group-head">
+      <h3>Provenance</h3>
+      {provenanceSources.length > 0 && (
+        <div class="group-sources">
+          {provenanceSources.map((t) => (<ProvTag tag={t} slug={protocol.slug} />))}
+        </div>
+      )}
+    </div>
+    <dl class="fields two-col">
+      <div class="field">
+        <dt>Review status</dt>
+        <dd><span class="muted">listed</span></dd>
+      </div>
+      <div class="field">
+        <dt>Updated</dt>
+        <dd>{formatUtc(updatedAt)}</dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<style>
+  .reference-section {
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--brand-oxblood);
+  }
+  .reference-section > h2 { margin: 0 0 1rem 0; color: var(--text); font-size: 2.25rem; scroll-margin-top: 1rem; }
+  .group + .group { margin-top: 1.5rem; }
+  .group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--surface-raised);
+  }
+  .group-head h3 {
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+  .group-sources {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: baseline;
+    opacity: 0.55;
+    transition: opacity 120ms ease;
+  }
+  .group:hover .group-sources { opacity: 1; }
+
+  .fields.two-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1.75rem;
+    margin: 0;
+    padding: 0;
+    font-size: 0.95rem;
+  }
+  .field {
+    display: grid;
+    grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+    gap: 0 1rem;
+    align-items: baseline;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--surface-raised);
+  }
+  .field dt { color: var(--text-muted); font-weight: 500; margin: 0; }
+  .field dd {
+    color: var(--text);
+    margin: 0;
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .muted { color: var(--text-muted); }
+  .link { color: var(--accent-link); }
+  .bare { margin: 0; padding: 0; list-style: none; }
+  .audits { padding-top: 0.5rem; }
+  .audits li { padding: 0.15rem 0; }
+  .clickable { cursor: pointer; }
+
+  @media (max-width: 720px) {
+    .fields.two-col { grid-template-columns: 1fr; }
+    .field {
+      grid-template-columns: 1fr;
+      gap: 0.1rem;
+    }
+    .field dt { font-size: 0.85rem; }
+  }
+</style>

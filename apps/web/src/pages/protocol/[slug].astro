@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { getProtocol, listChildren, getAssessments, getSubmissions, type Snapshot } from "@defipunkd/registry";
 import Base from "../../layouts/Base.astro";
 import ProtocolDetail from "../../components/ProtocolDetail.astro";
+import FamilyDetail from "../../components/FamilyDetail.astro";
 import Delisted from "../../components/Delisted.astro";
 
 const slug = Astro.params.slug!;
@@ -14,7 +15,15 @@ const rawProtocol = getProtocol(slug);
 if (!rawProtocol) {
   return new Response(`Protocol not found: ${slug}`, { status: 404 });
 }
+
+// Children redirect to their parent's family page with their slug as the hash,
+// so existing links keep working under the consolidated family-page model.
+if (rawProtocol.parent_slug && !rawProtocol.delisted_at) {
+  return Astro.redirect(`/protocol/${rawProtocol.parent_slug}#${rawProtocol.slug}`, 301);
+}
+
 const children = rawProtocol.delisted_at ? [] : listChildren(slug);
+const isFamily = !rawProtocol.delisted_at && rawProtocol.is_parent && children.length > 0;
 
 function findSnapshotPath(): string {
   let dir = process.cwd();
@@ -76,6 +85,8 @@ const title = isDelisted
 <Base title={title} noindex>
   {isDelisted ? (
     <Delisted protocol={protocol} />
+  ) : isFamily ? (
+    <FamilyDetail protocol={protocol} snapshotGeneratedAt={snapshotGeneratedAt()} children={children} />
   ) : (
     <ProtocolDetail protocol={protocol} snapshotGeneratedAt={snapshotGeneratedAt()} children={children} assessments={getAssessments().get(protocol.slug)} submissions={getSubmissions().get(protocol.slug)} />
   )}
