@@ -118,6 +118,11 @@ async function main(): Promise<number> {
         || prev.consensus_strength !== a.consensus_strength
         || prev.merged_from.length !== a.merged_from.length;
 
+      const provenanceChanged = !!prev && (
+        prev.primary_submission_path !== a.primary_submission_path
+        || JSON.stringify(prev.merged_from) !== JSON.stringify(a.merged_from)
+      );
+
       const needsSynthesis = consensusChanged || !prev?.short_headline;
       const agreeing = entries
         .filter((e) => e.submission.grade === a.consensus_grade)
@@ -154,7 +159,7 @@ async function main(): Promise<number> {
           strength: a.consensus_strength,
           submissionCount: entries.length,
         });
-      } else if (consensusChanged || prev.short_headline !== a.short_headline) {
+      } else if (consensusChanged || provenanceChanged || prev.short_headline !== a.short_headline) {
         writeAssessment(assessmentPath, a);
         changes.push({
           slug,
