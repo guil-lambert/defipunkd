@@ -296,10 +296,22 @@ function loadAdapter(path: string): AdapterFile | null {
   }
 }
 
-function writeControl(repoRoot: string, slug: string, file: ControlFile): void {
+function writeControl(repoRoot: string, slug: string, file: ControlFile): boolean {
   const outDir = join(repoRoot, "data", "enrichment", slug);
+  const outPath = join(outDir, "control.json");
+  if (existsSync(outPath)) {
+    try {
+      const prev = JSON.parse(readFileSync(outPath, "utf8")) as ControlFile;
+      const prevData = JSON.stringify({ addresses: prev.addresses, summary: prev.summary });
+      const nextData = JSON.stringify({ addresses: file.addresses, summary: file.summary });
+      if (prevData === nextData) return false;
+    } catch {
+      // fall through and overwrite
+    }
+  }
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, "control.json"), `${JSON.stringify(file, null, 2)}\n`);
+  writeFileSync(outPath, `${JSON.stringify(file, null, 2)}\n`);
+  return true;
 }
 
 async function main(): Promise<void> {
@@ -335,6 +347,8 @@ async function main(): Promise<void> {
   let calls = 0;
   let cacheHits = 0;
   let limitedSkips = 0;
+  let writes = 0;
+  let unchanged = 0;
 
   for (const adapterPath of filtered) {
     const adapter = loadAdapter(adapterPath);
@@ -452,11 +466,12 @@ async function main(): Promise<void> {
       addresses: entries,
       summary: summarize(entries),
     };
-    writeControl(opts.repoRoot, adapter.slug, out);
+    if (writeControl(opts.repoRoot, adapter.slug, out)) writes++;
+    else unchanged++;
   }
 
   console.error(
-    `[control] done: ${calls} fresh fetches, ${cacheHits} cache hits` +
+    `[control] done: ${calls} fresh fetches, ${cacheHits} cache hits, ${writes} files updated, ${unchanged} unchanged` +
       (limitedSkips > 0 ? `, ${limitedSkips} skipped due to FETCH_LIMIT` : "") +
       ` across ${filtered.length} protocols`,
   );
