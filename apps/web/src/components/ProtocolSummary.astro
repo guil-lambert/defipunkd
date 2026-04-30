@@ -11,8 +11,10 @@ interface Props {
   protocol: Protocol;
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
   submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
+  idPrefix?: string;
 }
-const { protocol, assessments, submissions } = Astro.props;
+const { protocol, assessments, submissions, idPrefix = "" } = Astro.props;
+const idp = idPrefix ? `${idPrefix}-` : "";
 
 const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
 
@@ -177,11 +179,11 @@ const aboutUnknown = !curatedAbout;
             </pattern>
           </defs>
           {pizzaSlices.map(({ assessment, fillGrade, d }) => (
-            <a href={`#${assessment.id}`} data-pizza-slice={assessment.id} class="pizza-slice">
+            <a href={`#${idp}${assessment.id}`} data-pizza-slice={assessment.id} class="pizza-slice">
               <path d={d} fill={GRADE_FILL[fillGrade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
-                <title>{`${assessment.label} — ${assessment.partial ? `tentative ${fillGrade === "gray" ? "unknown" : fillGrade} (${assessment.models?.length ?? 0}/3 models submitted)` : assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
+                <title>{`${assessment.label} — ${assessment.partial ? `tentative ${fillGrade === "gray" ? "unknown" : fillGrade} (${assessment.models?.length ?? 0}/3 models submitted)` : assessment.tentative ? `tentative ${assessment.grade === "gray" ? "unknown" : assessment.grade}` : assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
               </path>
-              {assessment.partial && (
+              {(assessment.partial || assessment.tentative) && (
                 <path d={d} fill="url(#partial-hatch)" stroke="none" pointer-events="none" />
               )}
             </a>
@@ -194,7 +196,7 @@ const aboutUnknown = !curatedAbout;
           </span>
         ))}
       </div>
-      <RiskMatrix slices={headerSlices} variant="full" tier={protocolTier} />
+      <RiskMatrix slices={headerSlices} variant="full" tier={protocolTier} idPrefix={idPrefix} />
     </div>
 
     <div class="about-row">
@@ -305,6 +307,21 @@ const aboutUnknown = !curatedAbout;
   .pizza-slice { cursor: pointer; }
   .pizza-slice path { transition: opacity 150ms ease, transform 150ms ease; transform-origin: 50% 50%; transform-box: fill-box; }
   .pizza:has(.pizza-slice:hover) .pizza-slice:not(:hover) path { opacity: 0.3; }
+  /* Matrix-row hover dims non-matching pizza slices, mirroring slice-hover */
+  .risk-row:has(:global([data-slice-row="control"]:hover)) .pizza-slice:not([data-pizza-slice="control"]) path,
+  .risk-row:has(:global([data-slice-row="ability-to-exit"]:hover)) .pizza-slice:not([data-pizza-slice="ability-to-exit"]) path,
+  .risk-row:has(:global([data-slice-row="autonomy"]:hover)) .pizza-slice:not([data-pizza-slice="autonomy"]) path,
+  .risk-row:has(:global([data-slice-row="open-access"]:hover)) .pizza-slice:not([data-pizza-slice="open-access"]) path,
+  .risk-row:has(:global([data-slice-row="verifiability"]:hover)) .pizza-slice:not([data-pizza-slice="verifiability"]) path {
+    opacity: 0.3;
+  }
+  .risk-row:has(:global([data-slice-row="control"]:hover)) [data-pizza-label="control"],
+  .risk-row:has(:global([data-slice-row="ability-to-exit"]:hover)) [data-pizza-label="ability-to-exit"],
+  .risk-row:has(:global([data-slice-row="autonomy"]:hover)) [data-pizza-label="autonomy"],
+  .risk-row:has(:global([data-slice-row="open-access"]:hover)) [data-pizza-label="open-access"],
+  .risk-row:has(:global([data-slice-row="verifiability"]:hover)) [data-pizza-label="verifiability"] {
+    color: var(--text);
+  }
   .pizza-label {
     position: absolute;
     transform: translate(-50%, -50%);

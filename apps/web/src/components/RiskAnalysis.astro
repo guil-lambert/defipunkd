@@ -116,7 +116,8 @@ function partialStripeStyle(s: SliceAssessment): string {
   // Build a diagonal repeating stripe alternating each tentative grade with gray.
   const grades = (s.partialModelGrades ?? []).map((g) => g.grade);
   const uniq = Array.from(new Set(grades));
-  const colors = uniq.length > 0 ? uniq.map((g) => GRADE_VAR[g] ?? "var(--grade-gray)") : ["var(--grade-gray)"];
+  const fallback = GRADE_VAR[s.grade] ?? "var(--grade-gray)";
+  const colors = uniq.length > 0 ? uniq.map((g) => GRADE_VAR[g] ?? "var(--grade-gray)") : [fallback];
   const band = 8;
   const grayBand = "var(--surface)";
   const segments: string[] = [];
@@ -203,7 +204,7 @@ function partialPillText(modelCount: number): string {
 
   <ol class="cards">
     {gradedSlices.map((s) => (
-      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: s.partial || s.tentative }]} style={s.partial ? partialStripeStyle(s) : undefined} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
+      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: s.partial || s.tentative }]} style={(s.partial || s.tentative) ? partialStripeStyle(s) : undefined} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
         <details class="body card-details">
           <summary class="card-summary">
             <div class="meta">
