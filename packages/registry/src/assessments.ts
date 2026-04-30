@@ -52,6 +52,7 @@ export type LoadedAssessment = {
   models: string[];
   models_with_chat_url: number;
   model_sources: Array<{ model: string; chat_url: string | null }>;
+  consensus_sources: Array<{ model: string; chat_url: string | null; weight: number }>;
   merged_at?: string;
   human_signoff?: HumanSignoff | null;
   protocol_metadata?: ProtocolMetadata;
@@ -67,7 +68,7 @@ type RawAssessment = {
   merged_at?: string;
   human_signoff?: HumanSignoff | null;
   primary_submission_path: string;
-  merged_from?: Array<{ model: string; chat_url?: string | null }>;
+  merged_from?: Array<{ model: string; chat_url?: string | null; weight?: number }>;
   protocol_metadata?: ProtocolMetadata;
 };
 
@@ -156,9 +157,12 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
       const modelsWithChatUrl = new Set<string>();
       const seenModels = new Set<string>();
       const modelSources: Array<{ model: string; chat_url: string | null }> = [];
+      const consensusSources: Array<{ model: string; chat_url: string | null; weight: number }> = [];
       for (const m of raw.merged_from ?? []) {
         if (typeof m.model !== "string" || m.model.length === 0) continue;
         const url = typeof m.chat_url === "string" && m.chat_url.length > 0 ? m.chat_url : null;
+        const weight = typeof m.weight === "number" && Number.isFinite(m.weight) ? m.weight : 1;
+        consensusSources.push({ model: m.model, chat_url: url, weight });
         if (url) modelsWithChatUrl.add(m.model);
         if (!seenModels.has(m.model)) {
           seenModels.add(m.model);
@@ -181,6 +185,7 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         models,
         models_with_chat_url: modelsWithChatUrl.size,
         model_sources: modelSources,
+        consensus_sources: consensusSources,
         merged_at: raw.merged_at,
         human_signoff: raw.human_signoff ?? null,
         protocol_metadata: raw.protocol_metadata,

@@ -2,6 +2,7 @@ import type { Protocol, LoadedAssessment, AssessmentSliceId, Rationale, LoadedSu
 import type { GradeColor } from "./verifiability";
 import { verifiabilityGrade } from "./verifiability";
 import { autonomyGrade } from "./autonomy";
+import { assessConfidence } from "./confidence";
 
 export type SliceAssessment = {
   id: "control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability";
@@ -20,10 +21,17 @@ export type SliceAssessment = {
    * grade chip. */
   partial?: boolean;
   partialModelGrades?: { model: string; grade: GradeColor }[];
+  /** True when the merged consensus is shaky (weak strength, low URL coverage,
+   * hallucination-heavy weight, or low total support weight). Renders dashed
+   * with a tooltip but keeps the grade chip — distinct from `partial` (no
+   * quorum yet). */
+  tentative?: boolean;
+  tentative_reasons?: string[];
 };
 
-function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url" | "model_sources"> {
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url" | "model_sources" | "tentative" | "tentative_reasons"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
+  const confidence = assessConfidence(a.consensus_sources, a.strength);
   return {
     grade,
     headline: a.headline,
@@ -34,6 +42,8 @@ function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "gra
     models: a.models,
     models_with_chat_url: a.models_with_chat_url,
     model_sources: a.model_sources,
+    tentative: confidence.tentative,
+    tentative_reasons: confidence.reasons,
   };
 }
 
