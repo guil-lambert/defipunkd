@@ -51,6 +51,7 @@ export type LoadedAssessment = {
   rationale: Rationale;
   models: string[];
   models_with_chat_url: number;
+  model_sources: Array<{ model: string; chat_url: string | null }>;
   merged_at?: string;
   human_signoff?: HumanSignoff | null;
   protocol_metadata?: ProtocolMetadata;
@@ -153,9 +154,19 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         new Set((raw.merged_from ?? []).map((m) => m.model).filter((m) => typeof m === "string" && m.length > 0)),
       );
       const modelsWithChatUrl = new Set<string>();
+      const seenModels = new Set<string>();
+      const modelSources: Array<{ model: string; chat_url: string | null }> = [];
       for (const m of raw.merged_from ?? []) {
-        if (typeof m.model === "string" && m.model.length > 0 && typeof m.chat_url === "string" && m.chat_url.length > 0) {
-          modelsWithChatUrl.add(m.model);
+        if (typeof m.model !== "string" || m.model.length === 0) continue;
+        const url = typeof m.chat_url === "string" && m.chat_url.length > 0 ? m.chat_url : null;
+        if (url) modelsWithChatUrl.add(m.model);
+        if (!seenModels.has(m.model)) {
+          seenModels.add(m.model);
+          modelSources.push({ model: m.model, chat_url: url });
+        } else if (url) {
+          // Prefer first non-null chat_url for the same model.
+          const existing = modelSources.find((ms) => ms.model === m.model);
+          if (existing && !existing.chat_url) existing.chat_url = url;
         }
       }
 
@@ -169,6 +180,7 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         rationale: sub.rationale,
         models,
         models_with_chat_url: modelsWithChatUrl.size,
+        model_sources: modelSources,
         merged_at: raw.merged_at,
         human_signoff: raw.human_signoff ?? null,
         protocol_metadata: raw.protocol_metadata,

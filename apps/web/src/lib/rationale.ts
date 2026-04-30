@@ -14,6 +14,7 @@ export type SliceAssessment = {
   strength?: "strong" | "weak";
   models?: string[];
   models_with_chat_url?: number;
+  model_sources?: Array<{ model: string; chat_url: string | null }>;
   /** True when at least one submission exists but quorum is not met. UI hides
    * verdict + steel-man and shows an "(N/3 models submitted)" pill instead of a
    * grade chip. */
@@ -21,7 +22,7 @@ export type SliceAssessment = {
   partialModelGrades?: { model: string; grade: GradeColor }[];
 };
 
-function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url"> {
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url" | "model_sources"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
   return {
     grade,
@@ -32,6 +33,7 @@ function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "gra
     strength: a.strength,
     models: a.models,
     models_with_chat_url: a.models_with_chat_url,
+    model_sources: a.model_sources,
   };
 }
 
@@ -128,7 +130,7 @@ function autonomyRationale(p: Protocol): { grade: GradeColor; headline: string; 
   };
 }
 
-function partialFromSubmissions(arr: LoadedSubmission[]): Pick<SliceAssessment, "headline" | "short_headline" | "rationale" | "structured" | "models" | "partial" | "partialModelGrades"> {
+function partialFromSubmissions(arr: LoadedSubmission[]): Pick<SliceAssessment, "headline" | "short_headline" | "rationale" | "structured" | "models" | "model_sources" | "partial" | "partialModelGrades"> {
   // arr is pre-sorted newest-first by the loader.
   const latest = arr[0]!;
   // Merge findings across all submissions, deduped by code|text.
@@ -153,6 +155,7 @@ function partialFromSubmissions(arr: LoadedSubmission[]): Pick<SliceAssessment, 
     rationale: latest.headline,
     structured,
     models: arr.map((s) => s.model),
+    model_sources: arr.map((s) => ({ model: s.model, chat_url: s.chat_url })),
     partial: true,
     partialModelGrades: arr.map((s) => ({
       model: s.model,

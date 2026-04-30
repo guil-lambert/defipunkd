@@ -16,6 +16,7 @@ export type LoadedSubmission = {
   slug: string;
   slice: SliceId;
   model: string;
+  chat_url: string | null;
   grade: SubmissionGrade;
   headline: string;
   short_headline?: string;
@@ -31,6 +32,7 @@ type RawSubmission = {
   slug: string;
   slice: SliceId;
   model: string;
+  chat_url?: string | null;
   grade: SubmissionGrade;
   headline: string;
   short_headline?: string;
@@ -112,6 +114,7 @@ export function loadSubmissions(dataDir: string): Map<string, Map<SliceId, Loade
             slug: r.slug,
             slice: r.slice,
             model: r.model,
+            chat_url: typeof r.chat_url === "string" && r.chat_url.length > 0 ? r.chat_url : null,
             grade: r.grade,
             headline: r.headline ?? "",
             short_headline: r.short_headline,

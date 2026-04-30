@@ -313,7 +313,19 @@ function partialPillText(modelCount: number): string {
             <div class="sources">
               <span class="sources-label">Sources</span>
               <span class="model-badges">
-                {s.models.map((m) => <span class="model-badge">{m}</span>)}
+                {(s.model_sources && s.model_sources.length > 0
+                  ? s.model_sources
+                  : s.models.map((m) => ({ model: m, chat_url: null }))
+                ).map((src) => (
+                  <span class="model-badge">
+                    {src.model}
+                    {src.chat_url ? (
+                      <a class="model-source-link" href={src.chat_url} rel="noreferrer" target="_blank" title="Open public chat share link">url ↗</a>
+                    ) : (
+                      <span class="model-source-missing" title="No public chat share link — submission weight reduced by 95%">no url</span>
+                    )}
+                  </span>
+                ))}
               </span>
               <a class="sources-link" href={`https://github.com/guil-lambert/defipunkd/tree/main/data/submissions/${protocol.slug}/${s.id}`} rel="noreferrer" target="_blank">View raw submissions ↗</a>
             </div>
@@ -809,7 +821,9 @@ function partialPillText(modelCount: number): string {
   }
   .model-badges { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
   .model-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     padding: 0.1rem 0.5rem;
     border-radius: 999px;
     background: var(--surface-raised);
@@ -817,6 +831,18 @@ function partialPillText(modelCount: number): string {
     font-size: 0.72rem;
     font-weight: 500;
     font-family: var(--font-mono), ui-monospace, monospace;
+  }
+  .model-source-link {
+    color: var(--accent-link);
+    text-decoration: none;
+    font-size: 0.65rem;
+  }
+  .model-source-link:hover { text-decoration: underline; }
+  .model-source-missing {
+    color: var(--text-muted, #888);
+    font-size: 0.65rem;
+    font-style: italic;
+    opacity: 0.75;
   }
   .sources-link {
     color: var(--accent-link);
