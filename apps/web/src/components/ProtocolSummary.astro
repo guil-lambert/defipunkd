@@ -11,8 +11,10 @@ interface Props {
   protocol: Protocol;
   assessments?: Map<AssessmentSliceId, LoadedAssessment>;
   submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
+  idPrefix?: string;
 }
-const { protocol, assessments, submissions } = Astro.props;
+const { protocol, assessments, submissions, idPrefix = "" } = Astro.props;
+const idp = idPrefix ? `${idPrefix}-` : "";
 
 const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
 
@@ -20,11 +22,14 @@ let tierInput: TierInput | undefined;
 if ((assessments && assessments.size > 0) || (submissions && submissions.size > 0)) {
   tierInput = {};
   if (assessments) {
+    const tentativeBySlice = new Map<string, boolean>();
+    for (const s of headerSlices) tentativeBySlice.set(s.id, !!s.tentative);
     for (const [sliceId, a] of assessments.entries()) {
       tierInput[sliceId as PizzaSliceId] = {
         models: a.models,
         merged_at: a.merged_at,
         human_signoff: a.human_signoff ?? null,
+        tentative: tentativeBySlice.get(sliceId) ?? false,
       };
     }
   }
@@ -177,11 +182,11 @@ const aboutUnknown = !curatedAbout;
             </pattern>
           </defs>
           {pizzaSlices.map(({ assessment, fillGrade, d }) => (
-            <a href={`#${assessment.id}`} data-pizza-slice={assessment.id} class="pizza-slice">
+            <a href={`#${idp}${assessment.id}`} data-pizza-slice={assessment.id} class="pizza-slice">
               <path d={d} fill={GRADE_FILL[fillGrade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
-                <title>{`${assessment.label} — ${assessment.partial ? `tentative ${fillGrade === "gray" ? "unknown" : fillGrade} (${assessment.models?.length ?? 0}/3 models submitted)` : assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
+                <title>{`${assessment.label} — ${assessment.partial ? `tentative ${fillGrade === "gray" ? "unknown" : fillGrade} (${assessment.models?.length ?? 0}/3 models submitted)` : assessment.tentative ? `tentative ${assessment.grade === "gray" ? "unknown" : assessment.grade}` : assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
               </path>
-              {assessment.partial && (
+              {(assessment.partial || assessment.tentative) && (
                 <path d={d} fill="url(#partial-hatch)" stroke="none" pointer-events="none" />
               )}
             </a>
@@ -194,7 +199,7 @@ const aboutUnknown = !curatedAbout;
           </span>
         ))}
       </div>
-      <RiskMatrix slices={headerSlices} variant="full" tier={protocolTier} />
+      <RiskMatrix slices={headerSlices} variant="full" tier={protocolTier} idPrefix={idPrefix} />
     </div>
 
     <div class="about-row">
@@ -406,5 +411,34 @@ const aboutUnknown = !curatedAbout;
     .hero { padding: 0.75rem; gap: 0.9rem; }
     .about-row { grid-template-columns: 1fr; }
     .top-item.tvl .v { font-size: 1.4rem; }
+  }
+</style>
+
+<style is:global>
+  /* Matrix-row hover dims non-matching pizza slices, mirroring pizza→matrix hover.
+     Lives in a global block because [data-slice-row] is rendered by RiskMatrix
+     (different scope), and `:global()` inside `:has()` is not reliably scoped. */
+  .risk-row:has([data-slice-row="control"]:hover) .pizza-slice:not([data-pizza-slice="control"]) path,
+  .risk-row:has([data-slice-row="ability-to-exit"]:hover) .pizza-slice:not([data-pizza-slice="ability-to-exit"]) path,
+  .risk-row:has([data-slice-row="autonomy"]:hover) .pizza-slice:not([data-pizza-slice="autonomy"]) path,
+  .risk-row:has([data-slice-row="open-access"]:hover) .pizza-slice:not([data-pizza-slice="open-access"]) path,
+  .risk-row:has([data-slice-row="verifiability"]:hover) .pizza-slice:not([data-pizza-slice="verifiability"]) path {
+    opacity: 0.3;
+  }
+  .risk-row:has([data-slice-row="control"]:hover) [data-pizza-label="control"],
+  .risk-row:has([data-slice-row="ability-to-exit"]:hover) [data-pizza-label="ability-to-exit"],
+  .risk-row:has([data-slice-row="autonomy"]:hover) [data-pizza-label="autonomy"],
+  .risk-row:has([data-slice-row="open-access"]:hover) [data-pizza-label="open-access"],
+  .risk-row:has([data-slice-row="verifiability"]:hover) [data-pizza-label="verifiability"] {
+    color: var(--text);
+  }
+  /* Direct hover on a matrix row uses the same accent treatment as
+     pizza→row hover, so both directions are visually identical. */
+  .risk-row [data-slice-row]:hover {
+    background: color-mix(in oklab, var(--accent-link) 15%, transparent);
+    outline: 1px solid color-mix(in oklab, var(--accent-link) 45%, transparent);
+  }
+  .risk-row [data-slice-row]:hover .row-link {
+    background: transparent;
   }
 </style>

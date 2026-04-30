@@ -10,6 +10,8 @@ export type TierSliceInput = {
   human_signoff?: { signed_at: string; signers?: string[] } | null;
   /** Number of raw submissions for this slice — used to derive the "wood" tier. */
   submissionCount?: number;
+  /** True when the merged consensus is flagged as tentative (weak/low-confidence). */
+  tentative?: boolean;
 };
 
 export type TierInput = Partial<Record<PizzaSliceId, TierSliceInput>>;
@@ -17,19 +19,23 @@ export type TierInput = Partial<Record<PizzaSliceId, TierSliceInput>>;
 export function deriveTier(input: TierInput | undefined | null): Tier {
   if (!input) return "none";
   let quorumCount = 0;
-  let hasSignoff = false;
+  let tentativeQuorumCount = 0;
   let hasAnySubmission = false;
   for (const { id } of PIZZA_SLICES) {
     const slice = input[id];
     if (!slice) continue;
-    if (slice.human_signoff && slice.human_signoff.signed_at) hasSignoff = true;
-    if ((slice.models?.length ?? 0) >= QUORUM_MIN) quorumCount += 1;
+    const hasQuorum = (slice.models?.length ?? 0) >= QUORUM_MIN;
+    if (hasQuorum) {
+      quorumCount += 1;
+      if (slice.tentative) tentativeQuorumCount += 1;
+    }
     if ((slice.submissionCount ?? 0) >= 1 || (slice.models?.length ?? 0) >= 1) {
       hasAnySubmission = true;
     }
   }
-  if (hasSignoff) return "gold";
-  if (quorumCount >= PIZZA_SLICES.length) return "silver";
+  if (quorumCount >= PIZZA_SLICES.length) {
+    return tentativeQuorumCount === 0 ? "gold" : "silver";
+  }
   if (quorumCount >= 1) return "bronze";
   if (hasAnySubmission) return "wood";
   return "none";
@@ -95,8 +101,8 @@ export const TIER_CHECK_COLOR: Record<Exclude<Tier, "none">, string> = {
 export const TIER_LABEL: Record<Exclude<Tier, "none">, string> = {
   wood: "Wood tier · At least one model submission, no quorum yet",
   bronze: "Bronze tier · AI consensus on at least one dimension",
-  silver: "Silver tier · AI consensus on all dimensions",
-  gold: "Gold tier · Verified by human committee",
+  silver: "Silver tier · Weak AI consensus on all dimensions",
+  gold: "Gold tier · Strong AI consensus on all dimensions",
 };
 
 /** Below this size the checkmark is dropped — disc/rim/gradient only. */

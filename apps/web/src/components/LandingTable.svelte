@@ -276,9 +276,14 @@
   {@const rowHref = isChild && row.parent_slug
     ? `/protocol/${row.parent_slug}#${row.slug}`
     : isFamilyHead ? null : `/protocol/${row.slug}`}
+  {@const largestChild = isFamilyHead && row.children
+    ? [...row.children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))[0]
+    : null}
   {@const auditHref = isChild && row.parent_slug
     ? `/protocol/${row.parent_slug}#${row.slug}`
-    : isFamilyHead ? null : `/protocol/${row.slug}#audit-yourself`}
+    : isFamilyHead
+      ? (largestChild ? `/protocol/${row.slug}#${largestChild.slug}-audit-yourself` : null)
+      : `/protocol/${row.slug}#audit-yourself`}
   <tr class:child={isChild}>
     <td class="name-cell" class:child-cell={isChild}>
       <div class="name-inner">

@@ -30,15 +30,19 @@ const rows: LandingRow[] = protocols.map((p) => {
       )
     : undefined;
   const subBySlice = submissions.get(p.slug);
+  const sliceList = p.category === "CEX" ? cexAssessment() : assessProtocol(p, bySlice, subBySlice);
   let tierInput: TierInput | undefined;
   if (bySlice || subBySlice) {
     tierInput = {};
     if (bySlice) {
+      const tentativeBySlice = new Map<string, boolean>();
+      for (const s of sliceList) tentativeBySlice.set(s.id, !!s.tentative);
       for (const [sliceId, a] of bySlice.entries()) {
         tierInput[sliceId as PizzaSliceId] = {
           models: a.models,
           merged_at: a.merged_at,
           human_signoff: a.human_signoff ?? null,
+          tentative: tentativeBySlice.get(sliceId) ?? false,
         };
       }
     }
@@ -53,7 +57,6 @@ const rows: LandingRow[] = protocols.map((p) => {
     }
   }
   const tier = deriveTier(tierInput);
-  const sliceList = p.category === "CEX" ? cexAssessment() : assessProtocol(p, bySlice, subBySlice);
   const slice_summary = sliceList.map((s) => ({
     id: s.id,
     label: s.label,

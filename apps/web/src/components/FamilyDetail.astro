@@ -13,6 +13,7 @@ import ProtocolReferences from "./ProtocolReferences.astro";
 import DeploymentTabs from "./DeploymentTabs.svelte";
 import { getEnrichment } from "@defipunkd/registry";
 import { deriveTier, type TierInput } from "../lib/tier";
+import { assessProtocol, cexAssessment } from "../lib/rationale";
 import { pizzaGradesFor, type PizzaGrades, type PizzaSliceId } from "../lib/pizza";
 import { verifiabilityGrade, type GradeColor } from "../lib/verifiability";
 import { autonomyGrade } from "../lib/autonomy";
@@ -114,8 +115,16 @@ const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
         let ti: TierInput | undefined;
         if ((a && a.size > 0) || (s && s.size > 0)) {
           ti = {};
+          const childSlices = c.category === "CEX" ? cexAssessment() : assessProtocol(c, a, s);
+          const tentativeBySlice = new Map<string, boolean>();
+          for (const sl of childSlices) tentativeBySlice.set(sl.id, !!sl.tentative);
           if (a) for (const [sid, ass] of a.entries()) {
-            ti[sid as PizzaSliceId] = { models: ass.models, merged_at: ass.merged_at, human_signoff: ass.human_signoff ?? null };
+            ti[sid as PizzaSliceId] = {
+              models: ass.models,
+              merged_at: ass.merged_at,
+              human_signoff: ass.human_signoff ?? null,
+              tentative: tentativeBySlice.get(sid) ?? false,
+            };
           }
           if (s) for (const [sid, arr] of s.entries()) {
             const existing = ti[sid as PizzaSliceId] ?? {};
@@ -154,7 +163,7 @@ const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
         aria-labelledby={`tab-${child.slug}`}
         hidden={i !== 0}
       >
-        <ProtocolSummary protocol={child} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} />
+        <ProtocolSummary protocol={child} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} idPrefix={child.slug} />
         <RiskAnalysis protocol={child} snapshotGeneratedAt={snapshotGeneratedAt} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} children={[]} idPrefix={child.slug} />
         <TvlSurface enrichment={getEnrichment(child.slug)} idPrefix={child.slug} />
         <StagePreview protocol={child} />

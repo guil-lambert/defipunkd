@@ -24,7 +24,7 @@ describe("deriveTier", () => {
     expect(deriveTier(input)).toBe("wood");
   });
 
-  it("returns 'silver' when all 5 slices have quorum", () => {
+  it("returns 'gold' when all 5 slices have strong (non-tentative) quorum", () => {
     const input: TierInput = {
       control: { models: models(3) },
       "ability-to-exit": { models: models(3) },
@@ -32,14 +32,18 @@ describe("deriveTier", () => {
       "open-access": { models: models(3) },
       verifiability: { models: models(3) },
     };
-    expect(deriveTier(input)).toBe("silver");
+    expect(deriveTier(input)).toBe("gold");
   });
 
-  it("returns 'gold' on any human signoff", () => {
+  it("returns 'silver' when all 5 slices have quorum but at least one is tentative", () => {
     const input: TierInput = {
-      control: { models: models(3), human_signoff: { signed_at: "2026-01-01T00:00:00Z" } },
+      control: { models: models(3) },
+      "ability-to-exit": { models: models(3), tentative: true },
+      autonomy: { models: models(3) },
+      "open-access": { models: models(3) },
+      verifiability: { models: models(3) },
     };
-    expect(deriveTier(input)).toBe("gold");
+    expect(deriveTier(input)).toBe("silver");
   });
 });
 
