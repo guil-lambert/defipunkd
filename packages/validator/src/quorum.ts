@@ -52,6 +52,15 @@ export type QuorumContext = {
 };
 
 
+function isHallucinationProneModel(model: string): boolean {
+  const m = model.toLowerCase();
+  if (/claude-haiku-4-5/.test(m)) return true;
+  if (/gemini-3-flash-preview/.test(m)) return true;
+  const gpt = m.match(/gpt-(\d+(?:\.\d+)?)/);
+  if (gpt && parseFloat(gpt[1]!) <= 5.3) return true;
+  return false;
+}
+
 function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): ScoredSubmission {
   let weight = 1.0;
   if (!isPublicChatShareUrl(s.chat_url ?? null)) weight *= 0.05;
@@ -72,6 +81,8 @@ function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): Scored
   if (s.snapshot_generated_at !== ctx.currentSnapshotGeneratedAt) weight -= 0.1;
 
   if (/\(autorun\)/i.test(s.model)) weight += 0.2;
+
+  if (isHallucinationProneModel(s.model)) weight *= 0.25;
 
   if (weight < 0.1) weight = 0.1;
   return { submission: s, sourcePath, weight };
