@@ -216,6 +216,16 @@ export function getProtocolMetadata(slug: string): ProtocolMetadata | undefined 
       const merged = aggregateProtocolMetadata(bySlice);
       if (merged) cachedMetadata.set(s, merged);
     }
+    // Last-resort fallback: overlay-supplied auto-enriched bug_bounty_url.
+    // Curated assessment values always win.
+    const overlays = loadOverlays(DATA_DIR);
+    for (const [s, overlay] of overlays) {
+      const url = overlay.bug_bounty_url;
+      if (!url) continue;
+      const existing = cachedMetadata.get(s);
+      if (existing?.bug_bounty_url) continue;
+      cachedMetadata.set(s, { ...(existing ?? {}), bug_bounty_url: url });
+    }
   }
   return cachedMetadata.get(slug);
 }

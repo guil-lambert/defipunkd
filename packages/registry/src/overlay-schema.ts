@@ -16,6 +16,7 @@ export const OverlaySchema = z
     parent_slug: z.string().nullable(),
     forked_from: z.array(z.number()).nullable(),
     is_dead: z.boolean().nullable(),
+    bug_bounty_url: z.string().nullable(),
   })
   .partial()
   .strict();

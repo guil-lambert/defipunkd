@@ -1,0 +1,55 @@
+name: Refresh bug bounty index
+
+on:
+  schedule:
+    - cron: "30 6 * * MON"
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-bounties
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Crawl Immunefi + Cantina
+        run: pnpm --filter @defipunkd/enrichment run index-bounties
+
+      - name: Match protocols against bounty index
+        run: pnpm --filter @defipunkd/enrichment run extract-bounties
+
+      - name: Merge chosen URLs into overlays
+        run: pnpm --filter @defipunkd/enrichment run merge-bounties-to-overlays -- --apply
+
+      - name: Open PR with bounty diff
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(data): refresh bug bounty index"
+          title: "chore(data): refresh bug bounty index — ${{ github.run_number }}"
+          body: |
+            Weekly refresh of the bug bounty pipeline:
+            - `data/bounties/index.json` re-crawled from Immunefi + Cantina
+            - `data/enrichment/<slug>/bounties.json` rebuilt
+            - `data/overlays/<slug>.json` `bug_bounty_url` field updated where missing
+          branch: data/bounties-${{ github.run_number }}
+          add-paths: |
+            data/bounties/**
+            data/enrichment/**/bounties.json
+            data/overlays/**
+          delete-branch: true
