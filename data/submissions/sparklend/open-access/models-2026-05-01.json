@@ -1,0 +1,149 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Core SparkLend actions are open onchain; official frontend restrictions found were passive legal terms",
+    "short_headline": "Open onchain access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The deployed Ethereum Pool implementation exposes supply, supplyWithPermit, withdraw, borrow, repay, repayWithPermit, repayWithATokens, collateral, liquidation, and flash-loan functions as public/external user actions without whitelist/KYC modifiers; bridge/admin/configurator powers are separate privileged functions. Searches of the verified source found no onlyWhitelisted, onlyRole, allowlist, isAccredited, or isKYCed matches."
+        },
+        {
+          "code": "A2",
+          "text": "Core admission is enforced by onchain protocol state, not off-chain operator approval: supply checks reserve status and caps, withdraw checks reserve status and balance, borrow checks reserve status, collateralization, caps, and a global priceOracleSentinel isBorrowAllowed hook if configured."
+        },
+        {
+          "code": "A3-passive",
+          "text": "The official Terms contain passive eligibility and sanctions language, including the clause \"not be an individual or entity subject to national or international sanctions\", and reserve discretion to limit site access based on factors such as address, IP, or location."
+        },
+        {
+          "code": "A3-active",
+          "text": "I found no fetched evidence of an active runtime block: no quoted live rejection banner, HTTP 451 observation, KYC wall, or named Chainalysis/TRM/Elliptic integration was observed in the fetched app/site/terms sources, so no A3-active restriction is asserted."
+        },
+        {
+          "code": "A3b",
+          "text": "The protocol's own Terms document direct non-site access through block explorers, nodes, and user-signed wallet transactions; the official spark-interface IPFS path is an official redistribution, while cp0x's separate permissionless Spark interface is an independently operated alternative path."
+        },
+        {
+          "code": "A4",
+          "text": "No onchain OFAC, sanctions, blacklist, blocklist, or Chainalysis-style address-screening check was found in the deployed Pool source; the sanctions signal found is off-chain Terms language."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through Pool view getters, and write access to core user functions is public subject to balance, collateral, cap, pause/freeze, and reserve-state checks; Etherscan shows live Supply, Withdraw, Borrow, and Repay calls against the Pool proxy."
+        },
+        {
+          "code": "A6",
+          "text": "The official legal link is https://spark.fi/terms-of-use and contains the sanctions/eligibility quote recorded under A3-passive."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that SparkLend has privileged bridge/admin/configurator functions and a global borrow sentinel hook, but the evidence shows these are not per-user KYC, whitelist, or single-operator admission approvals for core user actions.",
+        "orange": "The strongest orange argument is that the official frontend Terms reserve targeted denial based on address, IP, or location, but I did not verify runtime enforcement and independent contract/front-end paths exist.",
+        "green": "The strongest green argument is that the deployed Pool admits supply, withdrawal, borrow, repay, collateral, liquidation, and flash-loan calls through public functions without whitelist/KYC/blocklist checks, and Spark's own Terms say contract use does not require the Site."
+      },
+      "verdict": "Choosing green because the deployed Pool implementation and proxy evidence show public onchain user entry/exit functions with no per-user whitelist/KYC/blocklist checks, while the official legal restrictions I verified are passive Terms language and are mitigated by documented direct contract access plus an independent cp0x interface."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "shows": "Ethereum SparkLend Pool proxy, verified as an upgradeability proxy with active implementation 0x5aE329203E00f76891094DcfedD5Aca082a50e1b, live Supply/Withdraw/Borrow/Repay transactions, and proxy admin constructor argument 0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE.",
+        "chain": "Ethereum",
+        "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5aE329203E00f76891094DcfedD5Aca082a50e1b",
+        "shows": "Verified Pool implementation source; user-facing functions supply, supplyWithPermit, withdraw, borrow, repay, repayWithPermit, repayWithATokens, setUserUseReserveAsCollateral, liquidationCall, flashLoan, and flashLoanSimple are public/external, while onlyBridge/onlyPoolAdmin/onlyPoolConfigurator guard non-user admin or bridge functions.",
+        "chain": "Ethereum",
+        "address": "0x5aE329203E00f76891094DcfedD5Aca082a50e1b",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5aE329203E00f76891094DcfedD5Aca082a50e1b",
+        "shows": "Verified source searches found no onlyWhitelisted, onlyRole, allowlist, isAccredited, isKYCed, blacklist, blocklist, sanction, OFAC, or Chainalysis matches; validation logic gates supply/withdraw/borrow by reserve status, caps, balances, collateralization, and a global priceOracleSentinel borrow check.",
+        "chain": "Ethereum",
+        "address": "0x5aE329203E00f76891094DcfedD5Aca082a50e1b",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://app.spark.fi/",
+        "shows": "Official app URL fetched during the run; static fetch did not expose a runtime rejection banner, KYC wall, HTTP 451 text, or named sanctions-screening provider evidence.",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://spark.fi/terms-of-use",
+        "shows": "Official Terms define the Site to include spark.fi, app.spark.fi, and docs.spark.fi; they state contract use does not require the Site, describe direct block-explorer/node/wallet access, include passive sanctions eligibility text, and reserve discretionary targeted site denial.",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://spark.fi/",
+        "shows": "Official homepage links to docs, audits, GitHub, forum.sky.money, app.spark.fi, and Immunefi; describes SparkLend as borrowing USDC/USDS against supplied assets and supplying liquid assets such as ETH, wstETH, rETH, weETH, cbBTC, and LBTC.",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://github.com/sparkdotfi/spark-interface",
+        "shows": "Official interface repository states app.spark.fi points to the latest IPFS hash and can be accessed through public or private IPFS gateways; this is an official-interface redistribution, not an independent ToS-free operator path.",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-spark-fi-interface",
+        "shows": "cp0x-org repository describes a separate permissionless Spark interface, lists spark.cp0x.com as the interface URL, and provides local development/self-host instructions.",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://github.com/sparkdotfi/sparklend-deployments",
+        "shows": "SparkLend deployment/custom-code repository; README identifies it as Spark Lend deploy scripts and custom code and links the SparkLend Immunefi bug bounty.",
+        "commit": "416c57f",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/sparklend/information/",
+        "shows": "Public Immunefi bug bounty page for SparkLend loaded from the official homepage bug-bounty link.",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      },
+      {
+        "url": "https://docs.spark.fi/dev/security/security-and-audits",
+        "shows": "Official Spark security and audits documentation URL reached from the official homepage audits link.",
+        "fetched_at": "2026-05-01T06:54:28Z"
+      }
+    ],
+    "unknowns": [
+      "A2: Current priceOracleSentinel address/operator was not resolved; the inspected code only shows a global borrow guard, not per-user admission approval.",
+      "A3b: DeFi Saver and Instadapp supplemental candidate integrations were not verified in this run and are not used as evidence.",
+      "A1: xDai/Gnosis deployed Pool address was not located during this run; the deployed onchain inspection is for Ethereum."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sparkdotfi/sparklend-deployments",
+        "https://github.com/sparkdotfi/spark-interface"
+      ],
+      "docs_url": "https://docs.spark.fi/",
+      "audits": [],
+      "governance_forum": "https://forum.sky.money",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/sparklend/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+          "role": "SparkLend Pool proxy admin / PoolAddressesProvider recorded in proxy constructor",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "SparkLend is Spark's money market for supplying liquid assets and borrowing stablecoins such as USDC and USDS against collateral. Its public materials emphasize scalable stablecoin borrowing, supplied assets including ETH, wstETH, rETH, weETH, cbBTC, and LBTC, and liquidity supported by Spark/Sky capital allocation rather than only peer deposits."
+    }
+  }
+]

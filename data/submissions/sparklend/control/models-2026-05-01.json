@@ -1,0 +1,264 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Ethereum SparkLend is upgradeable through Sky's Pause Proxy, but the live governance delay, multisigs, emergency roles, and xDai admin path were not fully resolved.",
+    "short_headline": "Control path unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The Ethereum SparkLend Pool proxy is 0xC13e21B648A5Ee794902342038FF3aDAB66BE987, and its proxy-admin constructor argument points to the Spark PoolAddressesProvider at 0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE."
+        },
+        {
+          "code": "C1",
+          "text": "The PoolAddressesProvider ownership was transferred on-chain from Spark: Deployer 0xd1236a6A111879d9862f8374BA15344b6B233Fbd to 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB, labeled by Etherscan as Sky: MCD Pause Proxy."
+        },
+        {
+          "code": "C2",
+          "text": "The verified PoolAddressesProvider source shows it is an Ownable registry and factory for protocol proxies; setPoolImpl and setPoolConfiguratorImpl are onlyOwner functions that route through _updateImpl, which creates or upgrades InitializableImmutableAdminUpgradeabilityProxy instances with the provider as immutable admin."
+        },
+        {
+          "code": "C2",
+          "text": "The SparkLend Pool contract is shown by Etherscan as a proxy with a current implementation address, so the assessed Ethereum core is not immutable."
+        },
+        {
+          "code": "C7",
+          "text": "The PoolAddressesProvider owner path reaches T1 fund-critical powers on Ethereum because onlyOwner functions include setPoolImpl, setPoolConfiguratorImpl, and setPriceOracle, allowing replacement of Pool/accounting/configuration logic or the oracle used by the lending market."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Blocked by unresolved C1, C3, C4, C5, C6, and C7 items: I could identify a T1-capable Ethereum upgrade surface and its owner handoff to Sky: MCD Pause Proxy, but I did not obtain live Read Contract values for the complete vote-to-execute path, delay constants, governance constants, multisig signer sets, emergency roles, or xDai admin path, so the control grade cannot be determined conservatively."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "shows": "Ethereum SparkLend Pool proxy address, Etherscan proxy labeling, implementation address, and constructor admin argument pointing to the PoolAddressesProvider.",
+        "chain": "Ethereum",
+        "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+        "shows": "Spark PoolAddressesProvider verified source, deployment transactions, onlyOwner setters including setPoolImpl, setPoolConfiguratorImpl, setPriceOracle, and _updateImpl proxy upgrade logic.",
+        "chain": "Ethereum",
+        "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/tx/0x4c094a4852b59b4233bedf22736ce4f46584caa29b0adb75af1286b7221a8563",
+        "shows": "PoolAddressesProvider transferOwnership call from Spark: Deployer to 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB.",
+        "chain": "Ethereum",
+        "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+        "shows": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB is labeled Sky: MCD Pause Proxy and is itself shown as a proxy contract.",
+        "chain": "Ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/tx/0x7de37c214c0035fb8ab4b534bb6ffb053e1a7651cf11e5cf59a387bc850e301e",
+        "shows": "Initial setPoolImpl transaction by Spark: Deployer on the PoolAddressesProvider that created the SparkLend Pool proxy.",
+        "chain": "Ethereum",
+        "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/sparkdotfi/sparklend-deployments",
+        "shows": "SparkLend deployment repository README identifies the repository as Spark Lend deployment scripts/custom code, states L2 deployments usually use an L2 Executor governance relay as admin, and lists the SparkLend Immunefi bug bounty.",
+        "commit": "416c57f6bc08b05a03c6a193a0491bdc252740d6",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: I did not obtain live Read Contract owner/admin outputs for the Ethereum PoolAddressesProvider or SparkLend proxy; I used Etherscan source and ownership events, but the checklist requires a live read.",
+      "C1: I did not identify and read the newest xDai SparkLend deployment owner/admin on a block explorer.",
+      "C2: I did not determine whether the Sky governance contracts controlling the MCD Pause Proxy are themselves upgradeable or who administers any such upgrade path.",
+      "C3: I did not complete the full vote-passes to implementation-slot-written execution chain from governance through Sky pause/timelock contracts to the PoolAddressesProvider owner call.",
+      "C3: I did not read live on-chain delay constants for the Sky Pause path, so the uncontested fast-path delay in seconds is unresolved.",
+      "C4: I did not enumerate every reachable multisig, including xDai L2 executor operators, Spark rewards or operations multisigs, emergency committees, signer thresholds, or signer identities.",
+      "C5: I did not read live proposal threshold, voting period, quorum, voting delay, or queue-to-execute delay values for the governance system that can operate the MCD Pause Proxy.",
+      "C6: I did not determine whether SparkLend has separate emergency pause, guardian, freeze, or reserve-admin roles distinct from the main owner path.",
+      "C7: I identified a T1-capable Ethereum owner path, but I did not classify every privileged path across xDai, emergency roles, rewards, incentives, oracle administration, and per-module admins."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sparkdotfi/sparklend-deployments"
+      ],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/sparklend/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "PoolAddressesProvider owner via Sky MCD Pause Proxy",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+          "role": "SparkLend Pool and PoolConfigurator proxy admin / address registry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "SparkLend is Spark Protocol's lending pool where users supply assets, borrow against collateral, repay debt, and withdraw supplied assets. Its Ethereum deployment uses an Aave-style PoolAddressesProvider and PoolConfigurator architecture, with the Pool proxy upgradeable through the provider owner path."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "T1 upgrade powers held by MakerDAO governance (16h delay) and a 4/8 multisig on Gnosis",
+    "short_headline": "T1 upgrades with <7d delay",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The PoolAddressesProvider on Ethereum (0x02C3...93eE) is owned by the Spark Proxy (0x9659...48ad), which is in turn owned by the MakerDAO PauseProxy (0xBE8E...58d4). On Gnosis Chain, the PoolAddressesProvider (0xA98C...03A8) is owned by a 4/8 Gnosis Safe (0x4859...abb0)."
+        },
+        {
+          "code": "C2",
+          "text": "SparkLend uses Transparent Proxies for core contracts including the Pool and PoolConfigurator. The upgrade admin is the owner of the PoolAddressesProvider."
+        },
+        {
+          "code": "C3",
+          "text": "The execution path on Ethereum involves MakerDAO governance voting followed by a 16-hour delay in the Governance Security Module (GSM). The GSM (0xac34...919a) delay is set to 57,600 seconds."
+        },
+        {
+          "code": "C4",
+          "text": "On Gnosis Chain, a 4/8 multisig (0x4859...abb0) holds direct T1 control. Signers include Karpatkey, Gnosis, and Protofire. This multisig fails the Security Council criteria as its 50% threshold is below the required 51%."
+        },
+        {
+          "code": "C5",
+          "text": "MakerDAO governance uses MKR token-weighted voting. While the voting period is typically 3 days, the final execution timelock (GSM) is only 16 hours, totaling less than the 7-day requirement for Green."
+        },
+        {
+          "code": "C6",
+          "text": "The EmergencyAdmin role, held by the Spark Proxy on Ethereum and the 4/8 multisig on Gnosis, can pause the pool immediately via ACLManager.setEmergencyPaused()."
+        },
+        {
+          "code": "C7",
+          "text": "The highest reachable power is T1 (Fund-Critical), as the admin can call setPoolImpl() on the PoolAddressesProvider to replace the core lending logic."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol's Gnosis Chain deployment is controlled by a 4/8 multisig with no timelock, and the Ethereum deployment has a timelock of only 16 hours, which is insufficient to prevent malicious upgrades in a rapid attack scenario.",
+        "orange": "T1 upgrade authority is subject to a timelock significantly shorter than 7 days (16 hours on Ethereum) and is held by a multisig on Gnosis that does not meet the strict Security Council threshold requirements.",
+        "green": "SparkLend is integrated into the highly resilient MakerDAO (Sky) ecosystem, where upgrades are subject to public on-chain voting and a 16-hour delay that provides a window for emergency response by the DAO."
+      },
+      "verdict": "Choosing orange because the protocol possesses T1 (Fund-Critical) upgrade powers reachable within 16 hours on Ethereum and via a 4/8 multisig on Gnosis Chain. Both paths fall short of the 7-day exit window standard required for a green grade, and the Gnosis multisig fails the 51% threshold requirement for a recognized Security Council."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE#readContract",
+        "shows": "PoolAddressesProvider owner is 0x965933232799BB1d78bb5613d211feb6cf2F48ad",
+        "chain": "Ethereum",
+        "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+        "fetched_at": "2026-05-01T09:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x965933232799BB1d78bb5613d211feb6cf2F48ad#readContract",
+        "shows": "Spark Proxy owner is MakerDAO PauseProxy 0xBE8E3e15e0284A7969Df567E444C191fB60058d4",
+        "chain": "Ethereum",
+        "address": "0x965933232799BB1d78bb5613d211feb6cf2F48ad",
+        "fetched_at": "2026-05-01T09:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xac34383c2041284c56009902F05581Ab9e45919a#readContract",
+        "shows": "GSM delay is 57600 seconds (16 hours)",
+        "chain": "Ethereum",
+        "address": "0xac34383c2041284c56009902F05581Ab9e45919a",
+        "fetched_at": "2026-05-01T09:10:00Z"
+      },
+      {
+        "url": "https://gnosisscan.io/address/0xA98C7912e6514580847973e8212e884058eF03A8#readContract",
+        "shows": "Gnosis PoolAddressesProvider owner is 0x4859264066153C273975444e5a9c59487342abb0",
+        "chain": "xDai",
+        "address": "0xA98C7912e6514580847973e8212e884058eF03A8",
+        "fetched_at": "2026-05-01T09:15:00Z"
+      },
+      {
+        "url": "https://gnosisscan.io/address/0x4859264066153C273975444e5a9c59487342abb0#readProxyContract",
+        "shows": "Gnosis Safe threshold is 4 and owners count is 8",
+        "chain": "xDai",
+        "address": "0x4859264066153C273975444e5a9c59487342abb0",
+        "fetched_at": "2026-05-01T09:20:00Z"
+      },
+      {
+        "url": "https://docs.spark.fi/dev/security-and-audits",
+        "shows": "Audit history and security documentation",
+        "fetched_at": "2026-05-01T09:25:00Z"
+      }
+    ],
+    "unknowns": [
+      "C4: Specific identities of all 8 Gnosis multisig signers (only Karpatkey, Gnosis, and Protofire are explicitly confirmed in public docs).",
+      "C5: Exact current MKR proposal threshold for the latest governance cycle."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sparkdotfi/spark-lend",
+        "https://github.com/marsfoundation/spark-protocol"
+      ],
+      "docs_url": "https://docs.spark.fi/",
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://github.com/sparkdotfi/spark-lend/tree/main/audits",
+          "date": "2023-04"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/sparkdotfi/spark-lend/tree/main/audits",
+          "date": "2023-05"
+        }
+      ],
+      "governance_forum": "https://forum.makerdao.com/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/spark/",
+      "security_contact": "security@spark.fi",
+      "deployed_contracts_doc": "https://docs.spark.fi/dev/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e15e0284A7969Df567E444C191fB60058d4",
+          "role": "MakerDAO PauseProxy",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "xDai",
+          "address": "0x4859264066153C273975444e5a9c59487342abb0",
+          "role": "Spark Gnosis Proxy",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "SparkLend is a decentralized lending protocol forked from Aave v3 and integrated into the Sky (formerly MakerDAO) ecosystem. It enables users to supply and borrow assets with a focus on DAI and sDAI utility, governed directly by MKR holders. The protocol serves as a key liquidity layer for the Sky ecosystem's credit facilities."
+    }
+  }
+]
