@@ -1,0 +1,168 @@
+{
+  "schema_version": 3,
+  "slug": "zyfai",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "claude-opus-4-6",
+  "chat_url": https://claude.ai/chat/4afe1f09-ea8b-4da9-bf46-d96c85aae336,
+  "grade": "green",
+  "headline": "No contract-level whitelists or KYC gates on user entry/exit; ToS contains only passive jurisdictional boilerplate; SDK and Safe Global provide independent access paths",
+  "short_headline": "No allowlists or geofences",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The Zyfai USDC Liquidity Vault (SmartAccountWrapper) on Base at 0xD580071c47d4a667858B5FafAb85BC9C609beC5D is an ERC-7540 async vault using OpenZeppelin Ownable2StepUpgradeable and PausableUpgradeable. The verified source code shows deposit, requestRedeem, and claim functions with no onlyWhitelisted, onlyRole, allowlist, isAccredited, or isKYCed modifiers on user-facing entry points. On-chain transaction history confirms multiple unrelated addresses (ENS names, raw addresses) successfully depositing without restriction. The SDK's addWalletToSdk method gates API-key-level SDK access (CORS whitelisting for integrator domains), not contract-level user admission."
+      },
+      {
+        "code": "A2",
+        "text": "For the Smart Wallet path, Safe deployment and withdrawal are processed through ZyFAI's backend API asynchronously, but deposits are standard ERC-20 transfers to the user's own Safe. For the Vault path, deposit() is a direct on-chain call requiring no operator approval. requestRedeem() is also directly callable on-chain. The claim() function settles finalized redemptions. No off-chain operator approval is required to admit a deposit or initiate a redemption request at the contract level. Withdrawal settlement in the async vault depends on the operator fulfilling the redeem request, which is a liveness dependency (deferred to dependencies slice), not an admission gate."
+      },
+      {
+        "code": "A3-passive",
+        "text": "The ToS at docs.zyf.ai/support/terms-and-conditions states: 'Have the legal authority and capacity to accept these Terms and are of legal age in your jurisdiction' and 'Will not use the ZyFAI Agent and ZyFAI UI if prohibited by the laws of your country.' These are standard passive self-certification clauses with no active enforcement mechanism observed."
+      },
+      {
+        "code": "A3-active",
+        "text": "No evidence of active geo-blocking, IP-based restrictions, wallet-address screening, KYC wall, or jurisdiction-blocking banner was found. The zyf.ai homepage is an SPA that loads without any visible restriction banner. No third-party screening provider integration (Chainalysis, TRM, Elliptic) was identified in the frontend or SDK source. No public incident reports of enforcement were found."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-ii (independent paths): The Zyfai SDK (@zyfai/sdk on npm, MIT license, github.com/ondefy/zyfai-sdk) provides programmatic access independent of the official UI. ZyFAI documents using the protocol through Safe Global (app.safe.global) as an alternative interface for direct smart account interaction. The vault contract on Base is directly callable by any address without needing the frontend. The SDK documentation and Safe Global tutorial are published at docs.zyf.ai."
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain sanctions blocklist or OFAC address-checking mechanism was found in the verified vault contract source code or the SDK. No Chainalysis, TRM, or similar screening integration was identified."
+      },
+      {
+        "code": "A5",
+        "text": "Both read and write access to the vault contract are permissionless. Any address can call deposit(), requestRedeem(), and claim() without restriction. Read functions (balanceOf, totalAssets, etc.) are standard public view functions."
+      },
+      {
+        "code": "A6",
+        "text": "ToS located at docs.zyf.ai/support/terms-and-conditions. Verbatim eligibility clause: 'Have the legal authority and capacity to accept these Terms and are of legal age in your jurisdiction. Will not use the ZyFAI Agent and ZyFAI UI if prohibited by the laws of your country.' Governing law: 'These Terms are governed by Swiss law, with exclusive jurisdiction in Lausanne, Switzerland.' Operated by Ondefy S.A., Lausanne, Switzerland. No specific sanctions-country list or restricted-territory enumeration found in the ToS."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest argument for red would be that the Smart Wallet path's backend API could function as a de facto admission gate since Safe deployment, session key creation, and withdrawals are processed through ZyFAI's centralized API, and the API key system could silently deny service — but the vault path provides a fully on-chain alternative and the Smart Wallet's Safe itself remains accessible via Safe Global.",
+      "orange": "The strongest argument for orange would be that the official frontend is an SPA whose runtime enforcement could not be fully verified from a static fetch, and the Smart Wallet withdrawal path depends on the backend to process — but no evidence of active blocking was found, and independent access paths (SDK, Safe Global, direct vault contract) are well-documented.",
+      "green": "The strongest argument for green is that the vault contract has no whitelist or KYC modifiers on any user-facing function, multiple unrelated addresses deposit freely on-chain, the ToS contains only passive jurisdictional boilerplate without active enforcement, and multiple independent access paths exist (MIT-licensed SDK, Safe Global, direct contract calls)."
+    },
+    "verdict": "Choosing green because the on-chain vault contract at 0xD580071c47d4a667858B5FafAb85BC9C609beC5D demonstrates permissionless deposit/redeem/claim functions with no whitelist modifiers in verified source code and confirmed by diverse depositor addresses on BaseScan. The ToS contains only passive self-certification clauses (A3-passive) with no active enforcement mechanism detected (no geo-block banner, no wallet screening, no KYC wall). Independent A3b-ii access paths are well-documented: the MIT-licensed SDK, Safe Global integration, and direct contract interaction. The orange steel-man is weaker because no evidence supports active frontend enforcement, and the green steel-man is fully corroborated by on-chain and source-code evidence."
+  },
+  "evidence": [
+    {
+      "url": "https://basescan.org/address/0xD580071c47d4a667858B5FafAb85BC9C609beC5D",
+      "shows": "Vault proxy contract on Base with 150 transactions from multiple unrelated addresses calling Deposit, Request Redeem, and Claim functions. Creator: 0xba1523ed1c7c9fbb7d1f38c9d7de548e3a119626. Implementation contract at 0x541A6140a5721f449c31E0b988afa0bcf786E355.",
+      "chain": "Base",
+      "address": "0xD580071c47d4a667858B5FafAb85BC9C609beC5D",
+      "fetched_at": "2026-05-01T21:30:00Z"
+    },
+    {
+      "url": "https://basescan.org/address/0x541a6140a5721f449c31e0b988afa0bcf786e355#code",
+      "shows": "Verified source code of SmartAccountWrapper implementation contract. Uses OpenZeppelin Ownable2StepUpgradeable, PausableUpgradeable, ERC4626Upgradeable, and IERC7540Redeem. Contract has deposit, requestRedeem, and claim functions. No whitelist, allowlist, onlyRole, isKYCed, or isAccredited modifiers on user-facing entry points. Has pause()/unpause() functions controlled by owner.",
+      "chain": "Base",
+      "address": "0x541A6140a5721f449c31E0b988afa0bcf786E355",
+      "fetched_at": "2026-05-01T21:35:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/support/terms-and-conditions",
+      "shows": "ToS by Ondefy S.A., Lausanne, Switzerland. Eligibility clauses: 'Have the legal authority and capacity to accept these Terms and are of legal age in your jurisdiction. Will not use the ZyFAI Agent and ZyFAI UI if prohibited by the laws of your country.' No enumerated restricted territories. No mention of sanctions screening, KYC, or active enforcement. Governed by Swiss law.",
+      "fetched_at": "2026-05-01T21:20:00Z"
+    },
+    {
+      "url": "https://github.com/ondefy/zyfai-sdk",
+      "shows": "MIT-licensed TypeScript SDK for interacting with Zyfai. Supports Arbitrum (42161), Base (8453), and Plasma (9745). Provides programmatic access to deploy Safe wallets, manage positions, deposit/withdraw funds. SDK available on npm as @zyfai/sdk. The addWalletToSdk method is for SDK API key domain whitelisting (CORS), not contract-level user admission.",
+      "fetched_at": "2026-05-01T21:10:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/support/use-zyfai-through-safe-global",
+      "shows": "Official documentation for accessing ZyFAI through Safe Global (app.safe.global) as an independent interface. Users can connect their EOA, find their ZyFAI wallet, send tokens, interact with underlying protocols directly, and manage their Safe account even if the ZyFAI frontend becomes inaccessible.",
+      "fetched_at": "2026-05-01T21:25:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/zyfai-smart-account/technical-implementation",
+      "shows": "Technical details: ZyFAI Smart Account is a Safe smart contract wallet deployed on behalf of users. Uses session keys for delegated execution. Agent version V1.1 operates across Sonic, Base, Plasma, and Arbitrum. Users select networks and protocols during onboarding to configure session key permissions.",
+      "fetched_at": "2026-05-01T21:22:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/audits",
+      "shows": "Audit page lists audits for underlying components: SmartSession (report 25.12.2024), Safe7579 (report 5.07.2024), Core modules (report 3.10.2024) from Rhinestone. Pimlico ERC20 Paymaster audit (28.03.2024). rZFI reward token is a fork of Euler Finance evk-periphery.",
+      "fetched_at": "2026-05-01T21:15:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/f.a.q",
+      "shows": "FAQ confirms: 'ZyFAI does not maintain any vault contracts or similar entities' (for Smart Wallet path — the Vault product is newer). Agent 'is only authorized to interact with the protocols you have whitelisted through session keys.' Session keys provide temporary access with specific permissions.",
+      "fetched_at": "2026-05-01T21:18:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/sdk/getting-started",
+      "shows": "SDK documentation with full integration guide. Mentions Vault as a second product: 'Vault: Deposit into a shared vault on Base and receive shares representing your stake.' Includes demo application at github.com/ondefy/zyfai-sdk-demo.",
+      "fetched_at": "2026-05-01T21:28:00Z"
+    },
+    {
+      "url": "https://tradingstrategy.ai/trading-view/vaults/zyfai-usdc-liquidity-vault",
+      "shows": "Third-party vault tracker showing Zyfai USDC Liquidity Vault on Base at 0xD580071c47d4a667858B5FafAb85BC9C609beC5D with $145K TVL, 79 deposit events, deposit status Open, redemption status Open. ERC-7540-like vault. Share token ZFI-USDC.",
+      "fetched_at": "2026-05-01T21:32:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/governance/dao",
+      "shows": "DAO governance using ZFI token and stZFI staked variant. Core objective is community governance of infrastructure projects. Structured governance lifecycle with proposals, debates, and voting.",
+      "fetched_at": "2026-05-01T21:16:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/support/privacy-policy",
+      "shows": "Privacy policy by Ondefy S.A., Lausanne, Switzerland. Collects IP address, device info, browser type, connection timestamps. No mention of sanctions screening or address-level compliance tooling.",
+      "fetched_at": "2026-05-01T21:19:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: Could not fully verify absence of runtime geo-blocking or wallet screening on the zyf.ai SPA frontend because the site rendered as a minimal loading shell on static fetch; no block banner or screening script was observed, but dynamic enforcement could exist at runtime that is invisible to a static crawl."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ondefy/zyfai-sdk",
+      "https://github.com/ondefy/erc7540-wrapper"
+    ],
+    "docs_url": "https://docs.zyf.ai",
+    "audits": [
+      {
+        "firm": "Rhinestone (SmartSession)",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-12"
+      },
+      {
+        "firm": "Rhinestone (Safe7579)",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-07"
+      },
+      {
+        "firm": "Rhinestone (Core modules)",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-10"
+      },
+      {
+        "firm": "Pimlico (ERC20 Paymaster)",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-03"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Base",
+        "address": "0xba1523ed1c7c9fbb7d1f38c9d7de548e3a119626",
+        "role": "Vault deployer / creator",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "ZyFAI is an AI-driven yield optimization agent that deploys Safe smart accounts on behalf of users and automatically rebalances stablecoin positions across curated DeFi lending and liquidity protocols (Aave, Morpho, Compound, Euler, Moonwell, etc.) on Base, Arbitrum, Plasma, and Sonic. Users grant session keys that allow the agent to execute transactions within protocol-scoped permissions while retaining self-custody via their Safe wallet. A newer Vault product on Base offers a shared ERC-7540 async vault for passive USDC yield. Operated by Ondefy S.A. (Lausanne, Switzerland), governed by the ZFI token DAO."
+  }
+}
