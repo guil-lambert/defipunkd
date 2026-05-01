@@ -1,0 +1,255 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Liquity V1 core is immutable with no ongoing admin, governance, pause, or upgrade path found",
+    "short_headline": "Immutable, no admin path",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The assessed V1 core contracts are verified on Etherscan at the documented Ethereum addresses; their source-level privileged setup pattern is Ownable plus one-time initialization setters that call _renounceOwnership, and no pendingAdmin or governor surface was found for V1. A newer Liquity V2 owner/admin read was not completed and is listed in unknowns."
+        },
+        {
+          "code": "C2",
+          "text": "No transparent proxy, UUPS, beacon, diamond, or proxy-admin mechanism was identified for the V1 core: Etherscan shows verified implementation contracts, the inspected core source has no delegatecall match, and the protocol README says the deployed system has no admin key or human governance."
+        },
+        {
+          "code": "C3",
+          "text": "There is no V1 execution path from vote to timelock to implementation-slot write: the evidence shows no on-chain governance or proxy admin, so timelock delays are not applicable."
+        },
+        {
+          "code": "C4",
+          "text": "No multisig with reachable control over V1 core contracts was found. The README describes any Liquity admin address as having no extra privileges and no continuing protocol control after deployment."
+        },
+        {
+          "code": "C5",
+          "text": "No Governor, GovernorBravo, OpenZeppelin Governor, Aragon Voting, proposal threshold, voting period, quorum, or queue-to-execute timelock was found for V1; the protocol documentation describes Liquity as governance-free."
+        },
+        {
+          "code": "C6",
+          "text": "No separate emergency pause or guardian role was found in the inspected V1 core ABIs/source; the exposed surfaces are public user/algorithmic functions plus one-time setters that renounce ownership."
+        },
+        {
+          "code": "C7",
+          "text": "The initialization setters would be fund-critical before renunciation because they wire price feed, pool, token, and accounting dependencies, but the reachable post-deployment privileged path is none: no upgrade, pause, oracle-replacement, or governance path to user funds was identified."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that a non-zero live owner on a fund-holding V1 contract would be a T1 admin risk, but the inspected source and documentation instead point to one-time setters that renounce ownership and no admin-key design.",
+        "orange": "The strongest orange argument is that static fetching did not capture every live owner() return or the newer V2 owner reads, but the V1 evidence does not show any reachable multisig, proxy, timelock, or governor path to V1 user funds.",
+        "green": "The strongest green argument is that V1 core contracts are verified immutable implementations with one-time ownership-renouncing setup, no governance or emergency actor, and documentation explicitly describes the system as no-admin-key and governance-free."
+      },
+      "verdict": "Choosing green because the highest ongoing privileged tier found for Liquity V1 is no reachable privileged path: the deployed V1 core contracts are verified, their privileged setters renounce ownership during setup, and the project documentation states the deployed system has no admin key or human governance, so T1/T2 changes to user-fund logic are not reachable through a fast path."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "shows": "Ethereum deployed BorrowerOperations contract, verified as Liquity: Borrower Operations, with ABI/source exposing owner(), setAddresses(), and public borrower functions.",
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+        "shows": "Ethereum deployed TroveManager contract, verified as Liquity: Trove Manager.",
+        "chain": "Ethereum",
+        "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+        "shows": "Ethereum deployed StabilityPool contract address from Liquity V1 core.",
+        "chain": "Ethereum",
+        "address": "0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev",
+        "shows": "Liquity V1 source repository README describes the protocol, no admin key or human governance, and ownership renunciation after setup.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev/blob/main/packages/contracts/contracts/BorrowerOperations.sol",
+        "shows": "BorrowerOperations setAddresses is onlyOwner and calls _renounceOwnership; borrower entry points such as openTrove, withdrawColl, withdrawLUSD, repayLUSD, closeTrove, and claimCollateral are public user functions.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev/blob/main/packages/contracts/contracts/TroveManager.sol",
+        "shows": "TroveManager setAddresses is onlyOwner and calls _renounceOwnership; redeemCollateral is an external user/system function, not an admin execution path.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev/blob/main/packages/contracts/contracts/StabilityPool.sol",
+        "shows": "StabilityPool setAddresses is onlyOwner and calls _renounceOwnership; provideToSP and withdrawFromSP are public depositor functions.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+        "shows": "Liquity V1 technical resources list mainnet contract addresses and audit matrix entries.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://www.coinspect.com/blog/liquity-audit/",
+        "shows": "Coinspect Liquity V1 smart contract audit summary dated March 30, 2021.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: Liquity V2 owner/admin reads were not performed; this control assessment verified the Liquity V1 deployment and does not determine V2 control."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": "https://docs.liquity.org/liquity-v1",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2021-01"
+        },
+        {
+          "firm": "Coinspect",
+          "url": "https://www.coinspect.com/blog/liquity-audit/",
+          "date": "2021-03-30"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2021-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.liquity.org/liquity-v1/documentation/resources",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity V1 lets ETH holders open Troves, deposit ETH collateral, and borrow the LUSD stablecoin without ongoing interest. LUSD can be redeemed against system collateral, while Stability Pool depositors supply LUSD to absorb liquidations and receive ETH gains plus LQTY rewards. The design is distinctive for immutable contracts, algorithmic monetary parameters, and no token-governed admin process for changing the deployed V1 rules."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Liquity V1 is fully immutable with no admin keys, governance, or upgradeability mechanisms.",
+    "short_headline": "Fully immutable; no admin control.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "Core contracts including BorrowerOperations (0x2417...), TroveManager (0xA397...), and LUSDToken (0x5f98...) have no owner or admin roles. Contracts that originally had owners, such as PriceFeed (0x4c51...) and CommunityIssuance (0xd85E...), have had their ownership renounced to the zero address."
+        },
+        {
+          "code": "C2",
+          "text": "The protocol is entirely immutable. Core contracts are direct deployments rather than proxies (e.g., BorrowerOperations at 0x2417...), and there is no mechanism to upgrade the logic or change implementation slots."
+        },
+        {
+          "code": "C3",
+          "text": "There is no execution path for protocol changes as no upgradeability or parameter-tuning functions are exposed to any admin or governance role."
+        },
+        {
+          "code": "C4",
+          "text": "No multisigs or EOAs hold control over the protocol's core logic, parameters, or user funds. The system is designed to be 'governance-free'."
+        },
+        {
+          "code": "C5",
+          "text": "Liquity V1 has no on-chain governance for protocol parameters. The LQTY token is used for staking to earn protocol fees but does not grant voting power over the protocol's immutable rules."
+        },
+        {
+          "code": "C6",
+          "text": "The protocol lacks any emergency pause or guardian roles. System states like 'Recovery Mode' are triggered automatically by the on-chain Total Collateralization Ratio (TCR) rather than by human intervention."
+        },
+        {
+          "code": "C7",
+          "text": "T1 powers are unreachable. Functions that could potentially be fund-critical, such as changing the price oracle in PriceFeed.setAddresses, are permanently locked because ownership was renounced to the zero address."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol's reliance on external oracles like Chainlink introduces a T1-tier risk where the data source is upgradeable by a third party, and Liquity has no admin power to pause or switch oracles in the event of a failure.",
+        "orange": "The absolute immutability of the protocol prevents any emergency response or patching if a critical vulnerability is discovered in the core logic, potentially leaving user funds permanently at risk.",
+        "green": "The protocol is the industry standard for immutability, with no admin keys, no governance, and renounced ownership on all periphery contracts, ensuring that the rules of the system can never be changed by any entity."
+      },
+      "verdict": "Choosing green because the protocol core contracts are fully immutable and have no owner or admin roles, making T1 and T2 powers unreachable by any party. This satisfies the highest standard of decentralization where users are protected by code rather than by the promises of a multisig or governance process."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x24179CD81c9e782A4096035f7eC97fB8B783e007#readContract",
+        "shows": "BorrowerOperations contract has no owner or admin functions.",
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c517D4e3748307Ec57efc67ce9bc15df1f7F665#readContract",
+        "shows": "PriceFeed owner() is set to 0x0000000000000000000000000000000000000000 (renounced).",
+        "chain": "Ethereum",
+        "address": "0x4c517D4e3748307Ec57efc67ce9bc15df1f7F665",
+        "fetched_at": "2026-05-01T10:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5f98805A474f06764017138296727d487173a625#readContract",
+        "shows": "LUSDToken contract is a direct deployment with no owner or upgrade functions.",
+        "chain": "Ethereum",
+        "address": "0x5f98805A474f06764017138296727d487173a625",
+        "fetched_at": "2026-05-01T10:10:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev/blob/main/papers/Liquity_Audit_Report_ToB.pdf",
+        "shows": "Trail of Bits audit confirming the protocol is designed to be immutable with no admin keys.",
+        "commit": "b3757bfd02807ca22fc45cf3547e34d0321245f2"
+      },
+      {
+        "url": "https://docs.liquity.org/documentation/audits",
+        "shows": "Official documentation listing audits that verify the immutability of the protocol.",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": "https://docs.liquity.org/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Liquity_Audit_Report_ToB.pdf",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Liquity_Audit_Report_Sigma_Prime.pdf",
+          "date": "2021-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/liquity/",
+      "security_contact": "security@liquity.org",
+      "deployed_contracts_doc": "https://docs.liquity.org/deployment-addresses",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity is a decentralized borrowing protocol that allows users to draw interest-free loans against Ether used as collateral. Loans are paid out in LUSD (a USD-pegged stablecoin) and must be maintained at a minimum collateralization ratio of 110%. The protocol is characterized by its full immutability, lack of governance, and a unique liquidation mechanism involving a Stability Pool and redistribution."
+    }
+  }
+]

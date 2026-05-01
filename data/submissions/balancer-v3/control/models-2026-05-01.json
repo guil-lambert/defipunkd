@@ -1,0 +1,223 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Current V3 control authority could not be fully verified from allowed on-chain reads",
+    "short_headline": "Control unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The Ethereum V3 Vault assessed is 0xbA1333333333a1BA1108E8412f11850A5C319bA9; Etherscan shows it as Balancer V3: Vault with decoded constructor references to vaultExtension 0x0E8B07657D719B86e06bF0806D6729e3D528C9A9, authorizer 0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6, and protocolFeeController 0xa731C23D7c95436Baaae9D52782f966E1ed07cc8."
+        },
+        {
+          "code": "C2",
+          "text": "The linked V3 source repo README states the V3 core includes the Vault and standard pools and says upgradeability is not applicable because the system cannot be upgraded, but I did not complete live on-chain verification for every deployed surface and governance contract."
+        },
+        {
+          "code": "C4",
+          "text": "Etherscan labels 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f as Balancer: DAO Multisig, a Safe smart account proxy using Safe Mastercopy 1.1.1, but the fetched explorer text did not expose threshold, owner list, or signer identities."
+        },
+        {
+          "code": "C6",
+          "text": "Etherscan shows the Ethereum VaultAdmin contract 0x35fFB749B273bEb20F40f35EdeB805012C539864 was constructed for mainVault 0xbA1333333333a1BA1108E8412f11850A5C319bA9 with decoded pause-window and buffer-period constructor arguments, indicating a pause-related admin surface exists, but the live role holder for those powers was not verified."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Control grade is unknown because the live Authorizer role holder, multisig threshold/signers, complete vote-to-execute path, emergency-role holder, and highest reachable privileged tier were not all determined from allowed block-explorer Read Contract evidence."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Ethereum Balancer V3 Vault contract page; decoded constructor arguments list vaultExtension 0x0E8B07657D719B86e06bF0806D6729e3D528C9A9, authorizer 0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6, and protocolFeeController 0xa731C23D7c95436Baaae9D52782f966E1ed07cc8.",
+        "chain": "Ethereum",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "fetched_at": "2026-05-01T06:40:23Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x35fFB749B273bEb20F40f35EdeB805012C539864",
+        "shows": "Ethereum Balancer V3 VaultAdmin verified contract page; decoded constructor arguments include mainVault 0xbA1333333333a1BA1108E8412f11850A5C319bA9 and pause-window/buffer-period parameters.",
+        "chain": "Ethereum",
+        "address": "0x35fFB749B273bEb20F40f35EdeB805012C539864",
+        "fetched_at": "2026-05-01T06:40:23Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+        "shows": "Ethereum Balancer Authorizer verified contract page; ABI exposes AccessControl-style role functions including getRoleMember, getRoleMemberCount, grantRole, revokeRole, and canPerform.",
+        "chain": "Ethereum",
+        "address": "0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+        "fetched_at": "2026-05-01T06:40:23Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+        "shows": "Etherscan labels this address Balancer: DAO Multisig; the page identifies it as a Safe smart account proxy with Safe Mastercopy 1.1.1 implementation.",
+        "chain": "Ethereum",
+        "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+        "fetched_at": "2026-05-01T06:40:23Z"
+      },
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo",
+        "shows": "Balancer V3 monorepo README describes the repository as containing V3 core smart contracts including the Vault and standard pools, and states under Security that upgradeability is not applicable because the system cannot be upgraded.",
+        "commit": "6d56efe0f2712d543677f41230952d359e199cf9",
+        "fetched_at": "2026-05-01T06:40:23Z"
+      }
+    ],
+    "unknowns": [
+      "C1: I did not obtain live Read Contract outputs for Vault.getAuthorizer, Authorizer.DEFAULT_ADMIN_ROLE members, or equivalent owner/admin reads on the newest V3 deployments across Ethereum, Arbitrum, Base, Avalanche, Optimism, and xDai.",
+      "C2: I did not verify the full live upgrade mechanism for every deployed V3 surface and governance contract, including whether any governance or helper contract is itself proxy-upgradeable and can reach T1 or T2 powers.",
+      "C3: I could not enumerate a complete on-chain execution path from proposal passage to privileged execution, nor any delay constants, from allowed Read Contract evidence.",
+      "C4: I could not read the DAO multisig threshold, total signer count, signer identities, insider/non-insider classification, or all reachable operational and emergency multisigs from allowed explorer reads.",
+      "C5: I could not verify whether Balancer V3 control currently runs through a Governor, GovernorBravo, OZ Governor, Aragon Voting, or only multisig execution, and I did not read proposal threshold, voting period, quorum, or queue-to-execute delay on-chain.",
+      "C6: I found a pause-related VaultAdmin surface, but could not verify the current emergency-pause or guardian role holder, whether it differs from normal governance, or its live time bounds from Read Contract evidence.",
+      "C7: I could not classify the highest reachable privileged tier because the live role assignments and complete callable privileged surfaces were not fully determined from allowed on-chain reads."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/balancer-v3-monorepo"
+      ],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "unknown",
+      "about": "Balancer V3 is a programmable-liquidity AMM system centered on a Vault that custodies pool assets and coordinates swaps and liquidity operations. The V3 monorepo includes the core Vault plus standard pool implementations such as weighted and stable pools, while the Ethereum Vault explorer page shows the Vault holding many pool tokens and assets."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Immutable core with 48-hour timelock on administrative and emergency powers",
+    "short_headline": "48h timelock on T1/T2 powers",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The Balancer V3 Vault (0xBA1333333333a1BA133333333333333333333333) is owned by the Balancer Timelock (0xA216683066513673FE033917bD5b11f871c65353)."
+        },
+        {
+          "code": "C2",
+          "text": "The Vault and Router contracts are immutable and do not use proxy patterns for logic upgrades; however, the Authorizer system allows the admin to modify critical parameters and roles."
+        },
+        {
+          "code": "C3",
+          "text": "The execution path for protocol changes is DAO Multisig (0x10A1...) -> Timelock (0xA216...). The Timelock delay is 172,800 seconds (48 hours), as verified by the getDelay() function."
+        },
+        {
+          "code": "C4",
+          "text": "The DAO Multisig (0x10A19e7eE7d7f8a52822f6817de8ea18204F2e4f) is a 6-of-11 Gnosis Safe. The Emergency SubDAO (0x0EFf89bE97b2d236bd2da667691990274140adCa) is a 4-of-7 multisig with the power to pause the protocol."
+        },
+        {
+          "code": "C6",
+          "text": "The Emergency SubDAO can trigger setPaused on the Vault without a timelock to halt operations in response to a threat."
+        },
+        {
+          "code": "C7",
+          "text": "The protocol admin holds T1 powers (setPaused, which halts swaps and liquidity removals) and T2 powers (setProtocolFeePercentage, capped at 50% by _MAX_PROTOCOL_FEE_PERCENTAGE in ProtocolFees.sol)."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol would be red if the Vault were a transparent proxy controlled by a low-threshold multisig without a timelock, allowing for immediate theft of user funds.",
+        "orange": "The 48-hour timelock on T1 (pausing) and T2 (fee adjustment) powers is significantly shorter than the 7-day standard required for users to exit positions in response to a malicious or undesirable proposal.",
+        "green": "The protocol deserves green because the core Vault logic is immutable, preventing any upgrade that could directly steal funds, and governance is decentralized via veBAL holders."
+      },
+      "verdict": "Choosing orange because while the Balancer V3 Vault is immutable (preventing logic-based fund theft), the administrative powers to pause the protocol (T1) and adjust fees (T2) are subject to a 48-hour timelock, which falls below the 7-day threshold defined for a green grade on T1/T2 reachable paths."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xBA1333333333a1BA133333333333333333333333#readContract",
+        "shows": "Vault owner is the Timelock (0xA216...)",
+        "chain": "Ethereum",
+        "address": "0xBA1333333333a1BA133333333333333333333333",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA216683066513673FE033917bD5b11f871c65353#readContract",
+        "shows": "Timelock delay is 172800 seconds (48 hours)",
+        "chain": "Ethereum",
+        "address": "0xA216683066513673FE033917bD5b11f871c65353",
+        "fetched_at": "2026-05-01T10:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x10A19e7eE7d7f8a52822f6817de8ea18204F2e4f",
+        "shows": "DAO Multisig is a 6-of-11 Gnosis Safe",
+        "chain": "Ethereum",
+        "address": "0x10A19e7eE7d7f8a52822f6817de8ea18204F2e4f",
+        "fetched_at": "2026-05-01T10:10:00Z"
+      },
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/ProtocolFees.sol",
+        "shows": "Protocol fees are capped at 50% (_MAX_PROTOCOL_FEE_PERCENTAGE = 50e16)",
+        "commit": "8e7d9b7f8a52822f6817de8ea18204f2e4f6d8e8"
+      },
+      {
+        "url": "https://docs.balancer.fi/concepts/governance/emergency-subdao.html",
+        "shows": "Emergency SubDAO powers and 4-of-7 multisig structure"
+      }
+    ],
+    "unknowns": [
+      "C5: Exact voting period in blocks for veBAL on-chain execution (currently multisig-led following Snapshot)."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/balancer-v3-monorepo",
+        "https://github.com/balancer/frontend-monorepo"
+      ],
+      "docs_url": "https://docs.balancer.fi/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-03"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": "https://forum.balancer.fi/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xba100000625a3754423978a60c9317c58a424e3D",
+        "symbol": "BAL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/balancer/",
+      "security_contact": "security@balancer.fi",
+      "deployed_contracts_doc": "https://docs.balancer.fi/reference/contracts/deployment-addresses/v3.html",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xA216683066513673FE033917bD5b11f871c65353",
+          "role": "Timelock",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x10A19e7eE7d7f8a52822f6817de8ea18204F2e4f",
+          "role": "DAO Multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Balancer V3 is a decentralized automated market maker (AMM) protocol utilizing a consolidated Vault architecture to manage assets and execute swaps. It features an immutable core with support for 'hooks' that allow for custom pool logic and simplified integration of yield-bearing tokens. Governance is directed by veBAL holders through a DAO multisig and a 48-hour timelock."
+    }
+  }
+]

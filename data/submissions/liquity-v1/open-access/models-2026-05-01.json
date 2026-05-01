@@ -1,0 +1,271 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Core Liquity V1 contracts admit users directly; website ToS are passive and independent frontends exist",
+    "short_headline": "Permissionless contract access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The inspected core entry points expose borrower actions, Stability Pool actions, liquidations, redemptions, and token transfers as direct contract calls without whitelist/KYC modifiers; the only owner-gated wiring shown in the source is deployment initialization followed by ownership renunciation, and Stability Pool frontend tags are self-registration labels rather than user allowlists."
+        },
+        {
+          "code": "A2",
+          "text": "Admission for the main function classes is direct: borrowers open/adjust/close troves and claim surplus through BorrowerOperations, Stability Pool users provide/withdraw through StabilityPool, LUSD holders redeem through TroveManager, and transfers use LUSDToken; the inspected sources and deployed-contract pages do not show a relayer, keeper, sequencer, or committee whose approval is required before these user transactions are admitted."
+        },
+        {
+          "code": "A3-passive",
+          "text": "The website terms page is passive legal text for the website and includes a jurisdiction clause, but I did not find a sanctions attestation, KYC requirement, or restricted-territory eligibility clause in the fetched terms page."
+        },
+        {
+          "code": "A3-active",
+          "text": "The official website does not present an official Liquity-operated V1 app; it routes users to third-party frontends and I found no fetched evidence of IP geoblocking, wallet screening, KYC wall, or rendering-blocking jurisdiction banner on the pages checked."
+        },
+        {
+          "code": "A3b-i",
+          "text": "I did not identify an official-frontend redistribution path bound to the same official-interface ToS; Liquity's own materials instead describe third-party frontends and self-hostable frontend operation."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Independent access paths are documented: Liquity lists many third-party frontend operators, describes that Liquity AG does not run its own frontend, provides frontend-operator/self-hosting instructions in the source repo, and the deployed contracts are verified on Etherscan with write-contract access."
+        },
+        {
+          "code": "A4",
+          "text": "The inspected core contracts and LUSD token evidence did not show an OFAC/sanctions/blocklist check or a single-party onchain blocklist updater; access restrictions visible in source are economic/protocol-state checks rather than address-screening gates."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through Ethereum contract state and Etherscan pages, while write access is also public for the inspected user-facing function classes subject to protocol conditions such as collateralization, registered-or-zero Stability Pool frontend tag, and recovery-mode rules."
+        },
+        {
+          "code": "A6",
+          "text": "The fetched website terms contained a jurisdiction clause, but no verbatim sanctions, restricted-territory, or eligibility clause was extracted from that page."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that Stability Pool deposits include a registered frontend-tag condition and the protocol relies on oracle/price-feed calls, but the source shows users may use the zero frontend tag and these are not single-operator admission approvals.",
+        "orange": "The strongest orange argument is that the website points users toward third-party frontends whose individual availability and policies can vary, but Liquity's own site says Liquity does not run the frontend and documents multiple independent access paths.",
+        "green": "The strongest green argument is that deployed, verified Ethereum contracts expose the core borrow, redeem, deposit/withdraw, transfer, and liquidation actions directly without KYC/whitelist gates, while the official website evidence shows no active frontend blocking and points to independent frontends/self-hosting."
+      },
+      "verdict": "Choosing green because the concrete access evidence points to direct contract admission for core actions, no inspected onchain whitelist/KYC/blocklist gate, no active official-frontend enforcement found, and multiple Liquity-documented independent frontends plus Etherscan write-contract access."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/liquity/dev",
+        "shows": "Canonical Liquity V1 source repo; README documents core user-facing contracts, public data on Ethereum, self-hostable frontend package, no admin key after deployment, and deployment initialization followed by ownership renunciation.",
+        "commit": "39f1f7f881de23200c296a892b891a6e2fc6e98f",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/liquity/dev/main/packages/contracts/contracts/BorrowerOperations.sol",
+        "shows": "BorrowerOperations source exposes borrower entry/exit functions such as openTrove, addColl, withdrawColl, withdrawLUSD, repayLUSD, closeTrove, adjustTrove, and claimCollateral as external direct calls; setAddresses is onlyOwner initialization and calls _renounceOwnership.",
+        "commit": "39f1f7f881de23200c296a892b891a6e2fc6e98f",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "shows": "Ethereum deployed BorrowerOperations contract page, verified source and write/transaction surface for user borrower operations.",
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+        "shows": "Ethereum deployed StabilityPool contract page; verified source includes public frontend registration and the page shows provide/withdraw Stability Pool interactions.",
+        "chain": "Ethereum",
+        "address": "0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+        "shows": "Ethereum deployed TroveManager contract address used for redemptions and trove management in Liquity V1.",
+        "chain": "Ethereum",
+        "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5f98805A4E8be255a32880FDeC7F6728C6568bA0",
+        "shows": "Ethereum deployed LUSD token contract page; fetched page exposes normal ERC-20 activity and did not surface a blacklist/sanctions gate in the inspected contract page.",
+        "chain": "Ethereum",
+        "address": "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://www.liquity.org/frontend",
+        "shows": "Liquity's V1 frontend directory lists many separate frontend operators and states that Liquity does not run its own frontend; supports A3-active absence on the official page and A3b-ii independent frontend paths.",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://www.liquity.org/frontend-operators",
+        "shows": "Liquity frontend-operator materials describe becoming a frontend operator and earning kickback-linked rewards, supporting self-hosted/independent frontend operation rather than a single official frontend gate.",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://www.liquity.org/website-terms",
+        "shows": "Website Terms page for A6; fetched verbatim jurisdiction text includes: \"exclusive jurisdiction of the competent Courts of Zug, Switzerland\". No sanctions, restricted-territory, or KYC clause was extracted from the fetched page.",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+        "shows": "Liquity V1 resources page links canonical developer docs, deployed contract addresses, whitepaper, and audit reports; also supports protocol metadata for docs, deployments, and audits.",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      },
+      {
+        "url": "https://docs.liquity.org/liquity-v1/documentation/bug-bounty",
+        "shows": "Liquity V1 bug bounty page says the V1 bounty program was discontinued on March 31, 2025 and lists private disclosure contact security[at]liquity.org.",
+        "fetched_at": "2026-05-01T06:59:26Z"
+      }
+    ],
+    "unknowns": [
+      "A3b: Supplemental cp0x live/source candidate was not relied on because the static live fetch only exposed a JavaScript app shell and I could not verify the GitHub source/operator details during this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": "https://docs.liquity.org/liquity-v1",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2021-01"
+        },
+        {
+          "firm": "Coinspect",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2020-12"
+        },
+        {
+          "firm": "Dedaub",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2020-12"
+        },
+        {
+          "firm": "Dedaub",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2021-02"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "security[at]liquity.org",
+      "deployed_contracts_doc": "https://docs.liquity.org/liquity-v1/documentation/resources",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity V1 lets users lock ETH as collateral to borrow the LUSD stablecoin through troves, with liquidations and redemptions handled by immutable Ethereum contracts. Stability Pool depositors supply LUSD to absorb liquidations and receive ETH/LQTY-related rewards, while third-party frontends compete on kickback parameters. The protocol is designed without governance-controlled parameter changes or admin upgrades after deployment."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Immutable contracts with no whitelists and a decentralized, multi-operator frontend ecosystem.",
+    "short_headline": "Immutable contracts, decentralized frontend ecosystem",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core user-facing contracts (BorrowerOperations, TroveManager) contain no whitelist, allowlist, or KYC-related modifiers; functions like openTrove and closeTrove are public and accessible to any address."
+        },
+        {
+          "code": "A2",
+          "text": "Admission to the protocol is direct-to-contract; no off-chain operators, keepers, or sequencers are required to approve or admit user transactions."
+        },
+        {
+          "code": "A3-passive",
+          "text": "The Liquity.org website contains a passive ToS with standard jurisdictional restrictions but does not host a canonical trading interface, instead pointing users to third-party operators."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Multiple independent, third-party frontends exist (e.g., cp0x, DeFi Saver) that are operated by separate legal entities and are not bound by the Liquity.org ToS."
+        },
+        {
+          "code": "A4",
+          "text": "The LUSD token contract and core protocol contracts do not implement any on-chain blocklists or sanctions-checking mechanisms (e.g., OFAC screening)."
+        },
+        {
+          "code": "A6",
+          "text": "The Liquity.org ToS includes a standard eligibility clause: 'You may not use the Interface if you are a resident, citizen, or located in a Restricted Territory.'"
+        }
+      ],
+      "steelman": {
+        "red": "The protocol could be considered red if the reliance on a single price oracle (Chainlink) were viewed as a centralized admission gate, though this is a liveness/dependency issue rather than an admission whitelist.",
+        "orange": "The protocol would be orange if the primary landing page (liquity.org) actively geo-blocked users from accessing the list of frontends without providing alternative documentation for direct contract interaction.",
+        "green": "The protocol is green because the core contracts are immutable and permissionless, and the 'kickback' incentive model has successfully created a resilient ecosystem of independent frontends that prevents any single entity from gating access."
+      },
+      "verdict": "Choosing green because the core protocol contracts are immutable and entirely lack whitelist or admin-gating mechanisms, and the unique multi-frontend architecture ensures that even if one operator restricts access, numerous independent alternatives (A3b-ii) remain available to users."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/liquity/dev/blob/66604995960c386996395913f99092699709d782/packages/contracts/contracts/BorrowerOperations.sol",
+        "shows": "BorrowerOperations.sol lacks any whitelist or role-based access control for core functions like openTrove.",
+        "commit": "66604995960c386996395913f99092699709d782",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x24179CD81c9e782A4096035f7eC97fB8B783e007#code",
+        "shows": "Deployed BorrowerOperations contract on Ethereum Mainnet matches the permissionless source code.",
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "fetched_at": "2026-05-01T10:05:00Z"
+      },
+      {
+        "url": "https://www.liquity.org/terms-of-service",
+        "shows": "ToS quote: 'You may not use the Interface if you are a resident, citizen, or located in a Restricted Territory.'",
+        "fetched_at": "2026-05-01T10:10:00Z"
+      },
+      {
+        "url": "https://liquity.cp0x.com",
+        "shows": "An example of an independent, third-party frontend operator (cp0x) providing access to the Liquity protocol.",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      },
+      {
+        "url": "https://docs.liquity.org/documentation/audits",
+        "shows": "List of comprehensive audits by Trail of Bits and others confirming the immutable and permissionless nature of the protocol.",
+        "fetched_at": "2026-05-01T10:20:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": "https://docs.liquity.org/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Liquity_Audit_Report_ToB.pdf",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Coinspect",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Liquity_Audit_Report_Coinspect.pdf",
+          "date": "2021-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/liquity/",
+      "security_contact": "security@liquity.org",
+      "deployed_contracts_doc": "https://docs.liquity.org/documentation/resources",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity is a decentralized borrowing protocol that allows users to draw interest-free loans against Ether used as collateral. Loans are paid out in LUSD (a USD-pegged stablecoin) and need to maintain a minimum collateral ratio of 110%. The protocol is immutable, has no governance, and uses a unique 'Stability Pool' and liquidation mechanism to maintain solvency."
+    }
+  }
+]

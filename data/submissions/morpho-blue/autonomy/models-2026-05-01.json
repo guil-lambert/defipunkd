@@ -1,0 +1,238 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "morpho-blue",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Red: unmitigated per-market oracle/IRM/token failures can lose principal; impacted TVS up to ~100% of an affected market/vault",
+    "short_headline": "Per-market oracle loss risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Morpho Blue markets are parameterized by loanToken, collateralToken, oracle, irm, and lltv; the core contract calls ERC20 transfer/transferFrom, calls IIrm.borrowRate during market creation/accrual, and calls IOracle.price for borrow health checks, collateral withdrawal health checks, and liquidations. If a market token reverts/misbehaves, an IRM reverts/returns an extreme rate, or an oracle misprices/reverts, that market can become stuck, accrue incorrectly, create bad debt, or liquidate/seize collateral incorrectly."
+        },
+        {
+          "code": "A2",
+          "text": "No protocol-level reporter committee is present in the Morpho Blue or MetaMorpho source inspected; reporting risk is inherited from each market's chosen oracle contract/provider rather than from a Morpho-operated committee."
+        },
+        {
+          "code": "A3",
+          "text": "The inspected core and vault source does not implement a bridge or cross-chain messaging path for a required user flow; deployments on non-Ethereum chains appear to be independent protocol instances rather than bridged accounting for one shared pool."
+        },
+        {
+          "code": "A4",
+          "text": "Nested collateral and receipt-token risk is per-market: Morpho accepts arbitrary ERC20 loan/collateral tokens subject to documented token/oracle/IRM assumptions, so an LST, LRT, ERC4626, or receipt-token failure propagates to users and vault allocations in that isolated market, not automatically to unrelated markets."
+        },
+        {
+          "code": "A6",
+          "text": "Core Morpho Blue has no oracle fallback, second-opinion price check, or circuit breaker in the inspected code; the live mitigation is market isolation. MetaMorpho adds live code-level supply caps, timelocked cap increases, try/catch skipping of reverting markets on deposit/withdraw, and forced market removal, but forced removal explicitly writes off previously supplied funds and therefore is recovery for vault liveness, not principal preservation."
+        },
+        {
+          "code": "A7",
+          "text": "Ethereum deployment has no additional sequencer dependency beyond the base chain; pinned non-Ethereum deployments on Base, Arbitrum, Polygon, Optimism, Unichain, and World Chain add chain-level liveness/sequencer assumptions that can freeze access without changing Morpho's own contract accounting."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidation is an external permissionless function, so no privileged keeper is required, but practical solvency depends on liquidators calling liquidate when positions become unhealthy; if nobody liquidates during adverse price moves, bad debt can remain in the affected market."
+        },
+        {
+          "code": "A9",
+          "text": "Existing Morpho Blue market parameters are stored by market id and cannot be swapped for an already-created market; the owner can enable new IRMs and LLTVs for future markets, while MetaMorpho owner/curator roles can introduce a new market dependency into a vault by raising a cap after the vault timelock, and allocators can route among already-enabled capped markets."
+        }
+      ],
+      "steelman": {
+        "red": "A material affected market or vault can lose principal because Morpho relies directly on per-market oracle, IRM, and token contracts with no core fallback, and MetaMorpho vaults route passive deposits into those same markets.",
+        "orange": "The strongest orange argument is that dependencies are per-market, market parameters are immutable once created, MetaMorpho cap increases are timelocked, and a single dependency failure is bounded to the affected isolated market or vault allocation rather than all protocol markets.",
+        "green": "The strongest green argument is that Morpho Blue itself is a small immutable market primitive with no bridge, no protocol reporter committee, no cross-market pooled risk, and no governance power to hot-swap an existing market's oracle or IRM."
+      },
+      "verdict": "Choosing red because the core architecture verified in Morpho.sol and IMorpho.sol directly trusts market-specified oracle.price(), irm.borrowRate(), and ERC20 behavior, and IMorpho documents that broken oracle/IRM/token assumptions can break expected behavior or liveness; MetaMorpho then supplies vault assets into those same Morpho markets. Module Morpho Blue core holds ~100% of assessed lending principal because MetaMorpho deposits into Morpho Blue and totalAssets reads Morpho balances (grade: red); MetaMorpho vault wrapper holds ~0% outside Blue while routing a subset of the same TVS through vault roles (grade: red for vault users); weighted overall = red because the worst unmitigated dependency can impair principal for any material affected market/vault, even though blast radius is isolated to that market rather than all markets."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "shows": "Ethereum mainnet deployed Morpho contract at the canonical 0xBBBB... address, labeled Morpho, with material token holdings shown on the explorer.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T06:44:27Z"
+      },
+      {
+        "url": "https://basescan.org/address/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "shows": "Base deployed Morpho contract at the same canonical 0xBBBB... address.",
+        "chain": "Base",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T06:44:27Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue/blob/main/src/Morpho.sol",
+        "shows": "Morpho core source: owner-only enableIrm/enableLltv/setFee functions, market creation storing MarketParams, calls to IIrm.borrowRate, calls to IOracle.price in health/liquidation logic, ERC20 transfers, and permissionless liquidate.",
+        "commit": "a2459187b13d208824be4c44ef2e071452f460b5",
+        "fetched_at": "2026-05-01T06:44:27Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue/blob/main/src/interfaces/IMorpho.sol",
+        "shows": "IMorpho defines MarketParams as loanToken, collateralToken, oracle, irm, lltv and documents token, IRM, and oracle assumptions, including liveness failures if oracle.price or borrowRate revert or return extreme values.",
+        "commit": "a2459187b13d208824be4c44ef2e071452f460b5",
+        "fetched_at": "2026-05-01T06:44:27Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue",
+        "shows": "Repository README describes Morpho Blue as a noncustodial EVM lending protocol, oracle-agnostic, immutable, governance-minimized, and centered on Morpho.sol.",
+        "commit": "a2459187b13d208824be4c44ef2e071452f460b5",
+        "fetched_at": "2026-05-01T06:44:27Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho",
+        "shows": "MetaMorpho README describes ERC4626 vaults on top of Morpho Blue, owner/curator/guardian/allocator roles, timelocked adverse actions with minimum 24 hours, supply caps, withdraw queues, emergency market disablement, and forced removal that writes off funds in faulty markets.",
+        "commit": "4f195b518dabc7009efbee8e22b9b41e61d37b92",
+        "fetched_at": "2026-05-01T06:44:27Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol",
+        "shows": "MetaMorpho source: submitCap timelocks cap increases, acceptCap applies them, allocators set supply/withdraw queues and reallocate, deposits call MORPHO.supply, withdrawals call MORPHO.withdraw with try/catch skip behavior, and totalAssets sums expected Morpho supply balances.",
+        "commit": "4f195b518dabc7009efbee8e22b9b41e61d37b92",
+        "fetched_at": "2026-05-01T06:44:27Z"
+      }
+    ],
+    "unknowns": [
+      "A1: exhaustive live per-market oracle, IRM, loan-token, and collateral-token address/provider census was not completed because address_book was null and markets are permissionless.",
+      "A2: committee size, quorum, and selector for each live oracle provider were not determined because the full live oracle address set was not enumerated.",
+      "A3: material TVL by chain and whether any users rely on bridged representations of loan/collateral assets was not measured from allowed sources.",
+      "A5: DeFiLlama forkedFrom was not included in pinned fields and was not fetched from an allowed URL during this run.",
+      "A6: activation status of MetaMorpho guardian, timelock, cap, and queue settings was not checked for every live vault.",
+      "A7: sequencer and DA trust models for Base, Arbitrum, Polygon, Optimism, Unichain, and World Chain were not independently sourced beyond the pinned chain list.",
+      "A9: current actor classes for every Morpho Blue owner and every MetaMorpho vault owner, curator, guardian, and allocator were not resolved from block explorers in this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/morpho-org/morpho-blue",
+        "https://github.com/morpho-org/metamorpho"
+      ],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "security@morpho.org",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Morpho Blue is a noncustodial lending primitive that hosts isolated markets where users supply loan tokens, post collateral, borrow, repay, and liquidate positions using market-specific oracles, IRMs, and LLTVs. MetaMorpho, also described as Morpho Vault V1, wraps this primitive with ERC4626 vaults that allocate one loan asset across multiple Blue markets under owner, curator, guardian, and allocator roles, so passive lenders delegate market selection while borrowers interact with the underlying markets."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "morpho-blue",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Immutable core with isolated markets ensures no single external failure can affect the entire protocol",
+    "short_headline": "Immutable core, isolated market risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Morpho Blue core calls external Oracle and Interest Rate Model (IRM) contracts for each market. These are specified at market creation and are immutable for that market ID."
+        },
+        {
+          "code": "A2",
+          "text": "Most markets rely on Chainlink or other oracle committees; however, the protocol is oracle-agnostic and does not mandate a specific provider at the core level."
+        },
+        {
+          "code": "A3",
+          "text": "Deployments on Base, Arbitrum, and Optimism depend on canonical bridges for asset liveness (e.g., WSTETH, USDC)."
+        },
+        {
+          "code": "A6",
+          "text": "The core Morpho Blue contract is immutable and contains no global pause or circuit breaker; failure mitigation is handled through market isolation."
+        },
+        {
+          "code": "A7",
+          "text": "L2 deployments (Base, Arbitrum, etc.) are subject to centralized sequencer risk for liveness, consistent with the underlying substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidations are permissionless and can be triggered by any off-chain actor via the 'liquidate' function, ensuring no dependency on a privileged keeper set."
+        },
+        {
+          "code": "A9",
+          "text": "The Morpho Blue core is immutable; while the DAO can enable new IRMs or LLTVs, it cannot modify the parameters (including oracles) of existing markets."
+        }
+      ],
+      "steelman": {
+        "red": "A malicious oracle in a high-TVS market could lead to significant principal loss without any protocol-level ability to intervene or pause the market.",
+        "orange": "The protocol's performance is entirely dependent on the liveness and accuracy of external oracles and IRMs which are not controlled by Morpho, though the impact is isolated to specific markets.",
+        "green": "The core protocol is immutable and has zero global external dependencies; all external touchpoints (oracles, assets) are isolated to specific markets that users must explicitly opt into, and no admin can silently alter these dependencies."
+      },
+      "verdict": "Choosing green because the core architecture is immutable and enforces strict isolation between markets, ensuring that external dependencies (oracles, IRMs) are opt-in and their failure is contained to specific markets, with no global admin power to introduce or alter these dependencies for existing users. The impacted TVS from any single global dependency failure is effectively 0%."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xBBBBBbbBBb9cCEdAB13e0526A8759950923087BA",
+        "shows": "Morpho Blue core contract is a non-proxy implementation with no upgradeability and no owner-only functions to modify existing markets.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cCEdAB13e0526A8759950923087BA"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue/blob/7e87560/src/Morpho.sol",
+        "shows": "The 'createMarket' function hashes parameters into a unique ID, making the oracle and IRM immutable for that market; 'liquidate' is public.",
+        "commit": "7e87560"
+      },
+      {
+        "url": "https://docs.morpho.org/morpho-blue/overview/architecture#immutability",
+        "shows": "Official documentation confirming the immutability of the Morpho Blue core and the isolation of markets.",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A3: Verification of canonical bridge status for all assets on newer chains like Unichain and World Chain."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/morpho-org/morpho-blue",
+        "https://github.com/morpho-org/metamorpho"
+      ],
+      "docs_url": "https://docs.morpho.org/",
+      "audits": [
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/morpho-org/morpho-blue/blob/main/audits/2023-10-27_Cantina.pdf",
+          "date": "2023-10"
+        },
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/morpho-org/morpho-blue/blob/main/audits/2023-09-22_OpenZeppelin.pdf",
+          "date": "2023-09"
+        }
+      ],
+      "governance_forum": "https://forum.morpho.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9994E35Db5960D821B996274be045801D1e16156",
+        "symbol": "MORPHO"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/morpho/",
+      "security_contact": "security@morpho.org",
+      "deployed_contracts_doc": "https://docs.morpho.org/morpho-blue/addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xcBa28b3817dB091d266068433026c3a9dA33ff5A",
+          "role": "Morpho DAO",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Morpho Blue is an immutable, permissionless lending protocol that allows for the creation of isolated lending markets with any asset, oracle, and loan-to-value ratio. It separates core lending logic from risk management, which is handled by external vaults like MetaMorpho. This architecture minimizes protocol-wide systemic risk and maximizes capital efficiency."
+    }
+  }
+]

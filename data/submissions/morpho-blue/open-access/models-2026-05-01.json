@@ -1,0 +1,154 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "morpho-blue",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Core contracts admit users directly, but official metadata contains country-based market blacklists.",
+    "short_headline": "Open contracts, filtered UI",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Morpho Blue core user entry/exit functions are external direct calls, and the checked source had no matches for onlyWhitelisted, onlyRole, allowlist, isAccredited, or isKYCed; MetaMorpho vault deposit, mint, withdraw, and redeem are public ERC-4626 functions, while role modifiers govern vault management rather than depositor admission."
+        },
+        {
+          "code": "A2",
+          "text": "Core supply, repay, supplyCollateral, liquidate, and flashLoan do not require an off-chain operator to admit the transaction; withdraw, borrow, and withdrawCollateral require the caller to be the position owner or an address authorized by that owner, and borrow/withdrawCollateral use onchain health checks rather than a relayer approval path."
+        },
+        {
+          "code": "A3",
+          "text": "The official Terms of Use contain passive eligibility, sanctions, restricted-territory, and VPN-circumvention restrictions, while the official metadata repository states that the API data controls country-based market blacklists and the current markets-blacklist file includes US/GB and global entries for specific market IDs."
+        },
+        {
+          "code": "A3b",
+          "text": "Morpho documents direct contract-level access through block explorers if the interface is unavailable, and public explorers expose Read Contract and Write Contract tabs for the deployed Morpho contract; those paths bypass the official website but are technical compared with the hosted app."
+        },
+        {
+          "code": "A4",
+          "text": "The reviewed Morpho.sol and MetaMorpho.sol source did not show an onchain sanctions oracle, OFAC list, user blocklist, or admin-updatable address blacklist in the user-facing admission paths."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through verified explorer pages, public Solidity getters, and extSloads; write access to core supply/borrow/repay/withdraw/collateral/liquidation/flash-loan functions and vault deposit/mint/withdraw/redeem functions is contract-direct, subject to balances, liquidity, health checks, and user-granted authorization rather than KYC."
+        },
+        {
+          "code": "A6",
+          "text": "The Terms of Use define the official Apps as Morpho Association interfaces for reading information from and submitting transactions to Morpho Protocols, and include restricted-territory and sanctions eligibility language."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that official off-chain metadata can blacklist markets by country, but the core and vault contracts themselves do not contain a user whitelist, KYC gate, single-operator relayer, or onchain blocklist for deposits, borrowing, repayments, withdrawals, or liquidations.",
+        "orange": "The strongest orange argument is that contracts are directly callable, but the official Morpho API/interface metadata contains country-based market blacklist entries, creating active off-chain filtering for at least some official-interface market access.",
+        "green": "The strongest green argument is that the deployed and source-verified contracts expose direct public user functions without KYC or whitelist modifiers, and Morpho documents contract-level fallback access through Etherscan/BaseScan."
+      },
+      "verdict": "Choosing orange because the contract layer is open and direct-callable, but the official Morpho metadata used by the API/interface expressly controls country-based market blacklists with current US/GB and global entries; documented block-explorer access mitigates this but is more technical than the hosted official app."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "shows": "Ethereum deployed Morpho contract address; Etherscan labels it Morpho, shows Source Code Verified Exact Match, and exposes Read Contract and Write Contract tabs.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://basescan.org/address/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "shows": "Base deployed Morpho contract address; BaseScan shows source-code verification and an outline including createMarket, supply, withdraw, borrow, repay, supplyCollateral, withdrawCollateral, liquidate, flashLoan, and authorization functions.",
+        "chain": "Base",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue/blob/a2459187b13d208824be4c44ef2e071452f460b5/src/Morpho.sol",
+        "shows": "Morpho.sol source: onlyOwner is limited to owner, IRM, LLTV, fee, and fee-recipient management; user-facing supply, withdraw, borrow, repay, collateral, liquidation, flashLoan, and authorization functions are external and do not contain whitelist/KYC modifiers.",
+        "commit": "a2459187b13d208824be4c44ef2e071452f460b5",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho/blob/4f195b518dabc7009efbee8e22b9b41e61d37b92/src/MetaMorpho.sol",
+        "shows": "MetaMorpho source: deposit, mint, withdraw, and redeem are public ERC-4626 functions; curator, allocator, guardian, and owner modifiers apply to vault management, queue, cap, timelock, fee, and role functions.",
+        "commit": "4f195b518dabc7009efbee8e22b9b41e61d37b92",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://morpho.org/terms-of-use/",
+        "shows": "Official TOU dated November 3, 2025; includes passive restricted-territory and eligibility language, including: \"Use of a virtual private network (“VPN”) to circumvent the restrictions set forth herein is strictly prohibited.\" It also says Apps read information from and submit transactions to permissionless Morpho Protocols.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue-api-metadata",
+        "shows": "Official morpho-org metadata repository says its data folder is read by the API and includes Markets blacklisting; README states market blacklisting controls blacklisted markets by countries.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue-api-metadata/blob/main/data/markets-blacklist.json",
+        "shows": "Current markets-blacklist.json contains market IDs with countryCodes entries for US, GB, and wildcard global blacklisting.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://morpho.org/blog/our-vision-for-morphos-interface/",
+        "shows": "Morpho blog describes the interface vision as an explorer, says the interface is intended to be open-source, IPFS/self-hostable, able to interact with Morpho Blue smart-contract capacities, and lists ecosystem apps including Instadapp Pro and DeFi Saver.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://legacy.docs.morpho.org/interface/app-guides/",
+        "shows": "Morpho interface guide says that if the interface is not accessible, users can interact with Morpho at contract level and references Etherscan/BaseScan flows for vault and market actions.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://legacy.docs.morpho.org/morpho/tutorials/get-started/",
+        "shows": "Developer documentation shows direct integration using Morpho contracts and libraries, including installing morpho-org/morpho-blue and importing IMorpho and MorphoBalancesLib.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://legacy.docs.morpho.org/addresses/",
+        "shows": "Morpho deployed-contracts documentation index for Morpho Core, Morpho Vaults Factory, Bundlers, Public Allocator, rewards, optimizers, token, and DAO address references.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue",
+        "shows": "Canonical Morpho Blue source repository; README describes Morpho Blue as a noncustodial EVM lending protocol with permissionless risk management and market creation, designed as a simple immutable governance-minimized base layer.",
+        "commit": "a2459187b13d208824be4c44ef2e071452f460b5",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho",
+        "shows": "Canonical MetaMorpho source repository; README describes ERC-4626 vaults on top of Morpho Blue, deployed as immutable onchain instances by the MetaMorphoFactory, with owner, curator, allocator, and guardian roles.",
+        "commit": "4f195b518dabc7009efbee8e22b9b41e61d37b92",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      },
+      {
+        "url": "https://app.morpho.org/",
+        "shows": "Official app URL fetched as a JavaScript SPA with no extractable text or block-banner text in the static fetch.",
+        "fetched_at": "2026-05-01T06:54:16Z"
+      }
+    ],
+    "unknowns": [
+      "A3: Static fetches of app.morpho.org, /markets, and /vaults returned no extractable SPA text, so I did not capture a runtime wallet-screening rejection or jurisdiction block banner.",
+      "A3b: cp0x pi-morpho-interface live and GitHub URLs returned cache-miss through the fetch tool, so I did not count that supplemental candidate as verified.",
+      "A3b: DeFi Saver and Instadapp candidate integrations were not independently opened in this run; I only counted Morpho's own documentation/blog references and direct block-explorer access."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/morpho-org/morpho-blue",
+        "https://github.com/morpho-org/metamorpho"
+      ],
+      "docs_url": "https://docs.morpho.org/",
+      "audits": [],
+      "governance_forum": "https://forum.morpho.org/",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "security@morpho.org",
+      "deployed_contracts_doc": "https://legacy.docs.morpho.org/addresses/",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Morpho Blue is a noncustodial lending primitive where users supply assets, borrow against collateral, repay, withdraw, and liquidate positions in isolated markets defined by loan asset, collateral asset, oracle, IRM, and LLTV. MetaMorpho adds ERC-4626 vaults that accept deposits and allocate liquidity across Morpho Blue markets according to onchain vault roles and caps. The core design externalizes risk selection to market creators and vault curators instead of using one shared DAO-managed risk pool."
+    }
+  }
+]

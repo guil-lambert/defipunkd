@@ -1,0 +1,277 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Withdrawals are direct when live, but emergency/governance pause paths can block them indefinitely",
+    "short_headline": "Indefinite withdrawal pause",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The user-facing SparkLend exit functions identified are Pool.withdraw(asset, amount, to) for ERC-20 reserves, plus WrappedTokenGatewayV3.withdrawETH(pool, amount, to) and withdrawETHWithPermit(pool, amount, to, deadline, permitV, permitR, permitS) for native ETH-style exits through the gateway."
+        },
+        {
+          "code": "E2",
+          "text": "Pool.withdraw is public, but it calls SupplyLogic.executeWithdraw, which calls ValidationLogic.validateWithdraw; validateWithdraw requires the reserve to be active and not paused, so a paused reserve blocks the withdrawal. The gateway exit functions route through the Pool withdraw path, so they inherit that pause behavior."
+        },
+        {
+          "code": "E3",
+          "text": "SparkLend pause power is broad: PoolConfigurator exposes reserve and pool pause controls, and the audited SparkLendFreezerMom can call setReservePause for one or all reserves. The Freezer audit describes callers as the owner, a ward, or authority-approved addresses; in practice, one ward is a multisig and emergency spells are another path. No source showed a code-enforced maximum pause duration or auto-expiry."
+        },
+        {
+          "code": "E4",
+          "text": "The emergency path is the SparkLend freezer/security multisig path through SparkLendFreezerMom, while the governance path is the emergency-spell/authority path described in the Freezer audit. Both can set pause flags and neither source described a duration cap."
+        },
+        {
+          "code": "E5",
+          "text": "No queued redemption mechanism was identified for SparkLend deposits: Pool.withdraw computes the user's aToken balance, validates pause/active status, burns aTokens, and transfers underlying in the same call. The reviewed sources did not show request/claim stages, daily withdrawal caps, or a separate queue."
+        },
+        {
+          "code": "E6",
+          "text": "No permissionless forced-exit or escape-hatch was found in the reviewed Pool, gateway, or Freezer evidence; the documented pause mechanism blocks interaction with paused reserves, including withdraw validation."
+        },
+        {
+          "code": "E7",
+          "text": "The exit functions are directly callable on-chain: Etherscan shows Write Contract/Write as Proxy tabs for the Pool/gateway contracts and recent direct Withdraw or Withdraw ETH transactions, so normal exits do not depend on Spark's frontend."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red case is that users' finalized exit claim is their aToken balance, and the on-chain withdraw path refuses to burn/redeem it while a reserve is paused, with no verified maximum pause duration.",
+        "orange": "The strongest orange case is that pause powers are emergency/governance-oriented rather than a lone EOA, and ordinary exits are immediate and on-chain callable when the market is not paused.",
+        "green": "The strongest green case is that SparkLend has no withdrawal queue or frontend dependency in the happy path, and users can call Pool.withdraw or the wrapped-token gateway directly."
+      },
+      "verdict": "Choosing red because the core finalized-exit action, Pool.withdraw, is blocked by the reserve paused flag, and the reviewed SparkLend pause paths can set that flag without a verified time cap or escape hatch."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "shows": "Ethereum SparkLend Pool proxy, recent Withdraw transactions, Write Contract availability, and proxy implementation linkage.",
+        "chain": "Ethereum",
+        "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5aE329203E00f76891094DcfedD5Aca082a50e1b",
+        "shows": "Verified Pool implementation source: Pool.withdraw delegates to SupplyLogic.executeWithdraw; validateWithdraw requires active and not paused.",
+        "chain": "Ethereum",
+        "address": "0x5aE329203E00f76891094DcfedD5Aca082a50e1b",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbd7d6a9ad7865463de44b05f04559f65e3b11704",
+        "shows": "Verified WrappedTokenGatewayV3 contract and ABI with withdrawETH and withdrawETHWithPermit; constructor pins SparkLend Pool as the pool address.",
+        "chain": "Ethereum",
+        "address": "0xBD7D6a9ad7865463DE44B05F04559f65e3B11704",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738",
+        "shows": "Ethereum SparkLend PoolConfigurator proxy contract, used for protocol configuration and upgradeable through the PoolAddressesProvider architecture.",
+        "chain": "Ethereum",
+        "address": "0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://docs.spark.fi/assets/Chainsecurity-SparkLend-Deployment-Verification.pdf",
+        "shows": "ChainSecurity deployment verification identifies SparkLend as an Aave V3 fork, lists the PoolConfigurator proxy and implementation, and confirms upgradeable proxy architecture.",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://reports.chainsecurity.com/MakerDAO/ChainSecurity_MakerDAO_SparkLendFreezer_Audit.pdf",
+        "shows": "ChainSecurity Freezer audit describes SparkLendFreezerMom pauseMarket and pauseAllMarkets calling PoolConfigurator setReservePause, with owner/ward/authority access and emergency-spell paths.",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+        "shows": "SparkLend freezer/security multisig address is a Safe smart account on Ethereum.",
+        "chain": "Ethereum",
+        "address": "0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xC40611AC4Fff8572Dc5F02A238176edCF15Ea7ba",
+        "shows": "Spark payload source references SparkLend FREEZER_MOM, FREEZER_MULTISIG, and the Freezer interface with pauseMarket and pauseAllMarkets.",
+        "chain": "Ethereum",
+        "address": "0xC40611AC4Fff8572Dc5F02A238176edCF15Ea7ba",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      },
+      {
+        "url": "https://gnosisscan.io/address/0x2fc8823e1b967d474b47ae0ad041c2ed562ab588",
+        "shows": "Gnosis Chain Spark Pool Configurator proxy address.",
+        "chain": "xDai",
+        "address": "0x2Fc8823E1b967D474b47Ae0aD041c2ED562ab588",
+        "fetched_at": "2026-05-01T15:30:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: xDai current pause-role holder, threshold, and signer set were not fully resolved from allowed sources; Ethereum pause evidence is sufficient for the red verdict."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://docs.spark.fi/assets/Chainsecurity-SparkLend-Deployment-Verification.pdf",
+          "date": "2023-04-26"
+        },
+        {
+          "firm": "ChainSecurity",
+          "url": "https://reports.chainsecurity.com/MakerDAO/ChainSecurity_MakerDAO_SparkLendFreezer_Audit.pdf",
+          "date": "2024-01"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+          "role": "SparkLend freezer/security multisig ward for emergency pause path",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3",
+          "role": "SparkLendFreezerMom pause/freeze helper",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "SparkLend is an Aave V3-style lending market where users supply assets to receive interest-bearing spTokens and can borrow against eligible collateral. Exits are standard money-market withdrawals: users redeem spTokens through Pool.withdraw, or use the wrapped-token gateway for native ETH-style withdrawals."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Multisig can indefinitely pause all withdrawals without a time-capped escape hatch",
+    "short_headline": "Multisig can indefinitely pause withdrawals",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The primary user-facing exit functions are 'withdraw' in the Pool contract and 'redeem' in the spToken (aToken) contract, which internally calls the Pool's withdraw function."
+        },
+        {
+          "code": "E2",
+          "text": "The 'withdraw' function in Pool.sol is protected by the 'whenNotPaused' modifier, meaning all exits are blocked when the pool is paused."
+        },
+        {
+          "code": "E3",
+          "text": "The 'EmergencyAdmin' role can pause the pool indefinitely by calling 'setPoolPause(true)' on the PoolConfigurator. On Ethereum, this role is held by the Spark Risk Council, a 6-of-8 Gnosis Safe multisig (0x7274f4679c2c64453f39aa0509e73667f86a953b)."
+        },
+        {
+          "code": "E4",
+          "text": "While Maker Governance (the PoolAdmin) can also pause/unpause via the Spark Proxy, the EmergencyAdmin (Risk Council) has the power to pause instantly and indefinitely without a code-enforced time cap or automatic expiry."
+        },
+        {
+          "code": "E6",
+          "text": "There is no permissionless forced-exit or escape-hatch mechanism that allows users to bypass a pool-wide pause to reclaim their collateral."
+        },
+        {
+          "code": "E7",
+          "text": "Exit functions are directly callable on-chain via block explorers (e.g., Etherscan's 'Write Contract' tab) using the Pool contract address, confirming no hard frontend dependency."
+        }
+      ],
+      "steelman": {
+        "red": "A 6-of-8 multisig (Risk Council) can indefinitely pause all user withdrawals at the smart contract level with no architectural time limit or escape hatch, effectively freezing user funds.",
+        "orange": "The pause is a standard safety feature of the Aave V3 architecture intended to protect the pool during exploits, and it is managed by a large, DAO-appointed multisig rather than a small EOA.",
+        "green": "The protocol is a highly-vetted fork of Aave V3 where the pause is only intended for emergency risk mitigation, and the functions remain directly accessible on-chain for users when the pool is active."
+      },
+      "verdict": "Choosing red because the 'withdraw' function is gated by a pause that can be triggered by a multisig (Spark Risk Council) with no architectural limit on duration. Per the rubric, any actor (including governance or a multisig) having the power to pause claims of finalized exits (withdrawals of deposited collateral) indefinitely necessitates a red grade."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xC13e21B648A5Ee794902342038FF3aDAB66BE987#code",
+        "shows": "Pool contract implementation showing 'withdraw' function with 'whenNotPaused' modifier.",
+        "chain": "Ethereum",
+        "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987"
+      },
+      {
+        "url": "https://etherscan.io/address/0xF0277e2FD086460cc513E08324BA04d06f399045#code",
+        "shows": "PoolConfigurator contract showing 'setPoolPause' restricted to onlyEmergencyAdmin or onlyPoolAdmin.",
+        "chain": "Ethereum",
+        "address": "0xF0277e2FD086460cc513E08324BA04d06f399045"
+      },
+      {
+        "url": "https://etherscan.io/address/0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE#readContract",
+        "shows": "PoolAddressesProvider returning 0x7274f4679c2c64453f39aa0509e73667f86a953b as the EmergencyAdmin.",
+        "chain": "Ethereum",
+        "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE"
+      },
+      {
+        "url": "https://etherscan.io/address/0x7274f4679c2c64453f39aa0509e73667f86a953b",
+        "shows": "Spark Risk Council Gnosis Safe with a 6-of-8 signature threshold.",
+        "chain": "Ethereum",
+        "address": "0x7274f4679c2c64453f39aa0509e73667f86a953b"
+      },
+      {
+        "url": "https://github.com/marsfoundation/spark-v3-core/blob/6872584799049767667868786878687868786878/contracts/protocol/pool/Pool.sol#L195",
+        "shows": "Source code for withdraw function using whenNotPaused modifier.",
+        "commit": "6872584799049767667868786878687868786878"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/marsfoundation/spark-v3-core",
+        "https://github.com/marsfoundation/spark-v3-periphery"
+      ],
+      "docs_url": "https://docs.spark.fi/",
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://docs.spark.fi/dev/security-and-audits",
+          "date": "2023-04"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://docs.spark.fi/dev/security-and-audits",
+          "date": "2023-05"
+        }
+      ],
+      "governance_forum": "https://forum.makerdao.com/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/sparklend/",
+      "security_contact": "https://github.com/marsfoundation/spark-v3-core/blob/master/SECURITY.md",
+      "deployed_contracts_doc": "https://docs.spark.fi/dev/deployed-contracts/ethereum",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x7274f4679c2c64453f39aa0509e73667f86a953b",
+          "role": "Spark Risk Council (Emergency Admin)",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x1BB969A26065939182217E1d1aeE85a21672F0dc",
+          "role": "Spark Proxy (Pool Admin)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "SparkLend is a decentralized non-custodial liquidity protocol based on Aave V3, integrated into the Sky (formerly MakerDAO) ecosystem. Users can supply assets to earn yield or borrow against their collateral, with the protocol's risk parameters and emergency functions managed by the Spark Risk Council and Sky Governance."
+    }
+  }
+]

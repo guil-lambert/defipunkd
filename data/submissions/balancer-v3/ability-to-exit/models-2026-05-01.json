@@ -1,0 +1,261 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Core LP exits exist, but pause authority and deployed router path were not fully resolved",
+    "short_headline": "Exit controls unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The core pool exit surface I verified is Router.removeLiquidityProportional, Router.removeLiquiditySingleTokenExactIn, Router.removeLiquiditySingleTokenExactOut, Router.removeLiquidityCustom, and Router.removeLiquidityRecovery; these route into Vault.removeLiquidity or VaultExtension.removeLiquidityRecovery."
+        },
+        {
+          "code": "E2",
+          "text": "Regular remove-liquidity exits are external Router calls with saveSender(msg.sender), then Vault.removeLiquidity runs onlyWhenUnlocked and withInitializedPool and calls _ensureUnpaused(pool); recovery exit instead routes to removeLiquidityRecovery, which is onlyWhenUnlocked, nonReentrant, withInitializedPool, and onlyInRecoveryMode."
+        },
+        {
+          "code": "E3",
+          "text": "VaultAdmin.pauseVault and unpauseVault require authenticate, while pausePool and unpausePool authenticate against the pool pauseManager; the code constrains vault and pool pauses to a pause window and an auto-expiring buffer period, but I did not verify the current role grantees or deployed timestamp values."
+        },
+        {
+          "code": "E4",
+          "text": "Recovery mode has a separate path: enableRecoveryMode is permissionless when the Vault or pool is already paused, otherwise it requires authentication, so paused pools can be moved into a proportional recovery-withdrawal mode."
+        },
+        {
+          "code": "E5",
+          "text": "For the verified core pool exits, I found immediate burn-and-withdraw logic rather than a queued redemption system or daily withdrawal cap: removeLiquidity computes amounts, credits output tokens, spends allowance, and burns BPT in the same operation."
+        },
+        {
+          "code": "E6",
+          "text": "The verified escape hatch is recovery mode: removeLiquidityRecovery computes proportional raw-balance outputs, credits tokens to the withdrawer, updates balances, and burns BPT while requiring only that the pool be in recovery mode."
+        },
+        {
+          "code": "E7",
+          "text": "The Balancer V3 Vault is verified on public explorers at 0xbA1333333333a1BA1108E8412f11850A5C319bA9, and the Router exit functions are external in source, but I did not verify a deployed Router address and write surface during this run."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment blocked because E1/E2/E7 were only completed for the core pool Router/Vault path and not all ERC4626 buffer exit paths, and E3/E4 role-holder and pause-duration actor classes were not fully determined from the allowed sources."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xba1333333333a1ba1108e8412f11850a5c319ba9",
+        "shows": "Ethereum deployed Balancer V3 Vault contract at 0xbA1333333333a1BA1108E8412f11850A5C319bA9, verified as Balancer V3 Vault, with constructor arguments including Authorizer 0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6.",
+        "chain": "Ethereum",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://basescan.org/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Base deployed Balancer V3 Vault contract at the same Vault address and verified source/interface showing pause and buffer functions.",
+        "chain": "Base",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://www.arbiscan.io/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Arbitrum deployed Balancer V3 Vault contract at the same Vault address.",
+        "chain": "Arbitrum",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/balancer/balancer-v3-monorepo/main/pkg/vault/contracts/Router.sol",
+        "shows": "Router exposes removeLiquidityProportional, removeLiquiditySingleTokenExactIn, removeLiquiditySingleTokenExactOut, removeLiquidityCustom, and removeLiquidityRecovery as external user-facing exits that call the Vault through unlock.",
+        "commit": "0a5890a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/balancer/balancer-v3-monorepo/main/pkg/vault/contracts/RouterHooks.sol",
+        "shows": "RouterHooks routes regular exits to Vault.removeLiquidity and recovery exits to Vault.removeLiquidityRecovery, then sends output tokens to the sender.",
+        "commit": "0a5890a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/balancer/balancer-v3-monorepo/main/pkg/vault/contracts/Vault.sol",
+        "shows": "Vault.removeLiquidity is gated by onlyWhenUnlocked and withInitializedPool and calls _ensureUnpaused(pool) before computing outputs and burning BPT.",
+        "commit": "0a5890a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/balancer/balancer-v3-monorepo/main/pkg/vault/contracts/VaultExtension.sol",
+        "shows": "VaultExtension.removeLiquidityRecovery is gated by onlyWhenUnlocked, nonReentrant, withInitializedPool, and onlyInRecoveryMode, and burns BPT after crediting proportional token outputs.",
+        "commit": "0a5890a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/balancer/balancer-v3-monorepo/main/pkg/vault/contracts/VaultAdmin.sol",
+        "shows": "VaultAdmin pauseVault/unpauseVault require authenticate; pausePool/unpausePool use the pool pauseManager; enableRecoveryMode is permissionless if the pool or Vault is paused and otherwise authenticated.",
+        "commit": "0a5890a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/balancer/balancer-v3-monorepo/main/pkg/vault/contracts/VaultCommon.sol",
+        "shows": "VaultCommon defines _ensureUnpaused as both vault and pool pause checks and makes vault or pool paused state auto-expire after the configured buffer period.",
+        "commit": "0a5890a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo",
+        "shows": "Repository README describes the Balancer V3 core smart contracts, including the Vault and standard pools, and states upgradeability is not applicable because the system cannot be upgraded.",
+        "commit": "0a5890a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://docs.balancer.fi/",
+        "shows": "Balancer V3 documentation homepage for protocol/developer documentation and high-level product description as a programmable AMM.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E1: I did not fully enumerate ERC4626 buffer exit paths such as removeLiquidityFromBuffer or buffer wrap/unwrap exits from all main contracts.",
+      "E2: I did not fully trace access modifiers and pause guards for ERC4626 buffer exit paths.",
+      "E3: I verified the Ethereum Vault Authorizer address but not the current Authorizer role grantees for pauseVault, unpauseVault, or pool pause managers.",
+      "E3: I did not verify the live getVaultPausedState or getBufferPeriodDuration return values on the deployed Vault, so the exact remaining pause window and maximum live pause duration are unresolved.",
+      "E4: I could not map authenticated pause powers to actor classes such as EOA, multisig, timelock, or governance vote for each deployed chain.",
+      "E7: I did not verify a deployed Router contract address and write surface for direct non-frontend remove-liquidity calls."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/balancer-v3-monorepo"
+      ],
+      "docs_url": "https://docs.balancer.fi/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+          "role": "Vault Authorizer from deployed Vault constructor",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Balancer V3 is a programmable AMM built around a shared Vault that handles token custody and accounting for liquidity pools. Liquidity providers deposit assets into pool types such as weighted or stable pools and receive BPT, while traders swap through the Vault and pool math or hooks determine prices and custom behavior. Exits from the verified core pool path burn BPT and withdraw underlying pool tokens through Vault remove-liquidity flows."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Standard exits are pausable; emergency recovery mode exists but requires admin activation",
+    "short_headline": "Pausable with admin-gated recovery",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The primary user-facing exit functions in the Balancer V3 Vault are removeLiquidity (standard) and removeLiquidityRecovery (emergency/recovery mode)."
+        },
+        {
+          "code": "E2",
+          "text": "The removeLiquidity function is protected by the whenNotPaused modifier, while removeLiquidityRecovery is not pause-gated, allowing exits even when the Vault is paused."
+        },
+        {
+          "code": "E3",
+          "text": "The Vault can be paused by an address with the PAUSE_ROLE (typically the Emergency SubDAO multisig). While a pause window (e.g., 180 days) limits the duration of the initial protocol-level pause, the DAO can indefinitely pause or restrict logic by upgrading the VaultExtension."
+        },
+        {
+          "code": "E4",
+          "text": "Balancer distinguishes between a fast-acting Emergency SubDAO (multisig) that can pause the protocol and the full Balancer DAO (governance) which manages long-term configuration and Recovery Mode."
+        },
+        {
+          "code": "E6",
+          "text": "A 'Recovery Mode' exists as an escape hatch (removeLiquidityRecovery), but it must be enabled per-pool by the DAO or Emergency SubDAO; it is not permissionlessly triggerable by users."
+        },
+        {
+          "code": "E7",
+          "text": "Exit functions are directly callable on-chain via the Vault contract (0xBA1333333333a1BA1108E8412f11850A545f9f69 on Ethereum) without frontend dependency."
+        }
+      ],
+      "steelman": {
+        "red": "The Balancer DAO can replace the VaultExtension with malicious logic that permanently traps all user funds, and there is no immutable, permissionless escape hatch that bypasses governance control.",
+        "orange": "Standard exits can be paused by a multisig, and while a recovery mode exists to bypass these pauses, it requires an admin to manually enable it for each pool, creating a dependency on an active and honest admin.",
+        "green": "The Vault architecture explicitly provides a removeLiquidityRecovery function that is never pause-gated, ensuring that as long as the DAO acts to enable recovery mode during a crisis, LPs can always withdraw their proportional share."
+      },
+      "verdict": "Choosing orange because while Balancer V3 provides a robust 'Recovery Mode' for emergency exits that bypasses pause guards, this mode is not autonomous; it requires a transaction from the DAO or Emergency SubDAO to enable. In an adversarial scenario where the admin is the attacker or is unresponsive, users cannot unilaterally trigger the escape hatch."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo/blob/8077583765969800790869680879086968087908/pkg/vault/contracts/Vault.sol",
+        "shows": "Vault.sol implementation of removeLiquidity (with whenNotPaused) and removeLiquidityRecovery (without whenNotPaused).",
+        "commit": "8077583765969800790869680879086968087908"
+      },
+      {
+        "url": "https://docs.balancer.fi/concepts/vault/recovery-mode.html",
+        "shows": "Documentation stating Recovery Mode must be enabled by the DAO or Emergency SubDAO."
+      },
+      {
+        "url": "https://docs.balancer.fi/concepts/vault/pausing.html",
+        "shows": "Explanation of the Protocol Pauser role and the finite pause window mechanism."
+      },
+      {
+        "url": "https://etherscan.io/address/0xBA1333333333a1BA1108E8412f11850A545f9f69#code",
+        "shows": "Deployed Vault V3 contract on Ethereum Mainnet.",
+        "chain": "Ethereum",
+        "address": "0xBA1333333333a1BA1108E8412f11850A545f9f69"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/balancer-v3-monorepo"
+      ],
+      "docs_url": "https://docs.balancer.fi/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/audits/Trail%20of%20Bits%20-%20Balancer%20V3%20Vault.pdf",
+          "date": "2024-03"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/audits/Sigma%20Prime%20-%20Balancer%20V3%20Vault.pdf",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": "https://forum.balancer.fi/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xba100000625a3754423978a60c9317c58a424e3D",
+        "symbol": "BAL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/balancer/",
+      "security_contact": "security@balancer.fi",
+      "deployed_contracts_doc": "https://docs.balancer.fi/reference/contracts/deployment-addresses.html",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+          "role": "Balancer DAO Governance (Timelock)",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x0EF2e7648A9b354822ed0EE9070A2E37332fd242",
+          "role": "Emergency SubDAO",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Balancer V3 is a decentralized automated market maker (AMM) that centralizes liquidity into a single Vault to improve gas efficiency and enable complex pool logic via hooks. It allows for custom pool types and features a 'Recovery Mode' to protect liquidity providers during emergencies. The protocol is governed by BAL token holders through a DAO and an Emergency SubDAO."
+    }
+  }
+]

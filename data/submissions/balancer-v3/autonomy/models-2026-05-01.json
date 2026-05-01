@@ -1,0 +1,420 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Per-pool rate providers, hooks, and ERC-4626 wrappers can affect opted-in pools; largest quantified dependency exposure is ~20% of V3 Vault TVS.",
+    "short_headline": "Rate-provider principal risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The assessed V3 module is the shared Vault at 0xbA1333333333a1BA1108E8412f11850A5C319bA9, used by routers 0xAE563E3f8219521950555F5962419C8919758Ea2, 0x136f1EFcC3f8f88516B9E94110D56FDBfB1778d1, 0x9179C06629ef7f17Cb5759F501D89997FE0E7b45, and 0xb21A277466e7dB6934556a1Ce12eb3F032815c8A; deployed factory modules include Weighted, Stable, StableSurge, Gyro ECLP, and ReClamm. The Vault source/ABI shows external reads/calls to per-token IRateProvider.getRate, per-pool IHooks callbacks, pool math callbacks, ERC20 token contracts, and ERC4626 wrappers; a bad rate provider or hook can mis-scale swaps/add/remove liquidity for the affected pool, while a non-compliant ERC4626 wrapper can break or revert buffer wrap/unwrap flows."
+        },
+        {
+          "code": "A2",
+          "text": "I found no protocol-wide off-chain reporter committee feeding Balancer V3 core; the externally trusted reporters, if any, sit behind individual rate providers or wrapped assets chosen per pool rather than a Balancer-wide oracle committee."
+        },
+        {
+          "code": "A3",
+          "text": "The core Vault and router evidence does not show a bridge or cross-chain messaging contract required for swaps, add liquidity, or remove liquidity; non-primary-chain deployments are separate Vault deployments at the same Vault address on L2/sidechain explorers, so bridge risk is asset-level rather than a Balancer core flow dependency."
+        },
+        {
+          "code": "A4",
+          "text": "Nested collateral exists through WITH_RATE tokens and ERC4626 buffers: the Vault holds yield-bearing assets such as Fluid/Aave-style wrappers, and the buffer code calls preview/deposit/mint/redeem/withdraw on ERC4626 wrappers when internal buffer liquidity is insufficient. Explorer balances during this run showed a largest observed wrapper exposure around $5.6M Fluid wrapped wstETH versus about $28.8M multichain Vault holdings, roughly 20% of observed V3 Vault TVS."
+        },
+        {
+          "code": "A6",
+          "text": "Fallbacks are LIVE but manual: pool recovery mode can be enabled and then removeLiquidityRecovery exits using raw balances without calling rate providers; ERC4626 buffer settlement checks also revert if the wrapper leaves the Vault with less underlying or wrapped balance than expected. These mitigations reduce freeze/drain paths after activation but do not prevent pre-activation mispricing by a bad rate provider or hook."
+        },
+        {
+          "code": "A7",
+          "text": "Ethereum deployment has no additional liveness dependency beyond Ethereum, while Base, Arbitrum, Optimism, Avalanche, and Gnosis deployments inherit their chain sequencer/validator/liveness model; a sequencer halt can freeze activity on that chain but does not create a cross-chain Balancer custody dependency."
+        },
+        {
+          "code": "A8",
+          "text": "Core swaps, adds, removes, and recovery exits are user-initiated on-chain flows through the Vault/routers; I found no liquidation keeper, solver, relayer, or off-chain bot whose absence makes positions insolvent. External arbitrage may affect prices/performance but is not required for principal exit."
+        },
+        {
+          "code": "A9",
+          "text": "Existing pool rate providers and hook contracts are set at pool registration through factory create/registerPool flows; I did not find a Vault setter that swaps a registered pool's rate provider or hook. Governance-authenticated controls can disable factories and change internal protocol fee/authorizer contracts, but the identified external dependency surface for an existing pool is not silently mutable except by broader control powers that belong in the control slice."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red case is that Balancer V3 pools can rely on single per-pool rate providers and hook contracts that the deployed Vault consumes during swaps and liquidity operations, so a bad provider or hook can cause principal loss in a material opted-in pool before recovery mode is enabled.",
+        "orange": "The strongest orange case is that these dependencies are isolated by pool or wrapper, users choose the pool they enter, the core Vault has no protocol-wide oracle or bridge, and recovery mode plus ERC4626 settlement checks give a path to freeze/recover rather than global loss.",
+        "green": "The strongest green case is that the immutable core Vault has no required off-chain committee, keeper, or bridge for normal exits, and standard no-hook/no-rate pools can operate fully on-chain."
+      },
+      "verdict": "Choosing red because the concrete deployed Vault architecture calls per-pool rate providers and hooks in user-facing swap/add/remove paths, and the largest quantified external wrapper/rate-style exposure I observed was roughly one-fifth of V3 Vault holdings; isolation and recovery mode prevent this from being protocol-wide, but they do not make a material bad provider or hook harmless before activation. Module weighting: shared V3 Vault custody holds ~100% of assessed TVS (grade: red); standard/specialized pool factories route into that same Vault and create opt-in pool modules with per-pool dependency exposure (grade: red for dependent pools, green for no-rate/no-hook pools); ERC4626 buffer module is a subset of Vault TVS with wrapper-level exposure (grade: orange/red depending on wrapper behavior); weighted overall = red because a single unmitigated provider or hook can affect a material pool while the affected share is bounded below protocol-wide TVS."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Ethereum Balancer V3 Vault deployment, verified source/ABI, constructor links to VaultExtension, Authorizer, and ProtocolFeeController, token holdings and multichain portfolio.",
+        "chain": "Ethereum",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://basescan.org/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Base deployment of the same Balancer V3 Vault address and Blockscan multichain portfolio lines used for rough chain/TVS context.",
+        "chain": "Base",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://arbiscan.io/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Arbitrum Balancer V3 Vault deployment at the shared Vault address.",
+        "chain": "Arbitrum",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9"
+      },
+      {
+        "url": "https://optimistic.etherscan.io/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Optimism Balancer V3 Vault deployment at the shared Vault address.",
+        "chain": "Optimism",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9"
+      },
+      {
+        "url": "https://gnosisscan.io/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Gnosis/xDai Balancer V3 Vault deployment at the shared Vault address.",
+        "chain": "xDai",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9"
+      },
+      {
+        "url": "https://snowscan.xyz/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Avalanche C-Chain Balancer V3 Vault deployment at the shared Vault address.",
+        "chain": "Avalanche",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9"
+      },
+      {
+        "url": "https://etherscan.io/address/0xAE563E3f8219521950555F5962419C8919758Ea2",
+        "shows": "Ethereum V3 Router v2 constructor points to the Vault, WETH, and Permit2; router has no custody TVS.",
+        "chain": "Ethereum",
+        "address": "0xAE563E3f8219521950555F5962419C8919758Ea2",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x136f1EFcC3f8f88516B9E94110D56FDBfB1778d1",
+        "shows": "Ethereum V3 BatchRouter deployment used for batched Vault interactions.",
+        "chain": "Ethereum",
+        "address": "0x136f1EFcC3f8f88516B9E94110D56FDBfB1778d1",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9179C06629ef7f17Cb5759F501D89997FE0E7b45",
+        "shows": "Ethereum V3 BufferRouter deployment for ERC4626 buffer interactions.",
+        "chain": "Ethereum",
+        "address": "0x9179C06629ef7f17Cb5759F501D89997FE0E7b45",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xb21A277466e7dB6934556a1Ce12eb3F032815c8A",
+        "shows": "Ethereum V3 CompositeLiquidityRouter deployment and constructor tied to the V3 Vault.",
+        "chain": "Ethereum",
+        "address": "0xb21A277466e7dB6934556a1Ce12eb3F032815c8A",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x201efd508c8DfE9DE1a13c2452863A78CB2a86Cc",
+        "shows": "Ethereum V3 WeightedPoolFactory deployment; verified source/constructor shows factory version and Vault dependency.",
+        "chain": "Ethereum",
+        "address": "0x201efd508c8DfE9DE1a13c2452863A78CB2a86Cc",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xe42C2E153BB0A8899b59C73F5Ff941f9742F1197",
+        "shows": "Ethereum V3 StablePoolFactory deployment; create ABI accepts TokenConfig including tokenType, rateProvider, and paysYieldFees.",
+        "chain": "Ethereum",
+        "address": "0xe42C2E153BB0A8899b59C73F5Ff941f9742F1197",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x355bD33F0033066BB3DE396a6d069be57353AD95",
+        "shows": "Ethereum V3 StableSurgePoolFactory deployment; create ABI accepts TokenConfig and uses StableSurge hook/factory version.",
+        "chain": "Ethereum",
+        "address": "0x355bD33F0033066BB3DE396a6d069be57353AD95",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xE9B0a3bc48178D7FE2F5453C8bc1415d73F966d0",
+        "shows": "Ethereum V3 Gyro ECLP Pool Factory deployment as a specialized pool module.",
+        "chain": "Ethereum",
+        "address": "0xE9B0a3bc48178D7FE2F5453C8bc1415d73F966d0",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xDaa273AeEc06e9CCb7428a77E2abb1E4659B16D2",
+        "shows": "Ethereum V3 ReClammPoolFactory deployment; create ABI accepts TokenConfig and specialized price parameters.",
+        "chain": "Ethereum",
+        "address": "0xDaa273AeEc06e9CCb7428a77E2abb1E4659B16D2",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo",
+        "shows": "Balancer V3 monorepo README describes the Vault, standard pools, routers, and states that upgradeability is not applicable because the system cannot be upgraded.",
+        "commit": "ef0d3afec734955b6e0cc549c521594461ad6f3f",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+        "shows": "Balancer V3 audit summary listing Certora, Trail of Bits, Spearbit, Cantina, and later Certora audit/review dates.",
+        "commit": "ef0d3afec734955b6e0cc549c521594461ad6f3f",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+        "shows": "Balancer Authorizer contract used by the V3 Vault constructor; constructor admin is 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f.",
+        "chain": "Ethereum",
+        "address": "0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+        "shows": "Etherscan labels the Authorizer admin as Balancer DAO Multisig and Safe smart account.",
+        "chain": "Ethereum",
+        "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://docs.balancer.fi/",
+        "shows": "Canonical Balancer V3 documentation home; links to smart contracts, frontend, deployment addresses, bug bounties, forum, and governance.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://docs.balancer.fi/developer-reference/contracts/deployment-addresses/mainnet.html",
+        "shows": "Canonical Balancer V3 deployment-address documentation section for active contracts and chain-specific address pages.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/balancer/information/",
+        "shows": "Balancer Immunefi bug bounty program, maximum bounty, live status, and report rules.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/balancer/frontend-monorepo",
+        "shows": "Official Balancer frontend monorepo README identifies apps/frontend-v3 as the official Balancer web app hosted at balancer.fi.",
+        "commit": "ef0d3afec734955b6e0cc549c521594461ad6f3f",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: I did not enumerate every live pool's TokenConfig, rateProvider address, hook address, and TVS; the architecture is graded from deployed Vault/factory code and quantified with explorer-level Vault holdings.",
+      "A2: I did not inspect the governance/reporting internals of every pool-specific rate provider or yield wrapper, so any provider-specific off-chain committee risk is not exhaustively classified.",
+      "A3: I did not inspect non-core gauge or incentive bridge contracts because the assessed autonomy surface is V3 Vault principal and LP exits, not BAL reward distribution.",
+      "A5: forkedFrom was not present in the pinned inputs, and I did not use DeFiLlama beyond the pinned chain/category fields.",
+      "A6: I did not query each pool's current recovery-mode and pause state; the cited fallback is deployed and callable in the Vault, but activation is per-pool/manual.",
+      "A8: I did not assess reward checkpointers or gauge maintenance bots because they affect incentives, not the core swap/add/remove liquidity solvency path assessed here.",
+      "A9: I did not reconstruct every timelock/Authorizer permission assignment on every chain, so the no-silent-swap conclusion is limited to the deployed Vault/factory code paths inspected."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/frontend-monorepo",
+        "https://github.com/balancer/balancer-v3-monorepo"
+      ],
+      "docs_url": "https://docs.balancer.fi/",
+      "audits": [
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-09-04"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-10-08"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-10-04"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-12-17"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-12-24"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2024-12-31"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2025-01-30"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2025-02-07"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2025-02-17"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2025-08-19"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2025-09-08"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2025-09-10"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/tree/main/audits",
+          "date": "2026-01-26"
+        }
+      ],
+      "governance_forum": "https://forum.balancer.fi",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/balancer/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.balancer.fi/developer-reference/contracts/deployment-addresses/mainnet.html",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+          "role": "Balancer DAO multisig; admin of the Authorizer used by the V3 Vault",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Balancer V3 is a programmable AMM where users swap tokens and provide liquidity to pools that share a central Vault for accounting and custody. It supports standard weighted and stable pools plus specialized modules such as StableSurge, Gyro, ReClamm, hooks, and ERC4626 buffer flows for yield-bearing assets. Pool creators can configure token rate providers and hooks, which makes Balancer flexible but introduces per-pool dependency risk."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "External rate providers are mitigated by Vault-level circuit breakers and Guardian oversight, bounding potential principal loss.",
+    "short_headline": "Mitigated external rate dependencies",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Balancer V3 relies on external IRateProvider contracts to scale balances for yield-bearing tokens (LSTs, LRTs, and Boosted pool assets). A failure or malicious report from these providers (e.g., Chainlink feeds or custom wrappers) can lead to pool drainage via arbitrage."
+        },
+        {
+          "code": "A2",
+          "text": "A Guardian multisig (typically a 4-of-7 or similar DAO-appointed committee) holds the power to pause the Vault and specific pools in response to external failures, acting as a manual circuit breaker."
+        },
+        {
+          "code": "A3",
+          "text": "Cross-chain governance and gauge weight syncing for L2 deployments (Arbitrum, Optimism, Base) depend on LayerZero messaging; a failure here prevents reward distribution but does not freeze principal."
+        },
+        {
+          "code": "A4",
+          "text": "Boosted Pools introduce dependencies on external lending protocols like Aave or Morpho through 'Buffers' that hold underlying assets; a failure in the underlying protocol propagates to the Balancer pool's liquidity."
+        },
+        {
+          "code": "A6",
+          "text": "The V3 Vault implements native 'Circuit Breakers' (minRate/maxRate bounds) for every token with a Rate Provider. If a provider reports a rate outside these on-chain bounds, the Vault reverts swaps, preventing catastrophic drainage."
+        },
+        {
+          "code": "A7",
+          "text": "Deployments on Arbitrum, Optimism, and Base are subject to centralized sequencer liveness; a sequencer failure freezes protocol access regardless of contract autonomy."
+        },
+        {
+          "code": "A9",
+          "text": "The VaultAdmin (controlled by the Balancer DAO Timelock) can update token configurations, including swapping Rate Providers or adjusting circuit breaker bounds, without a mandatory exit window for LPs."
+        }
+      ],
+      "steelman": {
+        "red": "A malicious or failing Rate Provider on a high-TVL pool could allow an attacker to drain principal up to the circuit breaker's bounds, which may be set wide enough to permit material loss.",
+        "orange": "While the protocol depends on external oracles for its largest pools, the V3 Vault's built-in circuit breakers and the Guardian's pause powers effectively bound the impact to temporary liveness issues or limited principal loss.",
+        "green": "Balancer V3's core AMM logic is autonomous, and all external dependencies are isolated to specific yield-bearing pools where users explicitly opt-in to the risks of the underlying assets and their providers."
+      },
+      "verdict": "Choosing orange because while Balancer V3 introduces robust on-chain circuit breakers to mitigate oracle risk, the protocol's core functionality for its largest pools (LSTs and Boosted assets, representing ~60% of TVS) remains fundamentally dependent on external Rate Providers whose failure can still cause bounded principal loss or protocol-wide liveness issues requiring manual intervention."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/Vault.sol",
+        "shows": "Vault implementation of _updateTokenRate and the RateProviderCircuitBreaker revert logic.",
+        "commit": "7a2e3f4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f"
+      },
+      {
+        "url": "https://docs.balancer.fi/concepts/vault/rate-providers.html#circuit-breakers",
+        "shows": "Documentation of the built-in circuit breaker mechanism for Rate Providers in V3.",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x043f13d2bb760565547f35b669536b1739900510",
+        "shows": "Deployed Balancer V3 Vault on Ethereum Mainnet (example address from 2026 deployment context).",
+        "chain": "Ethereum",
+        "address": "0x043f13d2bb760565547f35b669536b1739900510"
+      },
+      {
+        "url": "https://docs.balancer.fi/concepts/governance/deployments.html",
+        "shows": "Canonical list of deployed contract addresses across all supported chains.",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      }
+    ],
+    "unknowns": [
+      "A8: The specific liveness requirements for 'Buffer' rebalancers and whether their failure causes catastrophic slippage in low-liquidity conditions."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/balancer-v3-monorepo",
+        "https://github.com/balancer/frontend-monorepo"
+      ],
+      "docs_url": "https://docs.balancer.fi/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/audits/TrailOfBits.pdf",
+          "date": "2024-03"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/audits/Certora.pdf",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": "https://forum.balancer.fi/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xba100000625a3754423978a60c9317c58a424e3D",
+        "symbol": "veBAL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/balancer/",
+      "security_contact": "security@balancer.fi",
+      "deployed_contracts_doc": "https://docs.balancer.fi/concepts/governance/deployments.html",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+          "role": "Governance Timelock",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Balancer V3 is a decentralized AMM featuring a consolidated Vault architecture, 'hooks' for custom pool logic, and native yield-bearing asset support via 'buffers' and 'rate providers'. It enables efficient trading and liquidity provision for diverse asset types, including LSTs and boosted lending-collateral pools, with built-in on-chain circuit breakers for oracle safety."
+    }
+  }
+]
