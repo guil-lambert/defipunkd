@@ -1,0 +1,201 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Nova's OmniBridge path can lose or freeze <0.01% TVS; classic pools are mostly self-contained.",
+    "short_headline": "Tiny Nova bridge risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Classic fixed pools have no oracle or price-feed calls: withdrawals check a protocol verifier and Merkle root, ETH pools only transfer ETH, and ERC20 pools call the selected token contract for transferFrom/transfer. Ethereum ERC20 pool token dependencies inspected were DAI 0x6B175474E89094C44Da98b954EedeAC495271d0F, cDAI 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643, USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7, and WBTC 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599; failures are isolated to users of those asset pools."
+        },
+        {
+          "code": "A1",
+          "text": "Nova's configured external/protocol-adjacent calls are Gnosis WETH 0x6a023ccd1ff6f2045c3309768ead9e68f978f6e1, Gnosis OmniBridge 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d, L1 Unwrapper 0x3F615bA21Bc6Cc5D4a6D798c5950cc5c42937fbd, Ethereum OmniBridge 0x88ad09518695c6c3712AC10a214bE5109a655671, and Ethereum WETH 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; L1 deposit and L1 withdrawal flows depend on those bridge/token contracts."
+        },
+        {
+          "code": "A2",
+          "text": "No oracle/reporter committee was found for classic pools; Nova relies on OmniBridge/AMB messages for L1-to-L2 deposits and cross-chain governance upgrades, so bridge message mis-reporting could cause bridged deposits or upgrades to execute incorrectly."
+        },
+        {
+          "code": "A3",
+          "text": "Nova is the only inspected module with a material bridge call path: its README states it uses an ETH(mainnet) to WETH(xDai) bridge, and TornadoPool's withdrawal path sends tokens to the configured OmniBridge when isL1Withdrawal is true."
+        },
+        {
+          "code": "A4",
+          "text": "No restaking or receipt-of-receipt collateral chain was found. Classic ERC20 pools and Nova's bridged WETH are opt-in isolated assets; a DAI, USDC, USDT, WBTC, cDAI, or bridged-WETH failure propagates only to users in that asset/module, not to ETH fixed pools."
+        },
+        {
+          "code": "A6",
+          "text": "Classic pools have no oracle fallback because they do not price assets. Nova has a live-code fallback for failed bridged deposit processing that transfers the sent amount to the configured multisig, but that does not mitigate OmniBridge compromise or bridge liveness failure."
+        },
+        {
+          "code": "A7",
+          "text": "Ethereum classic pools have no additional sequencer dependency beyond Ethereum substrate. Optimism and Arbitrum fixed-pool deployments inherit their rollup liveness, but the Tornado fixed-pool contracts inspected do not call L1 bridge or sequencer contracts themselves."
+        },
+        {
+          "code": "A8",
+          "text": "Relayers are optional for classic withdrawals: withdraw includes a relayer fee recipient, but any caller can submit the proof directly. If relayers disappear, privacy and gas-sourcing UX degrade, but principal exit remains available to users with gas."
+        },
+        {
+          "code": "A9",
+          "text": "Classic fixed pools store verifier/hasher/token addresses at construction and no dependency setter was found in the inspected core contracts. Nova has governance upgradeability, but no specific bridge/token/oracle setter was identified; arbitrary implementation upgrade is a control-slice issue rather than a specific A9 dependency setter."
+        },
+        {
+          "code": "A3",
+          "text": "TVS weighting: DeFiLlama showed total TVL $809.02m and Gnosis-chain TVL $46,866, so even treating all Gnosis TVL as Nova bridge-exposed gives <0.01% of protocol TVS; Ethereum fixed pools alone included ~216k ETH across the four ETH denomination contracts checked."
+        }
+      ],
+      "steelman": {
+        "red": "Nova deserves red because OmniBridge/AMB failure or malicious bridge messaging can freeze or lose principal in the Nova bridged-WETH pool and can carry governance upgrade messages.",
+        "orange": "The strongest orange case is that the red Nova bridge dependency is bounded to the Gnosis/Nova slice, while classic fixed pools that dominate observed TVS have no oracle, keeper, or bridge calls for deposit/withdrawal.",
+        "green": "The strongest green case is that classic fixed-denomination Tornado pools are immutable proof-verifier contracts where users can deposit and withdraw directly without relayers, oracles, price feeds, or off-chain committees."
+      },
+      "verdict": "Choosing orange because Module Classic fixed pools hold ~99.99% of TVS by chain weighting and are grade green/orange depending on opt-in ERC20 token risk; Module Nova/Gnosis holds <0.01% of TVS and is grade red due to OmniBridge/AMB principal-loss and liveness risk; weighted overall = orange because the unmitigated red dependency is real but currently de minimis relative to total protocol TVS."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc",
+        "shows": "Deployed Ethereum 0.1 ETH Tornado Cash pool with deposit/withdraw ABI, verifier getter, and current ETH balance.",
+        "chain": "Ethereum",
+        "address": "0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA160cdAB225685dA1d56aa342Ad8841c3b53f291",
+        "shows": "Deployed Ethereum 100 ETH pool and balance around 195k-196k ETH, used for TVS weighting.",
+        "chain": "Ethereum",
+        "address": "0xA160cdAB225685dA1d56aa342Ad8841c3b53f291",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x910Cbd523D972eb0a6f4cAe4618aD62622b39DbF",
+        "shows": "Deployed Ethereum 10 ETH pool and balance around 17.5k ETH, used for TVS weighting.",
+        "chain": "Ethereum",
+        "address": "0x910Cbd523D972eb0a6f4cAe4618aD62622b39DbF",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x47CE0C6eD5B0Ce3d3A51fdb1C52DC66a7c3c2936",
+        "shows": "Deployed Ethereum 1 ETH pool and balance around 3.3k ETH, used for TVS weighting.",
+        "chain": "Ethereum",
+        "address": "0x47CE0C6eD5B0Ce3d3A51fdb1C52DC66a7c3c2936",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/master/contracts/Tornado.sol",
+        "shows": "Core fixed-pool deposit/withdraw logic: immutable verifier, root/nullifier checks, relayer fee recipient, and no oracle or price-feed calls.",
+        "commit": "1ef6a263ac6a0e476d063fcb269a9df65a1bd56a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/master/contracts/ETHTornado.sol",
+        "shows": "ETH pool deposit requires exact msg.value and withdrawal transfers ETH to recipient and optional relayer.",
+        "commit": "1ef6a263ac6a0e476d063fcb269a9df65a1bd56a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/master/contracts/ERC20Tornado.sol",
+        "shows": "ERC20 pool stores token and calls safeTransferFrom on deposit and safeTransfer on withdrawal/fee.",
+        "commit": "1ef6a263ac6a0e476d063fcb269a9df65a1bd56a",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/tornadocash/tornado-classic-ui/master/networkConfig.js",
+        "shows": "Classic UI configuration listing Ethereum ERC20 token addresses, fixed-pool instance addresses, governance token, governance contract, router, and supported chains.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-nova",
+        "shows": "Nova README states it uses xDai/Gnosis with ETH(mainnet) to WETH(xDai) bridge, is governance-upgradeable, and lists L1Unwrapper and TornadoPool deployment addresses.",
+        "commit": "f9264eeffe",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-nova/blob/master/config.js",
+        "shows": "Nova config lists L1 multisig, L1 OmniBridge, WETH, Gnosis WETH, Gnosis OmniBridge, L1Unwrapper, governance address, and Gnosis multisig addresses.",
+        "commit": "f9264eeffe",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-nova/blob/master/contracts/TornadoPool.sol",
+        "shows": "Nova TornadoPool constructor stores token, omniBridge, l1Unwrapper, and multisig; onTokenBridged accepts only omniBridge; L1 withdrawals call token.transferAndCall to omniBridge; failed bridged deposits transfer to multisig.",
+        "commit": "f9264eeffe",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x3f615ba21bc6cc5d4a6d798c5950cc5c42937fbd",
+        "shows": "Deployed Nova L1Unwrapper; constructor args show Ethereum OmniBridge 0x88ad09518695c6c3712AC10a214bE5109a655671, WETH 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, and owner 0xb04E030140b30C27bcdfaafFFA98C57d80eDa7B4.",
+        "chain": "Ethereum",
+        "address": "0x3F615bA21Bc6Cc5D4a6D798c5950cc5c42937fbd",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      },
+      {
+        "url": "https://gnosisscan.io/address/0x0CDD3705aF7979fBe80A64288Ebf8A9Fe1151cE1",
+        "shows": "Block-explorer URL for the deployed Gnosis TornadoPool address listed by the Nova repo."
+      },
+      {
+        "url": "https://defillama.com/protocol/tornado-cash?denomination=ETH",
+        "shows": "TVS weighting source: total TVL $809.02m, Ethereum $734.91m, BSC $73.01m, and Gnosis $46,866 in fetched snippet.",
+        "fetched_at": "2026-05-01T15:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A2: OmniBridge/AMB validator or guardian committee size, quorum, and member-selection process were not determined from the Tornado GitHub repos or explorer pages inspected.",
+      "A3: Exact Nova-only WETH balance inside 0x0CDD3705aF7979fBe80A64288Ebf8A9Fe1151cE1 was not fetched; Gnosis-chain TVL was used as a conservative upper bound for the bridge-exposed module share.",
+      "A5: DeFiLlama forkedFrom was not visible in the fetched protocol snippets, so fork lineage was not determined.",
+      "A7: Current sequencer and DA trust details for the Arbitrum and Optimism fixed-pool deployments were not reconstructed from allowed sources.",
+      "A6: Gnosis verified-source/proxy state for 0x0CDD3705aF7979fBe80A64288Ebf8A9Fe1151cE1 could not be fetched in the browser tool; Nova activation was tied to the repo deployment address and explorer URL."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/tornado-nova",
+        "https://github.com/tornadocash/tornado-classic-ui",
+        "https://github.com/tornadocash/tornado-cli",
+        "https://github.com/tornadocash/tornado-governance"
+      ],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x77777FeDdddFfC19Ff86DB637967013e6C6A116C",
+        "symbol": "TORN"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5efda50f22d34F262c29268506C5Fa42cB56A1Ce",
+          "role": "Tornado governance contract",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xb04E030140b30C27bcdfaafFFA98C57d80eDa7B4",
+          "role": "Nova L1Unwrapper owner / L1 multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Gnosis",
+          "address": "0x1f727de610030a88863d7da45bdea4eb84655b52",
+          "role": "Nova Gnosis multisig for limits and failed bridged deposit recovery",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Tornado Cash is a non-custodial privacy protocol where users deposit fixed denominations of ETH or selected ERC20 assets into pool contracts and later withdraw to a different address by proving ownership of an unspent note with a zkSNARK. Its classic pools are fixed-amount mixers across several chains, while Tornado Cash Nova is a Gnosis-chain pool for arbitrary amounts and shielded transfers using bridged WETH. Relayers can improve withdrawal privacy and gas UX, but the core fixed-pool withdrawal path can be called directly."
+    }
+  }
+]

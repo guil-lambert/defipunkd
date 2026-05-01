@@ -1,0 +1,132 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Classic pools expose on-chain withdraw, but full protocol exit coverage is unresolved",
+    "short_headline": "Exit map incomplete",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The inspected Ethereum classic ETH pool exposes a user-facing `withdraw(bytes,bytes32,bytes32,address,address,uint256,uint256)` exit function; I did not complete enumeration for Tornado Cash Nova, ERC20 pools, or all non-Ethereum deployments."
+        },
+        {
+          "code": "E2",
+          "text": "In the inspected classic ETH source, `withdraw` is `external payable nonReentrant` and checks fee, nullifier, known Merkle root, and verifier proof before calling internal `_processWithdraw`; no `onlyOperator`, `whenNotPaused`, or role pause guard appears on `withdraw`."
+        },
+        {
+          "code": "E3",
+          "text": "The inspected classic ETH source has no pause guard on `withdraw`, but it does define an `operator` with `onlyOperator` authority to call `updateVerifier`; Etherscan shows constructor operator `0x8589427373D6D84E98730D7795D8f6f8731FDA16`, but I could not verify the current mutable operator value."
+        },
+        {
+          "code": "E4",
+          "text": "No separate emergency/governance pause path was visible in the inspected classic ETH source; the only privileged path found there is the operator-controlled verifier update."
+        },
+        {
+          "code": "E5",
+          "text": "The inspected classic ETH source has no queued redemption, daily withdrawal cap, request/claim split, or queue pause; `withdraw` verifies the proof and immediately calls `_processWithdraw`."
+        },
+        {
+          "code": "E6",
+          "text": "The inspected classic ETH source does not show a separate forced-exit or emergency escape hatch; the normal exit path depends on successful verification by the current verifier."
+        },
+        {
+          "code": "E7",
+          "text": "The inspected Etherscan pages expose contract source/ABI and Read/Write Contract tabs, and the ABI includes `withdraw`, supporting direct on-chain invocation without the project frontend for the checked Ethereum classic pools."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment blocked: I verified the classic Ethereum pool `withdraw` path, but did not complete all required checks across Nova, ERC20 pools, sidechain deployments, and current mutable operator state for the verifier-update path."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x47CE0C6eD5B0Ce3d3A51fdb1C52DC66a7c3c2936",
+        "shows": "Ethereum classic 1 ETH pool verified source: `withdraw` is external payable nonReentrant, checks nullifier/root/proof, calls `_processWithdraw`, defines operator-only `updateVerifier` and `changeOperator`, and constructor arguments include initial operator 0x8589427373D6D84E98730D7795D8f6f8731FDA16.",
+        "chain": "Ethereum",
+        "address": "0x47CE0C6eD5B0Ce3d3A51fdb1C52DC66a7c3c2936",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x910cbd523d972eb0a6f4cae4618ad62622b39dbf",
+        "shows": "Ethereum classic 10 ETH pool page identifies Tornado.Cash: 10 ETH, shows Contract Code/Read Contract/Write Contract tabs, and ABI includes `withdraw`, `deposit`, `operator`, `updateVerifier`, and `changeOperator`.",
+        "chain": "Ethereum",
+        "address": "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/tx/0xe2dff116bcb76feb2b2374b51bce9c5ce10630e5313248cbc4f174bdf954040a",
+        "shows": "Example Ethereum transaction against the 10 ETH pool with a `Withdrawal` event, recipient, relayer, nullifierHash, and fee decoded by Etherscan.",
+        "chain": "Ethereum",
+        "address": "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x8589427373D6D84E98730D7795D8f6f8731FDA16",
+        "shows": "Etherscan labels the constructor operator address as Tornado.Cash: Donate and shows it as an Address page rather than a Contract page; current operator storage for the pools was not verified.",
+        "chain": "Ethereum",
+        "address": "0x8589427373D6D84E98730D7795D8f6f8731FDA16",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core",
+        "shows": "Official archived Tornado Cash core repository describes Tornado Cash as a non-custodial Ethereum/ERC20 privacy solution using zkSNARKs and documents deposit/withdraw usage and ABDK audit links.",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/docs",
+        "shows": "Official archived docs repository describes Tornado Cash fixed-amount pools, non-custodial notes, supported networks, and Tornado Cash Nova arbitrary-amount/shielded-transfer design.",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://tornado.cash/audits/TornadoCash_contract_audit_ABDK.pdf",
+        "shows": "ABDK Consulting Tornado Cash smart-contract audit, final version dated 19 November 2019.",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E1: I did not complete enumeration of exit functions for Tornado Cash Nova, ERC20 pools, or every deployment across Binance, Arbitrum, Avalanche, Polygon, Optimism, and xDai.",
+      "E2: I did not inspect access modifiers and pause guards for every non-ETH-classic pool and sidechain/Nova exit function.",
+      "E3: I could not verify the current mutable `operator` storage value for old classic pools; Etherscan source shows the constructor operator, but `changeOperator` can modify it.",
+      "E4: I did not verify whether non-classic or Nova contracts have separate emergency/governance pause paths.",
+      "E5: I did not verify whether Tornado Cash Nova or bridge helper flows have queue duration, caps, or pausable request/claim stages.",
+      "E6: I could not verify a protocol-wide forced-exit or escape-hatch mechanism for adversarial verifier/operator conditions.",
+      "E7: I verified direct Etherscan/ABI access for inspected Ethereum classic pools only, not every chain deployment."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/docs"
+      ],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "ABDK Consulting",
+          "url": "https://tornado.cash/audits/TornadoCash_contract_audit_ABDK.pdf",
+          "date": "2019-11-19"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x8589427373D6D84E98730D7795D8f6f8731FDA16",
+          "role": "initial classic ETH pool verifier operator from constructor; current holder unresolved",
+          "actor_class": "eoa"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Tornado Cash is a non-custodial privacy protocol where users deposit ETH or supported ERC-20 tokens into shared anonymity pools and later withdraw to a different address by proving ownership of an unspent note with a zkSNARK. Classic pools use fixed denominations, while Tornado Cash Nova added arbitrary amounts and shielded transfers. Relayers can submit withdrawals for users so the recipient address does not need pre-existing ETH."
+    }
+  }
+]

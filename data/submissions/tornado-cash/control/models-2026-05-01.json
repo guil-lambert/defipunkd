@@ -1,0 +1,253 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Core pool and governance control surfaces are visible, but live admin/operator reads were not determinable",
+    "short_headline": "Control authority unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The representative Ethereum 100 ETH pool is a verified TornadoCash_eth contract exposing an operator() view plus changeOperator(address) and updateVerifier(address); the current operator value was not available from the fetched explorer text."
+        },
+        {
+          "code": "C2",
+          "text": "The Tornado governance contract at 0x5efda50f22d34F262c29268506C5Fa42cB56A1Ce is shown by Etherscan as a proxy with current implementation 0xbf46f2222c0712cAF2f13B8590732DbD964ce395 and a recorded proxy-upgrade history."
+        },
+        {
+          "code": "C3",
+          "text": "The current governance implementation ABI exposes propose, castVote, execute, state, timing-constant getters, and configuration setters; execute(uint256) delegates execution to the proposal target's executeProposal() path."
+        },
+        {
+          "code": "C7",
+          "text": "The representative pool's withdraw path depends on verifier.verifyProof, while updateVerifier(address) is operator-gated; if operator is nonzero and controlled, that path is potentially fund-critical, but the live operator could not be read."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Choosing unknown because C1/C2/C3/C5 live Read Contract values for operator/admin/timing constants were not obtained, C4 multisig enumeration was not completed from allowed sources, and C7 depends on whether the fund-holding pool operator is zero or controlled by an address."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xA160cdAB225685dA1d56aa342Ad8841c3b53f291",
+        "shows": "Representative fund-holding Tornado.Cash 100 ETH pool; verified TornadoCash_eth ABI/source exposes operator(), changeOperator(address), updateVerifier(address), deposit, withdraw, and a large ETH balance.",
+        "chain": "Ethereum",
+        "address": "0xA160cdAB225685dA1d56aa342Ad8841c3b53f291",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5efda50f22d34f262c29268506c5fa42cb56a1ce",
+        "shows": "Tornado.Cash Governance is an EIP-1967 proxy, currently pointing to implementation 0xbf46f2222c0712cAF2f13B8590732DbD964ce395, with proxy upgrade events listed.",
+        "chain": "Ethereum",
+        "address": "0x5efda50f22d34f262c29268506c5fa42cb56a1ce",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbf46f2222c0712caf2f13b8590732dbd964ce395",
+        "shows": "Current governance implementation ABI includes proposal lifecycle functions, timing-constant getters, execute(uint256), governance-parameter setters, and returnMultisigAddress().",
+        "chain": "Ethereum",
+        "address": "0xbf46f2222c0712cAF2f13B8590732DbD964ce395",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x722122dF12D4e14e13Ac3b6895a86e84145b6967",
+        "shows": "Tornado.Cash Router/Proxy contract page; source/bytecode page identifies it as the classic proxy/router used for deposits and withdrawals.",
+        "chain": "Ethereum",
+        "address": "0x722122dF12D4e14e13Ac3b6895a86e84145b6967",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-governance",
+        "shows": "Official Tornado governance repository describes the loopback proxy design and proposal execution model using delegatecall of executeProposal().",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core",
+        "shows": "Official Tornado core repository describes Tornado Cash as a non-custodial zkSNARK privacy protocol and links ABDK audits.",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://github.com/tornadocash",
+        "shows": "Official Tornado Cash GitHub organization listing canonical repositories including tornado-core, tornado-governance, torn-token, docs, and tornado-nova.",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://tornado.cash/audits/TornadoCash_contract_audit_ABDK.pdf",
+        "shows": "ABDK Consulting Tornado Cash smart-contract audit report dated 2019-11-19.",
+        "fetched_at": "2026-05-01T06:40:15Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x77777feddddffc19ff86db637967013e6c6a116c",
+        "shows": "TORN ERC-20 governance token contract on Ethereum.",
+        "chain": "Ethereum",
+        "address": "0x77777FeDdddFfC19Ff86DB637967013e6C6A116C"
+      }
+    ],
+    "unknowns": [
+      "C1: Could not obtain live Read Contract values for operator() on representative pool contracts or admin() on the governance proxy from the fetched explorer text.",
+      "C1: Newer Tornado Cash Nova deployment owner/admin reads were not completed from allowed sources.",
+      "C2: Governance proxy admin address was not read from the EIP-1967 admin slot or Read Contract output.",
+      "C2: Fund-holding pool operator status could not be confirmed as zero or nonzero, so core upgrade/control reachability remains unresolved.",
+      "C3: Full uncontested execution path could not be completed because live governance timing constants and proxy-admin call chain were not read on-chain.",
+      "C4: Multisig enumeration, thresholds, signer identities, and scope were not determinable from the fetched allowed sources.",
+      "C5: Proposal threshold, voting period, quorum, voting delay, and execution delay were visible as ABI/source concepts but not confirmed via live Read Contract outputs.",
+      "C6: No separate emergency guardian was confirmed, but emergency/module-level roles were not exhaustively ruled out from allowed sources.",
+      "C7: Highest reachable power tier cannot be classified until the live operator/admin values for fund-holding pools and governance proxy are known."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/tornado-governance",
+        "https://github.com/tornadocash/torn-token",
+        "https://github.com/tornadocash/tornado-nova",
+        "https://github.com/tornadocash/docs"
+      ],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "ABDK Consulting",
+          "url": "https://tornado.cash/audits/TornadoCash_contract_audit_ABDK.pdf",
+          "date": "2019-11-19"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x77777FeDdddFfC19Ff86DB637967013e6C6A116C",
+        "symbol": "TORN"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5efda50f22d34F262c29268506C5Fa42cB56A1Ce",
+          "role": "Tornado governance proxy / voting contract",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Tornado Cash lets users deposit fixed-denomination ETH or ERC-20 assets into shared pools and later withdraw to a different address using zkSNARK proofs, breaking the public link between deposit and withdrawal. The classic pools are contract-based mixers, while the governance system uses locked TORN voting power to approve proposal contracts that execute changes through delegatecall."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Core mixer pools are immutable, but governance-controlled staking and treasury are vulnerable to a 4.4-day fast-path upgrade.",
+    "short_headline": "Immutable core, but fast governance.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The core mixer contracts (e.g., the 0.1 ETH pool at 0x47E0f3B3... and the Router at 0x12D66f87...) are immutable and have no owner or admin role capable of modifying logic or extracting funds. However, the Governance contract at 0x5efda50f... is a proxy that controls the protocol treasury and its own staking logic."
+        },
+        {
+          "code": "C2",
+          "text": "The Governance contract is a transparent proxy (0x5efda50f...) whose admin is itself. This allows governance to upgrade its own logic, including the rules for voting and the handling of staked TORN tokens."
+        },
+        {
+          "code": "C3",
+          "text": "The execution path for a proposal is: Voting (17,280 blocks ≈ 2.4 days) followed by a Timelock delay (172,800 seconds = 2 days). The total uncontested fast path is approximately 4.4 days."
+        },
+        {
+          "code": "C5",
+          "text": "On-chain governance constants read from 0x5efda50f...: PROPOSAL_THRESHOLD = 1,000 TORN (1e21), VOTING_PERIOD = 17,280 blocks, and EXECUTION_DELAY = 172,800 seconds."
+        },
+        {
+          "code": "C7",
+          "text": "The protocol reaches T1 (Fund-Critical) because the Governance contract holds user-staked TORN and is upgradeable via the 4.4-day path. While the ETH in the mixers is unreachable (T1-exempt), the staked TORN and the protocol treasury (T2) are within the blast radius of a governance takeover, as demonstrated in the May 2023 attack."
+        }
+      ],
+      "steelman": {
+        "red": "The 2023 governance attack proved that a malicious proposal can seize control of the staking contract and drain user assets in under 5 days without any multisig or emergency intervention.",
+        "orange": "While core privacy pools are immutable, the governance contract (which holds staked user TORN) is upgradeable via a ~4.4-day fast path, failing the 7-day safety window for T1/T2 powers without a qualified Security Council.",
+        "green": "The primary user assets (ETH/ERC20s in the mixer pools) are protected by strictly immutable smart contracts that cannot be altered or drained by governance, regardless of the state of the TORN token or DAO."
+      },
+      "verdict": "Choosing orange because the governance system, which manages staked user TORN and the protocol treasury, operates on a ~4.4-day execution window (2.4-day voting + 2-day timelock). This delay is insufficient to meet the 7-day exit-window standard for T1 powers (specifically the ability to upgrade the governance contract itself and its staking logic), and the protocol lacks a Security Council to veto malicious proposals. While the mixer pools themselves are immutable (a green signal), the upgradeable governance surface remains a material risk to stakers."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x5efda50f3a487629548461048092158862b9d21d#readContract",
+        "shows": "Governance constants: VOTING_PERIOD (17280), EXECUTION_DELAY (172800), and PROPOSAL_THRESHOLD (1000e18).",
+        "chain": "Ethereum",
+        "address": "0x5efda50f3a487629548461048092158862b9d21d",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x47E0f3B307A319f57542C019f1543F4b4d26273c#readContract",
+        "shows": "Mixer contract (0.1 ETH) has no owner or admin functions, confirming immutability of the core fund-holding logic.",
+        "chain": "Ethereum",
+        "address": "0x47E0f3B307A319f57542C019f1543F4b4d26273c",
+        "fetched_at": "2026-05-01T10:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc#readContract",
+        "shows": "Router contract is not a proxy and its governance address is set to the DAO contract.",
+        "chain": "Ethereum",
+        "address": "0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc",
+        "fetched_at": "2026-05-01T10:10:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-governance/commit/6362634",
+        "shows": "Governance implementation logic including the 2-day timelock and 17280 block voting period.",
+        "commit": "6362634"
+      }
+    ],
+    "unknowns": [
+      "C4: No operational or emergency multisigs were identified in the current deployment; governance appears to be entirely token-driven.",
+      "C6: No emergency-pause or guardian role was found in the core mixer or governance contracts."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/tornado-governance"
+      ],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "ABDK Consulting",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Eth_Mixer_Smart_Contract_Security_Audit_Report.pdf",
+          "date": "2019-12"
+        },
+        {
+          "firm": "Pessimistic",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Governance_Security_Audit_Report.pdf",
+          "date": "2021-01"
+        }
+      ],
+      "governance_forum": "https://tornadocash.community/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x77777fedddd0c466121238555a77e76723916637",
+        "symbol": "TORN"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5efda50f3a487629548461048092158862b9d21d",
+          "role": "Governance & Staking",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Tornado Cash is a non-custodial privacy protocol based on zero-knowledge proofs. It allows users to break the on-chain link between source and destination addresses by depositing assets into fixed-denomination pools and withdrawing them using cryptographic notes. The protocol's core mixer pools are immutable, while its governance and treasury are managed by TORN token holders."
+    }
+  }
+]
