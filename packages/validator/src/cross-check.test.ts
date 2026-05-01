@@ -9,7 +9,7 @@ const sub = (over: Partial<Submission> = {}): Submission => ({
   snapshot_generated_at: "2026-04-22T22:09:47.359Z",
   prompt_version: 5,
   analysis_date: "2026-04-23",
-  model: "claude-sonnet-4-6",
+  model: "claude-opus-4-7",
   chat_url: "https://claude.ai/share/test",
   grade: "orange",
   headline: "x",
@@ -106,10 +106,21 @@ describe("crossCheck", () => {
     expect(issues.some((i) => i.severity === "warning" && i.field === "model" && /hallucination-prone/.test(i.message))).toBe(true);
   });
 
-  it("does not warn for high-quality models", () => {
-    for (const model of ["claude-sonnet-4-6", "gpt-5.4", "gpt-6", "gemini-3-pro"]) {
+  it("does not warn for thinking-capable models", () => {
+    for (const model of ["claude-opus-4-7", "gpt-5.5-thinking", "gemini-3-pro", "o3-mini"]) {
       const issues = crossCheck(sub({ model }), ctx());
       expect(issues.some((i) => i.field === "model")).toBe(false);
+    }
+  });
+
+  it("warns when model does not run with extended thinking", () => {
+    for (const model of ["claude-sonnet-4-6", "gpt-5.5", "gemini-3-flash", "grok-4"]) {
+      const issues = crossCheck(sub({ model }), ctx());
+      expect(
+        issues.some(
+          (i) => i.severity === "warning" && i.field === "model" && /extended thinking/.test(i.message),
+        ),
+      ).toBe(true);
     }
   });
 

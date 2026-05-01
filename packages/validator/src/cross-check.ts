@@ -61,6 +61,30 @@ export function isHallucinationProneModel(model: string): boolean {
   return false;
 }
 
+// "Thinking" models do meaningful chain-of-thought before answering. The
+// distinction matters for an audit task: non-thinking models pattern-match
+// from training data and are far more likely to miss subtle on-chain
+// reasoning, which the quorum then has to absorb. We downweight non-thinking
+// models 5x (vs. 20x for hallucination-prone) so they can still contribute
+// signal but can't drown out a single thinking submission.
+export function isThinkingModel(model: string): boolean {
+  const m = model.toLowerCase();
+  // Explicit thinking/reasoning markers in the model name
+  if (/thinking|reason/.test(m)) return true;
+  // Claude: Opus runs extended thinking by default; Sonnet/Haiku do not.
+  if (/claude-opus/.test(m)) return true;
+  // OpenAI o-series (o1, o3, o4, …) are reasoning models.
+  if (/^o\d/.test(m)) return true;
+  // Gemini: Pro tier (3+) ships with built-in deep thinking; -flash is
+  // speed-tuned and does not.
+  if (/gemini-(?:3|[4-9])(?:\.\d+)?-pro/.test(m)) return true;
+  return false;
+}
+
+export function isNonThinkingModel(model: string): boolean {
+  return !isHallucinationProneModel(model) && !isThinkingModel(model);
+}
+
 export function isPublicChatShareUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   try {
@@ -205,7 +229,13 @@ export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIss
     issues.push({
       severity: "warning",
       field: "model",
-      message: `model "${s.model}" is hallucination-prone (also: claude-haiku-4-5, gemini-3-flash-preview, gpt ≤ 5.3); quorum weight reduced by 95% — re-run with claude-sonnet-4-6, gpt-5.4+, gemini-3-pro, or similar to restore full weight`,
+      message: `model "${s.model}" is hallucination-prone (also: claude-haiku-4-5, gemini-3-flash-preview, gpt ≤ 5.3); quorum weight reduced by 95% — re-run with claude-opus-4-7, a "-thinking" GPT variant, gemini-3-pro, or similar to restore full weight`,
+    });
+  } else if (isNonThinkingModel(s.model)) {
+    issues.push({
+      severity: "warning",
+      field: "model",
+      message: `model "${s.model}" does not run with extended thinking; quorum weight reduced by 80% — re-run with a thinking variant (claude-opus-4-7, gpt-*-thinking, gemini-3-pro, openai o-series) to restore full weight`,
     });
   }
 

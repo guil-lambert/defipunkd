@@ -1,5 +1,5 @@
 import type { Submission } from "./schema";
-import { isExplorerUrl, isHallucinationProneModel, isPublicChatShareUrl } from "./cross-check";
+import { isExplorerUrl, isHallucinationProneModel, isNonThinkingModel, isPublicChatShareUrl } from "./cross-check";
 
 export type ScoredSubmission = {
   submission: Submission;
@@ -74,9 +74,11 @@ function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): Scored
   if (/\(autorun\)/i.test(s.model)) weight += 0.2;
 
   const hallucinationProne = isHallucinationProneModel(s.model);
+  const nonThinking = !hallucinationProne && isNonThinkingModel(s.model);
   if (hallucinationProne) weight *= 0.05;
+  else if (nonThinking) weight *= 0.2;
 
-  const floor = hallucinationProne ? 0.0025 : 0.1;
+  const floor = hallucinationProne ? 0.0025 : nonThinking ? 0.02 : 0.1;
   if (weight < floor) weight = floor;
   return { submission: s, sourcePath, weight };
 }

@@ -1,0 +1,803 @@
+---
+export const prerender = true;
+import { listProtocols, getAssessments, getSubmissions } from "@defipunkd/registry";
+import Base from "../layouts/Base.astro";
+import SideNav from "../components/SideNav.astro";
+import TierMedal from "../components/TierMedal.svelte";
+import TierGradients from "../components/TierGradients.svelte";
+import ProtocolLogo from "../components/ProtocolLogo.astro";
+import ModelLogo from "../components/ModelLogo.astro";
+import { PIZZA_SLICES, type PizzaSliceId } from "../lib/pizza";
+import { TIER_LABEL, type Tier } from "../lib/tier";
+import { formatTvl } from "../lib/format";
+import { buildStats, type CoverageState, type ModelFamily, type ModelQuality } from "../lib/stats";
+
+const protocols = listProtocols();
+const assessments = getAssessments();
+const submissions = getSubmissions();
+const stats = buildStats(protocols, assessments, submissions);
+
+const TIER_ORDER: Tier[] = ["gold", "silver", "bronze", "wood", "none"];
+
+const TIER_FILL: Record<Tier, string> = {
+  gold: "#D4A84A",
+  silver: "#A8A8B0",
+  bronze: "#B8763E",
+  wood: "#7C6B58",
+  none: "#3a3a40",
+};
+
+const TIER_NAME: Record<Tier, string> = {
+  gold: "Gold",
+  silver: "Silver",
+  bronze: "Bronze",
+  wood: "Wood",
+  none: "Ungraded",
+};
+
+const FAMILY_FILL: Record<ModelFamily, string> = {
+  claude: "#E8846A",
+  gpt: "#0EA982",
+  gemini: "#A17CF3",
+  grok: "#2196F3",
+  other: "#888",
+};
+
+const QUALITY_FILLED: Record<ModelQuality, number> = {
+  low: 1,
+  med: 2,
+  high: 3,
+};
+
+const QUALITY_TITLE: Record<ModelQuality, string> = {
+  low: "Low — hallucination-prone, quorum weight ×0.05 (20× penalty)",
+  med: "Medium — non-thinking, quorum weight ×0.2 (5× penalty)",
+  high: "High — thinking model, full quorum weight",
+};
+
+const GRADE_FILL = {
+  red: "oklch(0.52 0.170 22)",
+  orange: "oklch(0.65 0.120 75)",
+  green: "oklch(0.60 0.130 150)",
+  unknown: "oklch(0.55 0.015 235)",
+} as const;
+
+const GRADE_LABEL = {
+  red: "red",
+  orange: "orange",
+  green: "green",
+  unknown: "unknown",
+} as const;
+
+const COVERAGE_GLYPH: Record<CoverageState, string> = {
+  strong: "●",
+  weak: "◐",
+  insufficient: "◔",
+  disagreement: "⨯",
+  none: "·",
+};
+
+const COVERAGE_LABEL: Record<CoverageState, string> = {
+  strong: "Strong consensus",
+  weak: "Weak consensus",
+  insufficient: "Insufficient submissions",
+  disagreement: "Models disagree",
+  none: "No submissions",
+};
+
+/**
+ * Build flex-grow values for a stacked bar with optional axis break.
+ * Caps the "none" segment at the sum of all graded segments so it doesn't
+ * swallow the bar when ungraded protocols dwarf the assessed ones.
+ */
+function barSegments(
+  values: Record<Tier, number>,
+  axisBreak: boolean,
+): Array<{ tier: Tier; value: number; flex: number }> {
+  const gradedSum =
+    values.wood + values.bronze + values.silver + values.gold;
+  const out: Array<{ tier: Tier; value: number; flex: number }> = [];
+  for (const t of TIER_ORDER) {
+    const v = values[t];
+    if (v <= 0) continue;
+    const flex = t === "none" && axisBreak ? Math.max(gradedSum, 1) : v;
+    out.push({ tier: t, value: v, flex });
+  }
+  return out;
+}
+
+const tierBarSegments = barSegments(stats.tierCounts, stats.needsAxisBreak.count);
+const tvlBarSegments = barSegments(stats.tvlByTier, stats.needsAxisBreak.tvl);
+
+const maxReviewed = Math.max(1, ...stats.mostReviewed.map((r) => r.submissionCount));
+const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
+---
+<Base title="DeFiPunk'd — Stats" description="Snapshot stats for the DeFiPunk'd transparency registry.">
+  <TierGradients />
+  <SideNav contentMaxWidth={1200} links={[
+    { href: "#tier-distribution", label: "Tier distribution" },
+    { href: "#tvl-by-tier", label: "TVL by tier" },
+    { href: "#most-reviewed", label: "Most-reviewed" },
+    { href: "#model-breakdown", label: "Model breakdown" },
+    { href: "#grade-distribution", label: "Grade per slice" },
+    { href: "#coverage-matrix", label: "Coverage matrix" },
+  ]} />
+  <main class="page">
+    <p class="subtitle">
+      Snapshot of {stats.totalProtocols.toLocaleString()} live protocols ·
+      {stats.reviewedProtocols.toLocaleString()} reviewed ·
+      {stats.totalSubmissions.toLocaleString()} model submissions.
+    </p>
+
+    <section class="card" id="tier-distribution">
+      <h2>Tier distribution</h2>
+      <p class="caption">
+        Protocols by medal tier across the registry. The Ungraded segment is
+        capped — the {stats.tierCounts.none.toLocaleString()} ungraded protocols would otherwise hide the graded tiers.
+      </p>
+      <div class="stacked-bar" role="img" aria-label="Tier distribution by protocol count">
+        {tierBarSegments.map((s, i) => (
+          <>
+            {s.tier === "none" && stats.needsAxisBreak.count && i > 0 ? (
+            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
+            ) : null}
+            <span
+              class="seg"
+              style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
+              title={`${TIER_NAME[s.tier]} — ${s.value.toLocaleString()} protocol${s.value === 1 ? "" : "s"}`}
+            >
+              <span class="seg-label">{TIER_NAME[s.tier]}: {s.value.toLocaleString()}</span>
+            </span>
+          </>
+        ))}
+      </div>
+      <ul class="tier-legend">
+        {TIER_ORDER.map((t) => (
+          <li>
+            <span class="swatch" style={`background: ${TIER_FILL[t]};`}></span>
+            <span class="legend-name">{TIER_NAME[t]}</span>
+            <span class="legend-count">{stats.tierCounts[t].toLocaleString()}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="card" id="tvl-by-tier">
+      <h2>TVL by tier</h2>
+      <p class="caption">
+        Total TVL across live protocols: <strong>{formatTvl(stats.totalTvl)}</strong>.
+        Segment widths are proportional to dollars; the Ungraded segment is capped to keep the graded tiers visible.
+      </p>
+      <div class="stacked-bar" role="img" aria-label="TVL distribution by tier">
+        {tvlBarSegments.map((s, i) => (
+          <>
+            {s.tier === "none" && stats.needsAxisBreak.tvl && i > 0 ? (
+            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
+            ) : null}
+            <span
+              class="seg"
+              style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
+              title={`${TIER_NAME[s.tier]} — ${formatTvl(s.value)}`}
+            >
+              <span class="seg-label">{TIER_NAME[s.tier]}: {formatTvl(s.value)}</span>
+            </span>
+          </>
+        ))}
+      </div>
+      <ul class="tier-legend">
+        {TIER_ORDER.map((t) => (
+          <li>
+            <span class="swatch" style={`background: ${TIER_FILL[t]};`}></span>
+            <span class="legend-name">{TIER_NAME[t]}</span>
+            <span class="legend-count">{formatTvl(stats.tvlByTier[t])}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="card" id="most-reviewed">
+      <h2>Most-reviewed protocols</h2>
+      <p class="caption">Top 10 by total model submissions across all five slices.</p>
+      {stats.mostReviewed.length === 0 ? (
+        <p class="empty">No submissions yet.</p>
+      ) : (
+        <ol class="ranked-bars logo-bars">
+          {stats.mostReviewed.map((r) => (
+            <li>
+              <a class="row-label" href={`/protocol/${r.slug}`}>
+                <ProtocolLogo src={r.logo} name={r.name} size={16} />
+                <span class="row-name">{r.name}</span>
+              </a>
+              <span class="row-bar">
+                <span
+                  class="row-bar-fill"
+                  style={`width: ${(r.submissionCount / maxReviewed) * 100}%; background: var(--brand-oxblood);`}
+                ></span>
+              </span>
+              <span class="row-value">{r.submissionCount}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+
+    <section class="card" id="model-breakdown">
+      <h2>Model breakdown</h2>
+      <p class="caption">
+        Submissions per model.
+      </p>
+      {stats.modelBreakdown.length === 0 ? (
+        <p class="empty">No submissions yet.</p>
+      ) : (
+        <ol class="ranked-bars model-bars">
+          {stats.modelBreakdown.map((m) => {
+            const filled = QUALITY_FILLED[m.quality];
+            const tint = FAMILY_FILL[m.family];
+            return (
+              <li>
+                <span class="row-label model-row-label" style={`color: ${tint};`}>
+                  <ModelLogo family={m.family} size={14} />
+                  <span class="row-name">{m.model}</span>
+                </span>
+                <span
+                  class="quality tt-wrap"
+                  aria-label={QUALITY_TITLE[m.quality]}
+                  tabindex="0"
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      class="pip"
+                      style={i < filled ? `background: ${tint};` : undefined}
+                    ></span>
+                  ))}
+                  <span class="tt tt-wide" role="tooltip">{QUALITY_TITLE[m.quality]}</span>
+                  <span class="sr-only">{`${filled} of 3`}</span>
+                </span>
+                <span class="row-bar">
+                  <span
+                    class="row-bar-fill"
+                    style={`width: ${(m.count / maxModelCount) * 100}%; background: ${tint};`}
+                  ></span>
+                </span>
+                <span class="row-value">{m.count}</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+
+    <section class="card" id="grade-distribution">
+      <h2>Grade distribution per slice</h2>
+      <p class="caption">
+        Across all live protocols. Verifiability and Autonomy are rule-based so they cover ~every protocol;
+        Control / Ability to exit / Open Access only get a color once an AI consensus lands, so most are still unknown.
+        When unknown dwarfs the colored portion, the unknown segment is capped with a ⫽ axis break.
+      </p>
+      <ul class="slice-grades">
+        {PIZZA_SLICES.map(({ id, label }) => {
+          const b = stats.gradeBySlice[id as PizzaSliceId];
+          const total = b.red + b.orange + b.green + b.unknown;
+          const colored = b.red + b.orange + b.green;
+          const broken = stats.needsAxisBreak.gradeBySlice[id as PizzaSliceId];
+          const flexFor = (k: "green" | "orange" | "red" | "unknown") =>
+            k === "unknown" && broken ? Math.max(colored, 1) : b[k];
+          return (
+            <li>
+              <span class="slice-name">{label}</span>
+              {total === 0 ? (
+                <span class="slice-empty">no data yet</span>
+              ) : (
+                <span class="slice-bar" role="img" aria-label={`${label}: ${b.green} green, ${b.orange} orange, ${b.red} red, ${b.unknown} unknown`}>
+                  {(["green", "orange", "red", "unknown"] as const).map((k, i) => {
+                    if (b[k] === 0) return null;
+                    const showBreak = k === "unknown" && broken && i > 0;
+                    return (
+                      <>
+                        {showBreak ? (
+                        <span class="axis-break" aria-hidden="true" title="axis break">//</span>
+                        ) : null}
+                        <span
+                          class="slice-seg"
+                          style={`flex-grow: ${flexFor(k)}; background: ${GRADE_FILL[k]};`}
+                          title={`${GRADE_LABEL[k]}: ${b[k].toLocaleString()} of ${total.toLocaleString()}`}
+                        >{b[k].toLocaleString()}</span>
+                      </>
+                    );
+                  })}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+
+    <section class="card" id="coverage-matrix">
+      <h2>Slice coverage matrix</h2>
+      <p class="caption">
+        For each protocol with at least one submission: which of the five slices have reached AI consensus.
+        Click a cell to jump to that slice on the protocol's risk-analysis page.
+      </p>
+      {stats.coverage.length === 0 ? (
+        <p class="empty">No coverage yet.</p>
+      ) : (
+        <div class="matrix">
+          <div class="matrix-head">
+            <span class="m-name">Protocol</span>
+            <span class="m-medal">Tier</span>
+            {PIZZA_SLICES.map(({ label }) => (
+              <span class="m-slice">{label}</span>
+            ))}
+          </div>
+          {stats.coverage.map((row) => {
+            // Children of a family render under /protocol/{parent}#{slug};
+            // a bare /protocol/{slug}#anchor would 301 to the parent and lose
+            // the anchor, so prefix the slice id with the child slug to match
+            // RiskAnalysis.astro's `${idPrefix}-${sliceId}` convention.
+            const baseSlug = row.parent_slug ?? row.slug;
+            const sliceAnchor = (sliceId: string) =>
+              row.parent_slug ? `${row.slug}-${sliceId}` : sliceId;
+            const auditAnchor = row.parent_slug ? `${row.slug}-audit-yourself` : "audit-yourself";
+            return (
+              <div class={`matrix-row tier-${row.tier}`}>
+                <a class="m-name" href={`/protocol/${row.slug}`}>
+                  <ProtocolLogo src={row.logo} name={row.name} size={16} />
+                  <span class="m-name-text">{row.name}</span>
+                </a>
+                <a
+                  class="m-medal tt-wrap audit-cta"
+                  href={`/protocol/${baseSlug}#${auditAnchor}`}
+                  aria-label={row.tier === "none"
+                    ? "Be the first to audit this protocol"
+                    : `${TIER_LABEL[row.tier]} — contribute another run`}
+                >
+                  <TierMedal tier={row.tier} size={20} />
+                  <span class="tt" role="tooltip">
+                    {row.tier === "none" ? "Be the first to audit · copy a prompt" : `${TIER_LABEL[row.tier]} · contribute a run`}
+                  </span>
+                </a>
+                {PIZZA_SLICES.map(({ id, label }) => {
+                  const state = row.cells[id as PizzaSliceId];
+                  const cls = `m-cell glyph-${state} tt-wrap`;
+                  const needsMore = state !== "strong";
+                  return (
+                    <a
+                      class={cls}
+                      href={`/protocol/${baseSlug}#${sliceAnchor(id)}`}
+                      aria-label={`${row.name}: ${label} — ${COVERAGE_LABEL[state]}${needsMore ? " · Need more audits" : ""}`}
+                    >
+                      <span class="m-cell-glyph">{COVERAGE_GLYPH[state]}</span>
+                      <span class={`tt ${needsMore ? "tt-wide" : ""}`} role="tooltip">
+                        <span class="tt-line">{label} — {COVERAGE_LABEL[state]}</span>
+                        {needsMore && <span class="tt-line">Need more audits</span>}
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <ul class="coverage-legend">
+        {(["strong", "weak", "insufficient", "disagreement", "none"] as const).map((s) => (
+          <li>
+            <span class={`legend-glyph glyph-${s}`}>{COVERAGE_GLYPH[s]}</span>
+            {COVERAGE_LABEL[s]}
+          </li>
+        ))}
+      </ul>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .subtitle { color: oklch(0.65 0.015 235); margin: 0 0 1.5rem; }
+
+  .card {
+    background: oklch(0.18 0.005 235);
+    border: 1px solid oklch(0.25 0.01 235);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .card h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+  .caption {
+    color: oklch(0.65 0.015 235);
+    margin: 0 0 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .empty { color: oklch(0.55 0.015 235); font-size: 0.9rem; margin: 0.4rem 0; }
+
+  .stacked-bar {
+    display: flex;
+    width: 100%;
+    height: 38px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid oklch(0.25 0.01 235);
+  }
+  .seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #111;
+    font-size: 0.78rem;
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .seg-label { padding: 0 0.5rem; }
+  .axis-break {
+    flex: 0 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: oklch(0.78 0.015 235);
+    background: repeating-linear-gradient(
+      135deg,
+      oklch(0.22 0.005 235),
+      oklch(0.22 0.005 235) 4px,
+      oklch(0.30 0.005 235) 4px,
+      oklch(0.30 0.005 235) 8px
+    );
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .slice-bar .axis-break {
+    flex: 0 0 22px;
+    font-size: 1.05rem;
+  }
+
+  .tier-legend {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.85rem;
+    color: oklch(0.85 0.015 235);
+  }
+  .tier-legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.4);
+  }
+  .legend-name { min-width: 4em; }
+  .legend-count { color: oklch(0.65 0.015 235); font-variant-numeric: tabular-nums; }
+  .inline-swatch {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    margin-right: 0.15rem;
+    vertical-align: middle;
+  }
+  /* Family logo + name pair in the model breakdown caption. The mark
+     wrapper carries the family tint inline (so the SVG's currentColor
+     fills match), while the name text stays the caption's muted color. */
+  .caption-fam {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    vertical-align: middle;
+  }
+  .caption-fam-mark {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .ranked-bars {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .ranked-bars li {
+    display: grid;
+    grid-template-columns: minmax(8em, 14em) 1fr 3em;
+    gap: 0.6rem;
+    align-items: center;
+    font-size: 0.88rem;
+  }
+  .ranked-bars.model-bars li {
+    grid-template-columns: minmax(8em, 14em) auto 1fr 3em;
+  }
+
+  /* Three-pip quality rating: filled count = quality bucket
+     (low = 1, med = 2, high = 3). Filled pips get the model's family
+     tint (inline) so the row reads as one visual unit; unfilled pips
+     stay dim. */
+  .quality {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+    line-height: 1;
+    vertical-align: middle;
+  }
+  .quality .pip {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: oklch(0.30 0.005 235);
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .row-label {
+    color: oklch(0.92 0.01 235);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  a.row-label { text-decoration: none; }
+  a.row-label:hover { text-decoration: underline; }
+  /* Logo + name labels — inline-flex with the name truncating. The
+     ProtocolLogo / ModelLogo already declare flex-shrink:0, so only the
+     text needs ellipsis. */
+  .ranked-bars.logo-bars .row-label,
+  .ranked-bars.model-bars .row-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+  .row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .row-bar {
+    display: block;
+    height: 14px;
+    background: oklch(0.22 0.01 235);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .row-bar-fill { display: block; height: 100%; }
+  .row-value {
+    text-align: right;
+    color: oklch(0.85 0.015 235);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .slice-grades {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .slice-grades li {
+    display: grid;
+    grid-template-columns: minmax(8em, 12em) 1fr;
+    gap: 0.7rem;
+    align-items: center;
+  }
+  .slice-name { font-size: 0.88rem; color: oklch(0.92 0.01 235); }
+  .slice-empty {
+    font-size: 0.82rem;
+    color: oklch(0.55 0.015 235);
+    font-style: italic;
+  }
+  .slice-bar {
+    display: flex;
+    height: 22px;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid oklch(0.25 0.01 235);
+  }
+  .slice-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #111;
+    font-size: 0.72rem;
+    font-weight: 500;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .grade-legend {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    font-size: 0.82rem;
+    color: oklch(0.78 0.015 235);
+  }
+  .grade-legend li { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+  .matrix {
+    display: grid;
+    grid-template-columns: minmax(8em, 14em) 36px repeat(5, minmax(56px, 1fr));
+    gap: 4px 6px;
+    font-size: 0.85rem;
+  }
+  .matrix-head {
+    display: contents;
+    font-weight: 500;
+    color: oklch(0.7 0.015 235);
+  }
+  .matrix-head > span {
+    padding: 0 0 0.3rem;
+    border-bottom: 1px solid oklch(0.25 0.01 235);
+    font-size: 0.78rem;
+    text-transform: lowercase;
+    letter-spacing: 0.02em;
+  }
+  .matrix-head .m-slice { text-align: center; }
+  .matrix-row {
+    display: contents;
+  }
+  .matrix-row > .m-name {
+    color: oklch(0.92 0.01 235);
+    text-decoration: none;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+  .m-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .matrix-row > .m-name:hover .m-name-text { text-decoration: underline; }
+  .matrix-row > .m-medal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
+
+  /* Tier medal hover/click parity with LandingTable.svelte's stage-cell. */
+  .tt-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tt-wrap .tt {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    background: oklch(0.22 0.005 235);
+    color: oklch(0.92 0.01 235);
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    border: 1px solid oklch(0.28 0.01 235);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 80ms ease-out, transform 80ms ease-out;
+    z-index: 100;
+  }
+  .tt-wrap .tt::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: oklch(0.22 0.005 235);
+  }
+  .tt-wrap:hover .tt,
+  .tt-wrap:focus-within .tt {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  /* Wider, wrapping variant for tooltips that don't fit on one line
+     (pip quality blurb, multi-line coverage messages). Selector is
+     scoped under .tt-wrap to outrank the base .tt-wrap .tt rule's
+     `white-space: nowrap`, which otherwise wins on equal specificity. */
+  .tt-wrap .tt.tt-wide {
+    white-space: normal;
+    width: 18rem;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .tt-line {
+    display: block;
+  }
+  .tt-line + .tt-line {
+    margin-top: 0.2rem;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  /* Match LandingTable's stage-cell audit CTA so the medals read the same
+     across the landing page and the stats matrix. */
+  .audit-cta {
+    color: var(--text-muted);
+    opacity: 0.55;
+    transition: opacity 120ms ease-out, color 120ms ease-out;
+  }
+  .audit-cta:hover,
+  .audit-cta:focus-visible {
+    color: var(--accent-link);
+    opacity: 1;
+  }
+  .m-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    border-radius: 3px;
+    background: oklch(0.18 0.005 235);
+    border: 1px solid oklch(0.25 0.01 235);
+    font-size: 1rem;
+    line-height: 1;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .m-cell:hover {
+    background: oklch(0.24 0.01 235);
+    border-color: oklch(0.40 0.015 235);
+  }
+  /* In the matrix, every glyph in a row takes the protocol's tier color
+     regardless of state — so the row reads as a single tier-tinted strip. */
+  .matrix-row.tier-gold .m-cell { color: #D4A84A; }
+  .matrix-row.tier-silver .m-cell { color: #C0C0C8; }
+  .matrix-row.tier-bronze .m-cell { color: #C68A4E; }
+  .matrix-row.tier-wood .m-cell { color: #9A8770; }
+  .matrix-row.tier-none .m-cell { color: oklch(0.55 0.005 235); }
+  /* Keep ⨯ slightly bolder so it reads as the disagreement marker even
+     when tinted to the row's tier color. */
+  .m-cell.glyph-disagreement { font-weight: 600; }
+
+  .legend-glyph {
+    display: inline-flex;
+    width: 1.1em;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+    color: #fff;
+  }
+  .coverage-legend {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    font-size: 0.82rem;
+    color: oklch(0.78 0.015 235);
+  }
+  .coverage-legend li { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+  @media (max-width: 720px) {
+    .ranked-bars li { grid-template-columns: minmax(6em, 9em) 1fr 2.5em; gap: 0.4rem; font-size: 0.82rem; }
+    .ranked-bars.model-bars li { grid-template-columns: minmax(6em, 9em) auto 1fr 2.5em; }
+    .slice-grades li { grid-template-columns: minmax(6em, 8em) 1fr; }
+    .matrix { grid-template-columns: minmax(6em, 9em) 28px repeat(5, minmax(36px, 1fr)); font-size: 0.78rem; }
+    .m-cell { height: 22px; font-size: 0.95rem; }
+  }
+</style>
