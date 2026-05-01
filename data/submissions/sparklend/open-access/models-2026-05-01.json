@@ -145,5 +145,120 @@
       "upgradeability": "upgradeable",
       "about": "SparkLend is Spark's money market for supplying liquid assets and borrowing stablecoins such as USDC and USDS against collateral. Its public materials emphasize scalable stablecoin borrowing, supplied assets including ETH, wstETH, rETH, weETH, cbBTC, and LBTC, and liquidity supported by Spark/Sky capital allocation rather than only peer deposits."
     }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Permissionless smart contracts gated by an active geo-blocking official frontend",
+    "short_headline": "Permissionless core, geo-blocked frontend",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The core Pool.sol contract, forked from Aave V3, contains no whitelist or allowlist modifiers on user-facing entry points such as supply(), borrow(), or withdraw()."
+        },
+        {
+          "code": "A2",
+          "text": "Admission to the protocol is unconditional at the contract level; no off-chain operator, keeper, or sequencer approval is required to admit a user's deposit or borrow transaction."
+        },
+        {
+          "code": "A3-active",
+          "text": "The official frontend at app.spark.fi actively enforces IP-based geo-blocking, specifically targeting users in the United States and other restricted jurisdictions with a blocking overlay."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Independent access paths exist, most notably the cp0x pi-spark-fi-interface (spark.cp0x.com), which is an open-source, community-operated frontend not bound by the official Spark ToS."
+        },
+        {
+          "code": "A4",
+          "text": "No evidence of on-chain sanctions enforcement (e.g., Chainalysis oracle integration) was found in the core Pool or ValidationLogic contracts."
+        },
+        {
+          "code": "A5",
+          "text": "The protocol maintains permissionless read access to all state variables and permissionless write access for all standard lending/borrowing functions at the contract level."
+        },
+        {
+          "code": "A6",
+          "text": "The Terms of Service explicitly state: 'Access to the Interface is not available to any person or entity that is located in, or is a citizen or resident of, the United States of America...'"
+        }
+      ],
+      "steelman": {
+        "red": "The protocol could be considered red if the governance-controlled 'Isolation Mode' or 'Siloed Borrowing' were used to effectively whitelist specific users, though these are currently asset-level risk parameters rather than user-level gates.",
+        "orange": "The official frontend's active geo-blocking of US users constitutes a significant admission barrier for the primary user interface, despite the underlying contracts being open.",
+        "green": "The protocol is fundamentally permissionless because the smart contracts have no whitelists and multiple third-party frontends like cp0x and DeFi Saver provide unrestricted access."
+      },
+      "verdict": "Choosing orange because while the smart contracts are permissionless (Aave V3 fork), the official frontend at app.spark.fi implements active A3-active geo-blocking. Per the rubric, active frontend enforcement pushes the grade to orange even if the contracts are open, though the existence of A3b-ii alternatives like cp0x mitigates the severity."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/marsfoundation/spark-protocol/blob/784998240f99479e953835479007328659632943/contracts/protocol/pool/Pool.sol",
+        "shows": "Implementation of supply and borrow functions without whitelist modifiers.",
+        "commit": "784998240f99479e953835479007328659632943",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      },
+      {
+        "url": "https://app.spark.fi/terms",
+        "shows": "Verbatim ToS clause: 'Access to the Interface is not available to any person or entity that is located in, or is a citizen or resident of, the United States of America...'",
+        "fetched_at": "2026-05-01T10:20:00Z"
+      },
+      {
+        "url": "https://spark.cp0x.com",
+        "shows": "A community-operated, independent frontend providing access to SparkLend markets without the official geo-blocking.",
+        "fetched_at": "2026-05-01T10:25:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "shows": "The SparkLend Pool implementation on Ethereum Mainnet.",
+        "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "chain": "Ethereum",
+        "fetched_at": "2026-05-01T10:30:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/marsfoundation/spark-protocol",
+        "https://github.com/sparkdotfi/spark-protocol"
+      ],
+      "docs_url": "https://docs.spark.fi/",
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://docs.spark.fi/dev/security-and-audits",
+          "date": "2023-04"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://docs.spark.fi/dev/security-and-audits",
+          "date": "2023-05"
+        }
+      ],
+      "governance_forum": "https://forum.makerdao.com/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/spark/",
+      "security_contact": "https://github.com/marsfoundation/spark-protocol/blob/main/SECURITY.md",
+      "deployed_contracts_doc": "https://docs.spark.fi/dev/deployed-contracts/ethereum",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1BB9b6A35Bb583dD0430E56063397d299d910b03",
+          "role": "PoolAddressesProvider Owner (Maker Governance)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "SparkLend is a decentralized non-custodial liquidity protocol forked from Aave V3 and integrated into the Sky (formerly Maker) ecosystem. It enables users to supply assets as collateral to borrow other assets, with a specialized focus on DAI and sDAI liquidity and direct integration with MakerDAO's D3M."
+    }
   }
 ]
