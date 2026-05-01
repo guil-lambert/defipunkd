@@ -1,0 +1,147 @@
+{
+  "schema_version": 3,
+  "slug": "zyfai",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "gpt-5.5-thinking",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "Control path cannot be determined from verified deployed contracts",
+  "short_headline": "Control path unknown",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "I found a Base ZFI token contract at 0xd080ed3c74a20250a2c9821885203034acd2d5ae whose verified source initializes Ownable with the constructor delegate 0x952835d17AC55825F198a68DAb2823cD60C8e6bd, but I did not verify the current owner/admin through a live Read Contract result and did not find deployed addresses for the newer executor module or registry contracts."
+      },
+      {
+        "code": "C2",
+        "text": "The public zyfai-executor-module repository describes GuardedExecModuleUpgradeable as UUPS upgradeable and TargetRegistry as owner-controlled, but I could not tie those source contracts to a deployed proxy/admin address on an accepted block explorer."
+      },
+      {
+        "code": "C3",
+        "text": "No verified on-chain execution path from proposal or multisig action to implementation-slot write was established during this run."
+      },
+      {
+        "code": "C4",
+        "text": "Zyfai documentation states that registry ownership is controlled by a multisig, giving 3/5 as the example for Zyfai's own registry, but I did not find a block-explorer address, threshold read, or signer list sufficient to enumerate the multisig as required."
+      },
+      {
+        "code": "C5",
+        "text": "I did not verify an on-chain Governor, GovernorBravo, OZ Governor, Aragon Voting contract, proposal threshold, voting period, quorum, or timelock delay for ZyFAI during this run."
+      },
+      {
+        "code": "C6",
+        "text": "The executor-module repository describes emergency pause functionality for the module and registry, but I could not identify the deployed pauser/guardian actor, its address, or any time bound from on-chain reads."
+      },
+      {
+        "code": "C7",
+        "text": "The source repository describes owner powers to upgrade the module, update the registry, modify whitelists, authorize ERC20 recipients, and pause, but because no deployed module/registry addresses and live owners were verified, I could not classify the highest reachable deployed control tier."
+      }
+    ],
+    "steelman": null,
+    "verdict": "The assessment is blocked because the deployed control surface for ZyFAI's current smart-account executor/registry system was not verifiably mapped: I found source-level statements about UUPS upgradeability, registry ownership, whitelist modification, and pause powers, plus one Base token contract, but not the deployed module/registry addresses, their live owners/admins, multisig threshold/signers, governance/timelock constants, or execution path needed to grade control risk."
+  },
+  "evidence": [
+    {
+      "url": "https://basescan.org/token/0xd080ed3c74a20250a2c9821885203034acd2d5ae",
+      "shows": "BaseScan token page for the ZFI ERC-20 contract; verified source shows ZyfaiOFT constructor using Ownable(_delegate) and constructor arguments showing delegate 0x952835d17AC55825F198a68DAb2823cD60C8e6bd.",
+      "chain": "Base",
+      "address": "0xd080ed3c74a20250a2c9821885203034acd2d5ae",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ondefy/zyfai-executor-module",
+      "shows": "Public repository for GuardedExecModule and TargetRegistry; README describes whitelist-based execution, ERC20 transfer restrictions, owner-controlled whitelist management, emergency pause, and UUPS upgradeability.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ondefy/zyfai-sdk",
+      "shows": "Public Zyfai SDK repository; README describes Zyfai as a yield optimization engine using Safe smart wallets, session keys, multi-chain position management, deposits, withdrawals, and strategies.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/control/proxy",
+      "shows": "Zyfai Security Proxy Gateway documentation; describes a singleton Proxy Executor Module, Target Registry contracts, registry ownership by multisig such as 3/5 for Zyfai's own registry, and calldata validation by target, selector, and parameters.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/",
+      "shows": "Zyfai documentation home; describes smart wallet management, ERC-4337 account abstraction, ERC-7579 module standards, and multi-chain support for Arbitrum, Base, and Plasma.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/audits",
+      "shows": "ZyFAI audits page listing Smart Account dependencies, Pimlico paymaster audit, and rZFI audit references.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://zyf.ai/sherlock-audit-november-2025.pdf",
+      "shows": "Sherlock audit PDF linked by Zyfai's Security Proxy Gateway documentation for the Proxy Executor Module and Target Registry.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: I could not verify the current owner/admin/pendingAdmin/governor for the deployed newest ZyFAI executor module, target registry, vault, or smart-account infrastructure because I did not find canonical deployed contract addresses for those contracts in the accepted sources.",
+    "C1: I found the Base ZFI token contract and constructor delegate, but did not verify its current owner with a live Read Contract call.",
+    "C2: I could not identify the deployed proxy type, proxy admin address, implementation address, or governance-contract upgradeability for the actual deployed control surface.",
+    "C3: I could not enumerate the full execution path from vote or multisig approval to implementation-slot write, including delay constants and Read Contract function names, because the deployed admin/governance contracts were not identified.",
+    "C4: I could not enumerate every multisig with reachable control, its threshold, signer set, signer affiliations, or power scope from block-explorer reads; the docs mention a 3/5 Zyfai registry multisig only as documentation text without an address or signer list.",
+    "C5: I could not determine whether active on-chain governance exists for this control path, or read proposal threshold, voting delay, voting period, quorum, or queue-to-execute delay.",
+    "C6: I could not determine whether a separate emergency pause or guardian role exists on the deployed contracts, who holds it, or whether it has a time cap.",
+    "C7: I could not classify the highest reachable deployed power tier because the live owner/admin path for upgrade, registry mutation, pause, and execution-control powers was not verified on-chain."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ondefy/zyfai-sdk",
+      "https://github.com/ondefy/zyfai-executor-module"
+    ],
+    "docs_url": "https://docs.zyf.ai/",
+    "audits": [
+      {
+        "firm": "Sherlock",
+        "url": "https://zyf.ai/sherlock-audit-november-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "Rhinestone",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-12-25"
+      },
+      {
+        "firm": "Rhinestone",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-07-05"
+      },
+      {
+        "firm": "Rhinestone",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-10-03"
+      },
+      {
+        "firm": "Pimlico",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-03-28"
+      },
+      {
+        "firm": "ZyFAI",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2025-07-06"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Base",
+      "address": "0xd080ed3c74a20250a2c9821885203034acd2d5ae",
+      "symbol": "ZFI"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "ZyFAI provides DeFi yield automation through Safe smart wallets, session keys, and an SDK/API layer for deposits, withdrawals, position tracking, and yield strategies. Its Security Proxy Gateway design uses an ERC-7579 executor module plus target registries to constrain agent execution to approved contracts, function selectors, and calldata parameters. Users can deploy deterministic Safe smart wallets and interact with strategies across supported chains through the SDK, while Zyfai or other curators manage registries of approved DeFi actions."
+  }
+}
