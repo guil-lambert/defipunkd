@@ -1,0 +1,287 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "No global oracle/keeper, but opt-in hooks and L2 liveness can impair affected pools/chains; largest checked L2 PoolManager is ~2%+ of visible checked TVS",
+    "short_headline": "Bounded hook/L2 risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A0",
+          "text": "Sub-module enumeration: Uniswap v4 deployments consist of PoolManager plus periphery/view contracts such as PositionManager, Quoter, StateView, Universal Router and Permit2; checked explorer balances show TVS is held by PoolManager singletons, so PoolManager holds ~100% of v4 TVS and periphery/view/router contracts are treated as ~0% TVS-bearing modules."
+        },
+        {
+          "code": "A1",
+          "text": "External contract calls in core are class-based rather than fixed oracle addresses: PoolManager calls the caller's unlockCallback, optional per-pool hook callbacks around initialize/liquidity/swap/donate, and token balance/transfer functions through Currency; no Chainlink/Pyth/Redstone-style oracle or lending/staking dependency appears in the verified PoolManager ABI/source reviewed."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain reporting committee path was found in the reviewed PoolManager/ProtocolFees surface: there are no reporter-submitted mint, burn, withdrawal-finalization, oracle-report or freeze functions; privileged protocol-fee roles are fee collection/setting roles, not autonomy reporters."
+        },
+        {
+          "code": "A3",
+          "text": "No bridge or cross-chain messaging contract is part of the v4 PoolManager flow reviewed; the deployments page lists separate PoolManager addresses per network, and source review found no bridge endpoint or message-verification dependency in PoolManager."
+        },
+        {
+          "code": "A4",
+          "text": "Nested collateral/restaking is not a protocol-level dependency: arbitrary ERC-20s, LSTs, receipt tokens or malicious/non-standard tokens can be used as pool assets, but the OpenZeppelin audit states those risks affect the pools where the assets/hooks are used and that core accounting separates pools and hook/user deltas."
+        },
+        {
+          "code": "A6",
+          "text": "LIVE fallback/circuit breaker: PoolManager's unlock flow enforces settlement by reverting unless NonzeroDeltaCount returns to zero before relocking; for hook or token failure there is no global fallback beyond transaction reversion and per-pool isolation, so malicious/upgraded hooks remain an unmitigated risk for opted-in hook pools."
+        },
+        {
+          "code": "A7",
+          "text": "L2 liveness is a bounded autonomy dependency for Base, Arbitrum and Optimism deployments: checked explorer-visible PoolManager balances show Base at >$8.87M, Arbitrum at >$6.45M and Optimism at >$0.43M versus Ethereum at >$382M, so the largest checked L2 PoolManager is ~2%+ of checked visible TVS; an L2 outage would freeze that deployment rather than steal core principal."
+        },
+        {
+          "code": "A8",
+          "text": "No keeper/relayer liveness dependency was found for core pool safety: swaps, liquidity changes, settlement, mint/burn accounting and fee collection are externally invoked functions, and there is no liquidation, auto-compounding or withdrawal-finalization bot required for solvency."
+        },
+        {
+          "code": "A9",
+          "text": "Governance-mutable dependency surface is limited in the reviewed core: the owner can set protocolFeeController, and that controller can set/collect protocol fees, but PoolManager does not expose an admin registry for replacing hook, token, oracle or bridge addresses; hooks are selected in PoolKey at pool initialization."
+        }
+      ],
+      "steelman": {
+        "red": "A large hook-enabled pool could lose LP or swapper funds if its hook is malicious or upgradeable, because PoolManager intentionally delegates parts of pool execution to the hook contract chosen for that pool.",
+        "orange": "The core has no mandatory oracle, keeper or bridge dependency, but optional hooks, arbitrary token contracts and L2 liveness can freeze or impair affected pools/chains while remaining bounded to opted-in pools or individual deployments.",
+        "green": "No-hook v4 pools use an immutable PoolManager with on-chain AMM accounting and a live settlement invariant, so there is no global external feed, committee or keeper whose failure can misprice or drain all pools."
+      },
+      "verdict": "Choosing orange because the TVS-bearing module is PoolManager singletons holding ~100% of protocol TVS (grade: orange due bounded hook/L2 dependency exposure), while periphery/view/router modules hold ~0% TVS (grade: green); weighted overall = orange because core-wide oracle/keeper/bridge principal-loss risk was not found, but PoolManager intentionally executes opt-in hook contracts and material non-Ethereum deployments can be frozen by their chain/liveness layer."
+    },
+    "evidence": [
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+        "shows": "Official v4 deployment index listing PoolManager, PositionManager, Quoter, StateView, Universal Router and Permit2 addresses across Ethereum, Unichain, Optimism, Base, Arbitrum, Polygon and BNB Smart Chain.",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "shows": "Ethereum PoolManager exact-match verified source/ABI, constructor initialOwner, no proxy marker observed in fetched page, and visible balances of 41,375.3877 ETH worth $93.59M plus token holdings >$288.56M.",
+        "chain": "Ethereum",
+        "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://basescan.org/address/0x498581ff718922c3f8e6a244956af099b2652b2b",
+        "shows": "Base PoolManager verified address and visible balance of 3,928.9927 ETH worth $8.87M plus token holdings shown by BaseScan.",
+        "chain": "Base",
+        "address": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://arbiscan.io/address/0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+        "shows": "Arbitrum PoolManager verified address and visible balance of 3,089.0995 ETH worth $5.98M plus token holdings >$467,516.",
+        "chain": "Arbitrum",
+        "address": "0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://optimistic.etherscan.io/address/0x9a13f98cb987694c9f086b1f5eb990eea8264ec3",
+        "shows": "Optimism PoolManager verified address and visible balance of 165.6935 ETH worth $378,367 plus token holdings >$52,054.",
+        "chain": "Optimism",
+        "address": "0x9a13F98Cb987694C9F086b1F5eB990EeA8264Ec3",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x67366782805870060151383f4bbff9dab53e5cd6",
+        "shows": "Polygon PoolManager verified address, visible balance of 2,997,491 POL worth $275,514 plus token holdings >$1.878M, and verified source excerpts showing hook callback functions.",
+        "chain": "Polygon",
+        "address": "0x67366782805870060151383F4BbFF9dAb53e5Cd6",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://bscscan.com/address/0x28e2ea090877bf75740558f6bfb36a5ffee9e9df",
+        "shows": "BNB Smart Chain PoolManager verified address and visible balance of 4,115.6683 BNB worth $2.594M plus token holdings >$45,648.",
+        "chain": "BNB Smart Chain",
+        "address": "0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "shows": "Etherscan labels 0x1a9C...35BC as Uniswap V2: UNI Timelock, matching the Ethereum PoolManager constructor initialOwner.",
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core",
+        "shows": "Canonical Uniswap v4-core repository README describes PoolManager singleton architecture, unlock/callback flow and optional hooks set at pool initialization.",
+        "commit": "d153b048868a",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/ProtocolFees.sol",
+        "shows": "ProtocolFees source shows owner-set protocolFeeController, controller-only setProtocolFee and collectProtocolFees, and no mechanism for replacing hooks, tokens, or oracle/bridge addresses.",
+        "commit": "d153b048868a",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/concepts/poolmanager",
+        "shows": "Official PoolManager docs describe the singleton design, pool initialization, swap and liquidity flows, hook execution, and flash-accounting settlement.",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/concepts/hooks",
+        "shows": "Official Hooks docs state that hooks are external smart contracts, optional, pool-specific, specified when creating a pool, and can customize pool execution.",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      },
+      {
+        "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+        "shows": "OpenZeppelin v4-core audit describes PoolManager as the singleton entry point, hooks as specified at initialization, malicious hook/token risks, per-pool isolation, privileged protocol-fee roles and audit date.",
+        "commit": "d5d4957",
+        "fetched_at": "2026-05-01T06:50:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: Exhaustive live hook and token address census was not completed; PoolManager accepts arbitrary PoolKey.hooks and token addresses, so this assessment grades the architecture and notes per-pool dependency risk.",
+      "A5: DeFiLlama fork lineage was not present in the pinned inputs and was not separately available from the allowed evidence classes.",
+      "A7: Sequencer/DA trust models and exact all-chain TVS shares for Unichain/Base/Arbitrum/Optimism deployments were not fully determined from allowed sources; explorers were used only for visible PoolManager balances on checked chains."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core"
+      ],
+      "docs_url": "https://developers.uniswap.org/docs/",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+          "date": "2024-08-27"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+          "role": "Ethereum PoolManager constructor initialOwner / Uniswap timelock",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Uniswap v4 is a non-custodial automated market maker where swappers trade against liquidity supplied by LPs and held in a singleton PoolManager. It keeps concentrated-liquidity pool state in one contract for gas efficiency and lets pool creators attach optional hook contracts that can customize fees, accounting and execution around swaps and liquidity changes. Users and LPs therefore choose specific token pairs and, where present, specific hook behavior when interacting with a pool."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "0% global impacted TVS; singleton core is immutable with external dependencies (hooks) isolated to opt-in pools.",
+    "short_headline": "Isolated hooks; immutable singleton core.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The core PoolManager contract interacts with external Hook contracts (IHooks) and ERC20 tokens. These calls are scoped to individual pools; a failure or malicious behavior by a hook only impacts the specific pool that opted into it, not the global singleton state."
+        },
+        {
+          "code": "A5",
+          "text": "Uniswap V4 is an evolution of the Uniswap V3 architecture, maintaining the concentrated liquidity model but moving to a singleton design."
+        },
+        {
+          "code": "A6",
+          "text": "External failures in hooks are mitigated by strict isolation. If a required hook reverts, the transaction fails, preventing state corruption. There is no global fallback because the protocol's safety relies on the immutability of the PoolManager and the isolation of pool-specific logic."
+        },
+        {
+          "code": "A7",
+          "text": "On L2 deployments (Arbitrum, Base, Optimism, Unichain), the protocol depends on centralized or semi-centralized sequencers for liveness. While this is a substrate-level dependency, it represents a single point of failure for transaction processing on those specific chains."
+        },
+        {
+          "code": "A9",
+          "text": "Governance (UNI holders) can update the protocolFeeController address via the setProtocolFeeController function. This external dependency is limited to fee calculation and cannot access or freeze user principal or liquidity."
+        },
+        {
+          "code": "A9",
+          "text": "Pool hooks are immutable once a pool is initialized. Governance cannot swap or introduce new hooks into existing pools, ensuring that the external dependency surface of a pool is fixed at creation."
+        }
+      ],
+      "steelman": {
+        "red": "A malicious hook in a high-TVL pool could theoretically steal user principal if the hook logic is not properly audited, and the protocol lacks a global circuit breaker to intervene.",
+        "orange": "The protocol's reliance on L2 sequencers for a significant portion of its TVS introduces a centralized liveness dependency that can freeze user positions and withdrawals.",
+        "green": "The core PoolManager is immutable and external dependencies (hooks) are strictly isolated to individual pools, ensuring that no single external failure can propagate to the rest of the protocol's TVS."
+      },
+      "verdict": "Choosing green because the Uniswap V4 architecture is designed for maximum autonomy through its immutable singleton core. While hooks introduce external dependencies, they are isolated to specific pools and opted into by users, mirroring the safety profile of isolated lending markets. The protocol has no global external oracle or bridge dependencies that could cause a protocol-wide loss of principal."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/PoolManager.sol",
+        "shows": "The singleton PoolManager contract logic, including hook calls and fee controller management.",
+        "chain": "Ethereum",
+        "address": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol",
+        "shows": "The implementation of hook call logic and the requirement for hooks to be defined in the immutable PoolKey.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://docs.uniswap.org/contracts/v4/concepts/hooks",
+        "shows": "Documentation explaining that hooks are external contracts and their lifecycle within a pool.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/tree/main/audits",
+        "shows": "Public audit reports from OpenZeppelin and Trail of Bits confirming the security properties of the V4 core.",
+        "chain": "Ethereum"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core",
+        "https://github.com/Uniswap/v4-periphery"
+      ],
+      "docs_url": "https://docs.uniswap.org/",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/Uniswap/v4-core/blob/main/audits/OpenZeppelin.pdf",
+          "date": "2024-04"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/Uniswap/v4-core/blob/main/audits/TrailOfBits.pdf",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": "https://gov.uniswap.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "symbol": "UNI"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/uniswap/",
+      "security_contact": "https://github.com/Uniswap/v4-core/blob/main/SECURITY.md",
+      "deployed_contracts_doc": "https://docs.uniswap.org/contracts/v4/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1a9C8182C09C57503475d9f9244252322473c9Cd",
+          "role": "Uniswap Governance Timelock",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Uniswap V4 is a non-custodial automated market maker (AMM) featuring a singleton architecture where all pools reside in a single contract. It introduces 'hooks,' which are externally deployed contracts that allow for custom logic (e.g., dynamic fees, oracles, or limit orders) to be executed at specific points in a pool's lifecycle. This design optimizes gas efficiency for multi-hop swaps and enables a highly flexible and modular liquidity ecosystem."
+    }
+  }
+]
