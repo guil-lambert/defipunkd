@@ -1,0 +1,147 @@
+{
+  "schema_version": 3,
+  "slug": "zyfai",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "gpt-5.5-thinking",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "Exit path is SDK-documented but not fully verified on-chain",
+  "short_headline": "Exit path unknown",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The verified SDK documentation exposes a user-facing withdrawFunds(userAddress, chainId, amount?) method for full or partial withdrawal from the user's Safe, while the demo repository describes withdrawFunds as the UI action for withdrawing funds from the Zyfai smart wallet. I did not verify every deployed contract-level exit function such as withdraw, redeem, burn, requestWithdrawal, claim, or exit."
+      },
+      {
+        "code": "E2",
+        "text": "The SDK documentation states that withdrawFunds authenticates through SIWE before calling withdrawal endpoints and that withdrawals are processed asynchronously by the backend, but I did not verify the access modifiers or pause guards of the underlying deployed contract functions used for exit."
+      },
+      {
+        "code": "E3",
+        "text": "The executor-module repository documents pause and unpause powers for the module and registry, and the Security Proxy Gateway documentation says curator registries are multisig-controlled, but I did not verify the deployed pause role holder, whether an uncapped pause exists, or the maximum pause duration on-chain."
+      },
+      {
+        "code": "E4",
+        "text": "The executor-module repository documents emergency pause procedures for compromised session keys, malicious whitelist changes, and critical vulnerabilities, but I did not verify whether ZyFAI has distinct emergency and governance pause paths for exits or whether either path can affect finalized claims."
+      },
+      {
+        "code": "E5",
+        "text": "The SDK documentation says withdrawals are asynchronous and that a transaction hash may not be immediately available, but I did not find a verified maximum withdrawal queue duration, daily withdrawal cap, or evidence that the queue itself is or is not pausable."
+      },
+      {
+        "code": "E6",
+        "text": "The documentation describes user funds as held in Safe smart wallets and the executor module as scoped to curator registries, but I did not verify a permissionless forced-exit, escape-hatch, or emergency-exit mechanism from deployed contracts under adversarial-admin or backend-failure conditions."
+      },
+      {
+        "code": "E7",
+        "text": "The Security Proxy Gateway documentation describes an onchain Proxy Executor Module and target registries, and the executor-module repository includes example deployed or verification addresses, but I did not verify a directly callable on-chain exit function through a block explorer write tab or generic wallet path that bypasses ZyFAI's frontend and backend."
+      }
+    ],
+    "steelman": null,
+    "verdict": "The assessment is blocked because the SDK and docs show a Safe-based withdrawal flow, session-key-scoped execution, and backend-mediated withdrawFunds calls, but the deployed exit functions, access modifiers, pause guards, pause-role holders, queue limits, finalized-claim behavior, and a frontend/backend-independent forced-exit path were not fully verified on-chain."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/ondefy/zyfai-sdk/tree/3b2ebf7",
+      "shows": "Pinned SDK repository snapshot documenting Safe deployment, SIWE authentication, depositFunds, withdrawFunds, asynchronous backend-processed withdrawals, getHistory tracking, pauseAgent, and the SDK's purpose as a multi-chain DeFi yield toolkit.",
+      "commit": "3b2ebf75efab84dbf1b60aa7932264ea6faa02dc",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ondefy/zyfai-sdk-demo",
+      "shows": "Demo repository README describing a browser flow where users connect an EOA wallet, resolve or deploy deterministic Safe addresses, create session keys, deposit funds, and withdraw funds from the Zyfai smart wallet via withdrawFunds.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/ondefy/zyfai-executor-module/tree/c9e4b4f",
+      "shows": "Pinned executor-module repository snapshot documenting GuardedExecModuleUpgradeable, TargetRegistry, whitelist validation, ERC20 transfer restrictions, owner-controlled whitelist management, module and registry pause functionality, UUPS upgradeability, and example deployment or verification addresses.",
+      "commit": "c9e4b4ff71caa675d4f34404a4a719de51d67335",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/control/proxy",
+      "shows": "Zyfai Security Proxy Gateway documentation describing a singleton Proxy Executor Module, curator-managed Target Registry contracts, registry ownership by multisig such as 3/5 for Zyfai's own registry, session keys scoped to a curator registry, and calldata validation rejecting arbitrary transfers.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/audits",
+      "shows": "ZyFAI audits page listing smart account components built with Rhinestone SmartSession, Safe7579 and Core modules, Pimlico paymaster use for gasless actions including deposits and withdrawals, and rZFI audit references.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://arbiscan.io/address/0xF659d30D4EB88B06A909F20839D8959Bd77d8790",
+      "shows": "Arbitrum block-explorer address for an ERC1967 proxy address referenced by the executor-module repository's deployment and verification instructions; included as a deployed-contract anchor, but the current owner, pause state, exit functions, and registry linkage were not verified during this run.",
+      "chain": "Arbitrum",
+      "address": "0xF659d30D4EB88B06A909F20839D8959Bd77d8790",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://basescan.org/address/0xc8F535f56C191D4D623e252D540BA1Fcb6561208",
+      "shows": "Base block-explorer address for a TargetRegistry address referenced by the executor-module repository's deployment and verification instructions; included as a deployed-contract anchor, but the current owner, pause state, whitelist contents, and exit implications were not verified during this run.",
+      "chain": "Base",
+      "address": "0xc8F535f56C191D4D623e252D540BA1Fcb6561208",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E1: I could not enumerate every deployed contract-level user-facing exit function for ZyFAI's main contracts; I only verified the SDK-level withdrawFunds flow.",
+    "E2: I could not identify access modifiers or pause guards for each deployed exit function because the underlying deployed exit contracts/functions used by withdrawFunds were not fully mapped.",
+    "E3: I could not verify which deployed address holds any PAUSE_ROLE, GUARDIAN, owner, or equivalent pause power, nor whether an uncapped pause or PAUSE_INFINITELY equivalent exists.",
+    "E4: I could not distinguish emergency pause and governance pause paths for actual exits or finalized claims from on-chain reads.",
+    "E5: I could not determine the maximum asynchronous withdrawal queue duration, any daily withdrawal cap, or whether the queue itself is pausable.",
+    "E6: I could not verify a permissionless forced-exit, escape-hatch, or emergency-exit path that remains available if ZyFAI's backend, curator registry, or admin path becomes adversarial.",
+    "E7: I could not confirm that users can execute the complete exit path directly on-chain through a block explorer or generic wallet without using ZyFAI's frontend or backend."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ondefy/zyfai-sdk",
+      "https://github.com/ondefy/zyfai-executor-module",
+      "https://github.com/ondefy/zyfai-sdk-demo"
+    ],
+    "docs_url": "https://docs.zyf.ai/",
+    "audits": [
+      {
+        "firm": "Rhinestone",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-12-25"
+      },
+      {
+        "firm": "Rhinestone",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-07-05"
+      },
+      {
+        "firm": "Rhinestone",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-10-03"
+      },
+      {
+        "firm": "Pimlico",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2024-03-28"
+      },
+      {
+        "firm": "ZyFAI",
+        "url": "https://docs.zyf.ai/audits",
+        "date": "2025-07-06"
+      },
+      {
+        "firm": "Sherlock",
+        "url": "https://docs.zyf.ai/docs/product/control/proxy",
+        "date": "2025-12"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "ZyFAI provides DeFi yield automation through Safe smart wallets, session keys, and an SDK/API layer for deposits, withdrawals, position tracking, and yield strategies. Users deposit assets into their Safe smart wallet and can initiate full or partial withdrawals through the SDK, while ZyFAI's agent infrastructure executes whitelisted DeFi operations. Its Security Proxy Gateway uses an ERC-7579 executor module and curator-managed registries to restrict delegated execution to approved targets, selectors, and calldata parameters."
+  }
+}
