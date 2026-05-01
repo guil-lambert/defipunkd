@@ -7,7 +7,7 @@ import TierMedal from "../components/TierMedal.svelte";
 import { PIZZA_SLICES, type PizzaSliceId } from "../lib/pizza";
 import { TIER_LABEL, type Tier } from "../lib/tier";
 import { formatTvl } from "../lib/format";
-import { buildStats, type CoverageState, type ModelFamily } from "../lib/stats";
+import { buildStats, type CoverageState, type ModelFamily, type ModelQuality } from "../lib/stats";
 
 const protocols = listProtocols();
 const assessments = getAssessments();
@@ -38,6 +38,18 @@ const FAMILY_FILL: Record<ModelFamily, string> = {
   gemini: "#A17CF3",
   grok: "#2196F3",
   other: "#888",
+};
+
+const QUALITY_FILLED: Record<ModelQuality, number> = {
+  low: 1,
+  med: 2,
+  high: 3,
+};
+
+const QUALITY_TITLE: Record<ModelQuality, string> = {
+  low: "Low — hallucination-prone, quorum weight ×0.05 (20× penalty)",
+  med: "Medium — non-thinking, quorum weight ×0.2 (5× penalty)",
+  high: "High — thinking model, full quorum weight",
 };
 
 const GRADE_FILL = {
@@ -211,14 +223,27 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.gemini};`}></span> gemini ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.grok};`}></span> grok ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.other};`}></span> other).
+        Pips next to each model rate quorum weight:
+        <span class="quality" data-quality="high" aria-hidden="true"><span class="pip"></span><span class="pip"></span><span class="pip"></span></span> thinking ·
+        <span class="quality" data-quality="med" aria-hidden="true"><span class="pip"></span><span class="pip"></span><span class="pip"></span></span> non-thinking (5×) ·
+        <span class="quality" data-quality="low" aria-hidden="true"><span class="pip"></span><span class="pip"></span><span class="pip"></span></span> hallucination-prone (20×).
       </p>
       {stats.modelBreakdown.length === 0 ? (
         <p class="empty">No submissions yet.</p>
       ) : (
-        <ol class="ranked-bars">
+        <ol class="ranked-bars model-bars">
           {stats.modelBreakdown.map((m) => (
             <li>
               <span class="row-label">{m.model}</span>
+              <span
+                class="quality"
+                data-quality={m.quality}
+                title={QUALITY_TITLE[m.quality]}
+                aria-label={QUALITY_TITLE[m.quality]}
+              >
+                <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+                <span class="sr-only">{`${QUALITY_FILLED[m.quality]} of 3`}</span>
+              </span>
               <span class="row-bar">
                 <span
                   class="row-bar-fill"
@@ -461,6 +486,41 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     align-items: center;
     font-size: 0.88rem;
   }
+  .ranked-bars.model-bars li {
+    grid-template-columns: minmax(8em, 14em) auto 1fr 3em;
+  }
+
+  /* Three-pip quality rating: filled count = quality bucket
+     (low = 1, med = 2, high = 3). Used inline in the caption legend
+     and per-row in the model breakdown. */
+  .quality {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+    line-height: 1;
+    vertical-align: middle;
+  }
+  .quality .pip {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: oklch(0.30 0.005 235);
+  }
+  .quality[data-quality="high"] .pip { background: var(--grade-green); }
+  .quality[data-quality="med"] .pip:nth-child(-n+2) { background: var(--grade-orange); }
+  .quality[data-quality="low"] .pip:nth-child(1) { background: var(--grade-red); }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
   .row-label {
     color: oklch(0.92 0.01 235);
     overflow: hidden;
@@ -670,6 +730,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
 
   @media (max-width: 720px) {
     .ranked-bars li { grid-template-columns: minmax(6em, 9em) 1fr 2.5em; gap: 0.4rem; font-size: 0.82rem; }
+    .ranked-bars.model-bars li { grid-template-columns: minmax(6em, 9em) auto 1fr 2.5em; }
     .slice-grades li { grid-template-columns: minmax(6em, 8em) 1fr; }
     .matrix { grid-template-columns: minmax(6em, 9em) 28px repeat(5, minmax(36px, 1fr)); font-size: 0.78rem; }
     .m-cell { height: 22px; font-size: 0.95rem; }

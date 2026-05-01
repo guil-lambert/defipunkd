@@ -4,7 +4,11 @@ import type {
   LoadedSubmission,
   Protocol,
 } from "@defipunkd/registry";
-import { assessConfidence } from "./confidence";
+import {
+  assessConfidence,
+  isHallucinationProneModel,
+  isThinkingModel,
+} from "./confidence";
 import { PIZZA_SLICES, type PizzaSliceId } from "./pizza";
 import { assessProtocol, cexAssessment } from "./rationale";
 import { deriveTier, maxTier, TIER_RANK, type Tier, type TierInput } from "./tier";
@@ -12,6 +16,12 @@ import { deriveTier, maxTier, TIER_RANK, type Tier, type TierInput } from "./tie
 export type CoverageState = "none" | "insufficient" | "disagreement" | "weak" | "strong";
 
 export type ModelFamily = "claude" | "gpt" | "gemini" | "grok" | "other";
+
+/** Submission quality bucket — mirrors the quorum penalty tiers:
+ *  - "low":  hallucination-prone (×0.05, 20× penalty)
+ *  - "med":  non-thinking         (×0.2,  5× penalty)
+ *  - "high": thinking              (no penalty) */
+export type ModelQuality = "low" | "med" | "high";
 
 export type GradeBucket = {
   red: number;
@@ -42,6 +52,7 @@ export type MostReviewed = {
 export type ModelBreakdownEntry = {
   model: string;
   family: ModelFamily;
+  quality: ModelQuality;
   count: number;
 };
 
@@ -88,6 +99,12 @@ export function modelFamily(model: string): ModelFamily {
   return "other";
 }
 
+export function modelQuality(model: string): ModelQuality {
+  if (isHallucinationProneModel(model)) return "low";
+  if (isThinkingModel(model)) return "high";
+  return "med";
+}
+
 function isLive(p: Protocol): boolean {
   if (p.delisted_at) return false;
   if (p.is_dead) return false;
@@ -130,7 +147,15 @@ function coverageCell(
   submissions: Map<string, Map<AssessmentSliceId, LoadedSubmission[]>>,
 ): CoverageState {
   const a = assessments.get(slug)?.get(slice);
-  if (a) return a.strength === "strong" ? "strong" : "weak";
+  if (a) {
+    // Mirror the protocol page: a strong-strength consensus that the
+    // confidence check flags as tentative (low share-URL coverage, total
+    // weight below floor, hallucination-heavy weight, …) renders dashed
+    // there, so the matrix must not advertise it as "strong consensus".
+    const conf = assessConfidence(a.consensus_sources, a.strength);
+    if (a.strength === "strong" && !conf.tentative) return "strong";
+    return "weak";
+  }
   const subs = submissions.get(slug)?.get(slice) ?? [];
   if (subs.length === 0) return "none";
   // Mirrors the quorum cutoff in packages/validator/src/quorum.ts: <2 submissions
@@ -263,7 +288,12 @@ export function buildStats(
     }
   }
   const modelBreakdown: ModelBreakdownEntry[] = Array.from(modelCounts.entries())
-    .map(([model, count]) => ({ model, family: modelFamily(model), count }))
+    .map(([model, count]) => ({
+      model,
+      family: modelFamily(model),
+      quality: modelQuality(model),
+      count,
+    }))
     .sort((a, b) => b.count - a.count || a.model.localeCompare(b.model));
 
   // Walk every top-level live entry's slice list (rule-based + AI overrides)

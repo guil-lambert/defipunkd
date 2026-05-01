@@ -183,13 +183,42 @@ describe("buildStats", () => {
     expect(stats.modelBreakdown[0]).toEqual({
       model: "claude-sonnet-4-6",
       family: "claude",
+      quality: "med",
       count: 2,
     });
     expect(stats.modelBreakdown[1]).toEqual({
       model: "gpt-5.5",
       family: "gpt",
+      quality: "med",
       count: 1,
     });
+  });
+
+  it("tags model quality buckets (low / med / high) on the breakdown", () => {
+    const protocols = [proto({ slug: "a" })];
+    const stats = buildStats(
+      protocols,
+      aMap([]),
+      sMap([
+        [
+          "a",
+          "control",
+          [
+            submission({ model: "claude-opus-4-7" }),
+            submission({ model: "claude-sonnet-4-6" }),
+            submission({ model: "gemini-3-flash-preview" }),
+            submission({ model: "gpt-5.5-thinking" }),
+            submission({ model: "gemini-3-pro" }),
+          ],
+        ],
+      ]),
+    );
+    const byModel = new Map(stats.modelBreakdown.map((m) => [m.model, m.quality]));
+    expect(byModel.get("claude-opus-4-7")).toBe("high");
+    expect(byModel.get("gpt-5.5-thinking")).toBe("high");
+    expect(byModel.get("gemini-3-pro")).toBe("high");
+    expect(byModel.get("claude-sonnet-4-6")).toBe("med");
+    expect(byModel.get("gemini-3-flash-preview")).toBe("low");
   });
 
   it("derives grade-by-slice across all live protocols (rule-based + AI)", () => {
