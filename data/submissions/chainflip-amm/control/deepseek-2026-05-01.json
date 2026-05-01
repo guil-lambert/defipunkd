@@ -1,0 +1,112 @@
+{
+  "schema_version": 3,
+  "slug": "chainflip-amm",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "claude-opus-4-7",
+  "chat_url": "https://chat.deepseek.com/share/g8q00ld7qer16nda84",
+  "grade": "unknown",
+  "headline": "Unable to determine control authority — live on-chain verification of governance, timelocks, and multisigs was not possible in this run",
+  "short_headline": "Control assessment incomplete",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Unable to read contract owner/admin for Ethereum vault and Chainflip state chain governance pallet via block explorer — no live fetch performed."
+      },
+      {
+        "code": "C2",
+        "text": "Upgrade mechanism not verified; literature suggests the Ethereum vault is an upgradable contract controlled by the Chainflip validator aggregate signature, but proxy admin and implementation cannot be confirmed on-chain."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path from governance proposal to state change not enumerated; timelock constants (e.g., governance pallet's enactment delay) not read from on-chain storage."
+      },
+      {
+        "code": "C4",
+        "text": "All privileged multisigs on Chainflip (Council, Technical Committee, emergency pause guardian, validator set, Ethereum vault admin) not enumerated; signer identities, thresholds, and scope not verified."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance parameters (proposal submission deposit, voting period, quorum, enactment delay) not verified via block explorer."
+      },
+      {
+        "code": "C6",
+        "text": "Existence of a separate emergency guardian role with short timecap not confirmed; audit reports mention a 'Suspended' state in the vault, but the actor that can trigger it could not be verified on-chain."
+      },
+      {
+        "code": "C7",
+        "text": "Power tier classification not possible without inspecting the specific privileged functions and their on-chain bounds on the state chain and Ethereum vault."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Grade set to unknown because none of the mandatory control checklist items could be verified with live on-chain reads during this assessment. The Chainflip protocol operates a Substrate-based state chain where governance and upgrade authority live in pallets and a validator set; the Ethereum-side vault contract is a peripheral fund holder whose upgrade path is dependent on the state chain. Without reading contract storage on both the Chainflip chain (via explorer.chainflip.io or polkadot.js) and Ethereum (etherscan.io) to confirm owner addresses, timelock delays, multisig configurations, and governance parameters, no reliable power-tier or timelock-bar assessment can be made."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/2023-04-TrailOfBits-securityreview.pdf",
+      "shows": "Trail of Bits security review mentions governance, validator-set control of vault, and a vault suspension mechanism, but does not provide verifiable on-chain constants."
+    },
+    {
+      "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/Chainflip_Backend_-_Zellic_Audit_Report.pdf",
+      "shows": "Zellic audit of the Chainflip backend describes state-chain based governance, vault contracts, and emergency pause features, but no live on-chain constants."
+    },
+    {
+      "url": "https://github.com/chainflip-io/chainflip-backend",
+      "shows": "Source repository for the Chainflip state chain (Rust) and Ethereum contracts; contains the audited code, but without a live block explorer read the current deployed state is unknown."
+    },
+    {
+      "url": "https://docs.chainflip.io/concepts/governance-overview",
+      "shows": "Documentation describing the governance system with a Council, Technical Committee, and token-referenda, but this is a secondary source and not an on-chain read."
+    },
+    {
+      "url": "https://explorer.chainflip.io",
+      "shows": "Block explorer for the Chainflip state chain; in principle on-chain governance constants can be read here, but this run did not perform live queries."
+    }
+  ],
+  "unknowns": [
+    "C1: Owner/admin addresses of the Ethereum vault contract and Chainflip state chain governance pallet not read on-chain.",
+    "C2: Upgrade mechanism (transparent proxy/UUPS/immutable) of the Ethereum vault not confirmed; admin of the upgrade path on the state chain (sudo/technical committee/governance) not identified.",
+    "C3: Execution path stages and timelock delays (enactment period, veto period, vote delay) not read from on-chain pallet storage or contract storage.",
+    "C4: Full enumeration of multisigs (Council, Technical Committee, emergency guardian, validator set, vault admin) not performed — thresholds, signer count, and insider status unknown.",
+    "C5: Governance parameters — proposal threshold, voting period, quorum, and timelock values — not verified via block-explorer read functions.",
+    "C6: Emergency power roles (vault suspension, fast pause) not confirmed; actor class and time bounds unknown.",
+    "C7: Power blast radius cannot be tiered without verifying the exact functions and their on-chain parameter bounds on the state chain and Ethereum contracts."
+  ],
+  "protocol_metadata": {
+    "github": ["https://github.com/chainflip-io/chainflip-backend"],
+    "docs_url": "https://docs.chainflip.io",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/2023-04-TrailOfBits-securityreview.pdf",
+        "date": "2023-04"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/Chainflip_Backend_-_Zellic_Audit_Report.pdf",
+        "date": "2023-09"
+      },
+      {
+        "firm": "Kudelski Security",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/Multisig-Kudelski-Q1-2022.pdf",
+        "date": "2022-Q1"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/2023-04-chainflip-securityreview.pdf",
+        "date": "2023-04"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Chainflip is a cross-chain decentralized exchange that uses its own Substrate‑based appchain (the Chainflip state chain) to coordinate native asset swaps without wrapped tokens. Users deposit native assets (BTC, ETH, DOT, etc.) into protocol‑controlled vaults on each supported chain; a network of validators runs a threshold‑signature scheme (FROST) to control those vaults, while just‑in‑time (JIT) liquidity providers supply the pool capital that enables instant quotes. Swaps are executed atomically across chains, and the FLIP token governs the protocol and secures the validator set through staking."
+  }
+}
