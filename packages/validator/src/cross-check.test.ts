@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { crossCheck, isExplorerUrl, type CrossCheckContext } from "./cross-check";
+import { crossCheck, isExplorerUrl, isPublicChatShareUrl, verifyChatUrlReachable, type CrossCheckContext } from "./cross-check";
 import type { Submission } from "./schema";
 
 const sub = (over: Partial<Submission> = {}): Submission => ({
@@ -172,5 +172,77 @@ describe("isExplorerUrl", () => {
     expect(isExplorerUrl("https://github.com/x/y")).toBe(false);
     expect(isExplorerUrl("https://docs.lido.fi/")).toBe(false);
     expect(isExplorerUrl("not a url")).toBe(false);
+  });
+});
+
+describe("isPublicChatShareUrl", () => {
+  it("accepts /share/ paths on standard provider hosts", () => {
+    expect(isPublicChatShareUrl("https://claude.ai/share/abc-123")).toBe(true);
+    expect(isPublicChatShareUrl("https://chatgpt.com/share/abc-123")).toBe(true);
+    expect(isPublicChatShareUrl("https://gemini.google.com/share/abc-123")).toBe(true);
+  });
+
+  it("accepts perplexity /search/ paths (their share URL format)", () => {
+    expect(
+      isPublicChatShareUrl("https://www.perplexity.ai/search/763752fe-c5ac-43bb-a150-98d006465070"),
+    ).toBe(true);
+    expect(isPublicChatShareUrl("https://perplexity.ai/search/abc-123")).toBe(true);
+  });
+
+  it("rejects perplexity URLs that are not /search/ paths", () => {
+    expect(isPublicChatShareUrl("https://www.perplexity.ai/")).toBe(false);
+    expect(isPublicChatShareUrl("https://www.perplexity.ai/library")).toBe(false);
+  });
+
+  it("rejects /search/ paths on non-perplexity hosts", () => {
+    expect(isPublicChatShareUrl("https://claude.ai/search/abc-123")).toBe(false);
+  });
+
+  it("accepts g.co (Gemini short links) without path check", () => {
+    expect(isPublicChatShareUrl("https://g.co/gemini/share/abc")).toBe(true);
+  });
+
+  it("rejects unknown hosts and malformed input", () => {
+    expect(isPublicChatShareUrl("https://example.com/share/abc")).toBe(false);
+    expect(isPublicChatShareUrl(null)).toBe(false);
+    expect(isPublicChatShareUrl(undefined)).toBe(false);
+    expect(isPublicChatShareUrl("not a url")).toBe(false);
+  });
+});
+
+describe("verifyChatUrlReachable", () => {
+  const fakeFetch = (status: number, headers: Record<string, string> = {}): typeof fetch =>
+    (async () => new Response("", { status, headers })) as unknown as typeof fetch;
+
+  it("treats 2xx as reachable", async () => {
+    const res = await verifyChatUrlReachable("https://claude.ai/share/x", { fetch: fakeFetch(200) });
+    expect(res).toEqual({ ok: true, status: 200 });
+  });
+
+  it("treats Cloudflare challenge 403 as reachable (cf-mitigated header)", async () => {
+    const res = await verifyChatUrlReachable("https://claude.ai/share/x", {
+      fetch: fakeFetch(403, { "cf-mitigated": "challenge" }),
+    });
+    expect(res).toEqual({ ok: true, status: 403 });
+  });
+
+  it("treats Cloudflare 403 as reachable (server: cloudflare header)", async () => {
+    const res = await verifyChatUrlReachable("https://claude.ai/share/x", {
+      fetch: fakeFetch(403, { server: "cloudflare" }),
+    });
+    expect(res).toEqual({ ok: true, status: 403 });
+  });
+
+  it("treats a plain 403 (no Cloudflare markers) as unreachable", async () => {
+    const res = await verifyChatUrlReachable("https://example.com/x", { fetch: fakeFetch(403) });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.status).toBe(403);
+  });
+
+  it("treats 404 as unreachable regardless of Cloudflare", async () => {
+    const res = await verifyChatUrlReachable("https://chatgpt.com/share/x", {
+      fetch: fakeFetch(404, { server: "cloudflare" }),
+    });
+    expect(res.ok).toBe(false);
   });
 });

@@ -19,10 +19,11 @@ export type ChatUrlReachability =
   | { ok: false; status: number | null; reason: string };
 
 // Liveness check only: confirms the share URL resolves to *something* on the
-// provider host. Catches typos, dead links, and fabricated IDs on claude.ai
-// (403) and chatgpt.com (404). Does NOT catch tampering on gemini.google.com
-// — the SPA shell returns 200 for any well-formed /share/<anything>, so a
-// bogus Gemini share ID looks identical to a real one over plain HTTP.
+// provider host. Cloudflare-protected hosts (claude.ai) return 403 with a JS
+// challenge for any non-browser request — real or fake — so we treat that
+// response as inconclusive rather than failing. Real tampering detection
+// would require a headless browser; a SPA shell on chatgpt.com /
+// gemini.google.com / perplexity.ai also returns 200 for bogus IDs.
 export async function verifyChatUrlReachable(
   url: string,
   opts: { fetch?: typeof fetch; timeoutMs?: number } = {},
@@ -43,6 +44,16 @@ export async function verifyChatUrlReachable(
       },
     });
     if (res.status >= 200 && res.status < 400) return { ok: true, status: res.status };
+    // Cloudflare bot challenge: 403 with `cf-mitigated: challenge` (or
+    // `server: cloudflare`) means the request never reached the origin, so
+    // we can't tell if the share is valid. Don't fail on it.
+    if (res.status === 403) {
+      const cfMitigated = res.headers.get("cf-mitigated");
+      const server = res.headers.get("server");
+      if (cfMitigated === "challenge" || server?.toLowerCase() === "cloudflare") {
+        return { ok: true, status: 403 };
+      }
+    }
     return { ok: false, status: res.status, reason: `HTTP ${res.status}` };
   } catch (err) {
     const reason = (err as Error).name === "AbortError" ? `timeout after ${timeoutMs}ms` : (err as Error).message;
@@ -91,7 +102,11 @@ export function isPublicChatShareUrl(url: string | null | undefined): boolean {
     const { hostname, pathname } = new URL(url);
     const host = hostname.toLowerCase();
     if (!PROVIDER_SHARE_HOSTS.some((h) => host === h || host.endsWith("." + h))) return false;
-    return /\/share\//.test(pathname) || host === "g.co";
+    if (host === "g.co") return true;
+    // Perplexity uses /search/<id> for both private and shared threads;
+    // reachability check downstream catches private ones (HTTP 401/redirect).
+    if (host === "perplexity.ai" || host === "www.perplexity.ai") return /^\/search\//.test(pathname);
+    return /\/share\//.test(pathname);
   } catch {
     return false;
   }
