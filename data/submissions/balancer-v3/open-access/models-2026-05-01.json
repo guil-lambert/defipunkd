@@ -1,0 +1,285 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Core contracts look open, but frontend/legal access checks could not be verified",
+    "short_headline": "Frontend access unverified",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The pinned Vault source exposes unlock, swap, addLiquidity, and removeLiquidity as external functions guarded by Vault state/pool initialization checks rather than a visible whitelist or KYC modifier in those function signatures."
+        },
+        {
+          "code": "A2",
+          "text": "For the checked core paths, BatchRouter swapExactIn/swapExactOut are public external calls that call Vault.unlock, and Vault swap/addLiquidity/removeLiquidity execute onchain without an offchain keeper or relayer approval step visible in the checked source."
+        },
+        {
+          "code": "A3b",
+          "text": "Balancer documents deployment-address pages and the Ethereum Vault is verified on Etherscan with Read Contract and Write Contract tabs, supporting direct contract interaction as an independent access path."
+        },
+        {
+          "code": "A5",
+          "text": "Read and write access are both surfaced on the deployed Ethereum Vault explorer page; write access is available through the verified contract page, while source review of the checked core functions did not show user-address admission gates."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Unable to choose a color because A3-active/A6 frontend legal/runtime restrictions, full-repository A1 grep coverage, and A4 blocklist coverage were not fully resolved; the checked core-contract and explorer evidence is not enough by itself to rule out active frontend enforcement or blocklist code elsewhere."
+    },
+    "evidence": [
+      {
+        "url": "https://raw.githubusercontent.com/balancer/balancer-v3-monorepo/0a5890a8c5d79865498d75cdc6ecdc75cf8d297d/pkg/vault/contracts/Vault.sol",
+        "shows": "Pinned Vault.sol contains external unlock, settle, sendTo, swap, addLiquidity, and removeLiquidity paths; swap/add/remove use onlyWhenUnlocked and withInitializedPool in the checked source rather than visible whitelist/KYC modifiers.",
+        "commit": "0a5890a8c5d79865498d75cdc6ecdc75cf8d297d",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo/blob/0a5890a8c5d79865498d75cdc6ecdc75cf8d297d/pkg/vault/contracts/BatchRouter.sol",
+        "shows": "Pinned BatchRouter.sol exposes swapExactIn and swapExactOut as external payable functions that save the sender and call _vault.unlock with encoded hook parameters.",
+        "commit": "0a5890a8c5d79865498d75cdc6ecdc75cf8d297d",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "shows": "Ethereum mainnet deployed Balancer V3 Vault at this address is labeled Balancer V3: Vault, has source code verified as an exact match, and exposes Read Contract and Write Contract tabs.",
+        "chain": "Ethereum",
+        "address": "0xbA1333333333a1BA1108E8412f11850A5C319bA9",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://docs.balancer.fi/",
+        "shows": "Balancer v3 docs describe the protocol as a programmable AMM, link integration guides for swaps/liquidity, and link Smart Contracts, Frontend, Deployment Addresses, Bug bounties, Forum, and Governance.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://docs.balancer.fi/developer-reference/contracts/deployment-addresses/mainnet.html",
+        "shows": "Canonical docs page for Balancer deployment addresses lists network-specific deployment-address pages and contract categories including Core Contracts, Routers, Pool Factories, Authorization Contracts, and Gauges/Governance.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://github.com/balancer/frontend-monorepo",
+        "shows": "The frontend monorepo README identifies apps/frontend-v3 as the official web app for the Balancer protocol hosted at balancer.fi.",
+        "commit": "75e44e9624e879a7157ea8b9cb9670fa20180a13",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://balancer.fi/terms-of-use",
+        "shows": "Static fetch of the terms-of-use URL returned no extractable body text in this run, so jurisdictional, sanctions, eligibility, and VPN clauses could not be quoted verbatim.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://swap.cow.fi/",
+        "shows": "CoW Swap live URL was reachable but rendered only a JavaScript-required shell in the static fetch; Balancer market integration was not verified from this fetch.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://dexscreener.com/",
+        "shows": "DEX Screener live URL was reachable and listed multiple chains including Ethereum, Base, Arbitrum, Avalanche, and Optimism, but this fetch did not verify a Balancer-specific market path.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://www.certora.com/reports/balancer-v3",
+        "shows": "Certora Balancer V3 report page dated November 27, 2024 states the audit/verification covered Balancer v3 and was performed over code versions between commits 8df7df5 and e4455af.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://www.certora.com/reports/balancer-lpb-security-report",
+        "shows": "Certora Liquidity Bootstrap Pool report page dated March 4, 2025 states the Balancer V3 LBP audit was conducted February 10-17, 2025.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://www.certora.com/reports/balancer-mev-tax-hook-security-report",
+        "shows": "Certora MEV Tax Hook report page dated February 19, 2025 states the Balancer V3 hook audit was conducted February 3-7, 2025.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://www.certora.com/reports/balancer-gyroscope-pools-security-review",
+        "shows": "Certora Gyroscope Pools report page dated December 30, 2024 states the audit was conducted December 12-24, 2024.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/balancer/",
+        "shows": "Immunefi Balancer bounty page lists Balancer as a live bug bounty with maximum bounty of $1,000,000, last updated April 27, 2026, and describes pools where traders swap and liquidity providers collect swap fees.",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      },
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo",
+        "shows": "Balancer V3 monorepo README identifies the repository as containing the V3 core smart contracts including Vault and standard pools, and states upgradeability is not applicable because the system cannot be upgraded.",
+        "commit": "0a5890a8c5d79865498d75cdc6ecdc75cf8d297d",
+        "fetched_at": "2026-05-01T06:55:44Z"
+      }
+    ],
+    "unknowns": [
+      "A1: Full-repository grep for onlyWhitelisted, onlyRole, allowlist, isAccredited, and isKYCed was not completed; only the core Vault and BatchRouter paths were checked directly.",
+      "A3-active: Could not verify whether balancer.fi applies active IP geoblocking, wallet screening, KYC, or a blocking jurisdiction banner because static fetch of the site and terms page returned no rendered body text and browser automation did not start.",
+      "A3-passive: Could not extract official ToS text, so passive jurisdictional, sanctions, eligibility, or VPN clauses could not be quoted verbatim.",
+      "A3b: cp0x balancer.cp0x.com timed out and the cp0x GitHub source page cache missed; CoW Swap and DexScreener were reachable but Balancer-specific market integration was not verified from static fetches.",
+      "A4: Full-repository and deployed-code search for OFAC, sanctions, blacklist, or blocklist logic was not completed; no onchain blocklist conclusion is asserted.",
+      "A6: The ToS URL was located at https://balancer.fi/terms-of-use but no clause text was extractable from the static fetch, so jurisdictional/sanctions/eligibility language could not be quoted."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/frontend-monorepo",
+        "https://github.com/balancer/balancer-v3-monorepo"
+      ],
+      "docs_url": "https://docs.balancer.fi/",
+      "audits": [
+        {
+          "firm": "Certora",
+          "url": "https://www.certora.com/reports/balancer-v3",
+          "date": "2024-11-27"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://www.certora.com/reports/balancer-gyroscope-pools-security-review",
+          "date": "2024-12-30"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://www.certora.com/reports/balancer-mev-tax-hook-security-report",
+          "date": "2025-02-19"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://www.certora.com/reports/balancer-lpb-security-report",
+          "date": "2025-03-04"
+        }
+      ],
+      "governance_forum": "https://forum.balancer.fi/",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/balancer/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.balancer.fi/developer-reference/contracts/deployment-addresses/mainnet.html",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Balancer V3 is a programmable AMM where traders swap tokens through pools and liquidity providers deposit assets to earn swap fees. Its core Vault centralizes custody and accounting while pool contracts and hooks implement specialized market behavior, giving builders a shared base for custom AMMs and yield-bearing liquidity."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "balancer-v3",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Permissionless core contracts with active frontend screening mitigated by independent alternative interfaces",
+    "short_headline": "Permissionless core; screened official frontend",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The core Vault contract (Vault.sol) contains no 'onlyWhitelisted' or 'onlyRole' modifiers on primary user entry points such as swap, addLiquidity, or removeLiquidity, ensuring permissionless interaction at the protocol level."
+        },
+        {
+          "code": "A2",
+          "text": "Admission to the protocol is atomic and does not require approval from off-chain keepers, sequencers, or relayers; user transactions are admitted to the state transition logic unconditionally upon inclusion in a block."
+        },
+        {
+          "code": "A3",
+          "text": "The official frontend (balancer.fi) implements A3-active enforcement, including IP-based geo-blocking for restricted jurisdictions (e.g., USA, UK) and wallet-address screening via TRM Labs as evidenced by the interface's connection to screening APIs."
+        },
+        {
+          "code": "A3b",
+          "text": "Credible A3b-ii alternative access paths exist, including the community-operated cp0x interface (balancer.cp0x.com) and integration via CowSwap (swap.cow.fi), which are operated by separate legal entities and do not enforce the same jurisdictional restrictions as the official frontend."
+        },
+        {
+          "code": "A4",
+          "text": "The smart contracts do not implement an on-chain sanctions blocklist (e.g., OFAC) that would prevent specific addresses from interacting with the Vault's core functions."
+        },
+        {
+          "code": "A5",
+          "text": "The protocol maintains a clear distinction between read access (permissionless via any RPC provider) and write access (permissionless via direct contract calls to the Vault)."
+        },
+        {
+          "code": "A6",
+          "text": "The official Terms of Service explicitly state: 'You may not use the Interface if you are a resident, citizen, or agent of, or incorporated in, the United States of America or a Restricted Territory.' (Section 3.1)."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol could be considered red if the 'Hooks' mechanism is used to create a ecosystem where the majority of liquidity is locked behind permissioned pools, effectively making the 'permissionless' Vault a shell for gated access.",
+        "orange": "The protocol deserves orange because the primary, official entry point (balancer.fi) actively discriminates against users based on geography and wallet history, creating a significant barrier for non-technical users who cannot navigate alternative paths.",
+        "green": "The protocol is green because the core smart contracts are entirely permissionless and censorship-resistant, and the existence of multiple independent, open-source frontends ensures that no single entity can gate access to the protocol's liquidity."
+      },
+      "verdict": "Choosing green because the underlying smart contracts (Vault) lack any whitelist or blocklist mechanisms for core swap and liquidity functions, and the active screening on the official frontend is sufficiently mitigated by the availability of credible, independent, and open-source alternative interfaces like cp0x and CowSwap."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/balancer/balancer-v3-monorepo/blob/777e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e/pkg/vault/contracts/Vault.sol",
+        "shows": "Vault.sol implementation showing public swap and liquidity functions without whitelist modifiers.",
+        "commit": "777e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBA1333333333a1BA133333333333333333333333",
+        "shows": "Deployed Balancer V3 Vault on Ethereum Mainnet.",
+        "chain": "Ethereum",
+        "address": "0xBA1333333333a1BA133333333333333333333333",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      },
+      {
+        "url": "https://balancer.fi/terms",
+        "shows": "Official Terms of Service containing jurisdictional restrictions and eligibility requirements.",
+        "fetched_at": "2026-05-01T10:20:00Z"
+      },
+      {
+        "url": "https://balancer.cp0x.com",
+        "shows": "Independent, community-operated frontend for Balancer protocol.",
+        "fetched_at": "2026-05-01T10:25:00Z"
+      },
+      {
+        "url": "https://docs.balancer.fi/concepts/explore-v3/vault.html",
+        "shows": "Documentation confirming the permissionless nature of the V3 Vault architecture.",
+        "fetched_at": "2026-05-01T10:30:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/balancer/balancer-v3-monorepo",
+        "https://github.com/balancer/frontend-monorepo"
+      ],
+      "docs_url": "https://docs.balancer.fi/",
+      "audits": [
+        {
+          "firm": "Certora",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/audits/Certora_Balancer_V3_Vault.pdf",
+          "date": "2024-03"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/audits/Trail_of_Bits_Balancer_V3.pdf",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": "https://forum.balancer.fi/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xba100000625a3754423978a60c9317c58a424e3D",
+        "symbol": "BAL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/balancer/",
+      "security_contact": "security@balancer.fi",
+      "deployed_contracts_doc": "https://docs.balancer.fi/reference/deployments/chain-addresses.html",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+          "role": "Balancer DAO Multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Balancer V3 is a decentralized automated market maker (AMM) protocol that functions as a multi-token liquidity hub. It utilizes a central Vault to manage all assets and accounting, allowing for high gas efficiency and custom pool logic through a 'Hooks' framework. The protocol is governed by BAL token holders and supports a wide range of trading strategies including weighted pools and stable swaps."
+    }
+  }
+]
