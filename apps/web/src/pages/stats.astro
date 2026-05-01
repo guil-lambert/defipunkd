@@ -223,36 +223,41 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.gemini};`}></span> gemini ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.grok};`}></span> grok ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.other};`}></span> other).
-        Pips next to each model rate quorum weight:
-        <span class="quality" data-quality="high" aria-hidden="true"><span class="pip"></span><span class="pip"></span><span class="pip"></span></span> thinking ·
-        <span class="quality" data-quality="med" aria-hidden="true"><span class="pip"></span><span class="pip"></span><span class="pip"></span></span> non-thinking (5×) ·
-        <span class="quality" data-quality="low" aria-hidden="true"><span class="pip"></span><span class="pip"></span><span class="pip"></span></span> hallucination-prone (20×).
+        Hover the pips next to each model for the quorum-weight rating.
       </p>
       {stats.modelBreakdown.length === 0 ? (
         <p class="empty">No submissions yet.</p>
       ) : (
         <ol class="ranked-bars model-bars">
-          {stats.modelBreakdown.map((m) => (
-            <li>
-              <span class="row-label">{m.model}</span>
-              <span
-                class="quality"
-                data-quality={m.quality}
-                title={QUALITY_TITLE[m.quality]}
-                aria-label={QUALITY_TITLE[m.quality]}
-              >
-                <span class="pip"></span><span class="pip"></span><span class="pip"></span>
-                <span class="sr-only">{`${QUALITY_FILLED[m.quality]} of 3`}</span>
-              </span>
-              <span class="row-bar">
+          {stats.modelBreakdown.map((m) => {
+            const filled = QUALITY_FILLED[m.quality];
+            const tint = FAMILY_FILL[m.family];
+            return (
+              <li>
+                <span class="row-label">{m.model}</span>
                 <span
-                  class="row-bar-fill"
-                  style={`width: ${(m.count / maxModelCount) * 100}%; background: ${FAMILY_FILL[m.family]};`}
-                ></span>
-              </span>
-              <span class="row-value">{m.count}</span>
-            </li>
-          ))}
+                  class="quality"
+                  title={QUALITY_TITLE[m.quality]}
+                  aria-label={QUALITY_TITLE[m.quality]}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      class="pip"
+                      style={i < filled ? `background: ${tint};` : undefined}
+                    ></span>
+                  ))}
+                  <span class="sr-only">{`${filled} of 3`}</span>
+                </span>
+                <span class="row-bar">
+                  <span
+                    class="row-bar-fill"
+                    style={`width: ${(m.count / maxModelCount) * 100}%; background: ${tint};`}
+                  ></span>
+                </span>
+                <span class="row-value">{m.count}</span>
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>
@@ -491,14 +496,16 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
   }
 
   /* Three-pip quality rating: filled count = quality bucket
-     (low = 1, med = 2, high = 3). Used inline in the caption legend
-     and per-row in the model breakdown. */
+     (low = 1, med = 2, high = 3). Filled pips get the model's family
+     tint (inline) so the row reads as one visual unit; unfilled pips
+     stay dim. */
   .quality {
     display: inline-flex;
     gap: 2px;
     align-items: center;
     line-height: 1;
     vertical-align: middle;
+    cursor: help;
   }
   .quality .pip {
     display: inline-block;
@@ -507,9 +514,6 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     border-radius: 50%;
     background: oklch(0.30 0.005 235);
   }
-  .quality[data-quality="high"] .pip { background: var(--grade-green); }
-  .quality[data-quality="med"] .pip:nth-child(-n+2) { background: var(--grade-orange); }
-  .quality[data-quality="low"] .pip:nth-child(1) { background: var(--grade-red); }
   .sr-only {
     position: absolute;
     width: 1px;

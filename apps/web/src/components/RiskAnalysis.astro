@@ -432,17 +432,26 @@ function partialPillText(modelCount: number): string {
     });
   });
 
-  function openAuditDrawerIfHashed() {
+  // Expand the right card on hash navigation:
+  //  - "...-audit-yourself"  → the <details> element itself is the target
+  //  - slice cards (#control, #ability-to-exit, family-prefixed variants…)
+  //    → wrap is an <li id="…"> that contains <details class="card-details">
+  function openHashedCard() {
     const h = location.hash.slice(1);
-    if (!h.endsWith("audit-yourself")) return;
-    const el = document.getElementById(h) as HTMLDetailsElement | null;
+    if (!h) return;
+    const el = document.getElementById(h);
     if (!el) return;
-    el.open = true;
+    if (el instanceof HTMLDetailsElement) {
+      el.open = true;
+    } else {
+      const details = el.querySelector("details.card-details") as HTMLDetailsElement | null;
+      if (details) details.open = true;
+    }
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  document.addEventListener("DOMContentLoaded", openAuditDrawerIfHashed);
-  window.addEventListener("hashchange", openAuditDrawerIfHashed);
-  if (document.readyState !== "loading") openAuditDrawerIfHashed();
+  document.addEventListener("DOMContentLoaded", openHashedCard);
+  window.addEventListener("hashchange", openHashedCard);
+  if (document.readyState !== "loading") openHashedCard();
 </script>
 
 <style>
