@@ -1,0 +1,313 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Contract admission is permissionless; live UI legal checks remain partly unverified",
+    "short_headline": "Permissionless contracts; UI unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Classic pool user entry and exit are not gated by whitelist/KYC modifiers in the checked source: deposit only rejects duplicate commitments and withdraw checks fee, nullifier, known root, and proof validity; deployed Etherscan ABI exposes deposit and withdraw on the assessed 0.1 ETH pool."
+        },
+        {
+          "code": "A1",
+          "text": "Nova user functions are likewise not whitelist-based in the checked source: transact handles L2 deposits, withdrawals, and shielded transfers subject to amount/proof/root/nullifier checks, while register only requires the registered account owner to be msg.sender; onlyMultisig is present for rescueTokens and configureLimits, not for user admission."
+        },
+        {
+          "code": "A2",
+          "text": "Classic deposits are direct contract calls; Classic withdrawals can be submitted directly by the user or with an optional relayer address/fee, so relayers are fee recipients rather than approval operators for admission."
+        },
+        {
+          "code": "A2",
+          "text": "Nova L2 transact/register paths admit users directly subject to proof and pool-limit checks; Nova L1 bridge deposits enter through OmniBridge callback onTokenBridged, which is a bridge delivery path rather than a whitelist or per-user approval role in the checked source."
+        },
+        {
+          "code": "A3",
+          "text": "The official Classic UI source is buildable locally and deployable to IPFS, and the Decurity audit identifies deployed UI endpoints including tornadocash.eth.limo and tornadocash.eth.link; no verified A3-active block banner, KYC wall, or wallet-screening provider was found in the allowed evidence checked."
+        },
+        {
+          "code": "A3b",
+          "text": "A3b-i: official UI redistributions exist through IPFS/self-hosted builds, which are not independent of the official UI code but do reduce dependence on a single hosted site."
+        },
+        {
+          "code": "A3b",
+          "text": "A3b-ii: independent access exists through direct contract interaction on Etherscan and through the command-line flow documented in tornado-core; these paths are separate from any official frontend ToS or runtime UI behavior."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain OFAC/sanctions/blocklist check appears in the checked Classic deposit/withdraw implementation or Nova transact/register implementation; the deployed Classic ABI also does not expose a blocklist-management entrypoint."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through view helpers such as isSpent/isSpentArray and block explorers; write access for deposits/withdrawals is exposed through Classic deposit/withdraw and Nova transact/register/registerAndTransact without user allowlists."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that Etherscan labels the assessed mainnet pool as a blocked mixer and live official UI access could not be verified here, but that does not show a contract whitelist, on-chain blocklist, or single privileged admission operator.",
+        "orange": "The strongest orange argument is that an unreachable live official UI could theoretically enforce active geo or wallet screening for nontechnical users, even though direct contract and CLI paths remain available.",
+        "green": "The strongest green argument is that the checked Classic and Nova contracts expose user entry/exit functions without KYC, allowlists, or operator approval, while relayers and bridges are optional or transport/liveness mechanisms rather than per-user admission approvers."
+      },
+      "verdict": "Choosing green because the deployed Classic pool and the checked Classic/Nova source show direct user-facing admission paths without whitelist, KYC, or on-chain sanctions checks, and the only unresolved items concern live-frontend/legal-text verification rather than contract-level user admission."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc",
+        "shows": "Ethereum mainnet Tornado.Cash 0.1 ETH deployed contract, Etherscan label, proxy/source/ABI area, and recent Deposit/Withdraw transactions.",
+        "chain": "Ethereum",
+        "address": "0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc#writeContract",
+        "shows": "Block-explorer direct write-contract path for the assessed Classic pool.",
+        "chain": "Ethereum",
+        "address": "0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/master/contracts/Tornado.sol",
+        "shows": "Classic deposit and withdraw are external user functions gated by commitment/nullifier/root/proof checks, not whitelist/KYC checks; read helpers isSpent/isSpentArray are public/view.",
+        "commit": "1ef6a26",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/master/contracts/ETHTornado.sol",
+        "shows": "ETH Classic deposit checks only denomination value; withdraw sends denomination minus fee to recipient and optionally pays relayer if fee is nonzero.",
+        "commit": "1ef6a26",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/master/contracts/ERC20Tornado.sol",
+        "shows": "ERC20 Classic deposit transfers tokens from msg.sender and withdraw transfers tokens to recipient with optional relayer fee, with no user allowlist shown.",
+        "commit": "1ef6a26",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core",
+        "shows": "README describes Tornado Cash as non-custodial, serverless, and documents command-line deposit/withdraw usage including a relayer URL example.",
+        "commit": "1ef6a26",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-nova",
+        "shows": "Nova README describes arbitrary amount deposits, internal shielded transfers, xDai/Gnosis operation, governance upgradeability, and deployed TornadoPool address 0x0CDD3705aF7979fBe80A64288Ebf8A9Fe1151cE1.",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-nova/blob/master/contracts/TornadoPool.sol",
+        "shows": "Nova transact/register/registerAndTransact are public user functions; onTokenBridged is restricted to OmniBridge; onlyMultisig applies to rescueTokens/configureLimits rather than user admission.",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-classic-ui",
+        "shows": "Official Classic UI README documents local build, development build, and IPFS deployment via yarn generate/deploy-ipfs.",
+        "commit": "a83fae0",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/ui-minified",
+        "shows": "Minified official UI README documents self-hosting with a local HTTP server and an optional Tor service, and identifies tornadocash.eth.limo as a resource.",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://tornado.cash/audits/TornadoCash_Classic_dApp_audit_Decurity.pdf",
+        "shows": "Decurity frontend audit scoped Tornado Cash Classic UI at commit fa3d089e44a4aa9a6f30aa11779b0f34b74e0a4e and analyzed deployed UI URLs including tornadocash.eth.limo and tornadocash.eth.link.",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/docs",
+        "shows": "Official docs repo describes Tornado Cash as non-custodial, using smart contracts for deposits from one address and withdrawals to another, and notes IPFS-hosted community UI.",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://docs.tornado.cash/",
+        "shows": "Rendered documentation site for protocol overview, Classic and Nova behavior, and IPFS UI context.",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x77777feddddffc19ff86db637967013e6c6a116c",
+        "shows": "Etherscan token page for TORN Token, symbol TORN, ERC-20 contract address.",
+        "chain": "Ethereum",
+        "address": "0x77777FeDdddFfC19Ff86DB637967013e6C6A116C",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      },
+      {
+        "url": "https://tornado.cash/audits/TornadoCash_contract_audit_ABDK.pdf",
+        "shows": "ABDK Consulting smart contract audit report for Tornado Cash, final version dated 2019-11-19.",
+        "fetched_at": "2026-05-01T07:01:07Z"
+      }
+    ],
+    "unknowns": [
+      "A3: Live tornadocash.eth.limo and tornadocash.eth.link could not be fetched successfully in this run, so absence of runtime geo-blocking or wallet screening on the live official UI was not independently proven.",
+      "A3b: Supplemental cp0x candidate https://tornado.cp0x.com and https://github.com/cp0x-org/pi-tornado-cash could not be found or fetched through the available search/open tools, so operator separation and active Tornado integration were not confirmed.",
+      "A6: No official ToS/legal page or verbatim jurisdictional, sanctions, or eligibility clause was located in the checked official GitHub/docs/UI sources; no ToS clause quote is available."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/tornado-cli",
+        "https://github.com/tornadocash/tornado-classic-ui",
+        "https://github.com/tornadocash/ui-minified",
+        "https://github.com/tornadocash/tornado-nova",
+        "https://github.com/tornadocash/tornado-relayer",
+        "https://github.com/tornadocash/docs"
+      ],
+      "docs_url": "https://docs.tornado.cash/",
+      "audits": [
+        {
+          "firm": "ABDK Consulting",
+          "url": "https://tornado.cash/audits/TornadoCash_contract_audit_ABDK.pdf",
+          "date": "2019-11-19"
+        },
+        {
+          "firm": "Decurity",
+          "url": "https://tornado.cash/audits/TornadoCash_Classic_dApp_audit_Decurity.pdf",
+          "date": "2022-05"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x77777FeDdddFfC19Ff86DB637967013e6C6A116C",
+        "symbol": "TORN"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Tornado Cash lets users deposit fixed-denomination ETH or ERC-20 assets into a pool and later withdraw to another address by submitting a zk-SNARK proof, breaking the public link between funding and receiving addresses. Its Nova pool extends the model to arbitrary deposit amounts and shielded transfers inside a UTXO-style pool. Relayers can submit withdrawals for a fee, but the checked contracts also expose direct user transaction methods."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Core privacy pools are immutable and permissionless, accessible via multiple independent frontends.",
+    "short_headline": "Immutable, permissionless privacy pools.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The core liquidity pools (e.g., 0.1 ETH pool) are immutable and do not contain any whitelist or allowlist modifiers in the deposit or withdraw functions."
+        },
+        {
+          "code": "A2",
+          "text": "Admission to the protocol is unconditional; while relayers are commonly used for privacy-preserving withdrawals, users can interact with the withdraw function directly without operator approval."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Multiple independent access paths exist, including the cp0x pi-tornado-cash frontend, which is a separate legal entity, open-source, and self-hostable."
+        },
+        {
+          "code": "A4",
+          "text": "The core smart contracts do not implement any on-chain blocklists or sanctions-checking oracles; the contracts are immutable and cannot be updated to include such gates."
+        },
+        {
+          "code": "A5",
+          "text": "Both read access (merkle roots and events) and write access (deposits and withdrawals) are permissionless and available to any address."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol could be considered red if the governance-managed relayer registry or the mining reward system were viewed as centralized admission gates for the full privacy experience.",
+        "orange": "The protocol deserves orange if the seizure of the official domain and the resulting reliance on technical mirrors or IPFS gateways is viewed as a significant barrier to entry that gates access for non-technical users.",
+        "green": "The core contracts are immutable, contain no whitelists or blocklists, and require no operator approval for deposits or withdrawals, with multiple independent frontends ensuring continued access despite the loss of the official domain."
+      },
+      "verdict": "Choosing green because the core smart contracts (A1, A4) are immutable and lack any admission gates or blocklists, and the protocol remains fully accessible through independent, third-party frontends (A3b-ii) despite the seizure of the original domain."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x12D6930819967a695D93257720626207df595555#code",
+        "shows": "The 0.1 ETH pool contract code lacks whitelist modifiers and blocklist checks; it is immutable (no proxy).",
+        "chain": "Ethereum",
+        "address": "0x12D6930819967a695D93257720626207df595555",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/56689612f13b763d4d9ca56c9595f9983461f0dd/contracts/ETHTornado.sol",
+        "shows": "The deposit and withdraw functions are public and do not require operator approval.",
+        "commit": "56689612f13b763d4d9ca56c9595f9983461f0dd",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://tornado.cp0x.com",
+        "shows": "An independent, third-party frontend (A3b-ii) that provides access to the Tornado Cash contracts.",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x77777feddddFfC19Ff86DB637967013e6C6A116C",
+        "shows": "The TORN governance token contract.",
+        "chain": "Ethereum",
+        "address": "0x77777feddddFfC19Ff86DB637967013e6C6A116C",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/audits",
+        "shows": "Archive of audit reports from Pessimistic and ABDK Consulting.",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://tornadocash.community/",
+        "shows": "The primary governance discussion forum for the protocol.",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A3-active: could not verify active runtime enforcement on the defunct official domain; IPFS mirrors like tornadocash.eth.limo do not appear to implement wallet-level screening.",
+      "A6: could not extract verbatim ToS text as the original website is offline and the source repositories do not contain a dedicated legal terms file."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/tornado-trees",
+        "https://github.com/tornadocash/tornado-governance"
+      ],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Pessimistic",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Eth_Pool_Pessimistic_Audit.pdf",
+          "date": "2019-12"
+        },
+        {
+          "firm": "ABDK Consulting",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_ABDK_Audit.pdf",
+          "date": "2019-12"
+        }
+      ],
+      "governance_forum": "https://tornadocash.community/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x77777feddddFfC19Ff86DB637967013e6C6A116C",
+        "symbol": "TORN"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/tornadocash/tornado-core#deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5efda50f3a4876295f226600c5169bcdad655286",
+          "role": "Governance Contract",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Tornado Cash is a non-custodial privacy protocol that uses zk-SNARKs to enable anonymous transactions on EVM-compatible chains. It allows users to deposit fixed amounts of assets into a pool and later withdraw them to a new address, effectively severing the on-chain link between the two. The core liquidity pools are immutable and permissionless, though the protocol's peripheral systems like mining rewards are governed by a DAO."
+    }
+  }
+]
