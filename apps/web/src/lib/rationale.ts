@@ -29,6 +29,14 @@ export type SliceAssessment = {
   tentative_reasons?: string[];
 };
 
+/** A slice is "uncertain" when it has either pre-quorum submissions (partial)
+ *  or low-confidence merged consensus (tentative). Every UI surface that
+ *  hatches/dashes uncertain slices should call this helper so the rule stays
+ *  in one place. */
+export function isUncertain(s: Pick<SliceAssessment, "partial" | "tentative">): boolean {
+  return !!s.partial || !!s.tentative;
+}
+
 function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url" | "model_sources" | "tentative" | "tentative_reasons"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
   const confidence = assessConfidence(a.consensus_sources, a.strength);

@@ -1,5 +1,5 @@
 ---
-import type { SliceAssessment } from "../lib/rationale";
+import { isUncertain, type SliceAssessment } from "../lib/rationale";
 import { TIER_RIM_COLOR, TIER_STOPS, type Tier } from "../lib/tier";
 
 interface Props {
@@ -71,13 +71,20 @@ function partialFillGrade(s: SliceAssessment): string {
   {sorted.map((s) => {
     const fillGrade = partialFillGrade(s);
     return (
-    <li class:list={["row", `grade-${fillGrade}`, { partial: s.partial || s.tentative }]} data-slice-row={s.id} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
+    <li class:list={["row", `grade-${fillGrade}`, { partial: isUncertain(s) }]} data-slice-row={s.id} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
       <a href={`#${idp}${s.id}`} class="row-link">
         <span class="swatch" aria-hidden="true"></span>
         <span class="dim">{s.label}</span>
-        {s.partial ? (
-          <span class="chip chip-partial" title={`tentative — ${s.models?.length ?? 0}/3 models submitted`}>
-            {chipLabel(fillGrade)} <span class="chip-suffix">· {s.models?.length ?? 0}/3</span>
+        {isUncertain(s) ? (
+          <span
+            class="chip chip-partial"
+            title={s.partial
+              ? `tentative — ${s.models?.length ?? 0}/3 models submitted`
+              : `tentative consensus${s.tentative_reasons?.length ? ` — ${s.tentative_reasons.join("; ")}` : ""}`}
+          >
+            {chipLabel(fillGrade)}{s.partial && (
+              <span class="chip-suffix"> · {s.models?.length ?? 0}/3</span>
+            )}
           </span>
         ) : (
           <span class="chip">{chipLabel(s.grade)}</span>

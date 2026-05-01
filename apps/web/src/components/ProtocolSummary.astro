@@ -2,7 +2,7 @@
 import type { Protocol, LoadedAssessment, AssessmentSliceId, LoadedSubmission } from "@defipunkd/registry";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
-import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
+import { assessProtocol, cexAssessment, isUncertain, type SliceAssessment } from "../lib/rationale";
 import RiskMatrix from "./RiskMatrix.astro";
 import { deriveTier, type TierInput } from "../lib/tier";
 import type { PizzaSliceId } from "../lib/pizza";
@@ -170,15 +170,18 @@ const aboutUnknown = !curatedAbout;
     <div class="risk-row">
       <div class="pizza" aria-hidden="false">
         <svg viewBox={`0 0 ${PIZZA_VIEW} ${PIZZA_VIEW}`} role="img" aria-label="Risk pizza" preserveAspectRatio="xMidYMid meet">
+          {/* IDs are document-global in inline SVG; namespace them with
+              idPrefix so a family page rendering ProtocolSummary for each
+              child doesn't collide on the second/third/fourth deployment. */}
           <defs>
-            <radialGradient id="pie-ao" cx="50%" cy="50%" r="50%">
+            <radialGradient id={`${idp}pie-ao`} cx="50%" cy="50%" r="50%">
               <stop offset="0%" stop-color="#000000" stop-opacity="0.25" />
               <stop offset="55%" stop-color="#000000" stop-opacity="0.12" />
               <stop offset="100%" stop-color="#000000" stop-opacity="0" />
             </radialGradient>
-            <pattern id="partial-hatch" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
-              <rect width="10" height="10" fill="rgba(0,0,0,0)" />
-              <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(255,255,255,0.35)" stroke-width="3" />
+            <pattern id={`${idp}partial-hatch`} patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(135)">
+              <rect width="7" height="7" fill="rgba(0,0,0,0)" />
+              <line x1="0" y1="0" x2="0" y2="7" stroke="rgba(255,255,255,0.6)" stroke-width="3" />
             </pattern>
           </defs>
           {pizzaSlices.map(({ assessment, fillGrade, d }) => (
@@ -186,12 +189,16 @@ const aboutUnknown = !curatedAbout;
               <path d={d} fill={GRADE_FILL[fillGrade]} stroke="var(--surface)" stroke-width="6" stroke-linejoin="round">
                 <title>{`${assessment.label} — ${assessment.partial ? `tentative ${fillGrade === "gray" ? "unknown" : fillGrade} (${assessment.models?.length ?? 0}/3 models submitted)` : assessment.tentative ? `tentative ${assessment.grade === "gray" ? "unknown" : assessment.grade}` : assessment.grade === "gray" ? "unknown" : assessment.grade}`}</title>
               </path>
-              {(assessment.partial || assessment.tentative) && (
-                <path d={d} fill="url(#partial-hatch)" stroke="none" pointer-events="none" />
-              )}
             </a>
           ))}
-          <circle cx={PIZZA_CENTER} cy={PIZZA_CENTER} r={PIZZA_RADIUS} fill="url(#pie-ao)" style="mix-blend-mode: hard-light" pointer-events="none" />
+          <circle cx={PIZZA_CENTER} cy={PIZZA_CENTER} r={PIZZA_RADIUS} fill={`url(#${idp}pie-ao)`} style="mix-blend-mode: hard-light" pointer-events="none" />
+          {/* Hatch overlay rendered AFTER the radial gradient circle so the
+              hard-light blend doesn't crush the white stripes against gray /
+              orange slice fills. Pointer-events disabled so the underlying
+              <a class="pizza-slice"> still receives hover/click. */}
+          {pizzaSlices.filter(({ assessment }) => isUncertain(assessment)).map(({ assessment, d }) => (
+            <path d={d} fill={`url(#${idp}partial-hatch)`} stroke="none" pointer-events="none" class="pizza-hatch" data-pizza-hatch={assessment.id} />
+          ))}
         </svg>
         {pizzaSlices.map(({ assessment, labelLeftPct, labelTopPct, shortLabel }) => (
           <span class="pizza-label" data-pizza-label={assessment.id} style={`left:${labelLeftPct}%;top:${labelTopPct}%`}>
@@ -309,7 +316,18 @@ const aboutUnknown = !curatedAbout;
   }
   .pizza-slice { cursor: pointer; }
   .pizza-slice path { transition: opacity 150ms ease, transform 150ms ease; transform-origin: 50% 50%; transform-box: fill-box; }
+  .pizza-hatch { transition: opacity 150ms ease; }
   .pizza:has(.pizza-slice:hover) .pizza-slice:not(:hover) path { opacity: 0.3; }
+  /* Hatches sit above the radial overlay (so hard-light blending doesn't
+     crush them); when a sibling slice is hovered, dim the matching hatch
+     too so it stays visually paired with its colored wedge. */
+  .pizza:has([data-pizza-slice="control"]:hover) .pizza-hatch:not([data-pizza-hatch="control"]),
+  .pizza:has([data-pizza-slice="ability-to-exit"]:hover) .pizza-hatch:not([data-pizza-hatch="ability-to-exit"]),
+  .pizza:has([data-pizza-slice="autonomy"]:hover) .pizza-hatch:not([data-pizza-hatch="autonomy"]),
+  .pizza:has([data-pizza-slice="open-access"]:hover) .pizza-hatch:not([data-pizza-hatch="open-access"]),
+  .pizza:has([data-pizza-slice="verifiability"]:hover) .pizza-hatch:not([data-pizza-hatch="verifiability"]) {
+    opacity: 0.3;
+  }
   .pizza-label {
     position: absolute;
     transform: translate(-50%, -50%);
@@ -422,7 +440,12 @@ const aboutUnknown = !curatedAbout;
   .risk-row:has([data-slice-row="ability-to-exit"]:hover) .pizza-slice:not([data-pizza-slice="ability-to-exit"]) path,
   .risk-row:has([data-slice-row="autonomy"]:hover) .pizza-slice:not([data-pizza-slice="autonomy"]) path,
   .risk-row:has([data-slice-row="open-access"]:hover) .pizza-slice:not([data-pizza-slice="open-access"]) path,
-  .risk-row:has([data-slice-row="verifiability"]:hover) .pizza-slice:not([data-pizza-slice="verifiability"]) path {
+  .risk-row:has([data-slice-row="verifiability"]:hover) .pizza-slice:not([data-pizza-slice="verifiability"]) path,
+  .risk-row:has([data-slice-row="control"]:hover) .pizza-hatch:not([data-pizza-hatch="control"]),
+  .risk-row:has([data-slice-row="ability-to-exit"]:hover) .pizza-hatch:not([data-pizza-hatch="ability-to-exit"]),
+  .risk-row:has([data-slice-row="autonomy"]:hover) .pizza-hatch:not([data-pizza-hatch="autonomy"]),
+  .risk-row:has([data-slice-row="open-access"]:hover) .pizza-hatch:not([data-pizza-hatch="open-access"]),
+  .risk-row:has([data-slice-row="verifiability"]:hover) .pizza-hatch:not([data-pizza-hatch="verifiability"]) {
     opacity: 0.3;
   }
   .risk-row:has([data-slice-row="control"]:hover) [data-pizza-label="control"],
