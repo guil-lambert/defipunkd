@@ -1,6 +1,6 @@
 ---
 import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding, LoadedSubmission } from "@defipunkd/registry";
-import { assessProtocol, cexAssessment, type SliceAssessment } from "../lib/rationale";
+import { assessProtocol, cexAssessment, isUncertain, type SliceAssessment } from "../lib/rationale";
 import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
 
 interface Props {
@@ -214,7 +214,7 @@ function partialPillText(modelCount: number): string {
 
   <ol class="cards">
     {gradedSlices.map((s) => (
-      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: s.partial || s.tentative }]} style={(s.partial || s.tentative) ? partialStripeStyle(s) : undefined} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
+      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: isUncertain(s) }]} style={isUncertain(s) ? partialStripeStyle(s) : undefined} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
         <details class="body card-details">
           <summary class="card-summary">
             <div class="meta">
@@ -324,7 +324,20 @@ function partialPillText(modelCount: number): string {
             </div>
           )}
 
-          {(s.partial || s.tentative) && (
+          {s.partial && (
+            <div class="tentative-reasons">
+              <span class="tentative-reasons-label">Why is this slice uncertain?</span>
+              <ul class="tentative-reasons-list">
+                <li>only {s.models?.length ?? 0} of {QUORUM_MIN} model submissions on record — quorum requires ≥{QUORUM_MIN} agreeing models</li>
+                {s.partialModelGrades && s.partialModelGrades.length > 1 && new Set(s.partialModelGrades.map((g) => g.grade)).size > 1 && (
+                  <li>submitted models do not yet agree on a single grade</li>
+                )}
+              </ul>
+              <p class="tentative-reasons-note">A fresh independent run can establish (or overturn) a verdict.</p>
+            </div>
+          )}
+
+          {isUncertain(s) && (
             <div class="partial-cta">
               <span class="partial-cta-label">Run your own prompt</span>
               <button type="button" class="copy-btn" data-copy-target={`#prompt-partial-${idp}${s.id}`}>Copy prompt</button>
