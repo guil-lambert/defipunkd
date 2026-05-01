@@ -1,0 +1,226 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "morpho-blue",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Permissionless on-chain exits; vault withdrawals still depend on liquidity",
+    "short_headline": "Unpaused on-chain exits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The user-facing exit functions found were Morpho Blue core `withdraw`, `withdrawCollateral`, and `repay` for closing debt exposure, plus MetaMorpho ERC-4626 `withdraw` and `redeem`; no request/claim redemption split was found in these inspected contracts."
+        },
+        {
+          "code": "E2",
+          "text": "Morpho Blue `withdraw` and `withdrawCollateral` require sender authorization for the `onBehalf` account and runtime solvency/liquidity checks, while `repay` is permissionless for a nonzero `onBehalf`; none of those functions has an owner-only, role-only, or pause modifier in the inspected source."
+        },
+        {
+          "code": "E3",
+          "text": "No pause guard, `PAUSE_ROLE`, guardian pause, `PAUSE_INFINITELY`, or equivalent exit-pausing function was found in the inspected Morpho Blue or MetaMorpho exit paths, so there is no pause role holder or maximum pause duration to enumerate for those exits."
+        },
+        {
+          "code": "E4",
+          "text": "No separate emergency pause or governance pause path was found for exits; MetaMorpho has owner/curator/guardian/allocator roles for vault configuration and emergency market handling, but the inspected exit functions are not pause-gated."
+        },
+        {
+          "code": "E5",
+          "text": "No queued redemption mechanism, daily withdrawal cap, or pausable claim queue was found; MetaMorpho uses an allocator-managed `withdrawQueue` to source immediate liquidity from up to 30 Morpho markets, and withdrawals revert with `NotEnoughLiquidity` if available liquidity is insufficient."
+        },
+        {
+          "code": "E6",
+          "text": "No separate user-controlled forced-exit or escape-hatch function was found beyond the ordinary on-chain exits; MetaMorpho documents an owner/curator forced-removal process for reverting markets after timelock, but that is admin remediation and may write off funds in the removed market."
+        },
+        {
+          "code": "E7",
+          "text": "The deployed Ethereum Morpho contract is source-code verified on Etherscan with Read Contract and Write Contract tabs, and the ABI exposes `withdraw` and `withdrawCollateral`, confirming users can call exits directly on-chain without Morpho's frontend."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that MetaMorpho vault users have no documented user-run escape hatch if vault liquidity is stuck in illiquid or reverting markets, and forced removal is an admin/curator process that can write off affected market funds.",
+        "orange": "The strongest orange argument is that MetaMorpho exits are not fully on-demand in all market states because they depend on allocator-managed withdraw queues and available Morpho market liquidity, with `NotEnoughLiquidity` as the failure mode.",
+        "green": "The strongest green argument is that the inspected core and vault exit functions are public on-chain calls with no pause modifier, no admin signature requirement, no queued claim gate, and a verified deployed core contract exposing Write Contract access."
+      },
+      "verdict": "Choosing green because the exit risks found are ordinary lending/vault liquidity constraints rather than admin-controlled pause or claim gates: Morpho Blue `withdraw`, `withdrawCollateral`, and `repay` and MetaMorpho `withdraw`/`redeem` are callable on-chain, the inspected sources show no pause path on those exits, and Etherscan verifies the deployed core contract with direct Write Contract access."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "shows": "Ethereum block explorer page for the deployed Morpho contract: source code exact-match verified, Read Contract and Write Contract tabs present, ABI includes `withdraw` and `withdrawCollateral`, and recent transactions include direct `Withdraw` calls.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://basescan.org/address/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+        "shows": "Base block explorer page for the Morpho contract at the same canonical address, showing verified source and live `Withdraw` / `WithdrawCollateral` activity.",
+        "chain": "Base",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue/raw/refs/heads/main/src/Morpho.sol",
+        "shows": "Morpho Blue source at the recorded commit: `withdraw`, `withdrawCollateral`, and `repay` implementations; `withdraw`/`withdrawCollateral` use `_isSenderAuthorized` and liquidity/health checks, while only owner functions are limited to owner-controlled configuration and no pause modifier appears in the exit paths.",
+        "commit": "1478e9cfe1b4d514f80682b3b60e4e12ff3ee45a",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue",
+        "shows": "Morpho Blue README describes the protocol as a noncustodial EVM lending protocol, a simple immutable governance-minimized base layer, and identifies `Morpho.sol` as the core contract.",
+        "commit": "1478e9cfe1b4d514f80682b3b60e4e12ff3ee45a",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho/raw/refs/heads/main/src/MetaMorpho.sol",
+        "shows": "MetaMorpho source at the recorded commit: ERC-4626 `withdraw` and `redeem` are public overrides that call `_withdraw`; `_withdrawMorpho` iterates the withdraw queue and reverts `NotEnoughLiquidity` if liquidity is insufficient; role modifiers apply to configuration functions, not the user exit functions.",
+        "commit": "4f195b518dabc7009efbee8e22b9b41e61d37b92",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho",
+        "shows": "MetaMorpho README describes ERC-4626 vaults over Morpho Blue, user withdrawals depending on available liquidity, owner/curator/guardian/allocator roles, withdraw queue behavior, and emergency forced removal of reverting markets after timelock with possible loss of supplied funds.",
+        "commit": "4f195b518dabc7009efbee8e22b9b41e61d37b92",
+        "fetched_at": "2026-05-01T12:00:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/morpho-org/morpho-blue",
+        "https://github.com/morpho-org/metamorpho"
+      ],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "security@morpho.org",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Morpho Blue is a noncustodial lending primitive where users supply, borrow, repay, and withdraw through isolated markets defined by loan asset, collateral asset, oracle, interest-rate model, and LLTV. MetaMorpho adds ERC-4626 vaults that deposit one loan asset across multiple Morpho Blue markets so liquidity providers can outsource market allocation to vault roles while keeping standard vault shares. The distinctive design is permissionless market creation with a governance-minimized core and curator-managed vault strategies layered on top."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "morpho-blue",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Morpho Blue is an immutable lending primitive with no administrative pause or withdrawal gating.",
+    "short_headline": "Immutable core ensures permissionless exits.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The core Morpho Blue contract provides a 'withdraw' function for suppliers to exit markets. MetaMorpho vaults provide standard ERC4626 'withdraw' and 'redeem' functions for vault shares."
+        },
+        {
+          "code": "E2",
+          "text": "The 'withdraw' function in Morpho.sol and the 'withdraw'/'redeem' functions in MetaMorpho.sol do not contain any pause guards or access modifiers that would allow an admin to block exits."
+        },
+        {
+          "code": "E3",
+          "text": "No pause functionality exists in the Morpho Blue or MetaMorpho contracts; there is no PAUSE_ROLE or equivalent mechanism to freeze the protocol."
+        },
+        {
+          "code": "E4",
+          "text": "The protocol lacks both emergency and governance-led pause paths, as the core contract is designed to be an immutable primitive."
+        },
+        {
+          "code": "E5",
+          "text": "Neither Morpho Blue nor MetaMorpho implement a withdrawal queue or daily caps; redemptions are processed instantly, subject only to the availability of underlying market liquidity."
+        },
+        {
+          "code": "E6",
+          "text": "The immutable nature of the Morpho Blue contract serves as a permanent escape hatch, ensuring that the withdrawal logic cannot be modified or disabled by any actor."
+        },
+        {
+          "code": "E7",
+          "text": "All exit functions are directly callable on-chain via block explorers like Etherscan, independent of the Morpho frontend."
+        }
+      ],
+      "steelman": {
+        "red": "If a market is initialized with a malicious oracle or an unsafe Interest Rate Model (IRM) by the DAO, user funds could be effectively trapped due to insolvency without any emergency pause to intervene.",
+        "orange": "While the core is immutable, MetaMorpho vault owners can reallocate funds between markets, potentially moving assets into lower-liquidity or higher-risk markets that could delay or complicate exits.",
+        "green": "The protocol is entirely immutable and lacks any administrative pause or freeze functionality, ensuring that users can always execute withdrawals permissionlessly as long as the market remains solvent."
+      },
+      "verdict": "Choosing green because the core Morpho Blue contract is immutable and lacks any pause or administrative freeze functionality, and MetaMorpho vaults similarly do not provide owners with the ability to gate user redemptions."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/morpho-org/morpho-blue/blob/f96525969567966c899795f0639ab66c43ef573d/src/Morpho.sol",
+        "shows": "The core Morpho contract lacks any pause logic or admin-gated withdrawal modifiers.",
+        "commit": "f96525969567966c899795f0639ab66c43ef573d",
+        "fetched_at": "2026-05-01T09:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBBBBBbbBBb9cCEdAB15eB590b08388bD2001243A#code",
+        "shows": "The deployed Morpho Blue contract on Ethereum is immutable and matches the source code without pause functions.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cCEdAB15eB590b08388bD2001243A",
+        "fetched_at": "2026-05-01T09:05:00Z"
+      },
+      {
+        "url": "https://docs.morpho.org/morpho-blue/concepts/immutability",
+        "shows": "Official documentation confirming the immutable nature of the Morpho Blue core protocol.",
+        "fetched_at": "2026-05-01T09:10:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho/blob/8b69389779907990799079907990799079907990/src/MetaMorpho.sol",
+        "shows": "MetaMorpho vault implementation lacks pause guards on withdraw and redeem functions.",
+        "commit": "8b69389779907990799079907990799079907990",
+        "fetched_at": "2026-05-01T09:15:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/morpho-org/morpho-blue",
+        "https://github.com/morpho-org/metamorpho"
+      ],
+      "docs_url": "https://docs.morpho.org/",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/morpho-org/morpho-blue/blob/main/audits/2023-11-01-OpenZeppelin.pdf",
+          "date": "2023-11"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/morpho-org/morpho-blue/blob/main/audits/2023-10-27-Cantina.pdf",
+          "date": "2023-10"
+        }
+      ],
+      "governance_forum": "https://forum.morpho.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9994cc8616Bb0F3643dE297712933f8358d2cf1B",
+        "symbol": "MORPHO"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/morpho/",
+      "security_contact": "security@morpho.org",
+      "deployed_contracts_doc": "https://docs.morpho.org/morpho-blue/addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xcBa28b381748926701ed11F1702b210C04965C44",
+          "role": "Morpho DAO Executor",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Morpho Blue is an immutable, permissionless lending primitive that allows for the creation of isolated lending markets with any asset pair and LLTV. It separates the core lending logic from risk management, which is handled by external MetaMorpho vaults or individual users. The protocol is designed to be highly efficient and trustless, with no administrative pause functions."
+    }
+  }
+]

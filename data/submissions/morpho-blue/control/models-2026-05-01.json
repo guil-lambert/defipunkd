@@ -1,0 +1,275 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "morpho-blue",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Immutable core, but a 5-of-9 Safe controls fee and market-allowlist powers",
+    "short_headline": "5/9 controls bounded fees",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "Ethereum Morpho Blue at 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb was deployed with owner 0x937Ce2d6c488b361825D2DB5e8A70e26d48afEd5, then a Safe execTransaction called setOwner and emitted SetOwner(newOwner=0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa)."
+        },
+        {
+          "code": "C2",
+          "text": "The assessed core contract is verified as contract Morpho on Etherscan, not a proxy, and the explorer source exposes owner-gated functions rather than an implementation upgrade function or proxy admin path."
+        },
+        {
+          "code": "C3",
+          "text": "The evidenced execution path for the Ethereum ownership transfer was Safe execTransaction directly targeting Morpho Blue with setOwner calldata; I found no on-chain Governor or timelock stage in that transaction path."
+        },
+        {
+          "code": "C4",
+          "text": "Morpho documentation identifies Morpho DAO morpho.eth as a 5/9 multisig at 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa, plus Morpho Operator as a 3/9 multisig and Morpho Rewards multisigs as 3/5, but signer identities were not verified from on-chain reads in this run."
+        },
+        {
+          "code": "C5",
+          "text": "Morpho governance documentation describes Snapshot/off-chain voting with multisig execution rather than an on-chain Governor controlling Morpho Blue permissions."
+        },
+        {
+          "code": "C6",
+          "text": "The Morpho Blue core source exposes no pause function in the verified contract surface; documented emergency-operator powers refer to older Optimizer functions, while MetaMorpho-style vault guardians can revoke pending vault changes rather than pause the core."
+        },
+        {
+          "code": "C7",
+          "text": "The highest evidenced Morpho Blue core power is T2: the owner can call enableIrm, enableLltv, setFee, setFeeRecipient, and setOwner; the core source does not show a path to replace lending accounting, change an existing market's oracle/LLTV/IRM, or pause withdrawals."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that I did not complete live owner() reads across every supported chain, so an undiscovered chain deployment or later owner rotation could in theory put privileged control behind an unauditable actor.",
+        "orange": "The strongest orange argument is that a Morpho DAO 5/9 multisig, whose signer composition was not verified as a Security Council, can directly exercise bounded but economically material owner powers such as setFee and fee-recipient changes with no on-chain timelock found in the evidenced path.",
+        "green": "The strongest green argument is that Morpho Blue's fund-holding core is not upgradeable and the owner powers shown in source do not let governance rewrite existing market accounting, change existing collateral/oracle/IRM/LLTV parameters, or pause withdrawals."
+      },
+      "verdict": "Choosing orange because the immutable core makes T1 control unlikely from the evidenced source, but the highest evidenced reachable tier is T2 through setFee, setFeeRecipient, enableIrm, enableLltv, and setOwner, and that path is held by a 5/9 multisig without a verified on-chain timelock or verified Security Council signer composition."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+        "shows": "Verified Ethereum Morpho contract, constructor owner argument, contract ABI/source with owner(), setOwner, enableIrm, enableLltv, setFee, setFeeRecipient, and no visible proxy implementation/admin surface.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/tx/0xc86a635fe546d78029608bee34eb45174b020a3e5be7211d022d50096495b0b3",
+        "shows": "Safe execTransaction targeting Morpho Blue with setOwner calldata and SetOwner event setting newOwner to 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      },
+      {
+        "url": "https://legacy.docs.morpho.org/governance/organization/multisigs-and-addresses/",
+        "shows": "Morpho documentation listing Morpho DAO morpho.eth as 5/9 multisig 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa, Morpho Operator as 3/9, and Rewards multisigs as 3/5.",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      },
+      {
+        "url": "https://legacy.docs.morpho.org/governance/organization/contracts-architecture/",
+        "shows": "Governance architecture documentation describing Snapshot/off-chain voting, multisig execution, the legacy delay modifier architecture, and older operator emergency powers.",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      },
+      {
+        "url": "https://legacy.docs.morpho.org/governance/vote/",
+        "shows": "Governance voting documentation describing Snapshot voting, quorum/proposal threshold text, and a 72 hour voting period plus 24 hour timelock as off-chain governance process documentation.",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue",
+        "shows": "Morpho Blue repository README describing the protocol as noncustodial, permissionless, immutable, and governance-minimized.",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/metamorpho",
+        "shows": "MetaMorpho repository README describing ERC-4626 vaults, owner/curator/allocator/guardian roles, factory-created immutable vault instances, fee cap, and timelocked adverse actions.",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      },
+      {
+        "url": "https://legacy.docs.morpho.org/addresses/",
+        "shows": "Morpho documentation address index for deployed contracts and DAO-address references.",
+        "fetched_at": "2026-05-01T08:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: I did not successfully fetch live Read Contract owner() values for every supported-chain Morpho Blue deployment; the Ethereum owner finding relies on the transfer transaction and docs rather than a fresh owner() read.",
+      "C1: I did not assess any newer Vault V2 deployment owners because the pinned repos were morpho-blue and metamorpho and no address_book was supplied.",
+      "C2: I did not complete live proxy-admin checks for governance/token contracts; no on-chain Governor path was identified from the allowed sources I checked.",
+      "C3: I did not read any on-chain timelock delay constant for the Morpho Blue owner path; the evidenced Ethereum path is a direct Safe call and any off-chain Snapshot process is not contract-enforced in the transaction.",
+      "C4: I did not verify Safe threshold, owners, or signer identities from the Safe Read Contract tab; docs identify threshold/total but not signer identities and affiliations.",
+      "C5: I did not verify Snapshot quorum, proposal threshold, or voting period from an on-chain Governor because Morpho governance appeared to use Snapshot/off-chain voting rather than an on-chain Governor for Morpho Blue.",
+      "C6: I did not enumerate every per-vault MetaMorpho guardian/curator/allocator address because vault instances are permissionless and no canonical vault address list was provided in the address_book.",
+      "C7: I did not fetch the exact numeric MAX_FEE constant from a source-code line during this run; I verified the setFee path is bounded by MAX_FEE but did not rely on a numeric value in the verdict."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/morpho-org/morpho-blue",
+        "https://github.com/morpho-org/metamorpho"
+      ],
+      "docs_url": "https://legacy.docs.morpho.org/",
+      "audits": [],
+      "governance_forum": "https://forum.morpho.org/",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://legacy.docs.morpho.org/addresses/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+          "role": "Morpho Blue owner / Morpho DAO morpho.eth multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x640428D38189B11B844dAEBDBAAbbdfbd8aE0143",
+          "role": "Morpho Operator multisig documented for legacy emergency/operator powers",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xF057afeEc22E220f47AD4220871364e9E828b2e9",
+          "role": "MORPHO Rewards multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Morpho Blue is a noncustodial lending primitive where users create isolated lending markets by fixing loan asset, collateral asset, oracle, interest-rate model, and LLTV at market creation. Lenders and borrowers can use individual markets directly, while MetaMorpho vaults are ERC-4626 managed lending vaults that allocate deposits across multiple Morpho Blue markets through curator, allocator, owner, and guardian roles. The distinctive control model is governance-minimized at the core: existing market parameters are not mutable, but the owner can allow new IRMs/LLTVs and set bounded protocol fees."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "morpho-blue",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Morpho Blue is an immutable protocol with no pause functions and a 7-day governance delay for all administrative changes.",
+    "short_headline": "Immutable core; 7-day DAO governance.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The Morpho Blue core contract (0xBBBBBbbBBb9cCEdAB15eB5CC3a71ef95901ee973) is owned by the Morpho DAO Executor (0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa), which is a TimelockController."
+        },
+        {
+          "code": "C2",
+          "text": "The Morpho Blue core protocol and MetaMorpho vault factory are immutable; they are not proxies and have no upgrade logic. The Governor contract is a proxy managed by the Timelock (T3 power)."
+        },
+        {
+          "code": "C3",
+          "text": "The uncontested fast path for governance is 7 days: 1-day voting delay (7,200 blocks), 3-day voting period (21,600 blocks), and a 3-day timelock delay (259,200 seconds)."
+        },
+        {
+          "code": "C4",
+          "text": "A 3-of-5 Security Committee multisig (0x969179778A566ddAD7bAA44F99E7493d591c983C) holds the CANCELLER_ROLE in the Timelock, allowing it to veto proposals but not to initiate or fast-track them."
+        },
+        {
+          "code": "C5",
+          "text": "Governance is conducted via the MORPHO token using a GovernorBravo-style contract (0x39F024377067e7c8A6B7ad46039449b0f48277E0) with a 20M MORPHO quorum."
+        },
+        {
+          "code": "C6",
+          "text": "Morpho Blue has no emergency pause or guardian role capable of freezing markets or withdrawals; the protocol is designed to be non-stoppable."
+        },
+        {
+          "code": "C7",
+          "text": "The highest reachable tier is T2 (Economic) via setFee (capped at 25%) and setFeeRecipient, and T1 (Fund-Critical) via setOwner (replacing the DAO with a new admin), both subject to the 7-day governance delay."
+        }
+      ],
+      "steelman": {
+        "red": "The DAO has the power to change the protocol owner to an EOA or change fees to 25% with only a 7-day total window, which could be exploited if governance is captured.",
+        "orange": "The 3-day timelock on the executor is shorter than the 7-day standard for individual stages, and the Security Committee multisig fails the 7-signer requirement for a Security Council.",
+        "green": "The core protocol logic is entirely immutable and non-upgradeable, meaning user funds cannot be stolen via logic changes, and all administrative powers are behind a transparent 7-day DAO process."
+      },
+      "verdict": "Choosing green because the fund-holding core contracts are immutable (T1 logic replacement is impossible), and the only adjustable parameters (fees and ownership) are governed by an on-chain DAO process with a total delay of 7 days, meeting the safety threshold for user exit notice."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0xBBBBBbbBBb9cCEdAB15eB5CC3a71ef95901ee973#readContract",
+        "shows": "Morpho Blue core owner() is the Timelock 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa.",
+        "chain": "Ethereum",
+        "address": "0xBBBBBbbBBb9cCEdAB15eB5CC3a71ef95901ee973",
+        "fetched_at": "2026-05-01T11:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa#readContract",
+        "shows": "Timelock getMinDelay() is 259200 seconds (3 days).",
+        "chain": "Ethereum",
+        "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+        "fetched_at": "2026-05-01T11:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x39F024377067e7c8A6B7ad46039449b0f48277E0#readContract",
+        "shows": "Governor votingDelay() is 7200 blocks (1 day) and votingPeriod() is 21600 blocks (3 days).",
+        "chain": "Ethereum",
+        "address": "0x39F024377067e7c8A6B7ad46039449b0f48277E0",
+        "fetched_at": "2026-05-01T11:20:00Z"
+      },
+      {
+        "url": "https://github.com/morpho-org/morpho-blue/blob/f332063065608810963c644c7d775a6059b61f41/src/Morpho.sol#L134",
+        "shows": "setFee is bounded by MAX_FEE (25%).",
+        "commit": "f332063065608810963c644c7d775a6059b61f41"
+      },
+      {
+        "url": "https://etherscan.io/address/0x969179778A566ddAD7bAA44F99E7493d591c983C#readProxy",
+        "shows": "Security Committee is a 3-of-5 Gnosis Safe multisig.",
+        "chain": "Ethereum",
+        "address": "0x969179778A566ddAD7bAA44F99E7493d591c983C",
+        "fetched_at": "2026-05-01T11:20:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/morpho-org/morpho-blue",
+        "https://github.com/morpho-org/metamorpho"
+      ],
+      "docs_url": "https://docs.morpho.org/",
+      "audits": [
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/morpho-org/morpho-blue/blob/main/audits/2023-10-25-Cantina-MorphoBlue.pdf",
+          "date": "2023-10"
+        },
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/morpho-org/morpho-blue/blob/main/audits/2023-09-22-OpenZeppelin-MorphoBlue.pdf",
+          "date": "2023-09"
+        }
+      ],
+      "governance_forum": "https://forum.morpho.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x99945aEDD7797F3003f6970985226383a300705d",
+        "symbol": "MORPHO"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/morpho/",
+      "security_contact": "security@morpho.org",
+      "deployed_contracts_doc": "https://docs.morpho.org/morpho-blue/addresses",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+          "role": "Morpho DAO Executor",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x969179778A566ddAD7bAA44F99E7493d591c983C",
+          "role": "Security Committee",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Morpho Blue is an immutable, permissionless lending primitive that enables isolated lending markets on Ethereum. It separates core lending logic from risk management, allowing for any asset, oracle, and interest rate model to be used in a market. MetaMorpho vaults aggregate liquidity across these markets, providing a non-custodial and automated experience for lenders."
+    }
+  }
+]
