@@ -224,12 +224,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     <section class="card" id="model-breakdown">
       <h2>Model breakdown</h2>
       <p class="caption">
-        Submissions per model, color-tinted by family
-        (<span class="inline-swatch" style={`background: ${FAMILY_FILL.claude};`}></span> claude ·
-        <span class="inline-swatch" style={`background: ${FAMILY_FILL.gpt};`}></span> gpt ·
-        <span class="inline-swatch" style={`background: ${FAMILY_FILL.gemini};`}></span> gemini ·
-        <span class="inline-swatch" style={`background: ${FAMILY_FILL.grok};`}></span> grok ·
-        <span class="inline-swatch" style={`background: ${FAMILY_FILL.other};`}></span> other).
+        Submissions per model.
       </p>
       {stats.modelBreakdown.length === 0 ? (
         <p class="empty">No submissions yet.</p>
@@ -365,14 +360,18 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
                 {PIZZA_SLICES.map(({ id, label }) => {
                   const state = row.cells[id as PizzaSliceId];
                   const cls = `m-cell glyph-${state} tt-wrap`;
+                  const needsMore = state !== "strong";
                   return (
                     <a
                       class={cls}
                       href={`/protocol/${baseSlug}#${sliceAnchor(id)}`}
-                      aria-label={`${row.name}: ${label} — ${COVERAGE_LABEL[state]}`}
+                      aria-label={`${row.name}: ${label} — ${COVERAGE_LABEL[state]}${needsMore ? " · Need more audits" : ""}`}
                     >
                       <span class="m-cell-glyph">{COVERAGE_GLYPH[state]}</span>
-                      <span class="tt" role="tooltip">{label} — {COVERAGE_LABEL[state]}</span>
+                      <span class={`tt ${needsMore ? "tt-wide" : ""}`} role="tooltip">
+                        <span class="tt-line">{label} — {COVERAGE_LABEL[state]}</span>
+                        {needsMore && <span class="tt-line">Need more audits</span>}
+                      </span>
                     </a>
                   );
                 })}
@@ -482,6 +481,19 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     border-radius: 2px;
     margin-right: 0.15rem;
     vertical-align: middle;
+  }
+  /* Family logo + name pair in the model breakdown caption. The mark
+     wrapper carries the family tint inline (so the SVG's currentColor
+     fills match), while the name text stays the caption's muted color. */
+  .caption-fam {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    vertical-align: middle;
+  }
+  .caption-fam-mark {
+    display: inline-flex;
+    align-items: center;
   }
 
   .ranked-bars {
@@ -704,12 +716,22 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     transform: translateX(-50%) translateY(0);
   }
   /* Wider, wrapping variant for tooltips that don't fit on one line
-     (pip quality blurb). */
+     (pip quality blurb, multi-line coverage messages). Fixed width keeps
+     the box and the text aligned — `max-content` was leaving the long
+     "(20× penalty)" tail outside the painted background in some browsers. */
   .tt.tt-wide {
     white-space: normal;
-    width: max-content;
-    max-width: 240px;
+    width: 16rem;
+    max-width: 90vw;
     text-align: center;
+  }
+  .tt-line {
+    display: block;
+  }
+  .tt-line + .tt-line {
+    margin-top: 0.2rem;
+    color: var(--text-muted);
+    font-weight: 400;
   }
   /* Match LandingTable's stage-cell audit CTA so the medals read the same
      across the landing page and the stats matrix. */
