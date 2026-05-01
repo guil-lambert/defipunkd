@@ -223,7 +223,6 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.gemini};`}></span> gemini ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.grok};`}></span> grok ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.other};`}></span> other).
-        Hover the pips next to each model for the quorum-weight rating.
       </p>
       {stats.modelBreakdown.length === 0 ? (
         <p class="empty">No submissions yet.</p>
@@ -236,9 +235,9 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
               <li>
                 <span class="row-label">{m.model}</span>
                 <span
-                  class="quality"
-                  title={QUALITY_TITLE[m.quality]}
+                  class="quality tt-wrap"
                   aria-label={QUALITY_TITLE[m.quality]}
+                  tabindex="0"
                 >
                   {[0, 1, 2].map((i) => (
                     <span
@@ -246,6 +245,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
                       style={i < filled ? `background: ${tint};` : undefined}
                     ></span>
                   ))}
+                  <span class="tt tt-wide" role="tooltip">{QUALITY_TITLE[m.quality]}</span>
                   <span class="sr-only">{`${filled} of 3`}</span>
                 </span>
                 <span class="row-bar">
@@ -359,14 +359,16 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
                 </a>
                 {PIZZA_SLICES.map(({ id, label }) => {
                   const state = row.cells[id as PizzaSliceId];
-                  const cls = `m-cell glyph-${state}`;
+                  const cls = `m-cell glyph-${state} tt-wrap`;
                   return (
                     <a
                       class={cls}
                       href={`/protocol/${baseSlug}#${sliceAnchor(id)}`}
-                      title={`${label} — ${COVERAGE_LABEL[state]}`}
                       aria-label={`${row.name}: ${label} — ${COVERAGE_LABEL[state]}`}
-                    >{COVERAGE_GLYPH[state]}</a>
+                    >
+                      <span class="m-cell-glyph">{COVERAGE_GLYPH[state]}</span>
+                      <span class="tt" role="tooltip">{label} — {COVERAGE_LABEL[state]}</span>
+                    </a>
                   );
                 })}
               </div>
@@ -673,6 +675,14 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
   .tt-wrap:focus-within .tt {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+  /* Wider, wrapping variant for tooltips that don't fit on one line
+     (pip quality blurb). */
+  .tt.tt-wide {
+    white-space: normal;
+    width: max-content;
+    max-width: 240px;
+    text-align: center;
   }
   .audit-cta {
     color: oklch(0.65 0.015 235);
