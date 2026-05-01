@@ -32,9 +32,10 @@ const TIER_NAME: Record<Tier, string> = {
 };
 
 const FAMILY_FILL: Record<ModelFamily, string> = {
-  claude: "#c97a4f",
-  gpt: "#10a37f",
-  gemini: "#4285f4",
+  claude: "#E8846A",
+  gpt: "#0EA982",
+  gemini: "#A17CF3",
+  grok: "#2196F3",
   other: "#888",
 };
 
@@ -117,7 +118,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         {tierBarSegments.map((s, i) => (
           <>
             {s.tier === "none" && stats.needsAxisBreak.count && i > 0 ? (
-              <span class="axis-break" aria-hidden="true" title="axis break">⫽</span>
+            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
             ) : null}
             <span
               class="seg"
@@ -150,7 +151,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         {tvlBarSegments.map((s, i) => (
           <>
             {s.tier === "none" && stats.needsAxisBreak.tvl && i > 0 ? (
-              <span class="axis-break" aria-hidden="true" title="axis break">⫽</span>
+            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
             ) : null}
             <span
               class="seg"
@@ -203,6 +204,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         (<span class="inline-swatch" style={`background: ${FAMILY_FILL.claude};`}></span> claude ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.gpt};`}></span> gpt ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.gemini};`}></span> gemini ·
+        <span class="inline-swatch" style={`background: ${FAMILY_FILL.grok};`}></span> grok ·
         <span class="inline-swatch" style={`background: ${FAMILY_FILL.other};`}></span> other).
       </p>
       {stats.modelBreakdown.length === 0 ? (
@@ -228,29 +230,41 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     <section class="card">
       <h2>Grade distribution per slice</h2>
       <p class="caption">
-        Across protocols that have reached AI consensus on each slice, what colors did the consensus land on.
-        Counts only include slices with a merged assessment; unreviewed slices are excluded.
+        Across all live protocols. Verifiability and Autonomy are rule-based so they cover ~every protocol;
+        Control / Ability to exit / Open Access only get a color once an AI consensus lands, so most are still unknown.
+        When unknown dwarfs the colored portion, the unknown segment is capped with a ⫽ axis break.
       </p>
       <ul class="slice-grades">
         {PIZZA_SLICES.map(({ id, label }) => {
           const b = stats.gradeBySlice[id as PizzaSliceId];
           const total = b.red + b.orange + b.green + b.unknown;
+          const colored = b.red + b.orange + b.green;
+          const broken = stats.needsAxisBreak.gradeBySlice[id as PizzaSliceId];
+          const flexFor = (k: "green" | "orange" | "red" | "unknown") =>
+            k === "unknown" && broken ? Math.max(colored, 1) : b[k];
           return (
             <li>
               <span class="slice-name">{label}</span>
               {total === 0 ? (
-                <span class="slice-empty">no consensus yet</span>
+                <span class="slice-empty">no data yet</span>
               ) : (
                 <span class="slice-bar" role="img" aria-label={`${label}: ${b.green} green, ${b.orange} orange, ${b.red} red, ${b.unknown} unknown`}>
-                  {(["green", "orange", "red", "unknown"] as const).map((k) =>
-                    b[k] > 0 ? (
-                      <span
-                        class="slice-seg"
-                        style={`flex-grow: ${b[k]}; background: ${GRADE_FILL[k]};`}
-                        title={`${GRADE_LABEL[k]}: ${b[k]} of ${total}`}
-                      >{b[k]}</span>
-                    ) : null,
-                  )}
+                  {(["green", "orange", "red", "unknown"] as const).map((k, i) => {
+                    if (b[k] === 0) return null;
+                    const showBreak = k === "unknown" && broken && i > 0;
+                    return (
+                      <>
+                        {showBreak ? (
+                        <span class="axis-break" aria-hidden="true" title="axis break">//</span>
+                        ) : null}
+                        <span
+                          class="slice-seg"
+                          style={`flex-grow: ${flexFor(k)}; background: ${GRADE_FILL[k]};`}
+                          title={`${GRADE_LABEL[k]}: ${b[k].toLocaleString()} of ${total.toLocaleString()}`}
+                        >{b[k].toLocaleString()}</span>
+                      </>
+                    );
+                  })}
                 </span>
               )}
             </li>
@@ -285,11 +299,20 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
             ))}
           </div>
           {stats.coverage.map((row) => (
-            <div class="matrix-row">
+            <div class={`matrix-row tier-${row.tier}`}>
               <a class="m-name" href={`/protocol/${row.slug}`}>{row.name}</a>
-              <span class="m-medal" title={row.tier === "none" ? "Ungraded" : TIER_LABEL[row.tier]}>
+              <a
+                class="m-medal tt-wrap audit-cta"
+                href={`/protocol/${row.slug}#audit-yourself`}
+                aria-label={row.tier === "none"
+                  ? "Be the first to audit this protocol"
+                  : `${TIER_LABEL[row.tier]} — contribute another run`}
+              >
                 <TierMedal tier={row.tier} size={20} />
-              </span>
+                <span class="tt" role="tooltip">
+                  {row.tier === "none" ? "Be the first to audit · copy a prompt" : `${TIER_LABEL[row.tier]} · contribute a run`}
+                </span>
+              </a>
               {PIZZA_SLICES.map(({ id, label }) => {
                 const state = row.cells[id as PizzaSliceId];
                 const cls = `m-cell glyph-${state}`;
@@ -362,11 +385,11 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
   }
   .seg-label { padding: 0 0.5rem; }
   .axis-break {
-    flex: 0 0 22px;
+    flex: 0 0 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: oklch(0.65 0.015 235);
+    color: oklch(0.78 0.015 235);
     background: repeating-linear-gradient(
       135deg,
       oklch(0.22 0.005 235),
@@ -374,8 +397,13 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       oklch(0.30 0.005 235) 4px,
       oklch(0.30 0.005 235) 8px
     );
-    font-size: 0.95rem;
+    font-size: 1rem;
+    font-weight: 700;
     line-height: 1;
+  }
+  .slice-bar .axis-break {
+    flex: 0 0 22px;
+    font-size: 1.05rem;
   }
 
   .tier-legend {
@@ -526,6 +554,59 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    text-decoration: none;
+  }
+
+  /* Tier medal hover/click parity with LandingTable.svelte's stage-cell. */
+  .tt-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tt-wrap .tt {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    background: oklch(0.22 0.005 235);
+    color: oklch(0.92 0.01 235);
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    border: 1px solid oklch(0.28 0.01 235);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 80ms ease-out, transform 80ms ease-out;
+    z-index: 100;
+  }
+  .tt-wrap .tt::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: oklch(0.22 0.005 235);
+  }
+  .tt-wrap:hover .tt,
+  .tt-wrap:focus-within .tt {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .audit-cta {
+    color: oklch(0.65 0.015 235);
+    opacity: 0.7;
+    transition: opacity 120ms ease-out, color 120ms ease-out;
+  }
+  .audit-cta:hover,
+  .audit-cta:focus-visible {
+    color: var(--brand-oxblood);
+    opacity: 1;
   }
   .m-cell {
     display: inline-flex;
@@ -544,11 +625,16 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     background: oklch(0.24 0.01 235);
     border-color: oklch(0.40 0.015 235);
   }
-  .glyph-strong { color: oklch(0.78 0.165 150); }
-  .glyph-weak { color: oklch(0.78 0.135 75); }
-  .glyph-insufficient { color: oklch(0.65 0.015 235); }
-  .glyph-disagreement { color: oklch(0.62 0.180 22); font-weight: 600; }
-  .glyph-none { color: oklch(0.40 0.005 235); }
+  /* In the matrix, every glyph in a row takes the protocol's tier color
+     regardless of state — so the row reads as a single tier-tinted strip. */
+  .matrix-row.tier-gold .m-cell { color: #D4A84A; }
+  .matrix-row.tier-silver .m-cell { color: #C0C0C8; }
+  .matrix-row.tier-bronze .m-cell { color: #C68A4E; }
+  .matrix-row.tier-wood .m-cell { color: #9A8770; }
+  .matrix-row.tier-none .m-cell { color: oklch(0.55 0.005 235); }
+  /* Keep ⨯ slightly bolder so it reads as the disagreement marker even
+     when tinted to the row's tier color. */
+  .m-cell.glyph-disagreement { font-weight: 600; }
 
   .legend-glyph {
     display: inline-flex;
@@ -556,6 +642,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     justify-content: center;
     font-size: 1rem;
     line-height: 1;
+    color: #fff;
   }
   .coverage-legend {
     list-style: none;

@@ -93,7 +93,7 @@ describe("modelFamily", () => {
     expect(modelFamily("gpt-5.5-thinking")).toBe("gpt");
     expect(modelFamily("openai-o1")).toBe("gpt");
     expect(modelFamily("gemini-3-pro")).toBe("gemini");
-    expect(modelFamily("grok-4")).toBe("other");
+    expect(modelFamily("grok-4")).toBe("grok");
     expect(modelFamily("Mistral-Large")).toBe("other");
   });
 });
@@ -192,24 +192,28 @@ describe("buildStats", () => {
     });
   });
 
-  it("scopes grade-by-slice to assessed protocols (no absent column)", () => {
+  it("derives grade-by-slice across all live protocols (rule-based + AI)", () => {
+    // 3 plain protocols: assessProtocol gives them a verifiability grade
+    // ("red" for no github+no audits) and "gray" for the unreviewed slices.
+    // protocol "a" has an AI assessment for control (green), which overrides.
     const protocols = [
       proto({ slug: "a" }),
       proto({ slug: "b" }),
-      proto({ slug: "untouched" }),
+      proto({ slug: "c" }),
     ];
     const stats = buildStats(
       protocols,
-      aMap([
-        ["a", "control", assess({ slug: "a", slice: "control", grade: "green" })],
-        ["a", "verifiability", assess({ slug: "a", slice: "verifiability", grade: "red" })],
-        ["b", "control", assess({ slug: "b", slice: "control", grade: "orange" })],
-      ]),
+      aMap([["a", "control", assess({ slug: "a", slice: "control", grade: "green" })]]),
       sMap([]),
     );
-    expect(stats.gradeBySlice.control).toEqual({ red: 0, orange: 1, green: 1, unknown: 0 });
-    expect(stats.gradeBySlice.verifiability).toEqual({ red: 1, orange: 0, green: 0, unknown: 0 });
-    expect(stats.gradeBySlice.autonomy).toEqual({ red: 0, orange: 0, green: 0, unknown: 0 });
+    // verifiability is rule-based: all three are red (no github, no audits)
+    expect(stats.gradeBySlice.verifiability.red).toBe(3);
+    expect(stats.gradeBySlice.verifiability.green + stats.gradeBySlice.verifiability.orange).toBe(0);
+    // control: 1 green (a) + 2 unknown (b, c)
+    expect(stats.gradeBySlice.control.green).toBe(1);
+    expect(stats.gradeBySlice.control.unknown).toBe(2);
+    // ability-to-exit: all unknown (no AI assessment, no rule-based grade)
+    expect(stats.gradeBySlice["ability-to-exit"].unknown).toBe(3);
   });
 
   it("derives coverage cells: strong / weak / disagreement / insufficient / none", () => {

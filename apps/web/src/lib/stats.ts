@@ -6,11 +6,12 @@ import type {
 } from "@defipunkd/registry";
 import { assessConfidence } from "./confidence";
 import { PIZZA_SLICES, type PizzaSliceId } from "./pizza";
+import { assessProtocol, cexAssessment } from "./rationale";
 import { deriveTier, maxTier, TIER_RANK, type Tier, type TierInput } from "./tier";
 
 export type CoverageState = "none" | "insufficient" | "disagreement" | "weak" | "strong";
 
-export type ModelFamily = "claude" | "gpt" | "gemini" | "other";
+export type ModelFamily = "claude" | "gpt" | "gemini" | "grok" | "other";
 
 export type GradeBucket = {
   red: number;
@@ -49,7 +50,7 @@ export type Stats = {
   /** True when an "Ungraded" segment (`tier === "none"`) dominates the stacked
    *  bar so much that the page should render an axis break to keep the graded
    *  tiers visible. Page-side renderer caps the segment width when this is on. */
-  needsAxisBreak: { count: boolean; tvl: boolean };
+  needsAxisBreak: { count: boolean; tvl: boolean; gradeBySlice: Record<PizzaSliceId, boolean> };
   mostReviewed: MostReviewed[];
   modelBreakdown: ModelBreakdownEntry[];
   /** Counts only among protocols that have an assessment for that slice.
@@ -78,6 +79,7 @@ export function modelFamily(model: string): ModelFamily {
   if (m.includes("claude")) return "claude";
   if (m.includes("gpt") || m.includes("openai")) return "gpt";
   if (m.includes("gemini")) return "gemini";
+  if (m.includes("grok")) return "grok";
   return "other";
 }
 
@@ -259,11 +261,40 @@ export function buildStats(
     .map(([model, count]) => ({ model, family: modelFamily(model), count }))
     .sort((a, b) => b.count - a.count || a.model.localeCompare(b.model));
 
+  // Walk every top-level live entry's slice list (rule-based + AI overrides)
+  // so verifiability/autonomy report wide coverage. Parents inherit their
+  // biggest live child's slice grades, mirroring index.astro's logic so the
+  // count totals match the live-protocol count rendered in the header.
+  const bySlugMap = new Map<string, Protocol>();
+  for (const p of protocols) bySlugMap.set(p.slug, p);
+  const liveChildrenByParent = new Map<string, Protocol[]>();
+  for (const p of live) {
+    if (p.is_parent || !p.parent_slug) continue;
+    if (!bySlugMap.has(p.parent_slug)) continue;
+    const bucket = liveChildrenByParent.get(p.parent_slug) ?? [];
+    bucket.push(p);
+    liveChildrenByParent.set(p.parent_slug, bucket);
+  }
+  const gradeSource = (slug: string): Protocol | null => {
+    const p = bySlugMap.get(slug);
+    if (!p) return null;
+    if (!p.is_parent) return p;
+    const kids = liveChildrenByParent.get(slug) ?? [];
+    if (kids.length === 0) return p;
+    return [...kids].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))[0]!;
+  };
   const gradeBySlice = {} as Record<PizzaSliceId, GradeBucket>;
   for (const { id } of PIZZA_SLICES) gradeBySlice[id] = EMPTY_GRADE_BUCKET();
-  for (const bySlice of assessments.values()) {
-    for (const [sliceId, a] of bySlice.entries()) {
-      gradeBySlice[sliceId as PizzaSliceId][a.grade] += 1;
+  for (const slug of top.slugs) {
+    const src = gradeSource(slug);
+    if (!src) continue;
+    const bySlice = assessments.get(src.slug);
+    const subBySlice = submissions.get(src.slug);
+    const sliceList = src.category === "CEX" ? cexAssessment() : assessProtocol(src, bySlice, subBySlice);
+    for (const s of sliceList) {
+      const bucket = gradeBySlice[s.id as PizzaSliceId];
+      const key = s.grade === "gray" ? "unknown" : s.grade;
+      bucket[key] += 1;
     }
   }
 
@@ -297,9 +328,16 @@ export function buildStats(
   const gradedCount =
     tierCounts.wood + tierCounts.bronze + tierCounts.silver + tierCounts.gold;
   const gradedTvl = tvlByTier.wood + tvlByTier.bronze + tvlByTier.silver + tvlByTier.gold;
+  const sliceAxisBreak = {} as Record<PizzaSliceId, boolean>;
+  for (const { id } of PIZZA_SLICES) {
+    const b = gradeBySlice[id as PizzaSliceId];
+    const colored = b.red + b.orange + b.green;
+    sliceAxisBreak[id as PizzaSliceId] = colored > 0 && b.unknown > colored * 2;
+  }
   const needsAxisBreak = {
     count: gradedCount > 0 && tierCounts.none > gradedCount * 2,
     tvl: gradedTvl > 0 && tvlByTier.none > gradedTvl * 2,
+    gradeBySlice: sliceAxisBreak,
   };
 
   return {
