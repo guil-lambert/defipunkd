@@ -197,5 +197,103 @@
       "upgradeability": "mixed",
       "about": "Tornado Cash is a non-custodial privacy protocol where users deposit fixed denominations of ETH or selected ERC20 assets into pool contracts and later withdraw to a different address by proving ownership of an unspent note with a zkSNARK. Its classic pools are fixed-amount mixers across several chains, while Tornado Cash Nova is a Gnosis-chain pool for arbitrary amounts and shielded transfers using bridged WETH. Relayers can improve withdrawal privacy and gas UX, but the core fixed-pool withdrawal path can be called directly."
     }
+  },
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Immutable mixer contracts with zero external oracle or bridge dependencies on Ethereum L1",
+    "short_headline": "Zero external dependencies; fully autonomous",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The core mixer contracts (e.g., 1 ETH pool) are self-contained and do not call external oracles, price feeds, or third-party lending protocols; the deposit amount is hardcoded in the contract bytecode."
+        },
+        {
+          "code": "A7",
+          "text": "Deployments on L2s (Arbitrum, Optimism) inherit the liveness and censorship risks of the respective sequencers, though L1 deployments remain unaffected."
+        },
+        {
+          "code": "A8",
+          "text": "Withdrawals utilize a permissionless relayer network for privacy; however, the relayer role is non-exclusive, and users can execute withdrawals directly if they provide their own gas, ensuring principal is never trapped by relayer failure."
+        },
+        {
+          "code": "A9",
+          "text": "The individual mixer pools (0.1, 1, 10, 100 ETH) are immutable, non-proxy contracts; governance cannot change their logic, swap their verifier contracts, or introduce new dependencies to existing pools."
+        }
+      ],
+      "steelman": {
+        "red": "L2-based deployments (Arbitrum/Optimism) are subject to centralized sequencer risk which could theoretically freeze user principal.",
+        "orange": "The protocol's primary utility (privacy) depends on the liveness of the off-chain relayer network, without which users must reveal their withdrawal address to pay for gas.",
+        "green": "The core mixer contracts on Ethereum L1 are immutable and have zero external dependencies for price, state, or execution, making them entirely autonomous."
+      },
+      "verdict": "Choosing green because the core mixer architecture on Ethereum L1, which holds the vast majority of protocol TVS, is entirely immutable and lacks any external dependencies (oracles, bridges, or upgradeable proxies) that could lead to principal loss or performance degradation."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x47Edf03bbB7831f910163D054758766630792ee2#code",
+        "shows": "The 1 ETH Mixer contract is a non-proxy, immutable contract with no external oracle calls.",
+        "chain": "Ethereum",
+        "address": "0x47Edf03bbB7831f910163D054758766630792ee2",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/master/contracts/Tornado.sol",
+        "shows": "Mixer logic uses a static verifier and hardcoded denomination with no external price dependencies.",
+        "commit": "50ad59599947704274f436569636744033447f06",
+        "fetched_at": "2026-05-01T10:20:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Eth_Mixer_Unchecked_Call_Analysis_by_Pessimistic.pdf",
+        "shows": "Audit confirms the fixed-denomination nature and lack of external administrative controls over the mixer pools.",
+        "fetched_at": "2026-05-01T10:25:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/tornado-governance"
+      ],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Pessimistic",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Eth_Mixer_Unchecked_Call_Analysis_by_Pessimistic.pdf",
+          "date": "2019-12"
+        },
+        {
+          "firm": "ABDK Consulting",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Nova_Full_Audit_by_ABDK.pdf",
+          "date": "2021-12"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x77777fedddd0c129c21f302526e1d65a2832f7fb",
+        "symbol": "TORN"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5efda50f3a4876295484561f46273ee22529ca38",
+          "role": "Governance",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Tornado Cash is a non-custodial privacy protocol based on zk-SNARKs. It allows users to break the on-chain link between a deposit and withdrawal address by using fixed-size pools where funds are mixed with other deposits. The core mixer contracts are immutable and operate without external oracles or administrative keys."
+    }
   }
 ]
