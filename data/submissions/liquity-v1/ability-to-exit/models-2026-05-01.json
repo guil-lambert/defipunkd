@@ -1,0 +1,268 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Immutable contracts expose direct on-chain exits with no admin pause",
+    "short_headline": "No admin pause",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit functions identified: BorrowerOperations withdrawColl, adjustTrove with collateral withdrawal or debt repayment, repayLUSD, closeTrove, claimCollateral; TroveManager redeemCollateral; StabilityPool withdrawFromSP and withdrawETHGainToTrove; LQTYStaking unstake; LockupContract withdrawLQTY."
+        },
+        {
+          "code": "E2",
+          "text": "BorrowerOperations exit functions are external user calls without owner/role/pause modifiers; they enforce borrower ownership/active-trove, collateralization, Recovery Mode, TCR, and LUSD-balance checks. claimCollateral directly calls CollSurplusPool for msg.sender. TroveManager redeemCollateral is external and checks fee bounds, bootstrap period, TCR >= MCR, nonzero amount, and caller LUSD balance. StabilityPool withdrawFromSP is external, requires a deposit, and only gates nonzero LUSD withdrawals while undercollateralized Troves exist; amount 0 still pays gains. LQTYStaking unstake is external and requires a nonzero stake. LockupContract withdrawLQTY is external and restricted to the beneficiary after unlockTime."
+        },
+        {
+          "code": "E3",
+          "text": "No PAUSE_ROLE, guardian, PAUSE_INFINITELY, or equivalent admin pause path was found in the reviewed exit code. The only owner-only setup functions shown renounce ownership after wiring addresses, and Liquity documentation states the deployed system has no admin key and immutable rules."
+        },
+        {
+          "code": "E4",
+          "text": "No separate emergency pause or governance pause path was found. The documented control model is governance-free and admin-key-free, so there is no emergency actor, governance actor, or maximum pause duration to record."
+        },
+        {
+          "code": "E5",
+          "text": "No queued redemption or withdrawal queue was found: redeemCollateral executes synchronously over Troves subject to maxIterations/gas, while Stability Pool withdrawals have no lockup but nonzero LUSD withdrawals are temporarily suspended when liquidatable Troves below 110% remain. No daily withdrawal cap was found."
+        },
+        {
+          "code": "E6",
+          "text": "There is no separate adversarial-admin escape hatch because the assessed sources show no admin pause/upgrade actor; ordinary permissionless exits remain the escape path, and the Stability Pool suspension can be cleared because anyone can liquidate Troves below the minimum collateral ratio."
+        },
+        {
+          "code": "E7",
+          "text": "The deployed BorrowerOperations, TroveManager, StabilityPool, and LQTYStaking contracts are verified on Etherscan with ABI/Write Contract surfaces, so the exit functions are directly callable on-chain without relying on the project's frontend."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that Stability Pool principal withdrawals can be blocked during unresolved liquidatable Troves and borrower collateral exits can be blocked in Recovery Mode, so some users may not be able to withdraw immediately in stressed market states.",
+        "orange": "The strongest orange argument is that the Stability Pool's nonzero withdrawal guard is broad and has no fixed time limit, even though it is a solvency-condition guard rather than an admin pause.",
+        "green": "The strongest green argument is that the core contracts are immutable and admin-key-free, exits are exposed as direct external on-chain functions, no pause role exists, surplus and reward claims are not admin-gated, and any Stability Pool withdrawal suspension can be cleared by permissionless liquidations."
+      },
+      "verdict": "Choosing green because the blocking conditions found are protocol solvency checks rather than admin-controlled pauses: the reviewed deployed/source contracts expose direct exits, Liquity documents no admin key or governance, owner-only setup paths renounce ownership, and the only nonzero Stability Pool withdrawal suspension is tied to liquidatable Troves that anybody can liquidate."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x24179CD81c9e782A4096035f7eC97fB8B783e007#code",
+        "shows": "Ethereum mainnet BorrowerOperations deployed contract, verified source/ABI, Read Contract and Write Contract tabs, and ABI entries for adjustTrove, claimCollateral, closeTrove, repayLUSD, withdrawColl, and withdrawLUSD.",
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/liquity/dev/main/packages/contracts/contracts/BorrowerOperations.sol",
+        "shows": "BorrowerOperations source showing setAddresses renounces ownership; withdrawColl, repayLUSD, adjustTrove, closeTrove, and claimCollateral are external exits with collateralization, Recovery Mode, active-trove, and LUSD-balance checks but no pause modifier.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2#code",
+        "shows": "Ethereum mainnet TroveManager deployed contract, verified source/ABI, Read Contract and Write Contract tabs for direct interaction.",
+        "chain": "Ethereum",
+        "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/liquity/dev/main/packages/contracts/contracts/TroveManager.sol",
+        "shows": "TroveManager source showing redeemCollateral is external and checks fee bounds, bootstrap period, TCR over MCR, nonzero amount, and caller LUSD balance; setAddresses renounces ownership.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb#code",
+        "shows": "Ethereum mainnet StabilityPool deployed verified source showing withdrawFromSP is external, pays ETH/LQTY gains, only checks _requireNoUnderCollateralizedTroves when amount is nonzero, and the guard checks lowest Trove ICR >= MCR rather than an admin role.",
+        "chain": "Ethereum",
+        "address": "0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d#code",
+        "shows": "Ethereum mainnet LQTYStaking deployed verified source showing setAddresses renounces ownership and unstake is external, transfers LQTY/LUSD/ETH gains to msg.sender, and has no pause modifier.",
+        "chain": "Ethereum",
+        "address": "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/liquity/dev/main/packages/contracts/contracts/LQTY/LockupContract.sol",
+        "shows": "LockupContract source showing withdrawLQTY is callable by the beneficiary after unlockTime and transfers the contract's LQTY balance, with no pause/admin path.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://docs.liquity.org/liquity-v1/faq/general",
+        "shows": "Liquity V1 docs describing the protocol as non-custodial, immutable, governance-free, no admin key, directly redeemable, accessible via multiple interfaces, and operated without the core team frontend.",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations",
+        "shows": "Docs state Stability Pool deposits generally have no minimum lockup, withdrawals are temporarily suspended while liquidatable Troves below 110% remain, and anybody can liquidate such Troves.",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+        "shows": "Canonical technical resources page listing the GitHub repo, audit reports and dates, audit applicability matrix, and Ethereum mainnet contract addresses including BorrowerOperations, TroveManager, StabilityPool, LQTYStaking, LUSD, and LQTY.",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      },
+      {
+        "url": "https://docs.liquity.org/liquity-v1/documentation/bug-bounty",
+        "shows": "V1 bug bounty page states the V1 bounty has been discontinued and gives security[at]liquity.org for V1-related questions.",
+        "fetched_at": "2026-05-01T06:46:54Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": "https://docs.liquity.org/liquity-v1",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2021-01"
+        },
+        {
+          "firm": "Coinspect",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+          "date": "2021-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "security@liquity.org",
+      "deployed_contracts_doc": "https://docs.liquity.org/liquity-v1/documentation/resources",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity V1 lets ETH holders open Troves to borrow the LUSD stablecoin at 0% interest against ETH collateral while maintaining required collateral ratios. LUSD can be redeemed through the protocol for ETH, Stability Pool depositors absorb liquidations in exchange for ETH/LQTY rewards, and LQTY stakers earn borrowing and redemption fee revenue. The protocol is designed to run through immutable, governance-free contracts and multiple independent frontends rather than a single project-operated interface."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Fully immutable protocol with renounced ownership and no pause functionality",
+    "short_headline": "Immutable, governance-free, permissionless exit",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit functions include BorrowerOperations.closeTrove(), BorrowerOperations.withdrawColl(), TroveManager.redeemCollateral(), and StabilityPool.withdrawFromSP()."
+        },
+        {
+          "code": "E2",
+          "text": "Core exit functions (closeTrove, withdrawColl, redeemCollateral, withdrawFromSP) lack access modifiers like onlyOwner or pause guards like whenNotPaused."
+        },
+        {
+          "code": "E3",
+          "text": "No pause role or functionality exists in the core contracts; ownership of BorrowerOperations, TroveManager, and StabilityPool has been renounced to the zero address."
+        },
+        {
+          "code": "E4",
+          "text": "The protocol lacks both emergency and governance-controlled pause mechanisms; it is designed to be governance-free and immutable."
+        },
+        {
+          "code": "E5",
+          "text": "Redemptions and withdrawals are processed immediately on-chain without queues or admin-controlled withdrawal caps."
+        },
+        {
+          "code": "E6",
+          "text": "The protocol's immutability and lack of admin roles serve as a permanent permissionless exit mechanism; no adversarial admin scenario is possible as there are no admins."
+        },
+        {
+          "code": "E7",
+          "text": "All exit functions are directly callable on-chain via block explorers or generic wallet interfaces; Liquity explicitly relies on a decentralized frontend model with no official central frontend."
+        }
+      ],
+      "steelman": {
+        "red": "If the underlying price oracles (Chainlink/Tellor) were to fail or be manipulated, users might be unable to withdraw collateral due to perceived undercollateralization, and the immutable nature of the protocol would prevent any admin intervention to fix the feed.",
+        "orange": "During 'Recovery Mode' (Total Collateral Ratio < 150%), certain exit paths like partial collateral withdrawal are restricted to protect protocol solvency, which could be perceived as a temporary, non-admin-triggered limitation on user exit flexibility.",
+        "green": "The protocol is entirely immutable with renounced ownership, contains no pause or blacklist functions, and ensures that redemptions and Trove closures remain permissionless under all conditions."
+      },
+      "verdict": "Choosing green because the protocol is entirely immutable, ownership of core contracts has been renounced to the zero address, and there are no pause or emergency shutdown mechanisms that can be triggered by any actor."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x24179CD81c9e782A4096035f7eC97fB8B783e007#readcontract",
+        "shows": "BorrowerOperations owner is the zero address (renounced).",
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2#readcontract",
+        "shows": "TroveManager owner is the zero address (renounced).",
+        "chain": "Ethereum",
+        "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev/blob/b6734796339454f06880315482310b9195027419/packages/contracts/contracts/BorrowerOperations.sol",
+        "shows": "Lack of pause modifiers on closeTrove and withdrawColl functions.",
+        "commit": "b6734796339454f06880315482310b9195027419",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev/blob/b6734796339454f06880315482310b9195027419/packages/contracts/contracts/TroveManager.sol",
+        "shows": "Lack of pause modifiers on redeemCollateral function.",
+        "commit": "b6734796339454f06880315482310b9195027419",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://docs.liquity.org/documentation/audits",
+        "shows": "Audit reports confirming the governance-free and immutable nature of the protocol.",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": "https://docs.liquity.org/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Liquity_Audit_Report_ToB.pdf",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Liquity_Audit_Report_SigmaPrime.pdf",
+          "date": "2021-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x6DEA81C81869EaC6509739E988084445C9D35951",
+        "symbol": "LQTY"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/liquity/",
+      "security_contact": "security@liquity.org",
+      "deployed_contracts_doc": "https://docs.liquity.org/deployment-addresses",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity is a decentralized borrowing protocol that allows users to draw 0% interest loans against Ether used as collateral. Loans are paid out in LUSD (a USD-pegged stablecoin) and need to maintain a minimum collateral ratio of 110%. The protocol is immutable, governance-free, and utilizes an algorithmic redemption mechanism and a stability pool to maintain the peg."
+    }
+  }
+]

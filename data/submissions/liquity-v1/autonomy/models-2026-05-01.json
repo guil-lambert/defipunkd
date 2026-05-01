@@ -1,0 +1,157 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Oracle misreport can affect ~100% of Liquity V1 TVS despite live Chainlink/Tellor fallback logic",
+    "short_headline": "Oracle principal risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Liquity V1 core is one Ethereum CDP module: BorrowerOperations opens/adjusts/closes troves, TroveManager handles redemptions/liquidations, and StabilityPool handles LUSD deposits/withdrawals. The material external dependency is ETH/USD pricing: PriceFeed fetches Chainlink as primary and Tellor through TellorCaller as fallback; these prices drive trove collateral ratios, borrowing, redemption, liquidation, and Stability Pool loss/gain accounting."
+        },
+        {
+          "code": "A2",
+          "text": "The oracle reporters are external to Liquity: Etherscan shows recent Chainlink ETH/USD transmit calls at 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419, and TellorCaller at 0xAd430500ECDa11E38C9bCB08a702274b94641112 reads Tellor data from 0x88dF592F8eb5D7Bd38bFeF7dEb0fBc02cf3778a0. These reporters can affect protocol pricing, but Liquity has no governance reporter committee of its own."
+        },
+        {
+          "code": "A3",
+          "text": "No bridge or cross-chain messaging dependency is required for the assessed CDP core: DeFiLlama lists Liquity V1 TVL only on Ethereum, and the main deployed value-holding contracts inspected are Ethereum mainnet contracts."
+        },
+        {
+          "code": "A4",
+          "text": "Liquity V1 is not a nested-collateral or restaking design: the README describes users locking ETH collateral to mint LUSD, not wrapping LSTs, LRTs, ERC-4626 vault shares, or receipt-of-receipt assets."
+        },
+        {
+          "code": "A6",
+          "text": "Oracle fallback is LIVE and enforcing on-chain today: the deployed PriceFeed exposes fetchPrice, lastGoodPrice, status, priceAggregator, and tellorCaller, and Etherscan shows historical Fetch Price calls and LastGoodPriceUpdated events. The documented fallback rejects frozen, broken, and large-deviation oracle responses, can switch between Chainlink and Tellor, and can fall back to the last good price, but those checks do not prove that every adversarial or gradual wrong price would be rejected."
+        },
+        {
+          "code": "A7",
+          "text": "Liquity V1 is deployed on Ethereum L1 for the assessed core, so there is no additional sequencer or data-availability committee dependency beyond the base-chain substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidations are permissionless rather than assigned to a privileged keeper: the README states anyone may call liquidation functions. If liquidators disappear during a fast price move, stale undercollateralized troves can persist and solvency can degrade, but there is no single off-chain relayer that can censor exits or seize funds."
+        },
+        {
+          "code": "A9",
+          "text": "The README states Liquity has no admin key or human governance after deployment and that ownership is renounced after address setters connect the core contracts. Combined with the deployed immutable PriceFeed and the lack of a governance registry/router, I found no active Liquity admin surface that can silently swap oracle, bridge, or vault dependencies without users opting in."
+        },
+        {
+          "code": "A1",
+          "text": "Module weighting: the Ethereum Liquity V1 CDP core holds ~100% of assessed TVS (DeFiLlama Liquity V1 TVL by chain is Ethereum-only; ActivePool and StabilityPool are the main value-holding contracts inspected). The oracle dependency applies to borrowing, redemptions, and liquidations across that core module."
+        }
+      ],
+      "steelman": {
+        "red": "A wrong ETH/USD price that passes Liquity PriceFeed's bounded fallback checks can misprice troves, redemptions, and liquidations across the only material module, so external oracle failure can cause principal loss for ~100% of assessed TVS.",
+        "orange": "Liquity deserves orange if one treats the live Chainlink/Tellor/last-good-price design as sufficient for ordinary oracle outages, because frozen, reverted, stale, and abrupt large-deviation failures have automated fallback behavior and there is no admin who can add new dependencies.",
+        "green": "Liquity deserves green if one credits its immutable, governance-free, Ethereum-only core and dual-oracle fallback as making every external dependency failure survivable without user loss.",
+        "verdict": "Choosing red because the deployed core's only material module depends on external ETH/USD oracle data for collateral ratios, redemptions, and liquidations, and the live fallback catches documented failure modes but does not establish that an adversarial or gradual wrong Chainlink price accepted by PriceFeed would keep trove owners and Stability Pool depositors whole. Module Liquity V1 Ethereum CDP core holds ~100% of TVS (grade: red); weighted overall = red because the worst unmitigated dependency is cross-cutting."
+      }
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/liquity/dev/blob/3e64ee1b52c50d51587c64c1cf75e0ba82934979/README.md",
+        "shows": "Liquity V1 source README describes the ETH-collateralized LUSD borrowing system, core contracts, public user functions, permissionless liquidations, Chainlink primary oracle, Tellor fallback, last-good-price behavior, and ownership renunciation/no governance design.",
+        "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c517d4e2c851ca76d7ec94b805269df0f2201de",
+        "shows": "Ethereum mainnet deployed Liquity PriceFeed exact-match contract with ABI exposing fetchPrice, lastGoodPrice, status, priceAggregator, tellorCaller, and setAddresses; transaction list shows Fetch Price calls and LastGoodPriceUpdated events.",
+        "chain": "Ethereum",
+        "address": "0x4c517D4e2C851CA76d7eC94B805269Df0f2201De",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+        "shows": "Ethereum mainnet Chainlink ETH/USD Price Feed contract with recent Transmit transactions.",
+        "chain": "Ethereum",
+        "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xad430500ecda11e38c9bcb08a702274b94641112",
+        "shows": "Deployed Liquity TellorCaller exact-match contract; source states it is called by Liquity PriceFeed and reads Tellor getNewValueCountbyRequestId, getTimestampbyRequestIDandIndex, and retrieveData; constructor points to Tellor master 0x88dF592F8eb5D7Bd38bFeF7dEb0fBc02cf3778a0.",
+        "chain": "Ethereum",
+        "address": "0xAd430500ECDa11E38C9bCB08a702274b94641112",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x88dF592F8eb5D7Bd38bFeF7dEb0fBc02cf3778a0",
+        "shows": "Tellor Tributes/TRB contract used by Liquity's TellorCaller constructor as the Tellor master address.",
+        "chain": "Ethereum",
+        "address": "0x88dF592F8eb5D7Bd38bFeF7dEb0fBc02cf3778a0",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F",
+        "shows": "Ethereum mainnet Liquity ActivePool, a main value-holding core contract, with large ETH balance shown on Etherscan.",
+        "chain": "Ethereum",
+        "address": "0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+        "shows": "Ethereum mainnet Liquity StabilityPool, a main value-holding core contract, with ETH and LUSD balances shown on Etherscan.",
+        "chain": "Ethereum",
+        "address": "0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://defillama.com/protocol/liquity-v1",
+        "shows": "Liquity V1 page lists TVL by chain as Ethereum and category as CDP.",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://resources.cryptocompare.com/asset-management/489/1693231589834.pdf",
+        "shows": "Coinspect March 2021 Liquity V1 audit report; states review of liquity/dev up to commit dd7f59b9.",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      },
+      {
+        "url": "https://resources.cryptocompare.com/asset-management/489/1693231536299.pdf",
+        "shows": "Trail of Bits January 2021 Liquity security assessment report; states review of the LUSD stablecoin at liquity/dev commit f0df3ef.",
+        "fetched_at": "2026-05-01T06:53:52Z"
+      }
+    ],
+    "unknowns": [
+      "A1: Static Etherscan output did not expose live return values for PriceFeed.priceAggregator() and PriceFeed.tellorCaller(); the oracle-address assessment uses the verified PriceFeed ABI/README plus separately inspected Chainlink and Tellor contracts.",
+      "A2: Current Chainlink signer/transmitter quorum and Tellor reporter selection/quorum were not fully determined from the allowed source text during this run.",
+      "A5: DeFiLlama forkedFrom was not visible in the fetched Liquity V1 page text; no fork-lineage finding was recorded."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Coinspect",
+          "url": "https://resources.cryptocompare.com/asset-management/489/1693231589834.pdf",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://resources.cryptocompare.com/asset-management/489/1693231536299.pdf",
+          "date": "2021-01"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity V1 lets users lock ETH in individual troves and mint LUSD, a USD-pegged stablecoin, with a minimum collateral ratio of 110%. LUSD holders can redeem against ETH collateral, while Stability Pool depositors supply LUSD to absorb liquidated debt and receive liquidated ETH collateral. The system is designed as immutable and governance-free, with ETH/USD pricing supplied through a Chainlink primary oracle and Tellor fallback."
+    }
+  }
+]
