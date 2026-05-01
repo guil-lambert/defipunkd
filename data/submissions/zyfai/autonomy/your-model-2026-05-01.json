@@ -1,0 +1,176 @@
+{
+  "schema_version": 3,
+  "slug": "zyfai",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "claude-opus-4-6",
+  "chat_url": https://claude.ai/chat/2b1cfcc9-2775-49bd-a4fd-82001db3ee40,
+  "grade": "orange",
+  "headline": "User funds in self-custodial Safe wallets interact with whitelisted DeFi protocols directly; principal risk is inherited from those underlying protocols plus an off-chain rebalancing agent with on-chain session-key constraints. Cross-chain module adds Across/Warp bridge dependency. Impacted TVS under worst-case single-dependency failure: ~30-100% of cross-chain users, bounded at ~20-40% of total TVS.",
+  "short_headline": "Off-chain agent, bridge deps bounded",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "ZyFAI's core contracts (GuardedExecModuleUpgradeable and TargetRegistry) do not themselves call external oracles, price feeds, or read from third-party contracts. However, the protocol's entire value proposition depends on user funds being deposited INTO external DeFi protocols (Aave, Morpho, Fluid, Compound, Moonwell, Spark, Euler, Silo, Harvest, Wasabi) via the user's Safe7579 smart wallet. The GuardedExecModule validates that transactions target only whitelisted contracts/selectors in the TargetRegistry. The protocol does not maintain its own oracle — yield/APY data is consumed off-chain by the Intelligence Engine. If any integrated protocol (e.g., Aave, Morpho) were exploited or paused, user funds deposited there would be at risk, but this is per-market, opt-in risk since each user's Safe interacts directly with the underlying protocol. No shared vault aggregates risk across users."
+      },
+      {
+        "code": "A2",
+        "text": "No on-chain oracle committee or guardian multisig reports data INTO ZyFAI contracts. The rebalancing intelligence is entirely off-chain (the 'Intelligence & Strategy Layer'). The off-chain agent decides when/where to move funds, but execution is constrained by the on-chain Security Proxy Gateway (session keys scoped to TargetRegistry). Session key signing occurs inside an EigenCompute KMS Trusted Execution Environment (TEE). No on-chain committee-based oracle is consumed by ZyFAI's own contracts."
+      },
+      {
+        "code": "A3",
+        "text": "Cross-chain atomic rebalancing uses Warp (by Rhinestone) as the intent routing/execution engine and Across as the settlement layer. Per the docs, this module enables cross-chain capital movement between Base, Arbitrum, and other supported chains. Across operates a permissionless relayer system with canonical bridge settlement, which is a battle-tested intent-based bridge. However, this introduces a real bridge dependency: if Across or Warp fails, cross-chain rebalancing stalls and funds could be temporarily frozen in transit. The cross-chain module was described as 'closed beta' as of December 2025. Single-chain users (the majority historically) are not exposed to this bridge risk. Fraction of TVL on cross-chain module is unclear but likely <50% given the beta status."
+      },
+      {
+        "code": "A4",
+        "text": "ZyFAI does not itself create nested collateral chains. User funds are deposited into underlying money market protocols (Aave, Morpho, etc.) which may themselves have collateral chains, but this is the underlying protocol's risk, not ZyFAI's added dependency. ZyFAI's Risk Framework documents collateral assessment criteria (backing ratios, depeg monitoring). The risk is per-market and opt-in since users select their protocols. No receipt-of-receipt or restaking design exists within ZyFAI's own contracts."
+      },
+      {
+        "code": "A5",
+        "text": "DeFiLlama does not list a forkedFrom value for ZyFAI. The executor module and target registry are original contracts (not forks). The rZFI reward token is documented as a fork of Euler's evk-periphery repository."
+      },
+      {
+        "code": "A6",
+        "text": "Fallback mechanisms: (1) The Security Proxy Gateway is the primary circuit breaker — it rejects any transaction not matching the TargetRegistry whitelist at contract, function, and calldata level. This is LIVE and enforcing on-chain. (2) Both the GuardedExecModule and TargetRegistry have pause() functions that can be triggered by their respective owners to immediately halt all agent execution. Per README, module owner and registry owner should be multisig (docs reference 3/5 multisig for Zyfai's registry). Pause is LIVE. (3) The off-chain Intelligence Engine has security agents and monitoring that can proactively exit positions if anomalies are detected, but this is off-chain and not contractually enforced — status: LIVE but off-chain. (4) Users retain full ownership of their Safe wallet and can independently interact with underlying protocols via Safe's UI even if ZyFAI frontend is down — this is LIVE by virtue of Safe's architecture. No on-chain oracle fallback exists because the protocol doesn't use on-chain oracles."
+      },
+      {
+        "code": "A7",
+        "text": "ZyFAI is deployed on Base (Coinbase's L2 with centralized sequencer), Arbitrum (centralized sequencer with escape hatch), Sonic, and Plasma. Base and Arbitrum both have centralized sequencers that could temporarily freeze transactions, but both have documented escape-hatch mechanisms to L1. Sonic (chain ID 146) and Plasma (chain ID 9745) are less established chains with potentially higher liveness risk. If any L2 sequencer goes down, the ZyFAI agent cannot rebalance on that chain, but user funds remain accessible via the L1 escape hatch (for Base/Arbitrum) or are frozen until sequencer recovers (Sonic/Plasma). This is a standard L2 liveness dependency, not unique to ZyFAI."
+      },
+      {
+        "code": "A8",
+        "text": "The ZyFAI off-chain rebalancing agent (Intelligence Engine) is a critical keeper-like dependency. If the agent stops running: (1) no rebalancing occurs — funds remain in their current protocol position earning yield, (2) no auto-compounding occurs — reward tokens accumulate but are not reinvested, (3) no cross-chain rebalancing happens. The failure mode is GRACEFUL: users continue earning yield in their current position at the current rate, they just don't get optimized yield. No positions become insolvent, no bad debt accumulates, and no funds are locked. Users can always withdraw directly via Safe's interface. The agent is NOT permissionless — only the Zyfai-operated backend runs rebalancing. This is a centralized operator dependency for yield optimization but not for fund safety."
+      },
+      {
+        "code": "A9",
+        "text": "The TargetRegistry owner (documented as a multisig, per README 'should be multisig for production'; docs reference 3/5 for Zyfai's registry) can add new whitelisted contracts and function selectors WITHOUT a timelock. This means the registry owner can introduce new external protocol dependencies (e.g., whitelist a new lending protocol or DEX) immediately, and the agent can begin routing user funds to it. There is no timelock or user exit window between a registry addition and the agent acting on it. However, this is bounded: the agent can only move funds to whitelisted DeFi protocols, not to arbitrary addresses. ERC20 transfers are restricted to the user's own wallet, wallet owners, or explicitly authorized recipients. The A9 risk is that a compromised registry multisig could whitelist a malicious contract, and the agent could then route user funds there. This is mitigated by the multisig requirement but there is no timelock for users to react."
+      }
+    ],
+    "steelman": {
+      "red": "The registry owner (multisig) can instantly whitelist new external protocol targets without a timelock, and the off-chain agent is a single centralized operator that could be compromised to route funds to a newly-whitelisted malicious contract, potentially causing principal loss for all active users.",
+      "orange": "While the protocol has material external dependencies (underlying DeFi protocols, cross-chain bridge infrastructure, centralized off-chain agent), these are bounded by on-chain enforcement (session keys, TargetRegistry whitelist, ERC20 transfer restrictions), and agent failure degrades gracefully to static yield rather than causing principal loss; the no-timelock registry update is the main gap.",
+      "green": "User funds sit in self-custodial Safe wallets with on-chain session-key constraints, the protocol's own contracts make zero external oracle calls, and even total agent failure leaves funds safe and withdrawable via Safe's independent interface."
+    },
+    "verdict": "Choosing orange because the on-chain enforcement layer (GuardedExecModule + TargetRegistry whitelist + ERC20 transfer restrictions) provides meaningful guardrails that prevent arbitrary fund extraction, and agent failure degrades gracefully (static yield, not principal loss). However, the no-timelock TargetRegistry update by the multisig owner (allowing instant introduction of new external protocol dependencies), the centralized off-chain agent operator, and the Across/Warp cross-chain bridge dependency for the omni-chain module collectively mean that external failures can materially change expected performance (yield optimization stops) and the registry multisig could in theory introduce a malicious external dependency without user exit window. This prevents green. It does not reach red because: (1) principal loss requires compromising BOTH the registry multisig AND the off-chain agent, not just one, (2) ERC20 transfers are restricted to user's own wallet/authorized recipients even for whitelisted targets, and (3) users retain direct Safe wallet access independent of ZyFAI. Module weighting: single-chain rebalancing module holds ~60-80% of TVS (grade: orange due to no-timelock registry + centralized agent); cross-chain omni module holds ~20-40% (grade: orange due to Across bridge dependency plus same registry risk); weighted overall = orange."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/ondefy/zyfai-executor-module",
+      "shows": "Source code for GuardedExecModuleUpgradeable and TargetRegistry contracts. README documents the whitelist-based execution model, ERC20 transfer restrictions, pause functionality, UUPS upgradeability, and that registry owner should be multisig. Also reveals deployment addresses and owner address 0xd61C43c089852e0AB68B967dD1eDe03a18e52223.",
+      "fetched_at": "2026-05-01T10:00:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/overview/high-level",
+      "shows": "High-level architecture documentation describing the four-layer stack: Infrastructure (Safe7579, Paymaster), Control & Access (Session Keys, Security Proxy Gateway, EigenCompute KMS), Intelligence & Strategy (off-chain rebalancing engine), and Execution & Verifiability (Bundler, OmniAccounts, ZK Proofs). Confirms the off-chain Intelligence Engine decides capital allocation while on-chain enforcement validates transactions.",
+      "fetched_at": "2026-05-01T10:01:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/control/proxy",
+      "shows": "Security Proxy Gateway documentation describing the three-flow architecture: registry governance (multisig-owned TargetRegistry), session key scoping, and transaction validation at contract/function/calldata level. Confirms EigenCompute KMS TEE for session key signing. Confirms Sherlock audit of the system in December 2025. Registry ownership is by multisig (e.g., 3/5 for Zyfai's own registry).",
+      "fetched_at": "2026-05-01T10:02:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/control/session-keys",
+      "shows": "Session key documentation confirming keys are scoped to a specific TargetRegistry, user signs once during onboarding, and any action outside the registry is rejected at the contract level. Confirms no re-signing needed when new pools are added to the registry — this is the A9 finding about instant whitelist additions.",
+      "fetched_at": "2026-05-01T10:03:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/execution/omni",
+      "shows": "Cross-chain atomic rebalancing documentation describing the use of Warp (by Rhinestone) as intent routing engine and Across as settlement layer. Confirms cross-chain module uses intents with relayer pre-funding, MEV protection. States gas/bridge fees are covered by Zyfai and Rhinestone. Describes closed beta starting with Base and Arbitrum.",
+      "fetched_at": "2026-05-01T10:04:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/overview/audits",
+      "shows": "Audit page listing: (1) Sherlock end-to-end audit of NestJs Backend & Session Key Smart Contracts dated 20.12.2025, (2) Smart Session audit 25.12.2024, (3) Safe7579 audit 5.07.2024, (4) Core modules audit 3.10.2024, (5) Pimlico ERC20 Paymaster audit 28.03.2024, (6) rZFI audit 06.07.2025.",
+      "fetched_at": "2026-05-01T10:05:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/overview/risk-framework",
+      "shows": "Risk framework documentation detailing protocol whitelisting criteria (audits, TVL thresholds, oracle requirements, multisig requirements), collateral monitoring (depeg detection, backing ratios), pool monitoring (APY stability, TVL stability, utilization), and automated rebalancing controls (concentration limits, yield gates). Confirms underlying protocols must use tier-1 oracles like Chainlink/Pyth.",
+      "fetched_at": "2026-05-01T10:06:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/intelligence/rebalancing",
+      "shows": "Rebalancing rules documentation describing the five safety checks (pool safety, meaningful yield difference, yield stability, profit vs costs, money market liquidity) that every rebalance must pass. Confirms the off-chain Intelligence Engine makes all rebalancing decisions, with on-chain enforcement by the Security Proxy Gateway.",
+      "fetched_at": "2026-05-01T10:07:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/infra/safe7579",
+      "shows": "Confirms each user gets their own Safe7579 Smart Account, no shared vaults, user's EOA remains sole owner. Confirms front-end independence: users can interact with their Safe wallet directly even if ZyFAI frontend goes down.",
+      "fetched_at": "2026-05-01T10:08:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/ecosystem/governance/stewardship",
+      "shows": "Organizational structure documenting Ondefy Labs (development & operations), Zyfai Inc Panama (protocol curator), and Zyfai DAO (governance via stZFI voting). Confirms Zyfai Inc manages protocol curation including adding/removing protocols.",
+      "fetched_at": "2026-05-01T10:09:00Z"
+    },
+    {
+      "url": "https://zyfiofficial.medium.com/zyfai-november-yield-report-146-87-yield-boost-8-4m-aum-and-strong-multichain-activity-f48c699faddb",
+      "shows": "November 2025 yield report confirming $8.4M AUM, automated rebalancing across Base, Arbitrum, Plasma, and Sonic. Lists integrated protocols: Aave, Morpho, Fluid, Compound, Moonwell, Spark, Euler, Silo, Harvest, Wasabi. Confirms cross-chain beta launch with Warp/Across.",
+      "fetched_at": "2026-05-01T10:10:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/product/overview/introduction",
+      "shows": "Introduction page confirming Zyfai leverages Safe7579 and Session Keys, uses personalized Smart Accounts (not shared vaults), and was incubated by the Ethereum Foundation. Lists the four-layer agentic yield stack.",
+      "fetched_at": "2026-05-01T10:11:00Z"
+    },
+    {
+      "url": "https://basescan.org/tx/0xff74f6b9fa4dd2b329c4610eb85eacf85ea6ea37e5a7f54ed11041c5d400a21b",
+      "shows": "On-chain buyback transaction on Base confirming protocol activity, referenced in the November 2025 yield report.",
+      "chain": "Base"
+    },
+    {
+      "url": "https://vote.zyf.ai/",
+      "shows": "Snapshot governance portal for ZyFAI DAO, confirming on-chain governance via stZFI token voting.",
+      "fetched_at": "2026-05-01T10:12:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: Could not enumerate every specific external contract address called by user Safe wallets during rebalancing (e.g., exact Aave/Morpho pool addresses whitelisted in TargetRegistry) because the TargetRegistry state is not publicly indexed and block explorer search for the registry contract address returned no direct results.",
+    "A2: Could not verify the exact composition or threshold of the TargetRegistry owner multisig on-chain. Documentation references 3/5 for Zyfai's registry and the deployer address 0xd61C43c089852e0AB68B967dD1eDe03a18e52223 is mentioned in the GitHub README, but on-chain verification of the multisig configuration was not possible in this run.",
+    "A3: Could not determine the exact fraction of ZyFAI TVL currently using the cross-chain OmniAccounts module vs single-chain rebalancing. The cross-chain feature was described as 'closed beta' as of late 2025; its current adoption fraction is unclear.",
+    "A7: Could not verify the sequencer/DA trust model for Sonic (chain ID 146) and Plasma (chain ID 9745) as these are less documented chains. Their liveness guarantees and escape hatch mechanisms are unknown.",
+    "A9: Could not verify on-chain whether the TargetRegistry owner is actually a multisig vs an EOA at the time of this assessment. The GitHub README states it 'should be multisig for production' and docs reference 3/5, but on-chain state was not confirmed."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ondefy/zyfai-sdk",
+      "https://github.com/ondefy/zyfai-executor-module"
+    ],
+    "docs_url": "https://docs.zyf.ai",
+    "audits": [
+      {
+        "firm": "Sherlock",
+        "url": "https://zyf.ai/sherlock-audit-november-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "Independent (rZFI)",
+        "url": "https://www.zyf.ai/rzfi-audit-report.pdf",
+        "date": "2025-07"
+      }
+    ],
+    "governance_forum": "https://vote.zyf.ai/",
+    "voting_token": {
+      "chain": "Base",
+      "address": null,
+      "symbol": "stZFI"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Base",
+        "address": "0xd61C43c089852e0AB68B967dD1eDe03a18e52223",
+        "role": "TargetRegistry and module deployer/owner",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "ZyFAI is an agentic yield optimization layer that deploys per-user Safe7579 smart wallets and uses session-key-scoped automation to rebalance stablecoin deposits across whitelisted DeFi lending protocols (Aave, Morpho, Compound, Moonwell, etc.) on Base, Arbitrum, Sonic, and Plasma. Unlike shared-vault yield aggregators, each user's capital sits in their own self-custodial Safe wallet, and an off-chain rebalancing engine continuously moves funds to the highest risk-adjusted yield opportunity within on-chain-enforced guardrails. Cross-chain rebalancing is powered by Rhinestone's Warp intent system with Across as the settlement layer."
+  }
+}
