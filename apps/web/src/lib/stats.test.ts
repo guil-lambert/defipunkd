@@ -158,8 +158,8 @@ describe("buildStats", () => {
     );
     expect(stats.totalSubmissions).toBe(4);
     expect(stats.reviewedProtocols).toBe(2);
-    expect(stats.mostReviewed[0]).toEqual({ slug: "a", name: "X", submissionCount: 3 });
-    expect(stats.mostReviewed[1]).toEqual({ slug: "b", name: "X", submissionCount: 1 });
+    expect(stats.mostReviewed[0]).toEqual({ slug: "a", name: "X", logo: null, submissionCount: 3 });
+    expect(stats.mostReviewed[1]).toEqual({ slug: "b", name: "X", logo: null, submissionCount: 1 });
     expect(stats.mostReviewed.find((r) => r.slug === "c")).toBeUndefined();
   });
 

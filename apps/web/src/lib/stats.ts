@@ -33,6 +33,7 @@ export type GradeBucket = {
 export type CoverageRow = {
   slug: string;
   name: string;
+  logo: string | null;
   tier: Tier;
   /** Set when the protocol is a child rendered under its parent's family
    *  page; deep-links must target /protocol/{parent_slug}#{slug}-{slice}
@@ -46,6 +47,7 @@ export type CoverageRow = {
 export type MostReviewed = {
   slug: string;
   name: string;
+  logo: string | null;
   submissionCount: number;
 };
 
@@ -271,6 +273,7 @@ export function buildStats(
     .map((p) => ({
       slug: p.slug,
       name: p.name,
+      logo: p.logo,
       submissionCount: subCountBySlug.get(p.slug) ?? 0,
     }))
     .filter((r) => r.submissionCount > 0)
@@ -343,6 +346,7 @@ export function buildStats(
       return {
         slug: p.slug,
         name: p.name,
+        logo: p.logo,
         tier: perProtoTier.get(p.slug) ?? "none",
         parent_slug: p.parent_slug && bySlugMap.has(p.parent_slug) ? p.parent_slug : null,
         submissionCount: subCountBySlug.get(p.slug) ?? 0,
