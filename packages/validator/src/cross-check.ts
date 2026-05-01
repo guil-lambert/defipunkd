@@ -52,6 +52,15 @@ export async function verifyChatUrlReachable(
   }
 }
 
+export function isHallucinationProneModel(model: string): boolean {
+  const m = model.toLowerCase();
+  if (/claude-haiku-4-5/.test(m)) return true;
+  if (/gemini-3-flash-preview/.test(m)) return true;
+  const gpt = m.match(/gpt-(\d+(?:\.\d+)?)/);
+  if (gpt && parseFloat(gpt[1]!) <= 5.3) return true;
+  return false;
+}
+
 export function isPublicChatShareUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   try {
@@ -190,6 +199,33 @@ export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIss
         message: `on-chain slice "${s.slice}" has no block-explorer URL in evidence[]; downweighted by quorum`,
       });
     }
+  }
+
+  if (isHallucinationProneModel(s.model)) {
+    issues.push({
+      severity: "warning",
+      field: "model",
+      message: `model "${s.model}" is hallucination-prone (also: claude-haiku-4-5, gemini-3-flash-preview, gpt ≤ 5.3); quorum weight reduced by 95% — re-run with claude-sonnet-4-6, gpt-5.4+, gemini-3-pro, or similar to restore full weight`,
+    });
+  }
+
+  if (s.grade !== "unknown" && s.evidence.length > 0) {
+    const hasFetchedAt = s.evidence.some((e) => typeof e.fetched_at === "string" && e.fetched_at.length > 0);
+    if (!hasFetchedAt) {
+      issues.push({
+        severity: "warning",
+        field: "evidence",
+        message: `evidence entries lack fetched_at timestamps; quorum gives up to +0.2 weight for cited-and-dated evidence`,
+      });
+    }
+  }
+
+  if (s.grade !== "unknown" && s.unknowns.length === 0) {
+    issues.push({
+      severity: "warning",
+      field: "unknowns",
+      message: `grade is "${s.grade}" but unknowns[] is empty; quorum awards +0.15 weight when a graded submission acknowledges residual unknowns`,
+    });
   }
 
   return issues;

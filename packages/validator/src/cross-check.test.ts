@@ -14,8 +14,8 @@ const sub = (over: Partial<Submission> = {}): Submission => ({
   grade: "orange",
   headline: "x",
   rationale: { findings: [], steelman: { red: "a", orange: "b", green: "c" }, verdict: "x" },
-  evidence: [{ url: "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1", shows: "y" }],
-  unknowns: [],
+  evidence: [{ url: "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1", shows: "y", fetched_at: "2026-04-23T00:00:00Z" }],
+  unknowns: ["U1: residual"],
   ...over,
 });
 
@@ -79,6 +79,73 @@ describe("crossCheck", () => {
       ctx(),
     );
     expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(false);
+  });
+
+  it("warns when chat_url is null", () => {
+    const issues = crossCheck(sub({ chat_url: null }), ctx());
+    expect(issues.some((i) => i.severity === "warning" && i.field === "chat_url")).toBe(true);
+  });
+
+  it("warns when chat_url is not a public share URL", () => {
+    const issues = crossCheck(sub({ chat_url: "https://example.com/transcript" }), ctx());
+    expect(issues.some((i) => i.severity === "warning" && i.field === "chat_url")).toBe(true);
+  });
+
+  it("warns when model is hallucination-prone (gemini-3-flash-preview)", () => {
+    const issues = crossCheck(sub({ model: "gemini-3-flash-preview" }), ctx());
+    expect(issues.some((i) => i.severity === "warning" && i.field === "model" && /hallucination-prone/.test(i.message))).toBe(true);
+  });
+
+  it("warns when model is hallucination-prone (claude-haiku-4-5)", () => {
+    const issues = crossCheck(sub({ model: "claude-haiku-4-5-20251001" }), ctx());
+    expect(issues.some((i) => i.severity === "warning" && i.field === "model" && /hallucination-prone/.test(i.message))).toBe(true);
+  });
+
+  it("warns when model is hallucination-prone (gpt-5.3)", () => {
+    const issues = crossCheck(sub({ model: "gpt-5.3" }), ctx());
+    expect(issues.some((i) => i.severity === "warning" && i.field === "model" && /hallucination-prone/.test(i.message))).toBe(true);
+  });
+
+  it("does not warn for high-quality models", () => {
+    for (const model of ["claude-sonnet-4-6", "gpt-5.4", "gpt-6", "gemini-3-pro"]) {
+      const issues = crossCheck(sub({ model }), ctx());
+      expect(issues.some((i) => i.field === "model")).toBe(false);
+    }
+  });
+
+  it("warns when graded evidence lacks fetched_at timestamps", () => {
+    const issues = crossCheck(
+      sub({
+        evidence: [{ url: "https://etherscan.io/address/0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1", shows: "y" }],
+      }),
+      ctx(),
+    );
+    expect(issues.some((i) => i.severity === "warning" && i.field === "evidence" && /fetched_at/.test(i.message))).toBe(true);
+  });
+
+  it("does not warn about fetched_at when grade is unknown", () => {
+    const issues = crossCheck(
+      sub({
+        grade: "unknown",
+        evidence: [],
+        unknowns: ["E1: can't determine"],
+      }),
+      ctx(),
+    );
+    expect(issues.some((i) => i.field === "evidence" && /fetched_at/.test(i.message))).toBe(false);
+  });
+
+  it("warns when graded submission has empty unknowns[]", () => {
+    const issues = crossCheck(sub({ unknowns: [] }), ctx());
+    expect(issues.some((i) => i.severity === "warning" && i.field === "unknowns" && /residual unknowns/.test(i.message))).toBe(true);
+  });
+
+  it("does not warn about empty unknowns when grade is unknown", () => {
+    const issues = crossCheck(
+      sub({ grade: "unknown", evidence: [], unknowns: ["E1: can't determine"] }),
+      ctx(),
+    );
+    expect(issues.some((i) => i.field === "unknowns")).toBe(false);
   });
 });
 

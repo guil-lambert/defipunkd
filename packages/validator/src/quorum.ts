@@ -1,5 +1,5 @@
 import type { Submission } from "./schema";
-import { isExplorerUrl, isPublicChatShareUrl } from "./cross-check";
+import { isExplorerUrl, isHallucinationProneModel, isPublicChatShareUrl } from "./cross-check";
 
 export type ScoredSubmission = {
   submission: Submission;
@@ -51,15 +51,6 @@ export type QuorumContext = {
   now: string;
 };
 
-
-function isHallucinationProneModel(model: string): boolean {
-  const m = model.toLowerCase();
-  if (/claude-haiku-4-5/.test(m)) return true;
-  if (/gemini-3-flash-preview/.test(m)) return true;
-  const gpt = m.match(/gpt-(\d+(?:\.\d+)?)/);
-  if (gpt && parseFloat(gpt[1]!) <= 5.3) return true;
-  return false;
-}
 
 function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): ScoredSubmission {
   let weight = 1.0;
