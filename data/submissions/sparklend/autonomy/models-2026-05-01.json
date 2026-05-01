@@ -1,0 +1,209 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "A bad oracle/source failure can impair ~100% of SparkLend TVS; live checks do not bound positive misprices",
+    "short_headline": "Oracle dependency red",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The Ethereum SparkLend Pool at 0xC13e21B648A5Ee794902342038FF3aDAB66BE987 is live and handles supply, withdraw, borrow, and repay transactions, while its deployed AaveOracle at 0x8105f69D9C41644c6A0803fDA7D03Aa70996cFD9 maps assets to AggregatorInterface sources and returns source.latestAnswer() for prices. Positive but wrong external source prices are accepted, so a bad price source can misprice collateral and debt, enabling undercollateralized borrowing or bad liquidations."
+        },
+        {
+          "code": "A2",
+          "text": "The material off-chain reporting surface is the oracle-provider side of the price feeds consumed through AaveOracle; the deployed Spark contracts expose aggregator addresses and latestAnswer() consumption, but the allowed Spark and explorer sources did not expose the current reporter committee sizes, quorums, or member-selection rules."
+        },
+        {
+          "code": "A3",
+          "text": "SparkLend has a separate active Gnosis/xDai pool at 0x2Dae5307c5E3FD1CF5A72Cb6F698f915860607e0, with recent GnosisScan events for Pool reserve updates. The Gnosis deployment is a separate module rather than a bridge required for Ethereum users, but several Gnosis reserve assets are bridged or wrapped assets, so failures there are chain/module-scoped."
+        },
+        {
+          "code": "A4",
+          "text": "Current SparkLend reserves include receipt or wrapper assets such as wstETH and sDAI/sUSDS-era savings assets; these create at least one layer of nested collateral risk for users who opt into those reserves, and because SparkLend is a shared lending pool rather than isolated per-market silos, a severe collateral/oracle failure can propagate through bad debt."
+        },
+        {
+          "code": "A5",
+          "text": "SparkLend is an Aave v3 codebase fork; Spark docs state it is based on Aave v3 including the 3.0.1 and 3.0.2 upgrades, and the ChainSecurity deployment verification describes it as a fork of Aave V3 with Spark-specific differences."
+        },
+        {
+          "code": "A6",
+          "text": "The deployed AaveOracle has a live fallback path only when a source is missing or returns a nonpositive value; this does not catch stale or adversarial positive prices. Spark also has deployed FreezerMom/KillSwitchOracle-style addresses in the registry, but their live wiring and thresholds were not fully verified, so they were not counted as mitigation."
+        },
+        {
+          "code": "A7",
+          "text": "The Ethereum module has no additional L2 sequencer dependency beyond Ethereum itself. The Gnosis module is on Gnosis/xDai rather than an L2 sequencer system; no separate sequencer or DA committee dependency was identified from the allowed sources."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidations are an external liveness dependency in the normal Aave-style sense: the ChainSecurity deployment report observed regular pool operations including liquidationCall, and if permissionless liquidators disappear, bad debt can accumulate, but no privileged keeper-only liquidation bot was identified."
+        },
+        {
+          "code": "A9",
+          "text": "The external dependency surface is governance-mutable: AaveOracle exposes setAssetSources and setFallbackOracle to asset-listing or pool admins, and the address provider/config-engine interfaces expose price-oracle and price-feed update paths. This is specifically oracle/source mutability, not merely generic proxy upgradeability; the allowed sources did not verify a >=7-day exit window for users before oracle-source changes."
+        }
+      ],
+      "steelman": {
+        "red": "SparkLend deserves red because the deployed AaveOracle accepts latestAnswer() from mutable external price sources without bounding positive misreports, and a bad collateral or debt price can create protocol bad debt affecting supplier principal across the shared lending pools.",
+        "orange": "SparkLend deserves orange if the operational freezer/kill-switch processes and fallback oracle are treated as sufficient to turn most oracle failures into recoverable pauses or degraded liquidation performance.",
+        "green": "SparkLend deserves green if one focuses only on the Aave-v3-derived pool accounting and treats wrapped-asset and oracle risks as opt-in per reserve rather than cross-cutting protocol dependencies."
+      },
+      "verdict": "Choosing red because the strongest red case directly matches the deployed oracle architecture: both the large Ethereum module and the active Gnosis module rely on external, mutable price sources, the live fallback only handles missing or nonpositive prices, and a positive misprice can affect borrowing and liquidation solvency. Module weighting: Ethereum Pool holds ~95%+ of identifiable TVS and is red, with more than $1.4B visible in only spwstETH, spDAI, and spWETH cash balances; Gnosis Pool is ~<5%/not fully measured and is also red; weighted overall = red because the worst unmitigated oracle dependency can affect essentially all collateralized SparkLend TVS."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.spark.fi/",
+        "shows": "Spark docs describe Spark product categories and describe SparkLend as Spark's money market protocol with stablecoin liquidity provided from Sky.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://docs.spark.fi/dev/deployments/",
+        "shows": "Spark docs identify the Spark Address Registry as the canonical repository containing smart-contract addresses for each network.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://docs.spark.fi/dev/security/security-and-audits",
+        "shows": "Spark docs state SparkLend is based on the Aave v3 codebase, including 3.0.1 and 3.0.2 upgrades, and list SparkLend core/advanced/cap-automator audit repositories.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://docs.spark.fi/assets/Chainsecurity-SparkLend-Deployment-Verification.pdf",
+        "shows": "ChainSecurity deployment verification identifies SparkLend as an Aave V3 fork, lists the Ethereum Pool, PoolAddressesProvider, AaveOracle-related setup, upgradeable pool/token contracts, initial price-source differences, and MakerDAO DSPauseProxy as final owner/ACL admin at deployment.",
+        "commit": "d105126e34c7453cf3820ebfbda2db057a1a580e",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "shows": "Ethereum block explorer page for the deployed SparkLend Pool proxy, including active supply, withdraw, borrow, and repay transaction methods.",
+        "chain": "Ethereum",
+        "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x8105f69D9C41644c6A0803fDA7D03Aa70996cFD9",
+        "shows": "Verified deployed AaveOracle source: assetsSources mapping, setAssetSources/setFallbackOracle admin functions, Chainlink AggregatorInterface import, getAssetPrice calling latestAnswer(), and fallback only for missing or nonpositive prices.",
+        "chain": "Ethereum",
+        "address": "0x8105f69D9C41644c6A0803fDA7D03Aa70996cFD9",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4DEDf26112B3Ec8eC46e7E31EA5e123490B05B8B",
+        "shows": "Ethereum spDAI token contract page showing approximately $89.5M of DAI token holdings at fetch time.",
+        "chain": "Ethereum",
+        "address": "0x4DEDf26112B3Ec8eC46e7E31EA5e123490B05B8B",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x12B54025C112Aa61fAce2CDB7118740875A566E9",
+        "shows": "Ethereum spwstETH token contract page showing approximately 499,878.85 wstETH worth about $1.275B at fetch time.",
+        "chain": "Ethereum",
+        "address": "0x12B54025C112Aa61fAce2CDB7118740875A566E9",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x59cD1C87501baa753d0B5B5Ab5D8416A45cD71DB",
+        "shows": "Ethereum spWETH token contract page showing approximately 33,988.86 WETH worth about $63.3M at fetch time.",
+        "chain": "Ethereum",
+        "address": "0x59cD1C87501baa753d0B5B5Ab5D8416A45cD71DB",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://gnosisscan.io/tx/0x4ae01b6a52a298b76712fc349670de066c47332448b99d7be28622a34641514f",
+        "shows": "GnosisScan transaction receipt showing active Spark Pool reserve updates for the Gnosis/xDai SparkLend Pool at 0x2Dae5307c5E3FD1CF5A72Cb6F698f915860607e0.",
+        "chain": "Gnosis",
+        "address": "0x2Dae5307c5E3FD1CF5A72Cb6F698f915860607e0",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://github.com/sparkdotfi/spark-address-registry/blob/master/src/SparkLend.sol",
+        "shows": "Spark address registry page listing current SparkLend Ethereum core addresses, reserve-token addresses, auxiliary addresses including Cap Automator, FreezerMom, KillSwitchOracle, SSR rate source, and implementation/library addresses.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://github.com/sparkdotfi/spark-address-registry/blob/master/src/Gnosis.sol",
+        "shows": "Spark address registry page listing Gnosis SparkLend pool, oracle, configurator, reserves, data providers, AMB executor, and token addresses.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://github.com/sparkdotfi/spark-address-registry/blob/master/src/Ethereum.sol",
+        "shows": "Spark address registry page listing Ethereum Spark DAO addresses, SPK/STSPK token addresses, freezer multisigs, Sky Pause Proxy, and related protocol addresses.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://docs.spark.fi/dev/security/bug-bounty-program",
+        "shows": "Spark docs state Spark has an active Immunefi bug bounty program with rewards up to $5,000,000.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/sparklend/information/",
+        "shows": "Immunefi Spark bounty page showing the live Spark program, maximum bounty, live-since date, and last-updated date.",
+        "fetched_at": "2026-05-01T06:48:05Z"
+      }
+    ],
+    "unknowns": [
+      "A1: Could not exhaustively verify current getSourceOfAsset return values for every reserve on both chains through allowed explorer read calls; the core oracle architecture and representative active TVS were verified, so the grade does not depend on a full feed census.",
+      "A2: Current Chainlink or other feed reporter committee sizes, quorums, and member-selection rules were not exposed in the Spark docs, audit PDF, or block-explorer pages checked.",
+      "A3: For the Gnosis deployment, the bridge operator/trust model and exact fraction of TVS in bridged assets could not be fully determined from the allowed sources.",
+      "A4: Could not enumerate every slashing, freezing, or governance actor inside each nested receipt asset such as wstETH, rETH, weETH, ezETH, rsETH, sDAI, and sUSDS from the allowed Spark/block-explorer sources.",
+      "A6: FreezerMom and KillSwitchOracle addresses were found, but live role wiring, activation status, and thresholds were not fully verified; they were not counted as grade-reducing mitigation.",
+      "A9: Current exact ACL role holders and timelock or exit-window duration for setAssetSources and setFallbackOracle were not fully reconstructed from allowed sources."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sparkdotfi/spark-address-registry",
+        "https://github.com/sparkdotfi/sparklend-v1-core",
+        "https://github.com/sparkdotfi/sparklend-advanced",
+        "https://github.com/sparkdotfi/sparklend-cap-automator",
+        "https://github.com/sparkdotfi/sparklend-deployments"
+      ],
+      "docs_url": "https://docs.spark.fi/",
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://docs.spark.fi/assets/Chainsecurity-SparkLend-Deployment-Verification.pdf",
+          "date": "2023-04-26"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/sparklend/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.spark.fi/dev/deployments/",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3300f198988e4C9C63F75dF86De36421f06af8c4",
+          "role": "Spark DAO proxy",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "Sky Pause Proxy referenced by Spark registry",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+          "role": "SparkLend freezer multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Gnosis",
+          "address": "0xc4218C1127cB24a0D6c1e7D25dc34e10f2625f5A",
+          "role": "Gnosis AMB executor",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "SparkLend is an Aave v3-derived money market where users supply supported assets as collateral and borrow from shared liquidity. It is integrated with the Sky/Maker ecosystem, including custom DAI/savings-asset rate and oracle components, and is designed to provide deep stablecoin liquidity alongside ETH, BTC, LST, and other collateral markets."
+    }
+  }
+]
