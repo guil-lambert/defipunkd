@@ -154,5 +154,121 @@
       "upgradeability": "immutable",
       "about": "Liquity V1 lets users lock ETH in individual troves and mint LUSD, a USD-pegged stablecoin, with a minimum collateral ratio of 110%. LUSD holders can redeem against ETH collateral, while Stability Pool depositors supply LUSD to absorb liquidated debt and receive liquidated ETH collateral. The system is designed as immutable and governance-free, with ETH/USD pricing supplied through a Chainlink primary oracle and Tellor fallback."
     }
+  },
+  {
+    "schema_version": 3,
+    "slug": "liquity-v1",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "~0% impacted TVS; fully immutable protocol with native ETH collateral and dual-oracle fallback",
+    "short_headline": "Immutable, dual-oracle, native ETH only",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The protocol depends on two external oracle providers: Chainlink (primary) and Tellor (secondary). The PriceFeed contract (0x4c517D4e2C851CA76d7ec94b80C8992403a39744) calls the Chainlink ETH/USD Aggregator (0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419) and the Tellor oracle (0x88dF592F8eb5D7Bd38bFeF7dEb0fBc02cf3778a0) to determine collateral value."
+        },
+        {
+          "code": "A2",
+          "text": "Oracle reporting is handled by the decentralized node operator sets of Chainlink and Tellor. There are no protocol-specific guardian committees or multisigs that can manually override or report prices into the system."
+        },
+        {
+          "code": "A3",
+          "text": "Liquity V1 is native to Ethereum L1 and does not depend on any cross-chain bridges for its core functionality (borrowing LUSD against ETH)."
+        },
+        {
+          "code": "A4",
+          "text": "The protocol only accepts native ETH as collateral, avoiding any dependency on wrapped assets, LSTs, or external yield-bearing tokens."
+        },
+        {
+          "code": "A6",
+          "text": "The PriceFeed contract implements a robust, automated on-chain fallback mechanism (LIVE and enforcing). It monitors Chainlink for timeouts or 'broken' states; if Chainlink fails, it automatically switches to Tellor. If both fail, it uses the last known good price to prevent immediate catastrophic failure."
+        },
+        {
+          "code": "A7",
+          "text": "The protocol is deployed on Ethereum L1, meaning it has no dependency on centralized L2 sequencers or external DA layers beyond the base-chain substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidations are permissionless and incentivized by a gas compensation (200 LUSD) plus a 10% collateral premium, ensuring that any actor can run a bot to maintain system solvency without relying on a specific relayer set."
+        },
+        {
+          "code": "A9",
+          "text": "The protocol is fully immutable. The PriceFeed contract's ownership was renounced to the zero address (0x0000...0000) after initialization, meaning no admin or DAO can change the oracle addresses or introduce new external dependencies."
+        }
+      ],
+      "steelman": {
+        "red": "A simultaneous failure or coordinated manipulation of both the Chainlink and Tellor oracle feeds could lead to incorrect liquidations or protocol insolvency with no manual override possible.",
+        "orange": "The protocol's reliance on external oracle providers introduces a dependency where a failure in the primary provider (Chainlink) forces a transition to a secondary system (Tellor) with a different security and latency profile.",
+        "green": "The protocol is entirely immutable with no admin keys, uses only native ETH collateral, and features a live, automated on-chain fallback between two independent oracle networks to ensure continuous operation."
+      },
+      "verdict": "Choosing green because the protocol achieves the highest level of autonomy possible on Ethereum: it is fully immutable with renounced ownership (A9), uses no wrapped or yield-bearing assets (A4), and mitigates its only material external dependency (oracles) through a live, automated dual-feed fallback mechanism (A6) that ensures a single-provider failure results in 0% impacted TVS."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x4c517D4e2C851CA76d7ec94b80C8992403a39744#code",
+        "shows": "PriceFeed contract implementation and hardcoded/initialized oracle addresses.",
+        "chain": "Ethereum",
+        "address": "0x4c517D4e2C851CA76d7ec94b80C8992403a39744",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c517D4e2C851CA76d7ec94b80C8992403a39744#readContract",
+        "shows": "Ownership of the PriceFeed contract is renounced (owner = 0x0000000000000000000000000000000000000000).",
+        "chain": "Ethereum",
+        "address": "0x4c517D4e2C851CA76d7ec94b80C8992403a39744",
+        "fetched_at": "2026-05-01T10:05:00Z"
+      },
+      {
+        "url": "https://github.com/liquity/dev/blob/b6e6d13523a0b7ee30a14797c7bcf4441630d95d/packages/contracts/contracts/PriceFeed.sol#L330",
+        "shows": "Automated fallback logic between Chainlink and Tellor in fetchPrice().",
+        "commit": "b6e6d13523a0b7ee30a14797c7bcf4441630d95d",
+        "fetched_at": "2026-05-01T10:10:00Z"
+      },
+      {
+        "url": "https://docs.liquity.org/documentation/oracle-logic-chainlink-and-tellor",
+        "shows": "Official documentation describing the dual-oracle fallback mechanism and broken-state handling.",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x24179CD81c9e782A4096035f7eC97fB8B783e007#code",
+        "shows": "BorrowerOperations contract only accepts native ETH (msg.value) for collateral.",
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "fetched_at": "2026-05-01T10:20:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/liquity/dev"
+      ],
+      "docs_url": "https://docs.liquity.org/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Trail_of_Bits_Liquity_Audit_Report.pdf",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/liquity/dev/blob/main/papers/Sigma_Prime_Liquity_Smart_Contract_Security_Assessment_Report.pdf",
+          "date": "2021-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/liquity/",
+      "security_contact": "security@liquity.org",
+      "deployed_contracts_doc": "https://docs.liquity.org/essential-resources/contract-addresses",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Liquity is a decentralized borrowing protocol that allows users to draw interest-free loans against Ether used as collateral. Loans are paid out in LUSD (a USD-pegged stablecoin) and must maintain a minimum collateral ratio of 110%. The protocol is entirely immutable, has no admin keys, and uses a dual-oracle system for price resilience."
+    }
   }
 ]
