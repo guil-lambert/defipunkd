@@ -15,9 +15,8 @@ export const CONFIDENCE_THRESHOLDS = {
   TOTAL_WEIGHT_MIN: 1.5,
 } as const;
 
-// Mirror of packages/validator/src/quorum.ts:isHallucinationProneModel.
-// Duplicated here (10 LOC) instead of cross-importing the validator package
-// into the browser bundle.
+// Mirror of packages/validator/src/cross-check.ts. Duplicated here instead
+// of cross-importing the validator package into the browser bundle.
 export function isHallucinationProneModel(model: string): boolean {
   const m = model.toLowerCase();
   if (/claude-haiku-4-5/.test(m)) return true;
@@ -25,6 +24,19 @@ export function isHallucinationProneModel(model: string): boolean {
   const gpt = m.match(/gpt-(\d+(?:\.\d+)?)/);
   if (gpt && parseFloat(gpt[1]!) <= 5.3) return true;
   return false;
+}
+
+export function isThinkingModel(model: string): boolean {
+  const m = model.toLowerCase();
+  if (/thinking|reason/.test(m)) return true;
+  if (/claude-opus/.test(m)) return true;
+  if (/^o\d/.test(m)) return true;
+  if (/gemini-(?:3|[4-9])(?:\.\d+)?-pro/.test(m)) return true;
+  return false;
+}
+
+export function isNonThinkingModel(model: string): boolean {
+  return !isHallucinationProneModel(model) && !isThinkingModel(model);
 }
 
 export type ConsensusSource = {

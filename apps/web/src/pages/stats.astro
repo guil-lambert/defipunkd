@@ -2,6 +2,7 @@
 export const prerender = true;
 import { listProtocols, getAssessments, getSubmissions } from "@defipunkd/registry";
 import Base from "../layouts/Base.astro";
+import SideNav from "../components/SideNav.astro";
 import TierMedal from "../components/TierMedal.svelte";
 import { PIZZA_SLICES, type PizzaSliceId } from "../lib/pizza";
 import { TIER_LABEL, type Tier } from "../lib/tier";
@@ -97,18 +98,22 @@ const maxReviewed = Math.max(1, ...stats.mostReviewed.map((r) => r.submissionCou
 const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
 ---
 <Base title="DeFiPunk'd — Stats" description="Snapshot stats for the DeFiPunk'd transparency registry.">
+  <SideNav contentMaxWidth={1200} links={[
+    { href: "#tier-distribution", label: "Tier distribution" },
+    { href: "#tvl-by-tier", label: "TVL by tier" },
+    { href: "#most-reviewed", label: "Most-reviewed" },
+    { href: "#model-breakdown", label: "Model breakdown" },
+    { href: "#grade-distribution", label: "Grade per slice" },
+    { href: "#coverage-matrix", label: "Coverage matrix" },
+  ]} />
   <main class="page">
-    <header class="hero">
-      <h1>Stats</h1>
-      <p class="subtitle">
-        Snapshot of {stats.totalProtocols.toLocaleString()} live protocols ·
-        {stats.reviewedProtocols.toLocaleString()} reviewed ·
-        {stats.totalSubmissions.toLocaleString()} model submissions ·{" "}
-        <a href="/">back to landing</a>
-      </p>
-    </header>
+    <p class="subtitle">
+      Snapshot of {stats.totalProtocols.toLocaleString()} live protocols ·
+      {stats.reviewedProtocols.toLocaleString()} reviewed ·
+      {stats.totalSubmissions.toLocaleString()} model submissions.
+    </p>
 
-    <section class="card">
+    <section class="card" id="tier-distribution">
       <h2>Tier distribution</h2>
       <p class="caption">
         Protocols by medal tier across the registry. The Ungraded segment is
@@ -141,7 +146,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       </ul>
     </section>
 
-    <section class="card">
+    <section class="card" id="tvl-by-tier">
       <h2>TVL by tier</h2>
       <p class="caption">
         Total TVL across live protocols: <strong>{formatTvl(stats.totalTvl)}</strong>.
@@ -174,7 +179,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       </ul>
     </section>
 
-    <section class="card">
+    <section class="card" id="most-reviewed">
       <h2>Most-reviewed protocols</h2>
       <p class="caption">Top 10 by total model submissions across all five slices.</p>
       {stats.mostReviewed.length === 0 ? (
@@ -197,7 +202,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       )}
     </section>
 
-    <section class="card">
+    <section class="card" id="model-breakdown">
       <h2>Model breakdown</h2>
       <p class="caption">
         Submissions per model, color-tinted by family
@@ -227,7 +232,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       )}
     </section>
 
-    <section class="card">
+    <section class="card" id="grade-distribution">
       <h2>Grade distribution per slice</h2>
       <p class="caption">
         Across all live protocols. Verifiability and Autonomy are rule-based so they cover ~every protocol;
@@ -281,7 +286,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       </ul>
     </section>
 
-    <section class="card">
+    <section class="card" id="coverage-matrix">
       <h2>Slice coverage matrix</h2>
       <p class="caption">
         For each protocol with at least one submission: which of the five slices have reached AI consensus.
@@ -298,35 +303,45 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
               <span class="m-slice">{label}</span>
             ))}
           </div>
-          {stats.coverage.map((row) => (
-            <div class={`matrix-row tier-${row.tier}`}>
-              <a class="m-name" href={`/protocol/${row.slug}`}>{row.name}</a>
-              <a
-                class="m-medal tt-wrap audit-cta"
-                href={`/protocol/${row.slug}#audit-yourself`}
-                aria-label={row.tier === "none"
-                  ? "Be the first to audit this protocol"
-                  : `${TIER_LABEL[row.tier]} — contribute another run`}
-              >
-                <TierMedal tier={row.tier} size={20} />
-                <span class="tt" role="tooltip">
-                  {row.tier === "none" ? "Be the first to audit · copy a prompt" : `${TIER_LABEL[row.tier]} · contribute a run`}
-                </span>
-              </a>
-              {PIZZA_SLICES.map(({ id, label }) => {
-                const state = row.cells[id as PizzaSliceId];
-                const cls = `m-cell glyph-${state}`;
-                return (
-                  <a
-                    class={cls}
-                    href={`/protocol/${row.slug}#${id}`}
-                    title={`${label} — ${COVERAGE_LABEL[state]}`}
-                    aria-label={`${row.name}: ${label} — ${COVERAGE_LABEL[state]}`}
-                  >{COVERAGE_GLYPH[state]}</a>
-                );
-              })}
-            </div>
-          ))}
+          {stats.coverage.map((row) => {
+            // Children of a family render under /protocol/{parent}#{slug};
+            // a bare /protocol/{slug}#anchor would 301 to the parent and lose
+            // the anchor, so prefix the slice id with the child slug to match
+            // RiskAnalysis.astro's `${idPrefix}-${sliceId}` convention.
+            const baseSlug = row.parent_slug ?? row.slug;
+            const sliceAnchor = (sliceId: string) =>
+              row.parent_slug ? `${row.slug}-${sliceId}` : sliceId;
+            const auditAnchor = row.parent_slug ? `${row.slug}-audit-yourself` : "audit-yourself";
+            return (
+              <div class={`matrix-row tier-${row.tier}`}>
+                <a class="m-name" href={`/protocol/${row.slug}`}>{row.name}</a>
+                <a
+                  class="m-medal tt-wrap audit-cta"
+                  href={`/protocol/${baseSlug}#${auditAnchor}`}
+                  aria-label={row.tier === "none"
+                    ? "Be the first to audit this protocol"
+                    : `${TIER_LABEL[row.tier]} — contribute another run`}
+                >
+                  <TierMedal tier={row.tier} size={20} />
+                  <span class="tt" role="tooltip">
+                    {row.tier === "none" ? "Be the first to audit · copy a prompt" : `${TIER_LABEL[row.tier]} · contribute a run`}
+                  </span>
+                </a>
+                {PIZZA_SLICES.map(({ id, label }) => {
+                  const state = row.cells[id as PizzaSliceId];
+                  const cls = `m-cell glyph-${state}`;
+                  return (
+                    <a
+                      class={cls}
+                      href={`/protocol/${baseSlug}#${sliceAnchor(id)}`}
+                      title={`${label} — ${COVERAGE_LABEL[state]}`}
+                      aria-label={`${row.name}: ${label} — ${COVERAGE_LABEL[state]}`}
+                    >{COVERAGE_GLYPH[state]}</a>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       )}
       <ul class="coverage-legend">
@@ -343,10 +358,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
 
 <style>
   .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
-  .hero { margin-bottom: 1.5rem; }
-  h1 { margin: 0 0 0.4rem; }
-  .subtitle { color: oklch(0.65 0.015 235); margin: 0; }
-  .subtitle a { color: var(--brand-oxblood); }
+  .subtitle { color: oklch(0.65 0.015 235); margin: 0 0 1.5rem; }
 
   .card {
     background: oklch(0.18 0.005 235);

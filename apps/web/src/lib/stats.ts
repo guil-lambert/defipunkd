@@ -24,6 +24,11 @@ export type CoverageRow = {
   slug: string;
   name: string;
   tier: Tier;
+  /** Set when the protocol is a child rendered under its parent's family
+   *  page; deep-links must target /protocol/{parent_slug}#{slug}-{slice}
+   *  because the bare /protocol/{slug} URL 301-redirects to the parent
+   *  with `#{slug}` and drops the original hash. */
+  parent_slug: string | null;
   submissionCount: number;
   cells: Record<PizzaSliceId, CoverageState>;
 };
@@ -309,6 +314,7 @@ export function buildStats(
         slug: p.slug,
         name: p.name,
         tier: perProtoTier.get(p.slug) ?? "none",
+        parent_slug: p.parent_slug && bySlugMap.has(p.parent_slug) ? p.parent_slug : null,
         submissionCount: subCountBySlug.get(p.slug) ?? 0,
         cells,
       };
