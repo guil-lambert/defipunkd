@@ -1,0 +1,436 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "aave-v3",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Aave V3 withdraw/repay/liquidationCall are gated by ReservePaused; 5-of-9 Protocol Guardian Safe (EMERGENCY_ADMIN) can call setPoolPause unilaterally with NO time cap on the paused state — pause persists until same admin clears it. No escape hatch, no auto-expiry.",
+    "rationale": {
+      "verdict": "Choosing red because withdraw/repay/repayWithATokens/repayWithPermit/liquidationCall all delegate to library validators that revert with Errors.ReservePaused() when the reserve's paused bit is set. The pause bit is set/cleared by PoolConfigurator.setReservePause/setPoolPause, gated by onlyEmergencyOrPoolAdmin, callable by either the EMERGENCY_ADMIN_ROLE holder (Aave Protocol Guardian Safe 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30, verified 5-of-9 Gnosis Safe) or POOL_ADMIN_ROLE holder (Aave Governance v3 Executor Lvl1, 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A, timelocked governance). Critically, neither setPoolPause nor setReservePause take a maximum-duration parameter that bounds the paused state: MAX_GRACE_PERIOD = 4 hours caps only the post-unpause liquidation grace window, not the pause itself. There is no auto-expiry, no escape-hatch / forced-exit mechanism, and no separate already-finalized-claim path that bypasses the pause guard - withdrawal IS the exit, and it is pause-gated. The 5-of-9 emergency-admin multisig can therefore freeze user withdrawals indefinitely without a governance vote, matching the slice's red criterion 'ANY actor (including governance) can pause CLAIMS of finalized exits indefinitely'. Functions are directly callable on-chain via Etherscan Write-as-Proxy and any wallet (no frontend dependency).",
+      "steelman": {
+        "red": "withdraw/repay/liquidationCall all revert under ReservePaused; setPoolPause and setReservePause are callable by a 5-of-9 multisig (EMERGENCY_ADMIN) with NO time cap on the paused state itself, no auto-expiry, no escape hatch. Per the slice rubric 'ANY actor (including governance) can pause CLAIMS of finalized exits indefinitely' = red.",
+        "orange": "Although the pause is technically unbounded in time, the realistic actor classes are non-trivial: the Emergency Admin is a reputational 5-of-9 Safe with 9 distinct DAO-active signers (Chaos Labs, LlamaRisk, Karpatkey, Certora, TokenLogic, BGD Labs, ACI, Ezr3al, StableLab), making indefinite-malicious pause politically expensive; the Pool Admin path runs through the Aave Governance Executor Lvl1 with a timelock and on-chain vote; freeze (setReserveFreeze) only blocks new supply/borrow while keeping repay+liquidation open; the protocol has 5+ years of operational history with no abuse of the pause power. By the rubric '2-of-3 multisig with no time cap' = red and '5-of-9 with reputational signers' is closer to orange.",
+        "green": "Exit functions are directly callable on-chain without any frontend (Pool proxy at 0x87870Bca... has public withdraw/repay/repayWithATokens/repayWithPermit/liquidationCall callable via Etherscan write tab); there is no queued redemption, no withdrawal cap, no admin-signature requirement, no whitelist; withdrawals settle synchronously in the same block; in normal operation users have unilateral exit. The pause is never auto-applied and historically rarely used."
+      },
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit functions on Pool: withdraw(asset,amount,to), repay(asset,amount,interestRateMode,onBehalfOf), repayWithATokens(asset,amount,interestRateMode), repayWithPermit(asset,amount,interestRateMode,onBehalfOf,deadline,permitV,permitR,permitS), liquidationCall(collateralAsset,debtAsset,borrower,debtToCover,receiveAToken). All public/virtual/override and delegate to SupplyLogic.executeWithdraw / BorrowLogic.executeRepay / LiquidationLogic.executeLiquidationCall."
+        },
+        {
+          "code": "E2",
+          "text": "ValidationLogic enforces pause guards: validateWithdraw -> require(!isPaused, Errors.ReservePaused()); validateRepay -> require(!isPaused, Errors.ReservePaused()); validateLiquidationCall -> require(!collateralReservePaused && !principalReservePaused, Errors.ReservePaused()). All exit paths are pause-gated; freeze gates only NEW debt creation (validateBorrow) and supply, not repay/withdraw."
+        },
+        {
+          "code": "E3",
+          "text": "PoolConfigurator.setPoolPause(bool paused) external onlyEmergencyOrPoolAdmin -> calls setPoolPause(paused, 0); setReservePause(asset, paused, gracePeriod) public onlyEmergencyOrPoolAdmin. MAX_GRACE_PERIOD = 4 hours but the require(gracePeriod <= MAX_GRACE_PERIOD) only fires when UNPAUSING and bounds the post-unpause liquidation grace window. The PAUSE itself is a boolean with no expiry timestamp - it persists until explicitly unpaused."
+        },
+        {
+          "code": "E4",
+          "text": "Two pause paths: (1) EMERGENCY_ADMIN_ROLE held by Protocol Guardian 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30 (verified 5-of-9 Gnosis Safe), unilateral pause without governance. (2) POOL_ADMIN_ROLE held by 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (Aave Governance v3 Executor Lvl1, timelocked). Emergency-admin path has no time cap; pool-admin path requires governance vote."
+        },
+        {
+          "code": "E5",
+          "text": "Aave V3 has NO queued redemption, NO daily withdrawal cap, NO multi-block claim phase. SupplyLogic.executeWithdraw burns aTokens and transfers underlying in the same call/block. Only constraint is reserve liquidity and health factor."
+        },
+        {
+          "code": "E6",
+          "text": "Aave V3 has NO permissionless escape-hatch / forced-exit mechanism. Pool.sol exposes no function that bypasses ValidationLogic.validateWithdraw's ReservePaused require. There is no time-locked auto-unpause, no governance-bypass exit, no aToken redemption path that ignores Pool state."
+        },
+        {
+          "code": "E7",
+          "text": "Etherscan exposes Pool proxy under 'Write as Proxy', delegating to verified implementation. withdraw/repay/repayWithATokens/repayWithPermit/liquidationCall are all directly callable via Etherscan Web3 Connect or any generic wallet/SDK without any Aave-frontend dependency. Recent transaction history confirms organic non-frontend calls. No referrer check, no signed-attestation required."
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/Pool.sol",
+        "shows": "Pool.sol: withdraw(asset,amount,to), repay(asset,amount,interestRateMode,onBehalfOf), repayWithATokens, repayWithPermit, liquidationCall - all public/virtual/override delegating to SupplyLogic/BorrowLogic/LiquidationLogic.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Aave V3 Pool proxy on Ethereum (InitializableImmutableAdminUpgradeabilityProxy, EIP-1967). ABI exposes withdraw / repay / repayWithATokens / repayWithPermit / liquidationCall as public write functions. Implementation pinned at 0x8147b99Df7672a21809c9093e6f6ce1a60f119Bd.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/libraries/logic/ValidationLogic.sol",
+        "shows": "ValidationLogic enforces pause guards: validateWithdraw -> require(!isPaused, Errors.ReservePaused()); validateRepay -> require(!isPaused, Errors.ReservePaused()); validateLiquidationCall -> require(!collateralReservePaused && !principalReservePaused, Errors.ReservePaused()). validateBorrow/validateSupply gate on isPaused and isFrozen. ALL exit paths are pause-gated; freeze gates only NEW debt creation.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/libraries/configuration/ReserveConfiguration.sol",
+        "shows": "ReserveConfigurationMap layout: IS_PAUSED_START_BIT_POSITION = 60, PAUSED_MASK; IS_FROZEN_START_BIT_POSITION = 57, FROZEN_MASK. Pause/freeze stored as boolean bits, no associated timestamp.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/PoolConfigurator.sol",
+        "shows": "PoolConfigurator: setPoolPause(bool) external onlyEmergencyOrPoolAdmin -> setPoolPause(paused, 0); setPoolPause(bool, uint40 gracePeriod) public onlyEmergencyOrPoolAdmin iterates all reserves; setReservePause(asset, paused, gracePeriod) public onlyEmergencyOrPoolAdmin. MAX_GRACE_PERIOD = 4 hours but require(gracePeriod <= MAX_GRACE_PERIOD) only fires when UNPAUSING - bounds post-unpause liquidation grace, NOT the pause itself. PAUSE is a boolean with no expiry timestamp.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "shows": "Aave V3 PoolConfigurator proxy on Ethereum mainnet. Holds setPoolPause / setReservePause / setReserveFreeze / dropReserve write methods.",
+        "address": "0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "Aave V3 ACLManager. POOL_ADMIN_ROLE = 0x12ad05bde78c5ab75238ce885307f96ecd482bb402ef831f99e7018a0f169b7b, EMERGENCY_ADMIN_ROLE = 0x5c91514091af31f62f596a314af7d5be40146b2f2355969392f055e12e0982fb, RISK_ADMIN_ROLE, ASSET_LISTING_ADMIN_ROLE, FLASH_BORROWER_ROLE, BRIDGE_ROLE.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "On-chain verified via Blockscout eth_call: ACLManager.isEmergencyAdmin(0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30) = true; ACLManager.isPoolAdmin(0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A) = true. Confirms current EMERGENCY_ADMIN and POOL_ADMIN holders at block latest 2026-04-27.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T08:25:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "shows": "Aave Protocol Guardian Safe (Gnosis Safe v1.3.0 proxy). On-chain verified: getThreshold() = 5, getOwners() = 9 distinct EOAs (0x5d49dBcdd300aECc2C311cFB56593E71c445d60d, 0xbA037E4746ff58c55dc8F27a328C428F258DDACb, 0x818C277dBE886b934e60aa047250A73529E26A99, 0x4f96743057482a2E10253AFDacDA3fd9CF2C1DC9, 0xb647055A9915bF9c8021a684E175A353525b9890, 0x57ab7ee15cE5ECacB1aB84EE42D5A9d0d8112922, 0xC5bE5c0134857B4b96F45AA6f6B77DB96Ac1487e, 0xd4af2E86a27F8F77B0556E081F97B215C9cA8f2E, 0xf71fc92e2949ccF6A5Fd369a0b402ba80Bc61E02). 5-of-9 multisig. Holds EMERGENCY_ADMIN_ROLE - can unilaterally call setPoolPause(true) which propagates to ALL reserves with no time cap.",
+        "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "shows": "Aave Governance V3 Executor Lvl1 (per bgd-labs/aave-address-book). Holds POOL_ADMIN_ROLE and is provider.getACLAdmin() (DEFAULT_ADMIN_ROLE), reachable only through successful Aave Governance v3 vote with timelock. Pool-admin pause path requires governance, NOT unilateral admin; emergency-admin pause does NOT require governance.",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://aave.com/help/governance/aave-community",
+        "shows": "Aave Help docs confirm Protocol Emergency Guardian holds EMERGENCY_ADMIN role on Aave V3 with 5-of-9 multisig configuration; signers include service providers and DAO delegates (Chaos Labs, LlamaRisk, Karpatkey, Certora, TokenLogic, BGD Labs, ACI, Ezr3al, StableLab).",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/libraries/logic/SupplyLogic.sol",
+        "shows": "Aave V3 has NO queued redemption, NO daily withdrawal cap, NO multi-block claim phase. SupplyLogic.executeWithdraw burns aTokens and transfers underlying in the same call/block. Only constraint: reserve liquidity (available unborrowed underlying) and health factor.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2#writeProxyContract",
+        "shows": "Etherscan exposes Aave V3 Pool proxy under 'Write as Proxy', delegating to verified implementation 0x8147b99Df7672a21809c9093e6f6ce1a60f119Bd. withdraw/repay/repayWithATokens/repayWithPermit/liquidationCall/supply/borrow are all directly callable via Etherscan Web3 Connect or any generic wallet/SDK without any Aave-frontend dependency. No referrer check, no signed-attestation required.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://aave.com/docs/developers/smart-contracts/pool",
+        "shows": "Aave V3 Pool developer docs document withdraw/repay/repayWithATokens/repayWithPermit/liquidationCall as public ABI-callable functions; permit-style variants are gas-optimization helpers, not required gateways. No ToS-level frontend exclusivity.",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Ethereum.sol",
+        "shows": "Canonical address registry: AaveV3Ethereum.POOL = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2; POOL_ADDRESSES_PROVIDER = 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e; POOL_CONFIGURATOR = 0x64b761D848206f447Fe2dd461b0c635Ec39EbB27; ACL_MANAGER = 0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0; ACL_ADMIN = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A.",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      },
+      {
+        "url": "https://github.com/bgd-labs/aave-address-book/blob/main/src/MiscEthereum.sol",
+        "shows": "MiscEthereum.PROTOCOL_GUARDIAN = 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30 - the EMERGENCY_ADMIN holder for Aave V3.",
+        "fetched_at": "2026-04-27T08:21:00Z"
+      }
+    ],
+    "unknowns": [
+      "E5: Verified there is no queued-redemption surface - Aave V3 redemptions are synchronous in the same block. Listed for completeness; not a blocker.",
+      "E3: Did not enumerate every individual signer of the 5-of-9 Protocol Guardian Safe by name-to-address mapping (Aave docs name 9 entities: Chaos Labs, LlamaRisk, Karpatkey, Certora, TokenLogic, BGD Labs, ACI, Ezr3al, StableLab; on-chain getOwners returns 9 EOAs but the public mapping of each EOA -> entity was not verified address-by-address from a primary source in this run)."
+    ],
+    "short_headline": "Aave V3 withdraw/repay/liquidationCall are gated by ReservePaused; 5-of-9..."
+  },
+  {
+    "schema_version": 3,
+    "slug": "aave-v3",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Aave V3 Ethereum exits are on-chain and synchronous, but the same Pool withdraw/repay/liquidation exits revert when a reserve is paused; PoolConfigurator can set that pause without an expiry, including through the Protocol Guardian multisig emergency path.",
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin"
+      ],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/aave/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+          "role": "EMERGENCY_ADMIN_ROLE / Protocol Guardian for PoolConfigurator pause functions",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+          "role": "POOL_ADMIN_ROLE / ACL admin / PoolAddressesProvider owner via Aave governance executor",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Aave V3 is a non-custodial liquidity market where suppliers deposit assets into reserves and receive interest-bearing aTokens, while borrowers draw liquidity against collateral and later repay debt. The Pool contract is the main user entry point for supply, withdraw, borrow, repay, collateral toggling, liquidations, and flash loans; exits are normally synchronous Pool calls rather than a request/claim queue. V3 adds per-reserve risk controls such as pause, freeze, caps, isolation/eMode parameters, and upgradeable Pool/PoolConfigurator proxies governed through Aave administration."
+    },
+    "rationale": {
+      "verdict": "Red best fits the evidence because Pool.withdraw, repay, repayWithPermit, repayWithATokens, and liquidationCall are public on-chain exits, but ValidationLogic requires the relevant reserve not be paused before those exit paths proceed. PoolConfigurator.setPoolPause and setReservePause are callable by emergency or pool admins and set a boolean pause flag with no expiry timestamp; MAX_GRACE_PERIOD limits only the liquidation grace period when unpausing, not the duration of the pause itself. On Ethereum, the emergency path is held by the Protocol Guardian Safe and the governance path by the Aave executor, so a non-user actor can make the current withdrawal/repay/liquidation exits unavailable indefinitely until an admin unpauses; there is no separate finalized-claim function or escape hatch that bypasses the pause guard.",
+      "steelman": {
+        "red": "The strongest red case is that Aave V3 has no separate finalized-claim escape path: the user exit is Pool.withdraw or debt closeout via repay, those paths revert on ReservePaused, and PoolConfigurator can keep the pause boolean set with no protocol-level auto-expiry.",
+        "orange": "The strongest orange case is that the pause actors are not a single EOA or 2-of-3 wallet: the fast emergency actor is a Safe multisig and the pool-admin path is Aave governance, while exits are permissionless and synchronous whenever the reserve is not paused.",
+        "green": "The strongest green case is that normal exits require no admin signature, no frontend, no queue, and no daily cap: users can call withdraw and repay directly against the verified Pool proxy from any wallet or block-explorer write interface when reserves are active."
+      },
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit functions on the main Pool surface are withdraw(asset,amount,to), repay(asset,amount,interestRateMode,onBehalfOf), repayWithPermit(asset,amount,interestRateMode,onBehalfOf,deadline,permitV,permitR,permitS), repayWithATokens(asset,amount,interestRateMode), and liquidationCall(collateralAsset,debtAsset,borrower,debtToCover,receiveAToken). There is no requestWithdrawal, redeem, claim, or exit queue function on Pool.sol."
+        },
+        {
+          "code": "E2",
+          "text": "withdraw is public and delegates to validateWithdraw, which requires !isPaused. repay, repayWithPermit, and repayWithATokens are public and use validateRepay, which requires !isPaused. liquidationCall is public and uses validateLiquidationCall, which requires both the collateral reserve and principal reserve not paused."
+        },
+        {
+          "code": "E3",
+          "text": "PoolConfigurator.setPoolPause and setReservePause are guarded by onlyEmergencyOrPoolAdmin. The current Ethereum role surface identifies Protocol Guardian 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30 as emergency admin and governance executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A as pool/admin authority. The pause state is a boolean set on reserve configuration with no maximum duration; the 4-hour MAX_GRACE_PERIOD only caps liquidation grace after unpause."
+        },
+        {
+          "code": "E4",
+          "text": "Emergency and governance paths are distinct: the emergency path is the Protocol Guardian Safe calling onlyEmergencyOrPoolAdmin pause functions, while the governance path is the Pool Admin / ACL Admin executor. Neither path includes an on-chain pause-expiry parameter in setPoolPause or setReservePause."
+        },
+        {
+          "code": "E5",
+          "text": "Aave V3 Pool withdrawals are not queued redemptions. SupplyLogic.executeWithdraw validates, burns the caller's aTokens, and transfers underlying to the recipient in the same call; no daily withdrawal cap or later claim function is present in the inspected Pool/SupplyLogic source."
+        },
+        {
+          "code": "E6",
+          "text": "No forced-exit or permissionless emergency-withdraw bypass was found in the inspected Pool, SupplyLogic, ValidationLogic, or PoolConfigurator code: withdraw goes through validateWithdraw, and the pause flag is only cleared through the admin pause functions."
+        },
+        {
+          "code": "E7",
+          "text": "The Ethereum Pool is a verified EIP-1967 proxy with Read as Proxy and Write as Proxy tabs on Etherscan; the ABI exposes withdraw and repay variants directly, and the Etherscan transaction list shows direct Withdraw and Repay With Permit calls, so exit does not depend on the Aave frontend."
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/Pool.sol",
+        "shows": "Pool.sol at commit 1e3d70c: main interaction contract; public withdraw, repay, repayWithPermit, repayWithATokens, and liquidationCall functions delegate to SupplyLogic, BorrowLogic, and LiquidationLogic. Also supports protocol_metadata.about.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/libraries/logic/ValidationLogic.sol",
+        "shows": "ValidationLogic pause guards: validateWithdraw requires !isPaused; validateRepay requires !isPaused; validateLiquidationCall requires collateral and principal reserves not paused. No role modifier on user exit; the guard is reserve pause state.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/libraries/logic/SupplyLogic.sol",
+        "shows": "SupplyLogic.executeWithdraw burns aTokens and transfers underlying in the same execution path after validation. No request/claim queue, daily cap, or delayed finalized-claim phase appears in the inspected withdrawal logic.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/PoolConfigurator.sol",
+        "shows": "PoolConfigurator.setPoolPause and setReservePause use onlyEmergencyOrPoolAdmin. MAX_GRACE_PERIOD is 4 hours but is checked only when unpausing to set liquidation grace; currentConfig.setPaused(paused) stores a boolean pause flag with no expiry.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Ethereum Aave V3 Pool proxy, labeled Aave: Pool V3, source-code verified as proxy, implementation 0x8147b99Df7672a21809c9093e6f6ce1a60f119Bd, with Read as Proxy / Write as Proxy tabs and recent direct Withdraw / Repay With Permit transactions. Supports E7 and upgradeability metadata.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "shows": "Ethereum Aave V3 PoolConfigurator proxy, source-code verified, implementation 0x6fDdde45f777a4e461b0721a578b169b44579623, and historical EIP-1967 proxy upgrades. Supports deployed pause-control surface and upgradeability metadata.",
+        "address": "0x64b761D848206f447Fe2dd461b0c635Ec39EbB27",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "Ethereum ACLManager role surface: EMERGENCY_ADMIN_ROLE and POOL_ADMIN_ROLE are exposed; role reads identify Protocol Guardian 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30 as emergency admin and 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A as pool/default admin authority.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "Ethereum ACLManager verified source and ABI expose EMERGENCY_ADMIN_ROLE, POOL_ADMIN_ROLE, hasRole, isEmergencyAdmin, and isPoolAdmin; constructor provider is the Aave V3 PoolAddressesProvider.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "shows": "Protocol Guardian is a Safe multisig on Ethereum; read methods show threshold/owners for the Safe. This is the emergency-admin actor for PoolConfigurator pause functions.",
+        "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "shows": "Etherscan labels 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30 as a Smart Account by Safe with Safe Singleton 1.3.0 implementation.",
+        "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "shows": "Aave governance executor / ACL admin actor for Ethereum Aave V3, used as POOL_ADMIN and PoolAddressesProvider owner path; supports governance actor_class in metadata.",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/README.md",
+        "shows": "Aave V3.6 Origin README at the pinned commit describes the complete Foundry codebase, lists historical security reviews, and links the Aave bug bounty. Supports protocol_metadata.github and bug_bounty_url.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: Current pause-role holders were verified for the Ethereum deployment only; the run did not enumerate emergency/pool-admin holders for every non-Ethereum Aave V3 market in the pinned chain list.",
+      "E6: No separate escape hatch was found in the inspected core source; market-specific extensions outside Pool, SupplyLogic, ValidationLogic, and PoolConfigurator were not exhaustively enumerated."
+    ],
+    "short_headline": "Aave V3 Ethereum exits are on-chain and synchronous, but the same Pool..."
+  },
+  {
+    "slice": "ability-to-exit",
+    "grade": "orange",
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin",
+        "https://github.com/bgd-labs/aave-v3-origin"
+      ],
+      "docs_url": "https://docs.aave.com",
+      "audits": [
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/e979966547630799427047643501988941295272/audits/04-05-2022_SigmaPrime_AaveV3.pdf",
+          "date": "2022-05"
+        },
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/e979966547630799427047643501988941295272/audits/25-04-2022_TrailOfBits_AaveV3.pdf",
+          "date": "2022-04"
+        },
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/e979966547630799427047643501988941295272/audits/27-01-2022_OpenZeppelin_AaveV3.pdf",
+          "date": "2022-01"
+        }
+      ],
+      "governance_forum": "https://governance.aave.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "symbol": "AAVE"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/aave/",
+      "security_contact": "security@aave.com",
+      "deployed_contracts_doc": "https://docs.aave.com/developers/deployed-contracts/v3-mainnet",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+          "role": "EmergencyAdmin (Guardian)",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xEE56e2B20045d908E992822039db30E882309413",
+          "role": "PoolAdmin (Governance Executor)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Aave V3 is a decentralized non-custodial liquidity protocol where users can participate as depositors or borrowers. Depositors provide liquidity to the market to earn passive income, while borrowers can borrow in an overcollateralized manner. It features advanced risk management tools like Efficiency Mode (eMode) and Isolation Mode to optimize capital efficiency across multiple chains."
+    },
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The primary exit functions are withdraw() and redeem() (via aTokens). Users can also repay() loans to release collateral."
+        },
+        {
+          "code": "E2",
+          "text": "The withdraw() function in Pool.sol is protected by the whenNotPaused modifier, which blocks all withdrawals when the pool is paused."
+        },
+        {
+          "code": "E3",
+          "text": "The EmergencyAdmin role (held by the Aave Guardian 6-of-10 multisig on Ethereum) can pause the entire pool indefinitely via PoolConfigurator.setPoolPause()."
+        },
+        {
+          "code": "E4",
+          "text": "EmergencyAdmin can pause immediately (emergency path). Governance (via Timelock) can also pause/unpause but is subject to voting delays. Neither path has a hard-coded auto-expiry for the pause state."
+        },
+        {
+          "code": "E6",
+          "text": "There is no permissionless emergency-exit or 'escape hatch' mechanism that allows users to bypass a paused state to retrieve funds."
+        },
+        {
+          "code": "E7",
+          "text": "All exit functions are public and directly callable via block explorers or generic wallet interfaces."
+        }
+      ],
+      "steelman": {
+        "green": "The protocol is highly decentralized with a 6-of-10 Guardian multisig and a robust DAO, and the pause function is a standard safety feature that has never been used maliciously to prevent exits.",
+        "orange": "The protocol allows for an indefinite pause of all withdrawals by a multisig (Guardian) or Governance, which constitutes a broad-scope pause without a code-enforced time cap, but it is not controlled by a single EOA.",
+        "red": "Any actor (the Guardian multisig) can unilaterally and indefinitely pause the only mechanism for users to claim their funds (withdraw), with no on-chain expiry or alternative exit path."
+      },
+      "verdict": "The protocol is graded Orange because while the pause mechanism is broad and lacks a hard-coded time cap (blocking all exits), it is controlled by a high-threshold multisig (6-of-10 Guardian) and the DAO. This fits the 'pausable with broad scope' criteria better than Red, as it is not a single EOA or 2-of-3 multisig, and the 'claims of finalized exits' language in the Red criteria typically applies to multi-step withdrawal processes (like L2s) which Aave does not use."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/e979966547630799427047643501988941295272/src/contracts/protocol/pool/Pool.sol",
+        "shows": "(no description)",
+        "commit": "e979966547630799427047643501988941295272",
+        "fetched_at": "2026-04-27T08:30:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/e979966547630799427047643501988941295272/src/contracts/protocol/pool/PoolConfigurator.sol",
+        "shows": "(no description)",
+        "commit": "e979966547630799427047643501988941295272",
+        "fetched_at": "2026-04-27T08:30:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x87870B27F51f6e012868c11a0323E224401933ba",
+        "shows": "(no description)",
+        "address": "0x87870B27F51f6e012868c11a0323E224401933ba",
+        "fetched_at": "2026-04-27T08:35:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xc2aa9306c2d6F35f9d9126618296143ad66Ba246",
+        "shows": "(no description)",
+        "address": "0xc2aa9306c2d6F35f9d9126618296143ad66Ba246",
+        "fetched_at": "2026-04-27T08:35:00Z"
+      },
+      {
+        "url": "https://docs.aave.com/developers/core-contracts/poolconfigurator#setpoolpause",
+        "shows": "(no description)",
+        "fetched_at": "2026-04-27T08:40:00Z"
+      }
+    ],
+    "unknowns": [
+      "E5: Standard Aave V3 pools do not utilize a withdrawal queue; however, specific RWA or isolated pools may have different liquidity constraints not covered in this core assessment."
+    ],
+    "schema_version": 3,
+    "slug": "aave-v3",
+    "prompt_version": 12,
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z"
+  }
+]
