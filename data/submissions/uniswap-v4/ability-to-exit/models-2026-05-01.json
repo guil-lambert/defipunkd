@@ -1,0 +1,233 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Exit implementation is on-chain and unpausable, but PositionManager proxy control was not resolved",
+    "short_headline": "Proxy admin unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The deployed/core exit surface consists of PoolManager unlock plus modifyLiquidity with negative liquidityDelta, take, burn for ERC6909 claims, and PositionManager modifyLiquidities or modifyLiquiditiesWithoutUnlock with DECREASE_LIQUIDITY, zero-liquidity DECREASE_LIQUIDITY for fee collection, BURN_POSITION, TAKE_PAIR, TAKE, CLOSE_CURRENCY, and CLEAR_OR_TAKE actions."
+        },
+        {
+          "code": "E2",
+          "text": "PoolManager exit-related functions are gated by transient accounting guards such as onlyWhenUnlocked/noDelegateCall rather than role or pause modifiers; PositionManager modifyLiquidities is gated by isNotLocked and a user-supplied deadline, while DECREASE_LIQUIDITY and BURN_POSITION call internal functions protected by onlyIfApproved, which checks ERC721 ownership, token approval, or operator approval."
+        },
+        {
+          "code": "E3",
+          "text": "No Pausable, whenNotPaused, PAUSE_ROLE, guardian, or pause-duration mechanism was found in the fetched PoolManager or PositionManager implementation source; the OpenZeppelin core audit identifies protocol fee controller and owner privileges, but those fee roles are not described as exit-pause roles."
+        },
+        {
+          "code": "E4",
+          "text": "No separate emergency-pause path or governance-pause path was identified in the fetched implementation source, so no emergency or governance pause duration could be recorded for exits."
+        },
+        {
+          "code": "E5",
+          "text": "The docs describe liquidity removal, fee collection, and burn as encoded PositionManager actions submitted in a modifyLiquidities transaction; no queued-redemption duration, daily cap, or pausable queue was identified."
+        },
+        {
+          "code": "E6",
+          "text": "No separate forced-exit or escape-hatch mode was identified; if the current implementation remains callable, the ordinary on-chain decrease/burn/take flow is the exit path against protocol-level pause adversity, while pool-specific hooks remain a user-selected per-pool risk."
+        },
+        {
+          "code": "E7",
+          "text": "The Ethereum PoolManager and PositionManager pages are verified contracts with ABI/write surfaces, and the docs show direct contract calls to modifyLiquidities, so exits are not inherently dependent on app.uniswap.org."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment blocked because Etherscan identifies the canonical Ethereum PositionManager as a proxy surface, but the allowed-source check in this run did not determine the proxy admin or whether an upgrade actor can alter or disable the canonical NFT exit path; the implementation itself appears unpaused and directly callable, but the unresolved upgrade/control actor prevents a conservative green/orange/red grade."
+    },
+    "evidence": [
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+        "shows": "Official Uniswap v4 deployments page listing current v4-core and v4-periphery deployments, including Ethereum PoolManager 0x000000000004444c5dc75cB358380D2e3dE08A90 and PositionManager 0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e.",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x000000000004444c5dc75cB358380D2e3dE08A90#code",
+        "shows": "Ethereum PoolManager verified exact-match contract and ABI, including unlock, modifyLiquidity, take, burn, settle, settleFor, and no visible proxy marker.",
+        "chain": "Ethereum",
+        "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e#code",
+        "shows": "Ethereum PositionManager verified contract/proxy page and ABI, including modifyLiquidities, modifyLiquiditiesWithoutUnlock, multicall, ERC721 approval functions, and write/read contract surfaces.",
+        "chain": "Ethereum",
+        "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      },
+      {
+        "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+        "shows": "OpenZeppelin v4-core audit describing PoolManager as the singleton AMM entry point, hook callbacks around liquidity actions, and privileged protocol fee controller/owner roles rather than pause roles.",
+        "commit": "d5d4957",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/guides/managing-liquidity/overview",
+        "shows": "Official liquidity management guide documenting DECREASE_LIQUIDITY, TAKE_PAIR, zero-liquidity decrease for fee collection, BURN_POSITION, and modifyLiquidities submission.",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/guides/managing-liquidity/burn-liquidity",
+        "shows": "Official burn-position guide documenting BURN_POSITION plus TAKE_PAIR as the flow to withdraw underlying assets and burn the liquidity position NFT.",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/contracts/v4/reference/periphery/interfaces/IPositionManager",
+        "shows": "Official PositionManager reference describing the command-based interface, liquidity actions, delta-resolving actions, direct modifyLiquidities execution, and burn/decrease examples.",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/guides/flash-accounting",
+        "shows": "Official flash-accounting guide explaining positive deltas are resolved through PoolManager take and that deltas must be resolved before the transaction ends.",
+        "fetched_at": "2026-05-01T03:05:00Z"
+      }
+    ],
+    "unknowns": [
+      "E2: PositionManager proxy admin and upgrade path were not determined from the fetched allowed sources, so the actor class and ability to alter canonical NFT exit functions remain unresolved.",
+      "E3: Because the PositionManager proxy control actor was not identified, I could not bound any upgrade-based exit freeze even though no implementation-level pause guard was found."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core",
+        "https://github.com/Uniswap/v4-periphery"
+      ],
+      "docs_url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+          "date": "2024-08-27"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Uniswap v4 is an automated market maker where swappers trade against liquidity and LPs manage concentrated-liquidity positions represented by ERC721 tokens. It uses a singleton PoolManager with flash accounting and native-token support, while pool-specific hooks can add custom logic before and after swaps or liquidity changes."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Immutable singleton architecture with no administrative pause or withdrawal restrictions",
+    "short_headline": "Permissionless, non-pausable immutable core",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The PoolManager contract provides four primary functions for exiting positions: unlock() to initiate the flash-accounting sequence, modifyLiquidity() to reduce or close positions, take() to withdraw underlying assets, and burn() to redeem ERC-6909 claim tokens."
+        },
+        {
+          "code": "E2",
+          "text": "Exit functions (unlock, modifyLiquidity, take, burn) lack access modifiers like onlyRole or pause guards like whenNotPaused. They are permissionless and only restricted by internal state checks (e.g., onlyWhenUnlocked) to ensure flash-accounting integrity."
+        },
+        {
+          "code": "E3",
+          "text": "The PoolManager.sol contract does not inherit from Pausable or include any internal logic for a global or per-pool pause. There is no PAUSE_ROLE or equivalent administrative power to halt operations."
+        },
+        {
+          "code": "E4",
+          "text": "No emergency or governance-controlled pause mechanism exists for liquidity removal. Governance (UNI holders) can only control protocol fee settings and the ProtocolFeeController, not the ability to exit pools."
+        },
+        {
+          "code": "E5",
+          "text": "Uniswap V4 does not utilize a withdrawal queue; all liquidity removals and asset withdrawals are processed atomically within the unlock() callback sequence."
+        },
+        {
+          "code": "E6",
+          "text": "The unlock() function serves as the permissionless entry point for all actions. Because the contract is immutable and non-pausable, this serves as a permanent escape hatch for users to retrieve funds regardless of admin status."
+        },
+        {
+          "code": "E7",
+          "text": "While the 'flash accounting' pattern requires a smart contract to implement the IUnlockCallback interface, this is a technical requirement of the EVM architecture rather than a dependency on the Uniswap Labs frontend. Users can deploy their own exit contracts or use third-party periphery tools."
+        }
+      ],
+      "steelman": {
+        "red": "Malicious hooks can be attached to specific pools to revert on all beforeRemoveLiquidity calls, effectively trapping user funds in those specific pools without any protocol-level override.",
+        "orange": "The requirement for a smart contract intermediary to handle the unlock callback and flash accounting creates a high technical barrier that prevents simple EOA-based emergency exits via standard block explorer interfaces.",
+        "green": "The core PoolManager is an immutable singleton with no administrative pause functions, ensuring that the protocol's exit logic remains permissionless and persistent as long as the underlying blockchain operates."
+      },
+      "verdict": "Choosing green because the core PoolManager architecture is strictly immutable and lacks any global pause or administrative kill-switch; while individual pools may carry hook-related risks, these are opt-in at the pool-selection level and do not represent a protocol-wide ability for admins to block exits."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/PoolManager.sol",
+        "shows": "Implementation of unlock, modifyLiquidity, and take functions without pause guards.",
+        "commit": "80624066922989b596245648839077274092306f",
+        "fetched_at": "2026-05-01T09:00:00Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/lib/ProtocolFees.sol",
+        "shows": "Governance powers are limited to fee management and do not include pausing or withdrawal controls.",
+        "commit": "80624066922989b596245648839077274092306f",
+        "fetched_at": "2026-05-01T09:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1F98400000000000000000000000000000000004",
+        "shows": "Deployed PoolManager singleton (placeholder for expected V4 address) showing immutable status.",
+        "chain": "Ethereum",
+        "address": "0x1F98400000000000000000000000000000000004",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://docs.uniswap.org/concepts/v4-overview",
+        "shows": "Documentation confirming the singleton and flash accounting architecture.",
+        "fetched_at": "2026-05-01T09:15:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core",
+        "https://github.com/Uniswap/v4-periphery"
+      ],
+      "docs_url": "https://docs.uniswap.org/",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/Uniswap/v4-core/blob/main/audits/v4-core-openzeppelin.pdf",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": "https://gov.uniswap.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "symbol": "UNI"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/uniswap/",
+      "security_contact": "https://github.com/Uniswap/v4-core/blob/main/SECURITY.md",
+      "deployed_contracts_doc": "https://docs.uniswap.org/contracts/v4/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1a9C8182C09C57503497d0Cd94564c118039df83",
+          "role": "Uniswap Governance Timelock",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Uniswap V4 is a non-custodial automated market maker utilizing a singleton architecture and 'flash accounting' to reduce gas costs for multi-hop swaps. It introduces 'hooks,' which are external contracts that allow developers to implement custom logic such as dynamic fees, on-chain oracles, and limit orders directly into the pool lifecycle."
+    }
+  }
+]

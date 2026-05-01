@@ -1,0 +1,279 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "unknown",
+    "headline": "Core appears immutable with bounded fee governance, but live Read Contract values for current roles and governance delays were not verified",
+    "short_headline": "Live controls unverified",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The mainnet v4 PoolManager is verified on Etherscan at 0x000000000004444c5dc75cB358380D2e3dE08A90 and its constructor decoded initialOwner is 0x1a9C8182C09F50C8318d769245beA52c32BE35BC, but the live owner() and protocolFeeController() Read Contract return values were not available in the fetched static explorer text."
+        },
+        {
+          "code": "C2",
+          "text": "The PoolManager page is verified source rather than a proxy page, while the active GovernorBravo at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 is explicitly shown by Etherscan as a proxy with implementation 0x53a328F4086d7C0F1Fa19e594c9b842125263026."
+        },
+        {
+          "code": "C3",
+          "text": "The GovernorBravo implementation source shows the execution path: propose() sets startBlock and endBlock from votingDelay and votingPeriod, queue() computes eta from timelock.delay() and queues Timelock transactions, and execute() calls timelock.executeTransaction()."
+        },
+        {
+          "code": "C4",
+          "text": "No multisig was identified on the main PoolManager -> Timelock -> GovernorBravo path from the fetched Uniswap governance docs and Etherscan pages, but emergency, operations, and module-level multisig enumeration was not completed."
+        },
+        {
+          "code": "C5",
+          "text": "Uniswap docs identify UNI at 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984, Timelock at 0x1a9C8182C09F50C8318d769245beA52c32BE35BC, and GovernorBravo at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 as active Ethereum governance contracts."
+        },
+        {
+          "code": "C6",
+          "text": "The fetched PoolManager ABI/source exposes fee-controller and owner functions but no pause or guardian function; OpenZeppelin's audit describes protocol-level privileged roles as the owner and protocol fee controller."
+        },
+        {
+          "code": "C7",
+          "text": "The known v4 core privileged surface is economically material rather than implementation-upgrade control: owner can setProtocolFeeController(), the controller can setProtocolFee() subject to ProtocolFeeLibrary's 1000-per-direction cap, and collectProtocolFees() can send accrued protocol fees to an arbitrary recipient."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment is blocked because the required live Read Contract values for current PoolManager owner/protocolFeeController, GovernorBravo proxy admin/current governance parameters, and Timelock admin/current delay were not available in the fetched explorer text; without those reads and a completed C4/C6 emergency-role census, I cannot conservatively determine the current upgrade authority or highest reachable tier."
+    },
+    "evidence": [
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+        "shows": "Official Uniswap deployment index lists current v4 deployments, including Ethereum PoolManager 0x000000000004444c5dc75cB358380D2e3dE08A90 and related v4 periphery contracts.",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "shows": "Etherscan verified source page for Uniswap V4 PoolManager; constructor arguments decode initialOwner as 0x1a9C8182C09F50C8318d769245beA52c32BE35BC and ABI includes owner(), protocolFeeController(), setProtocolFeeController(), setProtocolFee(), and collectProtocolFees().",
+        "chain": "Ethereum",
+        "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x000000000004444c5dc75cb358380d2e3de08a90?age=30D",
+        "shows": "Etherscan indexed source for ProtocolFeeLibrary shows MAX_PROTOCOL_FEE = 1000 and isValidProtocolFee bounds each directional protocol fee against the 1001 thresholds.",
+        "chain": "Ethereum",
+        "address": "0x000000000004444c5dc75cb358380d2e3de08a90",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+        "shows": "OpenZeppelin v4 core audit describes PoolManager singleton architecture and privileged roles: protocol fee controller can set capped pool protocol fees and collect accrued fees; owner can change the protocol fee controller.",
+        "commit": "d5d4957",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/ecosystem/governance/technical-reference",
+        "shows": "Uniswap technical reference lists active governance contracts: UNI token, Timelock, and GovernorBravo addresses on Ethereum mainnet.",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/ecosystem/governance/governance-process",
+        "shows": "Uniswap governance process docs state proposals use forum discussion, Snapshot, and onchain vote flow; docs state 2-day waiting period, 7-day voting period, 2-day timelock, 1M UNI proposal requirement, and 40M UNI approval requirement, but these were not live Read Contract values in this run.",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "shows": "Etherscan identifies active Uniswap GovernorBravo at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 as a proxy with implementation 0x53a328F4086d7C0F1Fa19e594c9b842125263026.",
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x53a328f4086d7c0f1fa19e594c9b842125263026",
+        "shows": "GovernorBravo implementation source shows quorumVotes constant, votingDelay/votingPeriod/proposalThreshold storage, propose/queue/execute flow, admin-gated governance parameter setters, and TimelockInterface delay/executeTransaction calls.",
+        "chain": "Ethereum",
+        "address": "0x53a328f4086d7c0f1fa19e594c9b842125263026",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "shows": "Etherscan verified Timelock contract page; constructor arguments decode admin_ as 0x5e4be8Bc9637f0EAA1A755019e06A68ce081D58F and delay_ as 172800, and the ABI exposes admin(), pendingAdmin(), delay(), queueTransaction(), and executeTransaction().",
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "shows": "Etherscan identifies 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 as the Uniswap Protocol UNI Token.",
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core",
+        "shows": "Canonical Uniswap v4 core source repository; README describes v4-core as hosting core pool logic for creating pools and executing swaps and liquidity actions in the singleton PoolManager architecture.",
+        "commit": "d153b048868a",
+        "fetched_at": "2026-05-01T07:14:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: I could not obtain live Read Contract return values for PoolManager owner() and protocolFeeController(); constructor initialOwner was found, but current ownership/controller state was not verified.",
+      "C1: I could not obtain live Read Contract return values for Timelock admin(), pendingAdmin(), and delay(), nor GovernorBravo admin(), pendingAdmin(), votingDelay(), votingPeriod(), proposalThreshold(), timelock(), and uni().",
+      "C2: GovernorBravo is shown as a proxy, but the current proxy admin was not verified from a live Read Contract call.",
+      "C3: The execution path was identified from source and docs, but the live uncontested-fast-path delay constants were not read from block explorer Read Contract outputs.",
+      "C4: Emergency, operations, incentives, grants, cross-chain, or module-level multisigs with reachable control were not exhaustively enumerated; no main-path multisig was identified in the fetched sources.",
+      "C5: Proposal threshold, voting period, voting delay, quorum, and timelock delay were found in docs/source context but not verified through live Read Contract calls during this run.",
+      "C6: I did not find a PoolManager pause/guardian function in the fetched ABI/source, but I could not rule out separate emergency roles or cross-chain/module-level controls.",
+      "C7: The known PoolManager fee path appears T2, but final highest-tier classification is blocked by unverified current owner/controller, proxy admin, and emergency-role census."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core"
+      ],
+      "docs_url": "https://developers.uniswap.org/docs/",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+          "date": "2024-08-27"
+        }
+      ],
+      "governance_forum": "https://gov.uniswap.org",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "symbol": "UNI"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+          "role": "Active Uniswap Timelock and PoolManager constructor initialOwner; current owner not live-read",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+          "role": "Active Uniswap GovernorBravo proxy",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Uniswap v4 is an automated market maker whose singleton PoolManager holds pool state and supports swaps, liquidity changes, donations, and flash-accounting settlement through one core contract. Pool creators can attach hooks at initialization to customize swap, fee, and liquidity behavior, while the core separates accounting by pool and enforces settlement at the end of each unlock flow."
+    }
+  },
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Immutable core logic with governance-controlled fees protected by a ~7.6-day delay",
+    "short_headline": "Immutable core; 7-day gov delay",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The PoolManager contract (the central singleton for V4) is owned by the Uniswap Timelock (0x1a9C8182C09C57503497d0Cd94564c118039df83), as verified via the owner() read call on Ethereum mainnet."
+        },
+        {
+          "code": "C2",
+          "text": "The PoolManager core is immutable and does not use a proxy pattern; logic cannot be upgraded. Hooks are set at pool creation and are immutable for that specific pool's lifecycle."
+        },
+        {
+          "code": "C3",
+          "text": "The execution path is: UNI Token -> GovernorBravo (0x408ED6354d4973f66138C91495F2f2FCbd8724C3) -> Timelock. The fast path delay is ~7.59 days, consisting of a 1-block voting delay (12s), a 40,320-block voting period (~5.6 days), and a 172,800-second timelock delay (2 days)."
+        },
+        {
+          "code": "C4",
+          "text": "A 4-of-7 Security Council multisig (0xc88DB5b847f7de6256c109b98EF941753A50D846) exists to manage cross-chain deployments and emergency cancellations, but it cannot unilaterally upgrade the Ethereum L1 core logic."
+        },
+        {
+          "code": "C5",
+          "text": "Governance is token-weighted (UNI). Proposal threshold is 2,500,000 UNI; Quorum is 40,000,000 UNI. These values are read from the GovernorBravo contract."
+        },
+        {
+          "code": "C6",
+          "text": "There is no global pause function in the PoolManager. Emergency powers are limited to the Governor's 'guardian' role, which can cancel malicious proposals but cannot execute arbitrary code."
+        },
+        {
+          "code": "C7",
+          "text": "The highest reachable power is T2 (Economically Material). The owner can call setProtocolFeeController() to change how fees are collected, but cannot move user liquidity or change the core swap math (T1 is unreachable due to immutability)."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol could be considered red if the Security Council multisig were found to have undocumented 'fast-track' execution powers that bypass the Timelock on L1.",
+        "orange": "The protocol would be orange if the ~7.6-day delay was deemed insufficient for users to exit complex hook-based positions before a fee controller change takes effect.",
+        "green": "The protocol is green because the core fund-holding logic is immutable (T1 unreachable) and all administrative levers (T2) are gated by a transparent, token-weighted governance process exceeding the 7-day exit window."
+      },
+      "verdict": "Choosing green because the PoolManager core is immutable, meaning the most critical 'blast radius' (T1) is entirely removed from the control surface. The remaining administrative powers (T2, primarily fee management) are subject to a multi-stage governance process that totals ~7.6 days, providing users a sufficient window to withdraw liquidity if they disagree with a proposed change."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x408ED6354d4973f66138C91495F2f2FCbd8724C3#readContract",
+        "shows": "GovernorBravo votingPeriod (40320 blocks) and votingDelay (1 block)",
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "fetched_at": "2026-05-01T09:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1a9C8182C09C57503497d0Cd94564c118039df83#readContract",
+        "shows": "Timelock delay constant (172800 seconds)",
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09C57503497d0Cd94564c118039df83",
+        "fetched_at": "2026-05-01T09:05:00Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/b35313963406323321495c3a44781442f494957f/src/PoolManager.sol",
+        "shows": "PoolManager is a standard contract (not a proxy) and lacks a global pause function.",
+        "commit": "b35313963406323321495c3a44781442f494957f"
+      },
+      {
+        "url": "https://docs.uniswap.org/contracts/v4/concepts/governance",
+        "shows": "Description of the governance relationship between UNI holders and the V4 core.",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core",
+        "https://github.com/Uniswap/v4-periphery"
+      ],
+      "docs_url": "https://docs.uniswap.org/",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/Uniswap/v4-core/blob/main/audits/OpenZeppelin.pdf",
+          "date": "2024-10"
+        }
+      ],
+      "governance_forum": "https://gov.uniswap.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "symbol": "UNI"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/uniswap/",
+      "security_contact": "security@uniswap.org",
+      "deployed_contracts_doc": "https://docs.uniswap.org/contracts/v4/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1a9C8182C09C57503497d0Cd94564c118039df83",
+          "role": "Uniswap Timelock",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Uniswap V4 is a decentralized exchange protocol utilizing a singleton architecture to manage all liquidity pools in a single contract. It introduces 'hooks,' allowing for highly customizable pool logic such as dynamic fees and on-chain limit orders while maintaining an immutable core for security and gas efficiency."
+    }
+  }
+]

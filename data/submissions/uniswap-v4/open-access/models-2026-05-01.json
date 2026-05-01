@@ -1,0 +1,202 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Core contracts are permissionless, but Uniswap Labs actively blocks screened addresses and tokens in its own interface",
+    "short_headline": "Frontend blocks, contracts open",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The deployed PoolManager exposes core user actions such as unlock, initialize, modifyLiquidity, swap, donate, take, settle, settleFor, clear, mint, and burn without a whitelist/KYC modifier; the only privileged path found in the inspected core source is fee-controller administration in ProtocolFees, not user admission."
+        },
+        {
+          "code": "A2",
+          "text": "For the core function classes, pool creation is external, swaps and LP add/remove flow through unlock plus onchain pool or hook logic, and settlement/take/mint/burn are lock-scoped; I found no keeper, relayer, sequencer, or oracle-poster approval required to admit these actions."
+        },
+        {
+          "code": "A3-active",
+          "text": "Uniswap Labs documents active interface enforcement: unsupported-token pools have interactions and routing disabled, blocked addresses have state-changing actions disabled, and address screening uses TRM Labs intelligence."
+        },
+        {
+          "code": "A3-passive",
+          "text": "The Terms of Service also contains passive eligibility and sanctions representations for app.uniswap.org, including age-of-majority and sanctions-status clauses."
+        },
+        {
+          "code": "A3b-i",
+          "text": "Uniswap/interface releases publish official IPFS gateway mirrors of the Uniswap Interface, but those are official redistributions of the same Uniswap Labs interface rather than independent operators."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Independent access exists through direct deployed contracts and developer docs, the Etherscan Write Contract tab, and the separate cp0x-org permissionless Uniswap interface fork/live frontend; these paths are separate from app.uniswap.org."
+        },
+        {
+          "code": "A4",
+          "text": "I found no onchain sanctions or OFAC-style blocklist in the inspected PoolManager path; the documented sanctions/compliance tooling is applied by Uniswap Labs interfaces offchain through address screening and unsupported-token policy."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through explorers/docs and the verified ABI, while write access to core PoolManager functions is available through contracts or periphery routes without protocol-level user allowlisting, subject to pool-specific onchain hook behavior."
+        },
+        {
+          "code": "A6",
+          "text": "The legal links were located on Uniswap support/terms pages and include verbatim eligibility/sanctions snippets; those clauses are policy restrictions, while the separate support policy and screening guide evidence active interface blocking."
+        }
+      ],
+      "steelman": {
+        "red": "The strongest red argument is that Uniswap Labs can actively disable state-changing actions for screened wallets and unsupported-token pools in its own products, which is a real admission restriction for users relying on the official interface.",
+        "orange": "The strongest orange argument is that the canonical contracts admit users without whitelist/KYC or offchain approval, but the official Uniswap Labs frontend documents active TRM-based address screening and unsupported-token blocks.",
+        "green": "The strongest green argument is that PoolManager itself is permissionless and non-upgradeable, with direct contract, SDK, explorer, and independent frontend access paths available outside app.uniswap.org."
+      },
+      "verdict": "Choosing orange because the smart contracts and direct paths are open, which rules out red, but Uniswap Labs' own support documentation says blocked addresses lose state-changing actions and unsupported-token pools have interactions/routing disabled, so the official interface has A3-active admission controls that prevent a green grade."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "shows": "Ethereum deployed PoolManager is source-verified, has Read Contract and Write Contract tabs, and its constructor initialOwner decodes to 0x1a9C8182C09F50C8318d769245beA52c32BE35BC.",
+        "chain": "Ethereum",
+        "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/PoolManager.sol",
+        "shows": "PoolManager source defines unlock, initialize, modifyLiquidity, swap, donate, take, settle, settleFor, clear, mint, and burn with lock/no-delegatecall checks rather than allowlist/KYC checks.",
+        "commit": "d153b048868a",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/ProtocolFees.sol",
+        "shows": "ProtocolFees uses onlyOwner to set the protocolFeeController and restricts fee setting/collection to the controller; these are fee-admin functions, not user admission functions.",
+        "commit": "d153b048868a",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+        "shows": "Canonical v4 deployment index lists PoolManager and periphery/router addresses across networks and is the deployed-contracts documentation page.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/protocols/v4/concepts/poolmanager",
+        "shows": "Docs describe PoolManager as the singleton entry point for v4 pool creation, swaps, liquidity management, hooks, and flash accounting.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://support.uniswap.org/hc/en-us/articles/30935100859661-Uniswap-Labs-Terms-of-Service",
+        "shows": "ToS applies to app.uniswap.org and includes passive clauses: \"age of majority in your jurisdiction\" and \"subject of economic or trade sanctions\".",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://support.uniswap.org/hc/en-us/articles/18783694078989-Unsupported-Token-Policy",
+        "shows": "Uniswap Labs policy says interface blocks can disable unsupported-token pool interactions/routing and make blocked-address state-changing actions disabled.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://support.uniswap.org/hc/en-us/articles/8671777747597-Address-Screening-Guide",
+        "shows": "Address screening guide says Uniswap Labs uses TRM Labs intelligence and blocks wallets linked to sanctions or other illegal activity from the web app/wallet.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://app.uniswap.org/",
+        "shows": "Official app URL loaded as a JavaScript application shell during this run; no static HTTP block banner was returned in the fetched HTML.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/interface/releases/",
+        "shows": "Uniswap/interface releases publish IPFS CIDs and state that the latest release is mirrored at app.uniswap.org and accessible through IPFS gateways.",
+        "commit": "f535511",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://github.com/cp0x-org/pi-uniswap-interface",
+        "shows": "cp0x-org repository is a public fork from Uniswap/interface and describes itself as a permissionless Uniswap interface with Dockerfile and docker-compose files.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://uni.cp0x.com/",
+        "shows": "Live cp0x frontend URL returned a JavaScript app shell titled Permissionless Uniswap Frontend, separate from app.uniswap.org.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://dexscreener.com/ethereum/uniswap",
+        "shows": "DexScreener independently surfaces Uniswap markets on Ethereum, including v4-labeled pairs and current volume/transaction data.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://github.com/Uniswap/v4-core/security",
+        "shows": "v4-core SECURITY.md points vulnerability disclosure to the Uniswap bug bounty and lists security@uniswap.org as a direct security contact.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://uniswap.org/bug-bounty",
+        "shows": "Uniswap bug bounty redirects to a live Cantina bounty with maximum reward information and scope covering v4 core and related contracts.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://gov.uniswap.org/",
+        "shows": "Uniswap Governance forum identifies itself as the forum for governance proposal coordination and discussion.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://etherscan.io/token/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "shows": "Etherscan token page verifies Uniswap (UNI), symbol UNI, token contract 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984, and governance-token description.",
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "shows": "Etherscan labels 0x1a9C8182C09F50C8318d769245beA52c32BE35BC as Uniswap V2: UNI Timelock.",
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://support.uniswap.org/hc/en-us/articles/16747656529933-What-is-Uniswap-v4",
+        "shows": "Uniswap support describes v4 as a permissionless AMM using hooks, a singleton PoolManager, flash accounting, and non-upgradeable contracts.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      },
+      {
+        "url": "https://developers.uniswap.org/docs/ecosystem/governance/overview",
+        "shows": "Uniswap governance docs say UNI holders govern Uniswap and can control treasury spending, protocol fees, and UNI minting under governance.",
+        "fetched_at": "2026-05-01T06:59:58Z"
+      }
+    ],
+    "unknowns": [
+      "A3b: CoW Swap and 1inch candidate app pages rendered JavaScript shells or generic aggregator pages in this static fetch, so I did not cite them as verified Uniswap v4 access paths."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core",
+        "https://github.com/Uniswap/interface"
+      ],
+      "docs_url": "https://developers.uniswap.org/docs/protocols/v4/concepts/poolmanager",
+      "audits": [],
+      "governance_forum": "https://gov.uniswap.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "symbol": "UNI"
+      },
+      "bug_bounty_url": "https://uniswap.org/bug-bounty",
+      "security_contact": "security@uniswap.org",
+      "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+          "role": "PoolManager initialOwner and protocol fee controller setter",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Uniswap v4 is a non-custodial AMM for token swaps and liquidity provision. It uses a singleton PoolManager for all pools plus flash accounting, and lets pool creators attach hooks that customize swap, fee, and LP behavior. Swappers trade against LP-funded pools, while liquidity providers create or manage positions and earn pool fees."
+    }
+  }
+]
