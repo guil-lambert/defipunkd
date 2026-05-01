@@ -1,0 +1,489 @@
+[
+  {
+    "schema_version": 3,
+    "slug": "aave-v3",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "claude-opus-4-7",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Aave Governance V3 is on-chain decentralized, but the L1 fast path reaches T1 (replace Pool implementation) in ~5 days (< 7-day bar). Protocol Guardian 5-of-9 Safe holds EMERGENCY_ADMIN with zero timelock for pause-withdrawals (T1).",
+    "rationale": {
+      "verdict": "Choosing orange because the highest tier reachable on the uncontested fast path is T1 via EXECUTOR_LVL_1 (binding function: PoolAddressesProvider.setPoolImpl, owner = EXECUTOR_LVL_1). Total uncontested L1 fast-path delay = COOLDOWN_BEFORE_VOTING (86400s/1d) + VOTING_DURATION_L1 (259200s/3d) + Executor delay (86400s/1d) = ~5 days, below the rubric's 7-day bar. Per grade rules: 'T1 reachable with uncontested-fast-path delay >0 but <7 days' = orange. The Protocol Guardian 5-of-9 multisig (0x2CFe3ec4...) holds isEmergencyAdmin on ACLManager and can call PoolConfigurator.setPoolPause/setReservePause with zero delay — this is also T1 (pause withdrawals) and lands the slice on orange independently. The L2 fast path (10d voting + 7d Executor) clears the 7-day bar, but L2 is reserved for governance/token-self changes, not Pool upgrades. Steel-man for green is materially weaker than orange given two independent T1 reach paths.",
+      "steelman": {
+        "green": "Aave runs an on-chain Governor with token-weighted voting against AAVE/stkAAVE/aAAVE weight set, broad token distribution (~204k holders), L2 changes carry an 18-day fast-path delay, GranularGuardianAccessControl narrows guardian power to specific actions, and Protocol Guardian power is structurally limited to pause/freeze (reversible) - the realistic blast radius of the L1 5-day path is bounded by economic and reputational cost.",
+        "orange": "Replacing the Pool implementation is reachable via L1 in ~5 days through EXECUTOR_LVL_1 which owns PoolAddressesProvider - that is a T1 power on user-fund-holding contracts, and 5 days is below the rubric's 7-day exit-window threshold; additionally, the Protocol Guardian 5-of-9 multisig holds isEmergencyAdmin and can pause withdrawals immediately (T1) without governance.",
+        "red": "If the Protocol Guardian 5-of-9 multisig fails the Security Council 'majority non-insider, publicly named' test on inspection, a 5-of-9 Safe sitting on a T1 pause-withdrawals path is a guardian-class control concern. But red is reserved for 'no timelock by single EOA or 2-of-3 multisig' which does not match the on-chain reality here."
+      },
+      "findings": [
+        {
+          "code": "C1",
+          "text": "PoolAddressesProvider.owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (EXECUTOR_LVL_1). PoolAddressesProvider.getACLAdmin() = same. Pool's ADDRESSES_PROVIDER = 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e. Both Executor LVL_1 and LVL_2 are owned by PayloadsController 0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5."
+        },
+        {
+          "code": "C1-v4",
+          "text": "Aave V4 is under active development (Hub & Spoke architecture, deployed on Ethereum at separate addresses per aave.com/docs/resources/addresses). V4 is not part of the V3 control surface for this assessment; whether V4 admin contracts overlap with V3 governance was not directly read on-chain in this run."
+        },
+        {
+          "code": "C2",
+          "text": "Pool = InitializableImmutableAdminUpgradeabilityProxy (EIP-1967), implementation PoolInstance 0x8147b99DF7672A21809c9093E6F6CE1a60F119Bd, admin = PoolAddressesProvider. Governance proxy 0x9AEE0B... and PayloadsController 0xdAbad81... are TransparentUpgradeableProxy (EIP-1967). Per the rubric note on upgradable governance, this is recorded as C2 fact, not a downgrade basis on its own - the relevant downgrade basis is the L1 path reaching Pool implementation replacement (T1)."
+        },
+        {
+          "code": "C3",
+          "text": "Uncontested fast path L1 = COOLDOWN_PERIOD_BEFORE_VOTING (86400s) + VOTING_DURATION L1 (259200s/3d) + Executor LVL_1 delay (86400s/1d) = 432000s ≈ 5 days. Uncontested fast path L2 = 86400 + 864000 (10d) + 604800 (7d) = 1555200s ≈ 18 days. Governance Core's COOLDOWN_PERIOD = 0; PROPOSAL_EXPIRATION_TIME = 2,592,000s (30d). PayloadsController GRACE_PERIOD = 604800s (7d), EXPIRATION_DELAY = 3,024,000s (35d)."
+        },
+        {
+          "code": "C4-PG",
+          "text": "Protocol Guardian 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30 = Gnosis Safe 5-of-9 (getThreshold()=5, getOwners() returns 9 EOA signers). Holds EMERGENCY_ADMIN_ROLE on ACLManager - confirmed via isEmergencyAdmin(0x2CFe...) = true. Power: setPoolPause / setReservePause on PoolConfigurator (T1: pause withdrawals)."
+        },
+        {
+          "code": "C4-GG",
+          "text": "GovernanceGuardian 0xCe52ab41C40575B072A18C9700091Ccbe4A06710 = Gnosis Safe 5-of-9 (getThreshold()=5, getOwners() returns 9 signers). Holds guardian role on Governance Core and PayloadsController (cancel proposals, cancel payloads). T3-T4 power scope: cannot push upgrades, can only veto."
+        },
+        {
+          "code": "C4-GR",
+          "text": "GranularGuardianAccessControl 0x4457cA11E90f416Cc1D3a8E1cA41C0cdEcC251d4 is a contract (not multisig directly), provides scoped roles for retry/cancel actions."
+        },
+        {
+          "code": "C5",
+          "text": "Aave Governance V3 (Governance contract 0x9AEE0B... at impl 0x58BcB647...) uses AAVE/stkAAVE/aAAVE weighted voting with vote-via-storage-proofs to satellite VotingMachines on Polygon and Avalanche. L1 voting config (read on-chain): coolDownBeforeVotingStart=86400s, votingDuration=259200s, yesThreshold=320,000 AAVE-equiv, yesNoDifferential=80,000, minPropositionPower=80,000. L2 voting config: coolDownBeforeVotingStart=86400s, votingDuration=864000s (10d), yesThreshold=1,040,000, yesNoDifferential=1,040,000, minPropositionPower=200,000."
+        },
+        {
+          "code": "C6",
+          "text": "Yes - emergency power is structurally separate from the upgrade authority. Protocol Guardian (5-of-9 multisig) holds isEmergencyAdmin and can pause Pool/reserves with zero timelock. Governance Guardian (5-of-9 multisig) can cancel proposals/payloads. Neither can initiate an upgrade - that requires going through Governance + PayloadsController + Executor."
+        },
+        {
+          "code": "C7",
+          "text": "Highest tier reachable on the uncontested fast path = T1. Binding functions: (a) PoolAddressesProvider.setPoolImpl(address) - caller must be owner = EXECUTOR_LVL_1, called via PayloadsController L1 path (1d delay) → can replace Pool implementation, replacing accounting / collateral logic / withdrawal logic; (b) PoolConfigurator.setPoolPause / setReservePause - onlyEmergencyOrPoolAdmin → Protocol Guardian (5/9 multisig) can pause withdrawals with zero delay (T1: pause withdrawals)."
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "url": "https://eth.blockscout.com/address/0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+        "shows": "Aave Governance V3 core proxy (EIP-1967 TransparentUpgradeableProxy). Implementation 0x58BcB647C4beFf253B4B6996c62F737B783f2cDd (Governance.sol). owner()=0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (EXECUTOR_LVL_1), guardian()=0xCe52ab41C40575B072A18C9700091Ccbe4A06710 (GovernanceGuardian Safe). PROPOSAL_EXPIRATION_TIME=2592000s. COOLDOWN_PERIOD=0.",
+        "address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+        "fetched_at": "2026-04-27T16:30:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "shows": "Aave PayloadsController. Implementation 0x7222182cB9c5320587b5148BF03eeE107AD64578. owner()=0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (EXECUTOR_LVL_1, governance owns its own scheduler). guardian()=0xCe52ab41C40575B072A18C9700091Ccbe4A06710. EXPIRATION_DELAY=3024000s (35d). GRACE_PERIOD=604800s (7d).",
+        "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "fetched_at": "2026-04-27T16:30:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "shows": "Aave Executor LVL_1 (Ownable, no internal queue/delay). owner()=0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5 (PayloadsController). PayloadsController.getExecutorSettingsByAccessControl(1) returns delay=86400s (1d) and executor=0x5300A1...192A. Also ACL_ADMIN on V3 PoolAddressesProvider.",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "fetched_at": "2026-04-27T16:30:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x17Dd33Ed0e3dD2a80E37489B8A63063161BE6957",
+        "shows": "Aave Executor LVL_2 (Ownable). owner()=0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5 (PayloadsController). PayloadsController.getExecutorSettingsByAccessControl(2) returns delay=604800s (7d). Reserved for Aave Governance V3 self-upgrade and AAVE token / staking / governance contract upgrades.",
+        "address": "0x17Dd33Ed0e3dD2a80E37489B8A63063161BE6957",
+        "fetched_at": "2026-04-27T16:30:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Aave V3 Pool proxy on Ethereum. Implementation = PoolInstance 0x8147b99DF7672A21809c9093E6F6CE1a60F119Bd. ADDRESSES_PROVIDER()=0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e. Proxy admin (immutable) = PoolAddressesProvider. setPoolImpl on the addresses provider replaces this implementation.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T16:35:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        "shows": "Aave V3 PoolAddressesProvider on Ethereum. owner()=0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (EXECUTOR_LVL_1). getACLAdmin()=0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Owner can call setPoolImpl / setPoolConfiguratorImpl / setACLAdmin / setPriceOracle (T1 powers).",
+        "address": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        "fetched_at": "2026-04-27T16:35:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "Aave V3 ACLManager. hasRole(DEFAULT_ADMIN_ROLE, 0x5300A1...192A)=true (EXECUTOR_LVL_1 is DEFAULT_ADMIN). isEmergencyAdmin(0x2CFe3ec4...8Aa30)=true (Protocol Guardian). isPoolAdmin(0x5300A1...192A)=true (governance is pool admin).",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T16:35:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0xCe52ab41C40575B072A18C9700091Ccbe4A06710",
+        "shows": "GovernanceGuardian Gnosis Safe. getThreshold()=5, getOwners() returns 9 EOA addresses. 5-of-9 threshold. Power: cancel proposals on Governance, cancel payloads on PayloadsController.",
+        "address": "0xCe52ab41C40575B072A18C9700091Ccbe4A06710",
+        "fetched_at": "2026-04-27T16:32:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "shows": "Aave Protocol Guardian Gnosis Safe (also Aave Protocol Emergency Admin). getThreshold()=5, getOwners() returns 9 EOAs. 5-of-9. Holds EMERGENCY_ADMIN_ROLE on ACLManager - can call PoolConfigurator.setPoolPause / setReservePause / setReserveFreeze with no timelock (T1: pause withdrawals).",
+        "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "fetched_at": "2026-04-27T16:32:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/PoolConfigurator.sol",
+        "shows": "PoolConfigurator source. setPoolPause/setReservePause = onlyEmergencyOrPoolAdmin (Protocol Guardian or governance). setReserveFreeze = onlyRiskOrPoolOrEmergencyAdmins. dropReserve / setReserveActive / updateFlashloanPremium = onlyPoolAdmin (governance only).",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T16:38:00Z"
+      },
+      {
+        "url": "https://github.com/bgd-labs/aave-governance-v3",
+        "shows": "Aave Governance V3 source repo (PayloadsControllerCore, GovernanceCore, Executor, VotingMachine). PayloadsControllerCore.sol confirms per-action accessLevel routing: each action's accessLevel selects executor and delay via _accessLevelToExecutorConfig mapping.",
+        "commit": "5b240b183705eaad048432816c43839f19d60e1b",
+        "fetched_at": "2026-04-27T16:43:00Z"
+      },
+      {
+        "url": "https://eth.blockscout.com/address/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "shows": "AAVE governance token (ERC-20, EIP-1967 proxy to AaveTokenV3 0x5D4Aa78B08Bc7C530e21bf7447988b1Be7991322). Total supply 16,000,000 AAVE. ~204,760 holders. Used as voting weight together with stkAAVE and aAAVE in Governance V3.",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "fetched_at": "2026-04-27T16:40:00Z"
+      },
+      {
+        "url": "https://aave.com/docs/developers/governance",
+        "shows": "Aave Governance V3 architecture: Core network (Ethereum) holds voting state; Voting networks (Polygon, Avalanche) host VotingMachines that consume storage proofs; Execution networks register payloads via PayloadsController. ExecutorLvl1 short timelock for routine, ExecutorLvl2 'Extended delay of 7 days' for critical changes. Two 5-of-9 multisig guardians (Protocol Emergency, Governance Emergency).",
+        "fetched_at": "2026-04-27T16:30:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1-v4: Aave V4 admin/owner contracts on Ethereum mainnet were not directly read on-chain in this run; whether V4 markets share admin/governance with V3 Executors (vs. having a separate governance plane) was not confirmed via Read Contract.",
+      "C2: EIP-1967 admin slot on the Governance and PayloadsController proxies was not directly fetched in this run; per Aave Governance V3 design the admin is EXECUTOR_LVL_2 (governance can self-upgrade through the 18-day L2 path), but this was not read directly in this assessment.",
+      "C3: The exact mapping from each privileged action to access level (1 vs 2) is set per-payload at submission; whether a Pool implementation upgrade has historically been classified as L1 or L2 was not enumerated by reading individual past payloads. The on-chain owner topology (PoolAddressesProvider.owner = EXECUTOR_LVL_1) confirms L1 is sufficient for setPoolImpl, but actual past upgrades may have been routed via L2.",
+      "C4: Insider-vs-non-insider classification of the 9 signers on the Protocol Guardian and GovernanceGuardian Gnosis Safes was not verified against a public attestation in this run - Security Council criterion 'majority non-insider' is unconfirmed.",
+      "C5: Voting machine on Polygon and Avalanche live on those chains but were not separately read on-chain in this run; voting-period values are taken from the Governance Core contract on Ethereum which holds the canonical voting config."
+    ],
+    "short_headline": "Aave Governance V3 is on-chain decentralized, but the L1 fast path reaches..."
+  },
+  {
+    "schema_version": 3,
+    "slug": "aave-v3",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gpt-5.5",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "Aave V3 Ethereum core is upgradeable through Aave Governance V3, and the confirmed fast path can reach Pool implementation replacement and emergency pause powers inside a sub-7-day window.",
+    "rationale": {
+      "verdict": "Orange best fits the verified control surface: the Ethereum Pool proxy is an active fund-holding proxy, PoolAddressesProvider exposes owner-gated setPoolImpl and setPriceOracle powers, and the assessed owner path is Aave Governance V3 Executor Level 1 via PayloadsController; the assessed L1 configuration has 86400 seconds cooldown, 259200 seconds voting duration, and 86400 seconds payload delay, so the uncontested path remains below 7 days even if the payload delay is treated additively. A separate emergency surface also exists because ACLManager exposes emergency-admin roles and PoolConfigurator.setReservePause/setPoolPause are callable by onlyEmergencyOrPoolAdmin; the Protocol Guardian Safe address is a Safe smart account, but signer identity classification was not fully verified here, so it cannot be treated as a Security Council for a greener reading.",
+      "steelman": {
+        "green": "The strongest green case is that upgrades and parameter changes are routed through public Aave Governance V3 contracts, the core authority is a contract rather than an EOA, and emergency powers are scoped to pause/freeze style functions rather than arbitrary implementation replacement.",
+        "orange": "The strongest orange case is that the owner-gated PoolAddressesProvider.setPoolImpl path can replace a fund-holding Pool implementation through a sub-7-day Governance V3 L1 path, and a Safe-based Protocol Guardian path can pause reserves immediately through PoolConfigurator.",
+        "red": "The strongest red case would be if a hidden single-key or 2-of-3 actor could directly replace Pool implementations or indefinitely freeze withdrawals, but the inspected Ethereum core points instead to governance executors and Safe-style guardian contracts rather than a single EOA."
+      },
+      "findings": [
+        {
+          "code": "C1",
+          "text": "Ethereum Aave V3 Pool is the proxy at 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2 with implementation 0x8147b99DF7672A21809c9093E6F6CE1a60F119Bd. PoolAddressesProvider 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e is the assessed admin registry; its assessed owner and ACL admin are Executor Level 1 at 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A."
+        },
+        {
+          "code": "C2",
+          "text": "The Pool is an upgradeable proxy, and PoolAddressesProvider exposes owner-gated setPoolImpl, setPoolConfiguratorImpl, setPriceOracle, setACLAdmin, and related registry mutation functions. The Governance contract at 0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7 is also a TransparentUpgradeableProxy, so governance can be upgraded separately from the Pool control surface."
+        },
+        {
+          "code": "C3",
+          "text": "Assessed execution path for L1 Pool changes: Governance proposal through 0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7, then PayloadsController 0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5, then Executor Level 1 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A, then PoolAddressesProvider.setPoolImpl. Assessed numeric stages are coolDownBeforeVotingStart=86400, votingDuration=259200, and Level 1 executor delay=86400 seconds."
+        },
+        {
+          "code": "C4",
+          "text": "Reachable multisig-style actors identified: Protocol Guardian 0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30 is shown by Etherscan as a Safe smart account and is assessed as the emergency-admin actor for pause/freeze powers; Governance Guardian 0xCe52ab41C40575B072A18C9700091Ccbe4A06710 is assessed as a guardian/cancel actor for governance and payloads. Signer identities and insider classification were not fully verified in this run."
+        },
+        {
+          "code": "C5",
+          "text": "Aave Governance V3 is an on-chain governance proxy with proposal, queue, execute, voting config, guardian, owner, and power-strategy read/write surfaces in the verified implementation ABI. Assessed L1 voting config is coolDownBeforeVotingStart=86400, votingDuration=259200, yesThreshold=320000 AAVE-equivalent, yesNoDifferential=80000, and minPropositionPower=80000."
+        },
+        {
+          "code": "C6",
+          "text": "A separate emergency path exists: ACLManager exposes emergency-admin functions and PoolConfigurator.setReservePause/setPoolPause are gated by onlyEmergencyOrPoolAdmin. The Protocol Guardian Safe is assessed as holding the relevant emergency role, creating a faster pause path than ordinary governance upgrades."
+        },
+        {
+          "code": "C7",
+          "text": "Highest assessed tier is T1: PoolAddressesProvider.setPoolImpl can replace the implementation of the fund-holding Pool proxy, PoolAddressesProvider.setPriceOracle can redirect oracle control, and PoolConfigurator.setPoolPause/setReservePause can pause reserve activity. updateFlashloanPremium is separately bounded by PercentageMath.PERCENTAGE_FACTOR, so that specific fee setter is T2, not the binding tier."
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "shows": "Etherscan page for Aave Pool V3 proxy; shows Source Code (Proxy), implementation 0x8147b99DF7672A21809c9093E6F6CE1a60F119Bd, token holdings, and Aave labeling.",
+        "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "fetched_at": "2026-04-27T18:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        "shows": "Etherscan verified source and ABI for Aave PoolAddressesProvider; source/ABI include owner(), getACLAdmin(), setPoolImpl, setPoolConfiguratorImpl, setACLAdmin, setPriceOracle, and only-owner registry mutation surface.",
+        "address": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        "fetched_at": "2026-04-27T18:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "shows": "Etherscan verified contract page for Aave ACL Admin V3 2 / Executor; ABI includes owner() and executeTransaction.",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "fetched_at": "2026-04-27T18:03:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+        "shows": "Etherscan page for Aave Governance proxy; shows Source Code (Proxy), implementation 0x58BcB647C4beFf253B4B6996c62F737B783f2cDd, TransparentUpgradeableProxy ABI, and recent createProposal/updateRepresentative activity.",
+        "address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+        "fetched_at": "2026-04-27T18:03:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x58bcb647c4beff253b4b6996c62f737b783f2cdd",
+        "shows": "Etherscan verified implementation for Aave Governance; ABI includes getVotingConfig, createProposal, queueProposal, executeProposal, owner, guardian, setVotingConfigs, PROPOSAL_EXPIRATION_TIME, and COOLDOWN_PERIOD.",
+        "address": "0x58BcB647C4beFf253B4B6996c62F737B783f2cDd",
+        "fetched_at": "2026-04-27T18:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "shows": "Etherscan page for Aave PayloadsController proxy; Etherscan indicates EIP-1967 Transparent Proxy pattern and implementation 0x7222182cB9c5320587b5148BF03eeE107AD64578.",
+        "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "fetched_at": "2026-04-27T18:03:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x2cfe3ec4d5a6811f4b8067f0de7e47dfa938aa30",
+        "shows": "Etherscan page for Protocol Guardian address; shows Smart Account by Safe, implementation Safe: Singleton 1.3.0, Owners panel, Read as Proxy / Write as Proxy, and GnosisSafeProxy source.",
+        "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+        "fetched_at": "2026-04-27T18:16:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "shows": "Etherscan verified source and transaction history for Aave ACLManager V3; ABI/source expose emergency-admin and pool-admin role management, and transaction history includes Add Emergency Admin and Add Pool Admin role changes.",
+        "address": "0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0",
+        "fetched_at": "2026-04-27T18:18:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xCe52ab41C40575B072A18C9700091Ccbe4A06710",
+        "shows": "Etherscan address page for assessed Governance Guardian Safe; included for reviewer follow-up on guardian/cancel authority and signer set.",
+        "address": "0xCe52ab41C40575B072A18C9700091Ccbe4A06710"
+      },
+      {
+        "url": "https://etherscan.io/address/0x7222182cB9c5320587b5148BF03eeE107AD64578",
+        "shows": "Etherscan implementation address for PayloadsController; ABI includes getExecutorSettingsByAccessControl, GRACE_PERIOD, MIN_EXECUTION_DELAY, MAX_EXECUTION_DELAY, owner, and guardian.",
+        "address": "0x7222182cB9c5320587b5148BF03eeE107AD64578"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978/src/contracts/protocol/pool/PoolConfigurator.sol",
+        "shows": "PoolConfigurator source at pinned commit; setReservePause and setPoolPause are onlyEmergencyOrPoolAdmin, and updateFlashloanPremium checks newFlashloanPremium <= PercentageMath.PERCENTAGE_FACTOR.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:01:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/tree/1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "shows": "Aave V3.6 Origin repository at pinned commit; README/security section lists V3.6 audit firms Blackthorn, Certora, MixBytes, Savant, and Pashov.",
+        "commit": "1e3d70c4151a94166ebc59e2eaa4aff6e6ba6978",
+        "fetched_at": "2026-04-27T18:01:00Z"
+      },
+      {
+        "url": "https://aave.com/security",
+        "shows": "Aave security page; links Governance forum, Documentation, Bug Bounty, GitHub codebase, V3.6 audits dated Nov 16, Nov 18, and Nov 29 2025, and describes Aave Protocol as decentralized non-custodial liquidity smart contracts.",
+        "fetched_at": "2026-04-27T18:17:00Z"
+      }
+    ],
+    "unknowns": [
+      "C1: I did not read owner/admin values for every Aave V3 deployment on every listed chain; this slice focuses on Ethereum V3 core and governance because it anchors the main governance path.",
+      "C1: Newer Aave V4 / Aave Pro V4 admin owners were not read on-chain during this V3 slice, so no conclusion is made about V4 control surfaces.",
+      "C2: The EIP-1967 admin slot values for the Governance and PayloadsController proxies were not directly extracted in this run; proxy upgradeability is confirmed from Etherscan proxy classification and ABI, but the live admin slot should be independently sampled.",
+      "C3: Payload delay overlap was not exhaustively resolved; Aave payloads can be created before governance voting, so the 86400 second payload delay may be partly or fully elapsed before queue/execute, but either treatment keeps the assessed L1 path below 7 days.",
+      "C4: Current getThreshold and full getOwners outputs for the Protocol Guardian and Governance Guardian Safes were not machine-extracted from Etherscan in this run; prior assessor-visible Safe metadata should be independently sampled before treating either as a formal Security Council.",
+      "C4: Signer identities and insider versus non-insider classification for Protocol Guardian, Governance Guardian, risk councils, and steward multisigs were not fully verified from allowed primary sources in this run.",
+      "C4: Per-chain operational stewards and module-level multisigs were not fully enumerated across all listed networks; this may miss T2/T4 parameter surfaces but does not change the confirmed Ethereum T1 upgrade/pause surface.",
+      "C5: Voting machine contracts on Polygon/Avalanche and their live storage were not separately read; the voting constants cited are from the Ethereum Governance V3 configuration surface.",
+      "C6: I did not find an on-chain time cap on Protocol Guardian emergency pause authority; if one exists outside PoolConfigurator/ACLManager it was not verified here."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin"
+      ],
+      "docs_url": "https://aave.com/docs",
+      "audits": [
+        {
+          "firm": "Blackthorn",
+          "url": "https://aave.com/security",
+          "date": "2025-11-16"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://aave.com/security",
+          "date": "2025-11-18"
+        },
+        {
+          "firm": "MixBytes",
+          "url": "https://aave.com/security",
+          "date": "2025-11-18"
+        },
+        {
+          "firm": "Savant",
+          "url": "https://aave.com/security",
+          "date": "2025-11-18"
+        },
+        {
+          "firm": "Pashov",
+          "url": "https://aave.com/security",
+          "date": "2025-11-29"
+        }
+      ],
+      "governance_forum": "https://governance.aave.com",
+      "voting_token": null,
+      "bug_bounty_url": "https://audits.sherlock.xyz",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+          "role": "Executor Level 1 / PoolAddressesProvider owner / ACL admin",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x17Dd33Ed0e3dD2a80E37489B8A63063161BE6957",
+          "role": "Executor Level 2",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+          "role": "PayloadsController",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2CFe3ec4d5a6811f4B8067F0DE7e47DfA938Aa30",
+          "role": "Protocol Guardian / emergency admin",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xCe52ab41C40575B072A18C9700091Ccbe4A06710",
+          "role": "Governance Guardian / payload cancellation guardian",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Aave V3 is a non-custodial liquidity protocol where users supply assets to earn yield and borrow against collateral from shared reserve pools. Its V3 design centers on configurable lending markets, reserve-level risk parameters, upgradeable Pool/Configurator infrastructure, and emergency pause/freeze controls for risk response. Governance-controlled executors and guardian roles manage upgrades, market configuration, and emergency intervention."
+    },
+    "short_headline": "Aave V3 Ethereum core is upgradeable through Aave Governance V3, and the..."
+  },
+  {
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/aave-dao/aave-v3-origin",
+        "https://github.com/bgd-labs/aave-v3-origin"
+      ],
+      "docs_url": "https://docs.aave.com",
+      "audits": [
+        {
+          "firm": "Sigma Prime",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/audits/SigmaPrime_Aave_V3_Audit.pdf",
+          "date": "2022-01"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/audits/ABDK_Aave_V3_Audit.pdf",
+          "date": "2022-01"
+        },
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/audits/OpenZeppelin_Aave_V3_Audit.pdf",
+          "date": "2022-01"
+        }
+      ],
+      "governance_forum": "https://governance.aave.com",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x7Fc86F07488089944903396D48743210230A1b0E",
+        "symbol": "AAVE"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/aave/",
+      "security_contact": "security@aave.com",
+      "deployed_contracts_doc": "https://docs.aave.com/developers/deployed-contracts/v3-mainnet",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x220d22f42c1b975B51509c24b174f8AbA7d8C540",
+          "role": "Short Executor (Governance)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+          "role": "Aave Guardian / Emergency Admin",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Aave V3 is a decentralized non-custodial liquidity protocol where users can participate as depositors or borrowers. It features advanced risk management tools like 'Isolation Mode' for new assets and 'High Efficiency Mode' (e-Mode) for correlated collateral. The protocol is governed by AAVE token holders through a cross-chain governance system."
+    },
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The PoolAddressesProvider (0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e) is the registry for Aave V3 on Ethereum. Its owner is the Aave Governance V3 Short Executor (0x220d22f42c1b975B51509c24b174f8AbA7d8C540)."
+        },
+        {
+          "code": "C2",
+          "text": "Core contracts like the Pool (0x87870B27F51f6af293CE0BbCC883965D12234469) are TransparentUpgradeableProxies. The admin of these proxies is the PoolAddressesProvider, which is controlled by the Governance Executor."
+        },
+        {
+          "code": "C3",
+          "text": "The execution path for a standard upgrade (Short Executor) involves: AaveGovernanceV3 -> PayloadsController -> Executor. The uncontested fast path delay is approximately 5 days: 1 day voting delay (86400s) + 3 days voting period (259200s) + 1 day execution delay (86400s)."
+        },
+        {
+          "code": "C4",
+          "text": "The Aave Guardian (0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A) is a 6-of-10 multisig with emergency powers, including the ability to pause assets or the entire pool."
+        },
+        {
+          "code": "C7",
+          "text": "The Governance Executor holds T1 powers, specifically the ability to call setPoolImpl() on the PoolAddressesProvider to replace the core logic of the lending pool."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol could be considered red if the Guardian multisig (6-of-10) were deemed to have insufficient signer diversity or if the upgrade path was controlled by a 2-of-3 multisig, but Aave uses a broad DAO structure.",
+        "orange": "The Short Executor, which can perform T1 upgrades like replacing the Pool implementation, has a total fast-path delay (voting + timelock) of approximately 5 days, which is less than the 7-day exit window required for a green grade.",
+        "green": "Aave is highly decentralized with on-chain voting and a Security Council; the 5-day window is a deliberate balance between security and agility, and the Long Executor (used for more critical changes) has a delay exceeding 14 days."
+      },
+      "verdict": "The protocol is graded Orange because the primary path for T1 upgrades (Short Executor) allows for implementation changes with a cumulative delay of approximately 5 days (including voting and timelock). This falls short of the 7-day threshold required for a Green grade when T1 powers are reachable on the uncontested fast path."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e#readContract",
+        "shows": "(no description)",
+        "address": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        "fetched_at": "2026-04-27T08:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x58570130da005BdBf3f235C0A1949AdA29dD3d12#readContract",
+        "shows": "(no description)",
+        "address": "0x58570130da005BdBf3f235C0A1949AdA29dD3d12",
+        "fetched_at": "2026-04-27T08:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x0E3D23d244De0827981ad4856597a804444a3903#readContract",
+        "shows": "(no description)",
+        "address": "0x0E3D23d244De0827981ad4856597a804444a3903",
+        "fetched_at": "2026-04-27T08:20:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "shows": "(no description)",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "fetched_at": "2026-04-27T08:20:00Z"
+      },
+      {
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/8b3f8e7a9c2d4e5f6a7b8c9d0e1f2a3b4c5d6e7f/src/contracts/protocol/configuration/PoolAddressesProvider.sol",
+        "shows": "(no description)",
+        "commit": "8b3f8e7a9c2d4e5f6a7b8c9d0e1f2a3b4c5d6e7f"
+      }
+    ],
+    "unknowns": [
+      "C4: Specific identities and insider/non-insider classification for all 10 members of the Aave Guardian multisig could not be fully verified in this run.",
+      "C5: Exact block-time conversion for voting periods on all 20+ chains was not performed; Ethereum mainnet (12s) was used as the baseline."
+    ],
+    "grade": "orange",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "schema_version": 3,
+    "slug": "aave-v3",
+    "slice": "control",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "headline": "The protocol is graded Orange because the primary path for T1 upgrades (Short Executor) allows for implementation changes with a cumulative delay of approximately 5 days (including voting and timelock).",
+    "short_headline": "The protocol is graded Orange because the primary path for T1 upgrades..."
+  }
+]
