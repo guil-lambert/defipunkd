@@ -90,7 +90,8 @@ async function resolveAbiInternal(
   visited.add(key);
 
   const warnings: string[] = [];
-  const etherscanKey = import.meta.env.ETHERSCAN_API_KEY ?? process.env.ETHERSCAN_API_KEY;
+  // Server-only secret — see lib/onchain/client.ts for rationale.
+  const etherscanKey = process.env.ETHERSCAN_API_KEY ?? null;
   const chainEntry = getChainEntry(chainId);
 
   let baseAbi: Abi | null = null;

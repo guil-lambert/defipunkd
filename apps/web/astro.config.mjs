@@ -17,6 +17,12 @@ export default defineConfig({
       // Short enough to pick up fresh assessments quickly; long enough
       // that a popular page isn't re-rendered on every request.
       expiration: 60,
+      // /api/* are dynamic JSON endpoints with query-param-keyed responses,
+      // not page renders. ISR's path-keyed cache + crash-prone wrapper
+      // (it returns FUNCTION_INVOCATION_FAILED on routes that do their own
+      // streaming/JSON output) does not fit this access pattern. Each route
+      // sets its own Cache-Control: see apps/web/src/lib/onchain/error.ts.
+      exclude: [/^\/api\//],
     },
     // Data files live outside apps/web and are read at runtime by
     // @defipunkd/registry via process.cwd() traversal. Bundle them with
