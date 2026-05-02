@@ -13,6 +13,11 @@ export const preamble = `You are contributing a single-slice assessment to defip
 - prompt_version:             {{prompt_version}}
 - address_book:               {{addresses_or_null}}
 
+### Pre-built read-API surfacer URLs (verbatim — fetchable as-is)
+{{address_book_surfacer_urls}}
+
+These are the only URLs guaranteed to be accepted by your browser/web_fetch tool's URL allowlist. Fetch each one to load its embedded /api/contract/abi, /api/contract/read, and /api/safe/owners URLs into your context — those then become fetchable too. If you discover a NEW address transitively (e.g. an admin pulled out of an owner() call) that is NOT in this list, you cannot fetch its surfacer URL through the allowlist; ask the user in your reply (or set grade="unknown" with the address in unknowns[]) instead of guessing the URL.
+
 ### Hard rules
 1. Treat your training data as potentially stale. Facts about this protocol must be sourced from a URL you can cite in evidence[]. Do not claim anything you have not just verified.
 2. Only these source classes count as evidence:
@@ -53,9 +58,7 @@ URL-construction rule (important for browser/web_fetch tools): use the BARE meth
 
 Append &block=<n> to pin a specific block — recommended for evidence URLs, since the response is then content-addressed (Cache-Control: immutable).
 
-Bypass for browser-tool URL allowlists (Claude.ai web_fetch, ChatGPT browser): both refuse to fetch URLs that haven't appeared verbatim in conversation context. To unlock the read API URLs for an address you discover transitively (e.g. an admin pulled out of an owner() call), first fetch:
-    https://defipunkd.com/address/<chainId>/<address>
-That page renders an HTML body containing concrete /api/contract/abi, /api/contract/read, and /api/safe/owners URLs for the address. Once the page is in your fetch history, those embedded URLs are now fetchable directly — no user paste required. Use this whenever you need a read on an address that wasn't pinned in the address_book input. Supported chainIds: 1 (ethereum), 10 (optimism), 56 (bsc), 130 (unichain), 137 (polygon), 324 (zksync), 8453 (base), 42161 (arbitrum), 43114 (avalanche), 59144 (linea), 81457 (blast), 534352 (scroll), 11155111 (sepolia).
+Bypass for browser-tool URL allowlists (Claude.ai web_fetch, ChatGPT browser): both refuse to fetch URLs that haven't appeared verbatim in conversation context — that includes URLs you generate from a template, even when the template is described in this prompt. The "Pre-built read-API surfacer URLs" block above lists one concrete https://defipunkd.com/address/<chainId>/<address> URL per pinned address_book entry; those are verbatim in your context, so the allowlist accepts them. Fetching one loads its embedded /api/contract/abi, /api/contract/read, and /api/safe/owners URLs into your context too — those then become fetchable directly. For addresses NOT in the pinned list (e.g. an admin discovered transitively via an owner() call), you cannot fetch their surfacer URL — the allowlist will reject the generated URL. Surface the missing address in your reply or in unknowns[] instead of guessing. Supported chainIds: 1 (ethereum), 10 (optimism), 56 (bsc), 130 (unichain), 137 (polygon), 324 (zksync), 8453 (base), 42161 (arbitrum), 43114 (avalanche), 59144 (linea), 81457 (blast), 534352 (scroll), 11155111 (sepolia).
 
 Use this API for any factual claim about: contract ABI shape; return value of a view method (owner(), getOwners(), getThreshold(), totalSupply(), implementation(), paused(), MIN_DELAY(), …); Safe membership and threshold. Do NOT invent ABIs or view-method return values from your training data. URLs from /api/contract/read and /api/safe/owners count as on-chain evidence on the control / ability-to-exit / autonomy / verifiability slices and satisfy Rule 16 on their own (no separate block-explorer URL required) — they are content-addressed when block-pinned, which is strictly stronger than a screenshot of a block-explorer "Read Contract" tab. /api/contract/abi alone returns metadata, not eth_call results, so it does NOT satisfy Rule 16 — pair it with /contract/read or an explorer URL.
 

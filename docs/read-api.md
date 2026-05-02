@@ -113,31 +113,49 @@ function either.
 
 ## LLM client quirks
 
-### Browser-tool URL allowlists: use `/address/<chainId>/<addr>` as the bypass
+### Browser-tool URL allowlists: surfacer page + pre-baked URLs in prompt
 
 ChatGPT's browser tool and Claude.ai's `web_fetch` both refuse to fetch
-URLs that haven't appeared verbatim in conversation context (user message,
-assistant message, prior tool result). LLMs reading our prompt know the
-URL *template* but each new concrete URL they construct is unfetchable
-until something pastes that exact URL into the chat first.
+URLs that haven't appeared verbatim in conversation context. **The
+allowlist also rejects URLs the LLM constructs from a template** — the
+prompt describing the URL pattern is not enough; the exact URL string
+has to be in context as text.
 
-`apps/web/src/pages/address/[chainId]/[address].astro` is the bypass: a
-server-rendered HTML page whose body contains concrete `/api/contract/abi`,
-`/api/contract/read`, and `/api/safe/owners` URLs for the queried address
-(plus a curated battery of common methods — owner, admin, paused,
-implementation, totalSupply, name/symbol/decimals, MIN_DELAY, etc.). The
-LLM:
+Two-tier solution:
 
-1. fetches `https://defipunkd.com/address/1/0x...`
-2. reads the response body, sees the URLs
-3. fetches them directly — they're now "previously seen" by web_fetch
+1. **The surfacer page**
+   `apps/web/src/pages/address/[chainId]/[address].astro` is a
+   server-rendered HTML page whose body contains concrete
+   `/api/contract/abi`, `/api/contract/read`, and `/api/safe/owners`
+   URLs for the queried address (~14 URLs covering ABI, owner/admin
+   reads, Safe shortcut, ERC-20 fields, timelock constants). Once the
+   LLM fetches the surfacer page, those embedded URLs are in context
+   and become fetchable directly.
 
-No user paste in the loop. The page is path-keyed and has no data
-dependencies, so it ISR-caches well; render is pure URL synthesis.
+2. **Pre-baked surfacer URLs in the prompt**
+   The prompt itself can't unlock the surfacer URL — the allowlist
+   rejects template-constructed URLs. So `packages/prompts/src/index.ts`
+   emits **one concrete surfacer URL per pinned `address_book` entry**,
+   verbatim, in the preamble's "Pre-built read-API surfacer URLs"
+   section. The LLM sees those URLs as text → allowlist accepts them →
+   fetches the surfacer page → embedded API URLs are now in context →
+   read API calls go through.
 
-If you add new common-method URLs, edit `groups[]` in the `.astro` file —
-keep the list short and well-named so the LLM picks meaningful URLs to
-fetch instead of spamming the API.
+The chain — verbatim surfacer URL → fetched HTML → verbatim API URLs →
+fetched JSON — works without any user paste once the prompt has the
+address book.
+
+For addresses discovered transitively during the assessment (e.g. an
+admin returned by `owner()`), the LLM cannot construct a fetchable
+surfacer URL on its own; the prompt instructs it to surface the missing
+address in its reply or in `unknowns[]` rather than guess. After
+`defipunkd.com` lands on Anthropic's / OpenAI's standard fetchable-domain
+allowlist (the proper long-term fix), this restriction goes away
+entirely.
+
+If you add new common-method URLs to the surfacer, edit `groups[]` in
+the `.astro` file — keep the list short and well-named so the LLM picks
+meaningful URLs to fetch instead of spamming the API.
 
 ### `()` in `method=` triggers safety rejection
 

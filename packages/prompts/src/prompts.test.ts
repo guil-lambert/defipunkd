@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(17);
+    expect(PROMPT_VERSION).toBe(18);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             17");
+    expect(p).toContain("prompt_version:             18");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -178,9 +178,31 @@ describe("buildPrompt", () => {
 
   it("preamble points the LLM at the /address/<chainId>/<addr> surfacer to bypass web_fetch URL allowlists (v17)", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("/address/<chainId>/<address>");
     expect(p).toContain("Bypass for browser-tool URL allowlists");
     expect(p).toContain("appeared verbatim in conversation context");
+  });
+
+  it("emits concrete pre-built surfacer URLs per address_book entry (v18)", () => {
+    const p = buildPrompt("control", {
+      ...INPUTS,
+      addressBook: [
+        { chain: "Ethereum", address: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84", role: "stETH" },
+        { chain: "ethereum", address: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84", role: "duplicate-dropped" },
+        { chain: "Base", address: "0x4200000000000000000000000000000000000006" },
+      ],
+    });
+    // Concrete URLs verbatim — required for ChatGPT/Claude.ai allowlist match.
+    expect(p).toContain("https://defipunkd.com/address/1/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
+    expect(p).toContain("https://defipunkd.com/address/8453/0x4200000000000000000000000000000000000006");
+    expect(p).toContain("Pre-built read-API surfacer URLs");
+    // Roles attached so the LLM knows which surfacer is which.
+    expect(p).toContain("(stETH)");
+  });
+
+  it("when address_book is null, emits a fallback note about needing user paste", () => {
+    const p = buildPrompt("control", { ...INPUTS, addressBook: null });
+    expect(p).toContain("no addresses pinned");
+    expect(p).toContain("ask the user to paste the surfacer URL");
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
