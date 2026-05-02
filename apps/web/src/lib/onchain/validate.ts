@@ -11,6 +11,24 @@ export type Valid<T> = { ok: true; value: T };
 export type Invalid = { ok: false; error: string; message: string; hint?: string };
 export type Validated<T> = Valid<T> | Invalid;
 
+/**
+ * Build a URLSearchParams that tolerates `&amp;` separators in addition to `&`.
+ *
+ * Why: when an LLM (e.g. Claude.ai) emits a URL into its chat / thinking
+ * buffer, the chat UI HTML-encodes ampersands for display ("&" → "&amp;").
+ * If the LLM's own web_fetch tool then reads that rendered string back to
+ * make a real HTTP call, the request goes out with literal `&amp;` between
+ * params. A strict server splits on `&` and ends up with garbage param names
+ * like `amp;address`, returning 400. The helper restores the `&` delimiter
+ * before URLSearchParams parses, so a broken client still gets a useful
+ * response. Legitimate query strings should never contain literal `&amp;`,
+ * so this is safe.
+ */
+export function getTolerantSearchParams(url: URL): URLSearchParams {
+  const fixed = url.search.replace(/&amp;/g, "&");
+  return new URLSearchParams(fixed);
+}
+
 export function parseChainId(raw: string | null): Validated<number> {
   if (!raw) return { ok: false, error: "missing-chain-id", message: "chainId query param is required" };
   const n = Number(raw);

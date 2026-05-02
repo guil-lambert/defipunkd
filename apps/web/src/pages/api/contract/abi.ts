@@ -13,18 +13,19 @@ import { getChainEntry } from "../../../lib/onchain/chains.js";
 import { resolveAbi, AbiNotFoundError } from "../../../lib/onchain/abi.js";
 import { errorResponse, jsonResponse } from "../../../lib/onchain/error.js";
 import { summarizeContractAbi } from "../../../lib/onchain/summary.js";
-import { parseAddress, parseChainId } from "../../../lib/onchain/validate.js";
+import { getTolerantSearchParams, parseAddress, parseChainId } from "../../../lib/onchain/validate.js";
 
 export const prerender = false;
 
 const ABI_CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800";
 
 export const GET: APIRoute = async ({ url }) => {
-  const chainResult = parseChainId(url.searchParams.get("chainId"));
+  const params = getTolerantSearchParams(url);
+  const chainResult = parseChainId(params.get("chainId"));
   if (!chainResult.ok) {
     return errorResponse(chainResult.error === "unsupported-chain-id" ? 415 : 400, chainResult);
   }
-  const addrResult = parseAddress(url.searchParams.get("address"));
+  const addrResult = parseAddress(params.get("address"));
   if (!addrResult.ok) return errorResponse(400, addrResult);
 
   const chain = getChainEntry(chainResult.value)!;

@@ -13,18 +13,19 @@ import { getPublicClient, OnchainConfigError } from "../../../lib/onchain/client
 import { errorResponse, jsonResponse, cacheControlForBlock } from "../../../lib/onchain/error.js";
 import { SAFE_ABI } from "../../../lib/onchain/safe-abi.js";
 import { summarizeSafeOwners } from "../../../lib/onchain/summary.js";
-import { parseAddress, parseBlock, parseChainId } from "../../../lib/onchain/validate.js";
+import { getTolerantSearchParams, parseAddress, parseBlock, parseChainId } from "../../../lib/onchain/validate.js";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
-  const chainResult = parseChainId(url.searchParams.get("chainId"));
+  const params = getTolerantSearchParams(url);
+  const chainResult = parseChainId(params.get("chainId"));
   if (!chainResult.ok) {
     return errorResponse(chainResult.error === "unsupported-chain-id" ? 415 : 400, chainResult);
   }
-  const addrResult = parseAddress(url.searchParams.get("address"));
+  const addrResult = parseAddress(params.get("address"));
   if (!addrResult.ok) return errorResponse(400, addrResult);
-  const blockResult = parseBlock(url.searchParams.get("block"));
+  const blockResult = parseBlock(params.get("block"));
   if (!blockResult.ok) return errorResponse(400, blockResult);
 
   let resolved;
@@ -165,5 +166,5 @@ export const GET: APIRoute = async ({ url }) => {
     }),
   };
 
-  return jsonResponse(payload, cacheControlForBlock(url.searchParams.get("block") ?? undefined));
+  return jsonResponse(payload, cacheControlForBlock(params.get("block") ?? undefined));
 };
