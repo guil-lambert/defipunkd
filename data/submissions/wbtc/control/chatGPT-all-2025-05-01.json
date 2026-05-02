@@ -1,0 +1,552 @@
+[
+  {
+  "schema_version": 3,
+  "slug": "wbtc",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-02",
+  "model": "gpt-5.5-thinking",
+  "chat_url": "https://chatgpt.com/share/69f54a57-4be4-8329-b9a6-9ecb67f9e683",
+  "grade": "orange",
+  "headline": "WBTC exposes T1 mint, pause, and ownership-transfer powers through an unresolved controller/DAO control path.",
+  "short_headline": "Unresolved T1 multisig control",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The main WBTC token is the verified WBTC contract at 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599 and its ABI exposes owner(), pendingOwner(), paused(), mintingFinished(), plus write functions mint(), burn(), pause(), unpause(), reclaimToken(), claimOwnership(), and transferOwnership(); the Controller at 0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7 exposes owner(), members(), factory(), pendingOwner(), and token(), and its constructor argument binds it to the WBTC token address."
+      },
+      {
+        "code": "C2",
+        "text": "The inspected WBTC token and Controller pages are verified contracts with normal contract ABIs rather than proxy-admin ABIs, and the inspected WBTC DAO is a verified-similar MultiSigWalletWithDailyLimit; no ProxyAdmin, UUPS, Beacon, Diamond, GovernorBravoDelegator, or upgradeTo-style interface was identified in the visible explorer data."
+      },
+      {
+        "code": "C3",
+        "text": "The observable execution path is multisig-style submission and confirmations at the WBTC DAO, followed by execution of calls to controlled contracts such as the Controller; no explicit timelock stage or delay constant was identified in the WBTC token, Controller, or WBTC DAO ABIs."
+      },
+      {
+        "code": "C4",
+        "text": "The WBTC DAO at 0xD409dB68d0E6E97E1cB1F3EB0BD38dE278bc3C68 is a MultiSigWalletWithDailyLimit whose ABI exposes getOwners(), required(), submitTransaction(), confirmTransaction(), executeTransaction(), addOwner(), removeOwner(), replaceOwner(), and changeRequirement(); its transaction history shows confirmations from multiple labeled and unlabeled WBTC DAO member or merchant addresses, including GOPAX, Ren, Dharma, AirSwap, 0x36DEE7493Cb4fDEbbF6FD67BE4D4ec559aa61fe1, and others."
+      },
+      {
+        "code": "C5",
+        "text": "No token-weighted Governor, GovernorBravo, OZ Governor, or Aragon Voting contract was identified in the inspected WBTC token, Controller, or WBTC DAO ABIs; the inspected governance surface is a multisig wallet rather than token-weighted on-chain governance."
+      },
+      {
+        "code": "C6",
+        "text": "Emergency powers are present as pause()/unpause() on both the WBTC token and Controller surfaces; no separate emergency guardian, time-capped security council, or distinct emergency timelock was identified in the inspected ABIs."
+      },
+      {
+        "code": "C7",
+        "text": "The worst reachable tier is T1 because the named privileged surfaces include mint() on WBTC/Controller, pause()/unpause() on WBTC/Controller, callTransferOwnership() on Controller, and reclaimToken()/callReclaimToken(); these functions can affect token supply, freeze token movement, rotate control, or recover tokens if reachable by the active owner/control path."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that WBTC has T1 mint, pause, and ownership-transfer surfaces and the historical control path includes an EOA visible in ownership and DAO-confirmation transactions, so a still-live small or EOA-admin path would be no-timelock fund-critical control.",
+      "orange": "The strongest orange argument is that the confirmed T1 surfaces are administered through an unresolved Controller/DAO/multisig path where live owner, threshold, signer set, and any exit-window delay could not be read, so the Security Council or 7-day-governance conditions are not established.",
+      "green": "The strongest green argument is that the token and Controller appear non-proxy and the visible governance anchor is a public WBTC DAO multisig rather than an obviously unauditable proxy admin, but this does not prove broad token governance, a 7-day delay, or Security Council composition."
+    },
+    "verdict": "Choosing orange because the evidence supports a T1 blast radius through mint(), pause(), and ownership-transfer/reclaim functions, while the live owner, DAO threshold, signer composition, and any effective delay remain unresolved; that is worse than green because no 7-day exit window or qualifying Security Council was verified, but not red because a single EOA or 2-of-3 no-timelock admin was not proven from allowed sources."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "Ethereum mainnet WBTC token contract address, Etherscan label Wrapped BTC: WBTC Token, verified exact-match contract name WBTC, and ABI exposing owner, pendingOwner, paused, mintingFinished, mint, burn, pause, unpause, reclaimToken, claimOwnership, finishMinting, and transferOwnership.",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xca06411bd7a7296d7dbdd0050dfc846e95febeb7",
+      "shows": "Ethereum mainnet WBTC Controller contract address, Etherscan label Wrapped BTC: Controller, verified exact-match contract name Controller, constructor argument _token set to 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599, and ABI exposing owner, members, factory, pendingOwner, token, getWBTC, mint, burn, pause, unpause, callTransferOwnership, callClaimOwnership, callReclaimToken, setFactory, and setMembers.",
+      "chain": "Ethereum",
+      "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xca06411bd7a7296d7dbdd0050dfc846e95febeb7",
+      "shows": "Controller transaction history includes Set Factory, Set Members, Call Claim Ownership, Transfer Ownership, and Claim Ownership calls, including ownership-related inbound calls from Wrapped BTC deployer, 0xd0643BC0...73379D5C3, and 0x36DEE749...59aa61fe1.",
+      "chain": "Ethereum",
+      "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xd409db68d0e6e97e1cb1f3eb0bd38de278bc3c68",
+      "shows": "Ethereum mainnet Wrapped BTC DAO address, verified-similar contract name MultiSigWalletWithDailyLimit, and ABI exposing owners, isOwner, getOwners, required, submitTransaction, confirmTransaction, executeTransaction, addOwner, removeOwner, replaceOwner, changeRequirement, dailyLimit, and changeDailyLimit.",
+      "chain": "Ethereum",
+      "address": "0xD409dB68d0E6E97E1cB1F3EB0BD38dE278bc3C68",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xd409db68d0e6e97e1cb1f3eb0bd38de278bc3c68",
+      "shows": "Wrapped BTC DAO transaction history shows submitTransaction and confirmTransaction calls from multiple labeled and unlabeled addresses, including GOPAX: WBTC DAO Member 1, Ren: WBTC Merchant Deposit Address, Dharma: WBTC Merchant Deposit Address, AirSwap: WBTC Merchant Deposit Address, 0x36DEE749...59aa61fe1, 0x5aA0C20d...f207bf9B0, 0xd8056194...4084F7660, and others.",
+      "chain": "Ethereum",
+      "address": "0xD409dB68d0E6E97E1cB1F3EB0BD38dE278bc3C68",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x36dee7493cb4fdebbf6fd67be4d4ec559aa61fe1",
+      "shows": "Address history for 0x36DEE7493Cb4fDEbbF6FD67BE4D4ec559aa61fe1 shows Claim Ownership calls to Wrapped BTC DAO/Members/Controller and Confirm Transaction calls to the Wrapped BTC DAO.",
+      "chain": "Ethereum",
+      "address": "0x36DEE7493Cb4fDEbbF6FD67BE4D4ec559aa61fe1",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts/tree/0e8c140ab5fa006a17afa504dafcf311f56f81a2",
+      "shows": "Canonical WrappedBTC bitcoin-token-smart-contracts repository at commit 0e8c140ab5fa006a17afa504dafcf311f56f81a2; repository README states it contains the contracts that implement the wrapped BTC token.",
+      "commit": "0e8c140ab5fa006a17afa504dafcf311f56f81a2",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Etherscan pages were fetched, but JavaScript-rendered Read Contract return values for WBTC owner(), WBTC pendingOwner(), Controller owner(), Controller members(), Controller factory(), DAO getOwners(), and DAO required() were not available in the fetched text, so the live owner/admin values were not independently read.",
+    "C2: No proxy-admin or upgradeTo interface was visible for the inspected contracts, but EIP-1967 or legacy proxy storage slots were not directly read during this run.",
+    "C3: The DAO multisig threshold and current shortest submit/confirm/execute timing could not be read from getOwners() and required() outputs, and no live delay constant was available from the fetched Read Contract output.",
+    "C4: The WBTC DAO threshold, full current owner set, signer identities, and insider/non-insider classifications could not be fully determined from allowed sources because getOwners() and required() outputs were unavailable in the fetched explorer text.",
+    "C5: No token-weighted governance contract was identified in the inspected allowed sources; if WBTC uses an off-chain governance process or undiscovered governance contract, proposal threshold, voting period, quorum, and queue delay were not determined.",
+    "C6: No separate emergency guardian or time-capped emergency role was identified beyond Controller/WBTC pause and unpause functions, but off-chain emergency procedures could not be verified from allowed sources."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/bitcoin-token-smart-contracts"
+    ],
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+        "role": "Controller contract exposing WBTC mint, burn, pause, unpause, ownership-transfer, recover-token, factory, and members control surface",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xD409dB68d0E6E97E1cB1F3EB0BD38dE278bc3C68",
+        "role": "Wrapped BTC DAO multisig wallet observed as governance transaction target with submit, confirm, execute, owner-management, and requirement-change functions",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x36DEE7493Cb4fDEbbF6FD67BE4D4ec559aa61fe1",
+        "role": "EOA observed in historical WBTC ownership-claim and DAO-confirmation transaction paths",
+        "actor_class": "eoa"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "WBTC is an ERC-20 representation of bitcoin on Ethereum, described by Etherscan as backed 1:1 with Bitcoin. The inspected architecture routes mint, burn, pause, ownership-transfer, factory, and membership control through a WBTC token plus Controller and DAO/multisig surface, giving Ethereum DeFi users BTC-denominated liquidity while relying on custodial backing and privileged operator controls."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "wbtc",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-02",
+  "model": "gpt-5.2-pro",
+  "chat_url": "https://chatgpt.com/share/69f551f6-e868-832c-a2ef-b8b7cee12bcd",
+  "grade": "unknown",
+  "headline": "Privileged control surfaces exist on the WBTC ERC-20 contract, but current admin and timelock protections were not verifiable in this run",
+  "short_headline": "Admin controls unverified",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The WBTC ERC-20 token contract exposes owner() and pendingOwner() accessors plus transferOwnership()/claimOwnership() functions in its verified ABI, but the current owner value was not read in this run."
+      },
+      {
+        "code": "C2",
+        "text": "The upgrade mechanism (proxy vs immutable) and any proxy admin for the WBTC token contract were not determined in this run."
+      },
+      {
+        "code": "C3",
+        "text": "No governance or timelock execution chain (vote/queue/execute) was identified for WBTC using the allowed sources in this run, so the uncontested fast-path delay could not be computed."
+      },
+      {
+        "code": "C4",
+        "text": "A separate Ethereum contract at 0xB33f8879d4608711cEBb623F293F8Da13B8A37c5 shows transaction activity consistent with multisig-style confirmations from labeled WBTC DAO member addresses, but its signer set and threshold were not read in this run."
+      },
+      {
+        "code": "C5",
+        "text": "No on-chain token-governed Governor/Timelock parameters (proposal threshold, voting period, quorum, timelock delay) were verified in this run."
+      },
+      {
+        "code": "C6",
+        "text": "The WBTC token ABI includes pause()/unpause(), indicating an emergency-stop surface exists, but the actor(s) authorized to invoke it were not determined in this run."
+      },
+      {
+        "code": "C7",
+        "text": "The WBTC token ABI includes mint() and burn() plus pause()/unpause() and reclaimToken(); without verifying authorization and upgrade reachability, the highest reachable power tier (T1-T4) could not be conclusively classified in this run."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Unable to determine the controlling admin(s), upgrade mechanism, and any timelock or governance delay constants for the WBTC token contract from block-explorer Read Contract outputs in this run (C1-C3), which prevents a reliable classification of the fastest path and worst-case power tier (C7)."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "shows": "Etherscan address page for the WBTC ERC-20 token contract; the verified ABI lists mint(), burn(), pause()/unpause(), reclaimToken(), and ownership functions (owner(), pendingOwner(), transferOwnership(), claimOwnership(), renounceOwnership()).",
+      "chain": "Ethereum",
+      "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "fetched_at": "2026-05-02T00:58:15Z"
+    },
+    {
+      "url": "https://etherscan.io/token/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "shows": "Etherscan token page describing Wrapped Bitcoin (WBTC) as an ERC-20 token backed 1:1 with Bitcoin and listing the official website link (wbtc.network).",
+      "chain": "Ethereum",
+      "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "fetched_at": "2026-05-02T00:58:15Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xB33f8879d4608711cEBb623F293F8Da13B8A37c5",
+      "shows": "Etherscan address page for 0xB33f8879d4608711cEBb623F293F8Da13B8A37c5 showing repeated transactions labeled as confirmations from addresses with WBTC DAO member labels (e.g., 'GOPAX: WBTC DAO Member 1'), consistent with multisig-style operation.",
+      "chain": "Ethereum",
+      "address": "0xB33f8879d4608711cEBb623F293F8Da13B8A37c5",
+      "fetched_at": "2026-05-02T00:58:15Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Could not read the current owner()/admin/pendingOwner values for the WBTC token contract on a block-explorer Read Contract view during this run, so the controlling address could not be identified.",
+    "C2: Could not confirm whether the WBTC token contract is a proxy (transparent/UUPS/Beacon/Diamond) or immutable, or identify any proxy admin/implementation, using Read Contract or proxy-checker outputs in this run.",
+    "C3: Could not identify and sum any on-chain delay constants (timelock delay, queue/execute windows) for the fastest uncontested control path because no timelock/governor chain was verified in this run.",
+    "C4: Could not read the multisig threshold, total signers, or signer identities for 0xB33f8879d4608711cEBb623F293F8Da13B8A37c5 (and any other multisigs on the control path) from Read Contract outputs in this run.",
+    "C5: Could not verify the existence of token-weighted on-chain governance (Governor/Timelock) or its parameters (proposal threshold, voting period, quorum) from Read Contract outputs in this run.",
+    "C6: Could not determine whether pause()/unpause() (and other privileged functions such as mint()/burn()) are protected by an owner/guardian role, and if so which address holds that role, from Read Contract outputs in this run.",
+    "C7: Could not classify the highest reachable power tier (T1-T4) on the fastest path because authorization for mint()/burn()/pause() and any upgrade reachability were not verified in this run."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://wbtc.network/",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Wrapped Bitcoin (WBTC) is an ERC-20 token intended to be backed 1:1 with Bitcoin. It provides a tokenized BTC representation on Ethereum for use in Ethereum-based applications."
+  }
+},
+{
+  "schema_version": 3,
+  "slug": "wbtc",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-02",
+  "model": "GPT-5.4 Pro",
+  "chat_url": "https://chatgpt.com/share/69f5528e-7c08-8333-929e-825d810f0f65",
+  "grade": "orange",
+  "headline": "Zero-delay multisig path into WBTC's T1 controller surface; multisig threshold and signer set unverified.",
+  "short_headline": "T1 path, no timelock",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Historical on-chain ownership handoffs show the WBTC token was transferred to controller 0xca06411bd7a7296d7dbdd0050dfc846e95febeb7, and controller/members ownership was later transferred to multisig 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80 via internal Claim Ownership calls on 2018-11-27."
+      },
+      {
+        "code": "C2",
+        "text": "Etherscan presents the token, controller, members, and factory as verified contract-code deployments, and their published ABIs expose owner/pendingOwner state plus business-logic administration functions rather than proxy-upgrade methods."
+      },
+      {
+        "code": "C3",
+        "text": "The shortest evidenced execution path is signer transaction -> multisig 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80 -> single internal call into the target contract in the same Ethereum transaction, i.e. 0 seconds of on-chain delay once the multisig executes."
+      },
+      {
+        "code": "C4",
+        "text": "Multisig 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80 is the only actor directly evidenced on the controller/members control path; the official DAO README also discloses multisig 0xB33f8879d4608711cEBb623F293F8Da13B8A37c5 and deprecated multisig 0xd409db68d0e6e97e1cb1f3eb0bd38de278bc3c68, but this run did not link either public multisig to controller or members ownership."
+      },
+      {
+        "code": "C5",
+        "text": "The reviewed core contracts use owner/pendingOwner patterns, and this run did not identify a Governor, GovernorBravo, OZ Governor, Aragon app, or timelock sitting between proposal passage and execution on the reviewed contracts."
+      },
+      {
+        "code": "C6",
+        "text": "No separately evidenced emergency guardian was found: the controller surface includes pause/unpause alongside mint, burn, and ownership-moving calls, while the members surface includes setCustodian, addMerchant, and removeMerchant on the same owner path."
+      },
+      {
+        "code": "C7",
+        "text": "The worst evidenced blast radius is T1 because the controller ABI includes mint, burn, pause, callTransferOwnership, and callReclaimToken, the token ABI separately exposes owner-level mint, burn, and pause, and token ownership was historically transferred to the controller."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red case is that the controller path is zero-delay and T1-capable while the multisig threshold and owners were not read, so the admin setup could still collapse to an unsafe small multisig.",
+      "orange": "The strongest orange case is that a zero-delay T1 path is clearly evidenced through multisig 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80, but this run did not prove the red-specific condition of a single EOA or 2-of-3 multisig.",
+      "green": "The strongest green case is that the deployed contracts are exact-match immutable contracts rather than proxies, and this run did not directly read current owner() values, leaving open the possibility that the historical T1 owner path has since changed."
+    },
+    "verdict": "Choosing orange because on-chain transactions show multisig 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80 claiming controller and members ownership in single-transaction internal calls, the controller and token ABIs expose T1 mint/burn/pause and ownership-moving functions, and no timelock/governor layer was identified; but the evidence here does not establish that 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80 is a single EOA or 2-of-3 multisig, so the orange steel-man is stronger than the red one."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xca06411bd7a7296d7dbdd0050dfc846e95febeb7",
+      "shows": "Verified Controller contract page and ABI, including owner/pendingOwner plus mint, burn, pause, unpause, setFactory, setMembers, callTransferOwnership, callClaimOwnership, and callReclaimToken.",
+      "chain": "Ethereum",
+      "address": "0xca06411bd7a7296d7dbdd0050dfc846e95febeb7",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "shows": "Verified WBTC token contract page and ABI, including owner/pendingOwner plus mint, burn, pause, unpause, transferOwnership, and claimOwnership.",
+      "chain": "Ethereum",
+      "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3e8640574aa764763291ed733672d3a105107ac5",
+      "shows": "Verified Members contract page and ABI, including owner/pendingOwner plus setCustodian, addMerchant, removeMerchant, and claimOwnership.",
+      "chain": "Ethereum",
+      "address": "0x3e8640574aa764763291ed733672d3a105107ac5",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xe5A5F138005E19A3E6D0FE68b039397EeEf2322b",
+      "shows": "Verified Factory contract page and ABI, including confirmMintRequest, rejectMintRequest, confirmBurnRequest, addMintRequest, burn, owner/pendingOwner, and a controller() reference initialized in the constructor.",
+      "chain": "Ethereum",
+      "address": "0xe5A5F138005E19A3E6D0FE68b039397EeEf2322b",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/tx/0x25423584547d5f849c590352f2a38de98b4475b1982041e9c35223fd1746b223",
+      "shows": "Controller called callClaimOwnership on the WBTC token and the token emitted OwnershipTransferred to controller 0xca06411bd7a7296d7dbdd0050dfc846e95febeb7.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x4dbbbfb0e68be9d8f5a377a4654604a62e851e80",
+      "shows": "Verified-similar-match MultiSigWalletWithDailyLimit contract with ABI exposing getOwners, required, changeRequirement, submitTransaction, confirmTransaction, and executeTransaction.",
+      "chain": "Ethereum",
+      "address": "0x4dbbbfb0e68be9d8f5a377a4654604a62e851e80",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/tx/0x52ec0d176d4bc83ac4e53726097464c8c13e5f524740fb22ab517f48e8a66b23/advanced",
+      "shows": "A signer transaction into multisig 0x4db... produced an internal Claim Ownership call into the Controller and emitted OwnershipTransferred from 0xd0643BC0D0C879F175556509dbcEe9373379D5C3 to 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/tx/0xcf76023a565b235e74d09924e5456e3f93a4027f63a4dc82d5dc549ff1ada068/advanced",
+      "shows": "A signer transaction into multisig 0x4db... produced an internal Claim Ownership call into Members and emitted OwnershipTransferred from 0xd0643BC0D0C879F175556509dbcEe9373379D5C3 to 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/tx/0x9911bf6cfda8663087ccf35b78bb086dd71023da0fb6932f83ae71e5050ddabb/advanced",
+      "shows": "A signer transaction into multisig 0x4db... produced an internal Add Merchant call into Members, demonstrating owner-level operational use after the ownership handoff.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://etherscan.io/txs?a=0x4dbbbfb0e68be9d8f5a377a4654604a62e851e80",
+      "shows": "The 0x4db... multisig remains active, with recent Confirm Transaction entries in 2024-2025 from at least two distinct sending addresses.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts",
+      "shows": "Public WrappedBTC/bitcoin-token-smart-contracts repository, described as containing wrapped-token contract code and network-specific readmes.",
+      "commit": "41dc747",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/DAO/blob/master/README.md",
+      "shows": "DAO README listing the WBTC token, controller, factory, and members addresses plus multisig wallet 0xB33f... and deprecated multisig wallet 0xd409....",
+      "commit": "ed3c47b",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://github.com/solidified-platform/audits/blob/master/Audit%20Report%20-%20WBTC%20%5B11-19-2018%5D.pdf",
+      "shows": "Solidified WBTC audit report PDF dated 2018-11-19.",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    },
+    {
+      "url": "https://github.com/coinspect/publications/blob/master/WBTC2018v1113.pdf",
+      "shows": "Coinspect WBTC audit report PDF.",
+      "fetched_at": "2026-05-02T01:06:43Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Live owner() and pendingOwner() values for the token, controller, members, and factory were not directly obtained from the explorer's Read Contract tab in this run; ownership conclusions rely on ownership-transfer events and advanced internal-call traces.",
+    "C1: Current owner() and pendingOwner() for factory 0xe5A5F138005E19A3E6D0FE68b039397EeEf2322b were not determined.",
+    "C3: No timelock contract was identified, but the multisig's required threshold and owner set were not live-read, so the only delay claim this run can make is that the evidenced internal execution itself occurred in the same Ethereum transaction.",
+    "C4: Threshold, total signers, and full signer identities/affiliations for multisig 0x4dbbbFb0e68bE9D8F5a377A4654604a62E851e80 were not read on-chain in this run, so Security-Council qualification could not be tested.",
+    "C5: No Governor/GovernorBravo/OZ Governor/Aragon/Timelock contract was identified in reviewed sources, so proposal threshold, quorum, voting period, voting delay, and queue delay could not be determined.",
+    "C6: This run did not identify a separate emergency-scoped guardian or committee distinct from the controller/members owner path."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/bitcoin-token-smart-contracts"
+    ],
+    "docs_url": null,
+    "audits": [
+      {
+        "firm": "Solidified",
+        "url": "https://github.com/solidified-platform/audits/blob/master/Audit%20Report%20-%20WBTC%20%5B11-19-2018%5D.pdf",
+        "date": "2018-11-19"
+      },
+      {
+        "firm": "Coinspect",
+        "url": "https://github.com/coinspect/publications/blob/master/WBTC2018v1113.pdf",
+        "date": "2018-11"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://github.com/WrappedBTC/DAO/blob/master/README.md",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x4dbbbfb0e68be9d8f5a377a4654604a62e851e80",
+        "role": "multisig that claimed controller and members ownership in Nov-2018 and later executed owner-level Members actions",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "WBTC uses separate Ethereum contracts for the token, controller, factory, and members modules. The Factory handles mint and burn request workflows, the Controller exposes issuance, pausing, and ownership-moving functions, and the Members contract manages merchant and custodian addresses. That architecture splits roles across modules, but it also means privileged Ethereum admins remain central to issuance and membership changes."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "wbtc",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-02",
+  "model": "gpt-5.5-pro",
+  "chat_url": "https://chatgpt.com/share/69f55225-d5bc-8330-9f46-032185a80e15",
+  "grade": "unknown",
+  "headline": "WBTC has visible pause/mint control surfaces, but the live controller authority could not be verified",
+  "short_headline": "Live admin unresolved",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The commit-pinned DAO README identifies the WBTC token, Controller, Factory, and Members addresses, and Etherscan verifies those contracts with owner()/pendingOwner-style read functions in their ABIs. The rendered explorer pages did not expose the live owner/pendingOwner outputs during this run, so the current owner/admin of the token, Controller, Factory, and Members contracts was not verified."
+      },
+      {
+        "code": "C2",
+        "text": "Etherscan shows the WBTC token, Controller, Factory, and Members contracts as verified contracts with normal Code/Read/Write surfaces, and the displayed ABIs for those contracts expose ownership and operational control functions rather than a proxy-admin or implementation-upgrade function. A proxy-admin/storage-slot read was not obtained, so upgradeability is left unknown rather than classified as immutable."
+      },
+      {
+        "code": "C3",
+        "text": "No Governor, timelock, scheduler, or queue/execute execution chain was identified in the inspected WBTC token, Controller, Factory, Members, or B33f multisig surfaces. The apparent privileged path is a live owner or multisig calling Token/Controller/Members functions directly, but the live owner and any delay constants were not readable from the rendered explorer pages."
+      },
+      {
+        "code": "C4",
+        "text": "The commit-pinned DAO README lists 0xB33f8879d4608711cEBb623F293F8Da13B8A37c5 as the WBTC DAO multisig and lists 13 DAO member entries. Etherscan identifies that address as a MultiSigWalletWithDailyLimit exposing getOwners() and required(), and its transaction history includes a 2025 Add Owner call, so the current signer set and threshold cannot be inferred safely from the older README alone."
+      },
+      {
+        "code": "C5",
+        "text": "No token-weighted Governor, GovernorBravo, OpenZeppelin Governor, or Aragon Voting contract was found on the inspected WBTC token, Controller, Factory, Members, or B33f multisig pages. Because live owner outputs were unavailable, an upstream governance contract could not be ruled out and proposal threshold, voting period, quorum, and queue-to-execute delay could not be read."
+      },
+      {
+        "code": "C6",
+        "text": "The WBTC token ABI exposes pause() and unpause(), and the Controller ABI exposes pause() and unpause(). The actor class, threshold, and any time cap for those emergency powers could not be determined without live owner and multisig reads."
+      },
+      {
+        "code": "C7",
+        "text": "The visible privileged function surfaces include fund-critical candidates if reachable by the current authority: WBTC mint(), pause(), reclaimToken(), and transferOwnership(); Controller mint(), pause(), setFactory(), setMembers(), callTransferOwnership(), and callReclaimToken(); and Members setCustodian(), addMerchant(), and removeMerchant(). The highest reachable tier cannot be classified because the live authority path, signer threshold, delay, and any on-chain bounds were not verified."
+      }
+    ],
+    "steelman": null,
+    "verdict": "The assessment is blocked because the live owner/admin values and multisig threshold for the fund-critical control path were not obtainable from rendered Read Contract outputs. C1, C3, C4, C6, and C7 remain unresolved: privileged pause, mint, reclaim, ownership-transfer, factory, member, and custodian-management functions are visible, but the current actor, delay, signer threshold, and highest reachable tier cannot be established without guessing."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "Ethereum WBTC token contract; Etherscan shows exact-match verified source, contract name WBTC, Read/Write Contract tabs, and ABI functions including owner(), pendingOwner(), pause(), unpause(), mint(), burn(), reclaimToken(), transferOwnership(), plus the token overview describing WBTC as an ERC-20 backed 1:1 with Bitcoin.",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xca06411bd7a7296d7dbdd0050dfc846e95febeb7",
+      "shows": "Ethereum WBTC Controller contract; Etherscan shows exact-match verified source, contract name Controller, Read/Write Contract tabs, and ABI functions including owner(), pendingOwner(), mint(), burn(), pause(), unpause(), setFactory(), setMembers(), callTransferOwnership(), and callReclaimToken().",
+      "chain": "Ethereum",
+      "address": "0xca06411bd7a7296d7dbdd0050dfc846e95febeb7",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xe5a5f138005e19a3e6d0fe68b039397eeef2322b",
+      "shows": "Ethereum WBTC Factory contract; Etherscan shows exact-match verified source, contract name Factory, Read/Write Contract tabs, recent Burn transactions, and ABI functions including owner(), pendingOwner(), controller(), addMintRequest(), confirmMintRequest(), rejectMintRequest(), burn(), confirmBurnRequest(), and transferOwnership().",
+      "chain": "Ethereum",
+      "address": "0xe5a5f138005e19a3e6d0fe68b039397eeef2322b",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3e8640574aa764763291ed733672d3a105107ac5",
+      "shows": "Ethereum WBTC Members contract; Etherscan shows exact-match verified source, contract name Members, Read/Write Contract tabs, historical setCustodian/addMerchant transactions, and ABI functions including owner(), pendingOwner(), custodian(), getMerchants(), setCustodian(), addMerchant(), removeMerchant(), and transferOwnership().",
+      "chain": "Ethereum",
+      "address": "0x3e8640574aa764763291ed733672d3a105107ac5",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xB33f8879d4608711cEBb623F293F8Da13B8A37c5",
+      "shows": "Ethereum address 0xB33f8879d4608711cEBb623F293F8Da13B8A37c5 is a verified-similar MultiSigWalletWithDailyLimit contract; ABI exposes getOwners(), required(), addOwner(), removeOwner(), replaceOwner(), submitTransaction(), confirmTransaction(), executeTransaction(), and changeRequirement(); transaction history includes a 2025 Add Owner call.",
+      "chain": "Ethereum",
+      "address": "0xB33f8879d4608711cEBb623F293F8Da13B8A37c5",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/DAO/blob/c843f51d70a898dfd720f3316921f0bf903333ab/README.md",
+      "shows": "Commit-pinned WBTC DAO README lists the B33f multisig, the WBTC token, Controller, Factory, Members, BitGo custodian, a non-real-time merchant list with instruction to use Members.getMerchants(), and 13 named DAO member entries.",
+      "commit": "c843f51d70a898dfd720f3316921f0bf903333ab",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/DAO/blob/c843f51d70a898dfd720f3316921f0bf903333ab/MerchantGuide.md",
+      "shows": "Commit-pinned WBTC MerchantGuide describes the mint flow through merchant BTC deposits, addMintRequest(), custodian approval, and the burn flow through WBTC approval to Factory and Factory burn(uint amount).",
+      "commit": "c843f51d70a898dfd720f3316921f0bf903333ab",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts/commit/41dc747a4649b524b583e93f734351a331e766d4",
+      "shows": "Commit-pinned WrappedBTC bitcoin-token-smart-contracts repository commit; README diff states this repository has the contracts that implement wrapped tokens and points to EVM network contracts.",
+      "commit": "41dc747a4649b524b583e93f734351a331e766d4",
+      "fetched_at": "2026-05-02T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Etherscan Read Contract output for WBTC owner(), pendingOwner(), Controller owner(), pendingOwner(), members(), factory(), Factory owner(), pendingOwner(), controller(), and Members owner(), pendingOwner(), custodian(), and getMerchants() did not render in this run, so current admin values were not verified from live reads.",
+    "C2: No proxy-admin or implementation storage-slot read was obtained for the token, Controller, Factory, Members, or DAO multisig; only ABI and source-verification pages were available.",
+    "C3: No complete execution path from a live controlling actor to privileged Controller, Token, Factory, or Members functions could be walked because live owner and multisig threshold outputs were unavailable.",
+    "C4: Current B33f multisig required(), getOwners(), owner-index list, and signer insider/non-insider classifications were not obtained from live Read Contract outputs; the committed README signer list is not sufficient because Etherscan shows a 2025 Add Owner transaction.",
+    "C5: No on-chain Governor was identified on inspected surfaces, but without current owner outputs I could not rule out an upstream governance contract or read proposal threshold, voting period, quorum, or timelock values if one exists.",
+    "C6: Pause/unpause functions are visible in the token and Controller ABIs, but the current emergency actor, threshold, and any time cap could not be determined.",
+    "C7: The highest reachable power tier could not be classified because privileged function surfaces are visible but the live actor path, delay, signer threshold, and any on-chain bounds were unresolved."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/bitcoin-token-smart-contracts",
+      "https://github.com/WrappedBTC/DAO"
+    ],
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://github.com/WrappedBTC/DAO/blob/c843f51d70a898dfd720f3316921f0bf903333ab/README.md",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xB33f8879d4608711cEBb623F293F8Da13B8A37c5",
+        "role": "WBTC DAO multisig listed by the commit-pinned DAO README; current reachability to the live Controller owner was not verified",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "WBTC is an ERC-20 representation of Bitcoin used to bring BTC-denominated liquidity into Ethereum smart contracts. Minting and burning are merchant/custodian workflows: an approved merchant submits mint requests through the Factory after sending BTC to the custodian, while burns require WBTC approval to the Factory and later off-chain BTC remittance by the custodian."
+  }
+}
+]
