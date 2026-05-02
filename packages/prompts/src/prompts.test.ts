@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(14);
+    expect(PROMPT_VERSION).toBe(15);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             14");
+    expect(p).toContain("prompt_version:             15");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -131,7 +131,7 @@ describe("buildPrompt", () => {
     expect(p).toContain('"role": "stETH"');
   });
 
-  it("teaches the LLM about the DeFiPunkd machine-readable read API (v13)", () => {
+  it("teaches the LLM about the DeFiPunkd machine-readable read API (v13+)", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("On-chain reading via the DeFiPunkd API");
     expect(p).toContain("https://defipunkd.com/api/contract/abi");
@@ -141,6 +141,27 @@ describe("buildPrompt", () => {
     expect(p).toContain("rawReturnData");
     // Evidence class (e) — distinguished from class (a) (block explorers).
     expect(p).toContain("e) DeFiPunkd's machine-readable read API");
+  });
+
+  it("slice bodies wire concrete API methods into their checklists (v15)", () => {
+    // control: C1 (owner/admin reads), C3 (timelock constants), C4 (safe owners), Read Contract discipline
+    const control = buildPrompt("control", INPUTS);
+    expect(control).toContain("/api/contract/read?chainId=<id>&address=0x...&method=owner()");
+    expect(control).toContain("/api/safe/owners?chainId=<id>&address=0x...");
+    expect(control).toContain("MIN_DELAY()");
+    expect(control).toContain("a-bis"); // the new accepted-source bullet
+    // ability-to-exit: pause-state checks
+    const exit = buildPrompt("ability-to-exit", INPUTS);
+    expect(exit).toContain("method=paused()");
+    expect(exit).toContain("hasRole(bytes32,address)");
+    // verifiability: V1 (verified flag) + V6 (proxy.implementation) covered by /api/contract/abi
+    const ver = buildPrompt("verifiability", INPUTS);
+    expect(ver).toContain('/api/contract/abi');
+    expect(ver).toContain("proxy.implementation");
+    // autonomy: oracle live-read
+    const auto = buildPrompt("autonomy", INPUTS);
+    expect(auto).toContain("latestAnswer()");
+    expect(auto).toContain("/api/contract/read?chainId=<id>&address=<oracle>");
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
