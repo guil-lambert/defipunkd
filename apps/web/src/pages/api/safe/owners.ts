@@ -51,9 +51,11 @@ export const GET: APIRoute = async ({ url }) => {
     blockNumber = block.number!;
     blockHash = block.hash!;
   } catch (err) {
+    console.error("[/api/safe/owners] rpc-block-failed", { rpcLabel, err });
     return errorResponse(502, {
       error: "rpc-block-failed",
       message: `failed to fetch block: ${(err as Error).message}`,
+      hint: `RPC providers tried: ${rpcLabel}`,
     });
   }
 

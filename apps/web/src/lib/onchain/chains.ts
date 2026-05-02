@@ -26,7 +26,10 @@ export interface ChainEntry {
 }
 
 const SUPPORTED: Record<number, ChainEntry> = {
-  1: { name: "ethereum", viemChain: viemChains.mainnet, alchemySlug: "eth-mainnet", publicRpc: "https://eth.llamarpc.com" },
+  // PublicNode used for the chains where the obvious public RPC sits behind
+  // Cloudflare bot protection (eth.llamarpc.com returns a JS challenge to
+  // datacenter IPs, which makes it useless as a Vercel-side fallback).
+  1: { name: "ethereum", viemChain: viemChains.mainnet, alchemySlug: "eth-mainnet", publicRpc: "https://ethereum-rpc.publicnode.com" },
   10: { name: "optimism", viemChain: viemChains.optimism, alchemySlug: "opt-mainnet", publicRpc: "https://mainnet.optimism.io" },
   137: { name: "polygon", viemChain: viemChains.polygon, alchemySlug: "polygon-mainnet", publicRpc: "https://polygon-rpc.com" },
   42161: { name: "arbitrum", viemChain: viemChains.arbitrum, alchemySlug: "arb-mainnet", publicRpc: "https://arb1.arbitrum.io/rpc" },
@@ -36,7 +39,7 @@ const SUPPORTED: Record<number, ChainEntry> = {
   81457: { name: "blast", viemChain: viemChains.blast, alchemySlug: "blast-mainnet", publicRpc: "https://rpc.blast.io" },
   324: { name: "zksync", viemChain: viemChains.zksync, alchemySlug: "zksync-mainnet", publicRpc: "https://mainnet.era.zksync.io" },
   43114: { name: "avalanche", viemChain: viemChains.avalanche, alchemySlug: "avax-mainnet", publicRpc: "https://api.avax.network/ext/bc/C/rpc" },
-  56: { name: "bsc", viemChain: viemChains.bsc, alchemySlug: "bnb-mainnet", publicRpc: "https://bsc-dataseed.bnbchain.org" },
+  56: { name: "bsc", viemChain: viemChains.bsc, alchemySlug: "bnb-mainnet", publicRpc: "https://bsc-rpc.publicnode.com" },
   130: { name: "unichain", viemChain: viemChains.unichain, alchemySlug: "unichain-mainnet", publicRpc: "https://mainnet.unichain.org" },
   11155111: { name: "sepolia", viemChain: viemChains.sepolia, alchemySlug: "eth-sepolia", publicRpc: "https://ethereum-sepolia-rpc.publicnode.com" },
 };

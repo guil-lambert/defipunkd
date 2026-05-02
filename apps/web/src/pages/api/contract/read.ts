@@ -116,9 +116,11 @@ export const GET: APIRoute = async ({ url }) => {
     blockNumber = block.number!;
     blockHash = block.hash!;
   } catch (err) {
+    console.error("[/api/contract/read] rpc-block-failed", { rpcLabel, err });
     return errorResponse(502, {
       error: "rpc-block-failed",
       message: `failed to fetch block: ${(err as Error).message}`,
+      hint: `RPC providers tried: ${rpcLabel}`,
     });
   }
 
@@ -152,6 +154,7 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     decoded = decodeFunctionResult({ abi: [fn], functionName: fn.name, data: rawReturnData });
   } catch (err) {
+    console.error("[/api/contract/read] decode-failed", { method: methodRaw, rawReturnData, err });
     return errorResponse(502, {
       error: "decode-failed",
       message: `decode failed: ${(err as Error).message}`,
