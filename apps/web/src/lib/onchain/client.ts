@@ -24,7 +24,11 @@ export class OnchainConfigError extends Error {
 }
 
 function alchemyKey(): string | null {
-  return import.meta.env.ALCHEMY_API_KEY ?? process.env.ALCHEMY_API_KEY ?? null;
+  // Server-only secret. Use process.env directly: Astro/Vite's import.meta.env
+  // is build-time-replaced and only exposes PUBLIC_-prefixed vars in
+  // production, while ALCHEMY_API_KEY is a runtime Vercel project env var.
+  const k = process.env.ALCHEMY_API_KEY;
+  return k && k.length > 0 ? k : null;
 }
 
 export interface ResolvedClient {
