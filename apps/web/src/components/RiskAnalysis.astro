@@ -1,6 +1,6 @@
 ---
-import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding, LoadedSubmission, ProtocolEnrichment } from "@defipunkd/registry";
-import { getEnrichment } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding, LoadedSubmission, ProtocolMetadata } from "@defipunkd/registry";
+import { getProtocolMetadata } from "@defipunkd/registry";
 import { assessProtocol, cexAssessment, isUncertain, type SliceAssessment } from "../lib/rationale";
 import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
 
@@ -39,8 +39,8 @@ const graySlices = slices.filter((s) => s.grade === "gray" && !s.partial);
 const ANALYSIS_DATE = new Date().toISOString().slice(0, 10);
 const REPO = "guil-lambert/defipunkd";
 
-const enrichment = getEnrichment(protocol.slug);
-const addressBook = buildAddressBook(enrichment);
+const metadata = getProtocolMetadata(protocol.slug);
+const addressBook = buildAddressBook(metadata);
 
 function promptFor(sliceId: SliceId): string {
   return buildPrompt(sliceId, {
@@ -58,65 +58,51 @@ function promptFor(sliceId: SliceId): string {
 }
 
 /**
- * Distill enrichment.control.addresses (the TVL adapter's value-flow surface,
- * 50+ entries for protocols like WBTC mirrored across every chain) into a
- * prompt-sized address book biased toward control-slice utility:
- *   1. Direct Safes — the address itself is a Safe (best /api/safe/owners hit)
- *   2. Owner Safes — its owner is a Safe (multisig admin known)
- *   3. Resolved owners — owner address is known (chain of control)
- *   4. Named contracts — has a context label, useful for the LLM
+ * Build the prompt's address_book from prior LLM-curated metadata, NOT from
+ * the TVL adapter surface. Sources:
+ *   1. protocol_metadata.admin_addresses[] — multisigs, timelocks, governance
+ *      contracts, owners. LLM-recorded across prior slice submissions and
+ *      union-merged by aggregateProtocolMetadata in the registry.
+ *   2. protocol_metadata.voting_token — governance token address; useful for
+ *      C5 voting-rule reads.
  *
- * Dedupe by (chain, lowercase-address) so cross-chain mirror deployments
- * of the same token don't dominate. Cap at 12 entries to keep the prompt's
- * "Pre-built read-API surfacer URLs" block focused. Returns null when there's
- * nothing usable, which makes the prompt fall through to its
- * "no addresses pinned" message.
+ * No filtering / capping needed: these are already curated by hand (or by a
+ * prior LLM run that passed quorum). For a cold-start protocol with no prior
+ * submissions, addressBook is null and the prompt falls through to its
+ * "no addresses pinned — use the URL FETCH REQUEST escape hatch" message.
  */
 function buildAddressBook(
-  e: ProtocolEnrichment,
+  meta: ProtocolMetadata | undefined,
 ): Array<{ chain: string; address: string; role?: string }> | null {
-  if (!e.control || e.control.addresses.length === 0) return null;
-  const ZERO = "0x0000000000000000000000000000000000000000";
-  const SUPPORTED = new Set([
-    "ethereum", "optimism", "polygon", "arbitrum", "base", "linea", "scroll",
-    "blast", "zksync", "era", "avalanche", "avax", "bsc", "unichain", "sepolia",
-  ]);
-  const MAX = 12;
-
-  type Entry = { chain: string; address: string; role?: string };
-  const tier1: Entry[] = []; // self_is_safe
-  const tier2: Entry[] = []; // owner_is_safe (push the owner)
-  const tier3: Entry[] = []; // owner resolved (push the owner)
-  const tier4: Entry[] = []; // named context (push the contract itself)
-
+  if (!meta) return null;
+  const out: Array<{ chain: string; address: string; role?: string }> = [];
   const seen = new Set<string>();
-  const key = (chain: string, addr: string) => `${chain.toLowerCase()}:${addr.toLowerCase()}`;
-  const pushUnique = (bucket: Entry[], chain: string, address: string, role?: string) => {
-    const k = key(chain, address);
-    if (seen.has(k)) return;
-    seen.add(k);
-    bucket.push({ chain, address, ...(role ? { role } : {}) });
-  };
+  const key = (c: string, a: string) => `${c.toLowerCase()}:${a.toLowerCase()}`;
 
-  for (const a of e.control.addresses) {
-    if (!a.chain || !SUPPORTED.has(a.chain.toLowerCase())) continue;
-    if (a.address.toLowerCase() === ZERO) continue;
-    const ctx = a.context ?? undefined;
-    if (a.self_is_safe) {
-      pushUnique(tier1, a.chain, a.address, ctx ? `${ctx} (Safe)` : "Safe");
-    } else if (a.owner_is_safe && a.owner && a.owner.toLowerCase() !== ZERO) {
-      pushUnique(tier2, a.chain, a.owner, ctx ? `owner of ${ctx} (Safe)` : "owner Safe");
-      pushUnique(tier4, a.chain, a.address, ctx);
-    } else if (a.owner && a.owner.toLowerCase() !== ZERO) {
-      pushUnique(tier3, a.chain, a.owner, ctx ? `owner of ${ctx}` : "owner");
-      pushUnique(tier4, a.chain, a.address, ctx);
-    } else if (ctx) {
-      pushUnique(tier4, a.chain, a.address, ctx);
+  for (const aa of meta.admin_addresses ?? []) {
+    if (!aa.chain || !aa.address) continue;
+    const k = key(aa.chain, aa.address);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    // Prefer the human-written role over the actor_class enum, but fall back
+    // to the enum if role is empty / null. Both sourced from the LLM submission.
+    const role = aa.role?.trim() || aa.actor_class || undefined;
+    out.push({ chain: aa.chain, address: aa.address, ...(role ? { role } : {}) });
+  }
+
+  if (meta.voting_token) {
+    const vt = meta.voting_token;
+    if (vt.chain && vt.address) {
+      const k = key(vt.chain, vt.address);
+      if (!seen.has(k)) {
+        seen.add(k);
+        const role = vt.symbol ? `${vt.symbol} governance token` : "governance token";
+        out.push({ chain: vt.chain, address: vt.address, role });
+      }
     }
   }
 
-  const merged = [...tier1, ...tier2, ...tier3, ...tier4].slice(0, MAX);
-  return merged.length > 0 ? merged : null;
+  return out.length > 0 ? out : null;
 }
 
 function stubFor(sliceId: SliceId): string {
