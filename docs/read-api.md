@@ -147,11 +147,19 @@ address book.
 
 For addresses discovered transitively during the assessment (e.g. an
 admin returned by `owner()`), the LLM cannot construct a fetchable
-surfacer URL on its own; the prompt instructs it to surface the missing
-address in its reply or in `unknowns[]` rather than guess. After
-`defipunkd.com` lands on Anthropic's / OpenAI's standard fetchable-domain
-allowlist (the proper long-term fix), this restriction goes away
-entirely.
+surfacer URL on its own. As of PROMPT_VERSION 19 the preamble teaches a
+**URL-relay** escape hatch: the LLM emits a "URL FETCH REQUEST" fenced
+code block listing the surfacer URLs it needs, asks the user to paste
+them back as a new message, and pauses without emitting JSON. Once the
+user pastes, the URLs are in user-message context and become fetchable;
+the LLM resumes the assessment with the answers in `evidence[]`. The
+contributor's role becomes a one-click copy-paste relay, not a curl
+runner. Falling back to `grade="unknown"` is reserved for cases where
+the user declines or the surfacer fetch returns a non-200.
+
+After `defipunkd.com` lands on Anthropic's / OpenAI's standard
+fetchable-domain allowlist (the proper long-term fix), this restriction
+goes away entirely and the URL relay becomes vestigial.
 
 If you add new common-method URLs to the surfacer, edit `groups[]` in
 the `.astro` file — keep the list short and well-named so the LLM picks

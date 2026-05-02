@@ -58,7 +58,24 @@ URL-construction rule (important for browser/web_fetch tools): use the BARE meth
 
 Append &block=<n> to pin a specific block — recommended for evidence URLs, since the response is then content-addressed (Cache-Control: immutable).
 
-Bypass for browser-tool URL allowlists (Claude.ai web_fetch, ChatGPT browser): both refuse to fetch URLs that haven't appeared verbatim in conversation context — that includes URLs you generate from a template, even when the template is described in this prompt. The "Pre-built read-API surfacer URLs" block above lists one concrete https://defipunkd.com/address/<chainId>/<address> URL per pinned address_book entry; those are verbatim in your context, so the allowlist accepts them. Fetching one loads its embedded /api/contract/abi, /api/contract/read, and /api/safe/owners URLs into your context too — those then become fetchable directly. For addresses NOT in the pinned list (e.g. an admin discovered transitively via an owner() call), you cannot fetch their surfacer URL — the allowlist will reject the generated URL. Surface the missing address in your reply or in unknowns[] instead of guessing. Supported chainIds: 1 (ethereum), 10 (optimism), 56 (bsc), 130 (unichain), 137 (polygon), 324 (zksync), 8453 (base), 42161 (arbitrum), 43114 (avalanche), 59144 (linea), 81457 (blast), 534352 (scroll), 11155111 (sepolia).
+Bypass for browser-tool URL allowlists (Claude.ai web_fetch, ChatGPT browser): both refuse to fetch URLs that haven't appeared verbatim in conversation context — that includes URLs you generate from a template, even when the template is described in this prompt. URLs in your OWN output don't count; only URLs in user messages and prior tool-result bodies count. The "Pre-built read-API surfacer URLs" block above lists one concrete https://defipunkd.com/address/<chainId>/<address> URL per pinned address_book entry; those are verbatim in your context, so the allowlist accepts them. Fetching one loads its embedded /api/contract/abi, /api/contract/read, and /api/safe/owners URLs into your context too — those then become fetchable directly.
+
+If during the assessment you discover an address NOT in the pinned list (e.g. an admin pulled out of an owner() call), you cannot fetch its surfacer URL on your own — the allowlist will reject your generated URL. The escape hatch is a URL relay through the user:
+
+  1. Stop, do not guess. Note the addresses you need.
+  2. Output a "URL FETCH REQUEST" section in your reply BEFORE producing the JSON output. Format it as a fenced \`\`\`text block with one surfacer URL per line:
+
+      \`\`\`text
+      https://defipunkd.com/address/<chainId>/<address1>
+      https://defipunkd.com/address/<chainId>/<address2>
+      \`\`\`
+
+  3. Add a one-line note: "Please paste these URLs back as your next message so my fetch tool will accept them, then I'll continue."
+  4. End your turn there. Do NOT emit the JSON output yet — the assessment is incomplete until you fetch the URLs.
+
+When the user pastes the URLs, they're in context as a user message, and the allowlist accepts them. Fetch each one, read the embedded /api/* URLs from the response body, fetch those, and resume the assessment with the answers in evidence[]. Only escalate to grade="unknown" with the addresses in unknowns[] if the user declines to paste, or if the surfacer fetch returns a non-200 (chain unsupported, address invalid, etc.).
+
+Note on noisy address_book: the pinned address_book is a heuristic distillation of the protocol's TVL surface, not a curated admin set. It will sometimes include token deployments, oracle feeds, or peripheral contracts that aren't on the upgrade path. Skip the surfacer URLs that don't fit your slice — fetch only the ones whose role hints (parenthesized labels) suggest control / pause / upgrade authority. Don't feel obligated to fetch all 12. Supported chainIds: 1 (ethereum), 10 (optimism), 56 (bsc), 130 (unichain), 137 (polygon), 324 (zksync), 8453 (base), 42161 (arbitrum), 43114 (avalanche), 59144 (linea), 81457 (blast), 534352 (scroll), 11155111 (sepolia).
 
 Use this API for any factual claim about: contract ABI shape; return value of a view method (owner(), getOwners(), getThreshold(), totalSupply(), implementation(), paused(), MIN_DELAY(), …); Safe membership and threshold. Do NOT invent ABIs or view-method return values from your training data. URLs from /api/contract/read and /api/safe/owners count as on-chain evidence on the control / ability-to-exit / autonomy / verifiability slices and satisfy Rule 16 on their own (no separate block-explorer URL required) — they are content-addressed when block-pinned, which is strictly stronger than a screenshot of a block-explorer "Read Contract" tab. /api/contract/abi alone returns metadata, not eth_call results, so it does NOT satisfy Rule 16 — pair it with /contract/read or an explorer URL.
 

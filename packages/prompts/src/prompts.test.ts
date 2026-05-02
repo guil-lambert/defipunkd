@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(18);
+    expect(PROMPT_VERSION).toBe(19);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             18");
+    expect(p).toContain("prompt_version:             19");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -203,6 +203,16 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", { ...INPUTS, addressBook: null });
     expect(p).toContain("no addresses pinned");
     expect(p).toContain("ask the user to paste the surfacer URL");
+  });
+
+  it("preamble teaches the URL-relay escape hatch (v19)", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("URL FETCH REQUEST");
+    expect(p).toContain("Please paste these URLs back");
+    expect(p).toContain("Do NOT emit the JSON output yet");
+    // Notes the address_book is heuristic, not curated.
+    expect(p).toContain("noisy address_book");
+    expect(p).toContain("Don't feel obligated to fetch all 12");
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
