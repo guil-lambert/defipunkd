@@ -30,22 +30,45 @@ These are the only URLs guaranteed to be accepted by your browser/web_fetch tool
 4. Every factual claim in rationale must map to at least one evidence[] entry.
 5. Output exactly one JSON object matching the output contract at the end of this prompt, wrapped in a single fenced code block with language tag "json" (\`\`\`json ... \`\`\`). This gives the chat UI's copy button a clean single-click copy of the JSON content (the fence is stripped automatically). Nothing before or after the fence — no prose, no explanations, no summary, no follow-up questions. The fence is the ONLY thing that should wrap the JSON; do not nest additional fences inside it.
 
+   EXCEPTION TO JSON-ONLY (do not skip — this resolves a structural conflict between rule 5 and the URL-relay flow). Rule 5 applies only when the assessment is COMPLETE — i.e. you have all the evidence you need. If required source URLs are missing or blocked by the URL-relay rule (see "Bypass for browser-tool URL allowlists" below), the correct output is NOT JSON. The correct output is a "URL FETCH REQUEST" block in plain text with one surfacer URL per line and a one-line note asking the user to paste them back. In this case do not emit JSON, do not assign a grade, and do not include rationale/evidence; end your turn after the request and resume on the user's next message. Producing JSON before the relay completes is fabrication, full stop.
+
 ### Anti-fabrication gate (the most important rule on this page)
 
-You may only cite a URL in evidence[] if you PERSONALLY FETCHED it during this run via a browsing / web-fetch / browser / search tool, OR if its full response body was pasted into this conversation by the user. URLs you constructed from a template, recalled from training data, or "would expect to exist" do NOT qualify — even when they look syntactically correct and likely-resolvable.
+You may only cite a URL in evidence[] if you PERSONALLY FETCHED it during this run via a browsing / web-fetch / browser tool, OR if its full response body was pasted into this conversation by the user. Constructing a URL is fine — but every variable part of the constructed URL (address, commit SHA, repo path, contract name, method, args, block number) must come from a fetched or user-pasted source during this run, and the constructed URL must then be successfully fetched before it appears in evidence[]. Constructing a URL with remembered addresses, remembered repo paths, remembered contract names, or guessed API methods is fabrication, even if the URL happens to resolve.
+
+Search-result snippets are discovery only. A search snippet is NOT sufficient evidence for on-chain facts, contract state, multisig membership, governance constants, audits, or protocol_metadata. Open / fetch the underlying result URL before citing it.
 
 Before emitting the final JSON, build an internal evidence ledger and check each evidence[] entry against it:
 - the exact URL fetched (byte-equal to evidence[].url)
-- the tool that fetched it (web_fetch, browser, search, paste-back, …)
-- the HTTP status returned (must be 2xx for success citation)
+- the tool that fetched it (web_fetch, browser, paste-back, …)
+- the HTTP status returned, OR — if the tool does not expose status — confirmation that the response body is available and contains the cited supporting material; if neither is true, do not cite the URL
 - the specific field, sentence, or response key that supports the claim being cited
-- whether the supported claim is direct (read verbatim from the response body) or derived (inferred from what was read)
+- whether the supported claim is direct (read verbatim from the response body) or derived (inferred from what was read; state the inference explicitly in evidence[].shows)
 
-If any evidence[] URL is not on the ledger, REMOVE it and demote every rationale.findings entry that depended on it to unknowns[]. Never set evidence[].fetched_at unless the URL was actually fetched during this run — an ISO timestamp in fetched_at is a CLAIM that the fetch happened, and inventing one is fabrication.
+If any evidence[] URL is not on the ledger, REMOVE it and demote every rationale.findings entry that depended on it to unknowns[].
+
+evidence[].fetched_at: only set when the URL was actually fetched during this run. Use the timestamp your environment exposes (run start, current UTC, etc.); if no timestamp is available, omit the field entirely rather than inventing one. Inventing a fetched_at is fabrication of the most insidious kind because it survives a quick read and only fails on validator re-fetch.
 
 ### Plausibility is a failure mode
 
 A plausible-sounding answer backed by unsupported evidence is WORSE than grade="unknown" — it pollutes the quorum and wastes reviewer time. If the assessment would require leaning on remembered public facts ("Lido is governed by LDO token-weighted voting through a Timelock"), historical reports, common knowledge, or likely-contract-architecture reasoning ("UUPS proxies typically have an admin role"), return grade="unknown" with specific unknowns[] entries naming what you couldn't verify. Do not optimize for completeness. Optimize for reproducibility — if an independent reviewer can't re-verify each claim from the evidence URLs alone, the claim does not belong in the JSON.
+
+### Initial address discovery (when address_book is null or empty)
+
+If the pinned address_book is null or empty, you do NOT yet know any deployed contract address. You must first discover candidate addresses from eligible fetched sources — the protocol website, the linked GitHub repositories at a specific commit, the linked audit reports, or block-explorer search pages successfully fetched during this run. Token addresses, factory addresses, and admin addresses you "remember" from training data are NOT eligible — even for famous tokens like USDC, WBTC, stETH, UNI. The reproducibility requirement applies regardless of fame: a reviewer must be able to retrace your discovery from the URLs you cite.
+
+If no deployed address can be discovered from fetched sources after a good-faith attempt, return grade="unknown" with specific unknowns[] entries on the relevant checklist codes (typically C1 / C2 / C7 for the control slice, V1 / V6 for verifiability, etc.). Do not invent addresses to fill the gap.
+
+### Evidence receipt invariant
+
+For every evidence[] entry, the reviewer must be able to answer YES to all four questions:
+
+1. Did this exact URL appear in the model's actual fetch transcript or in a user-pasted source body?
+2. Did the fetched / pasted body contain the fact claimed in evidence[].shows?
+3. Does every rationale.findings / protocol_metadata claim that cites this evidence follow directly from that body, without recourse to memory?
+4. If the cited claim is derived rather than verbatim, is the inference labelled as derived in evidence[].shows?
+
+If any answer is NO or UNKNOWN, remove the evidence entry and demote dependent claims to unknowns[]. This invariant is what the validator (and the quorum bot, eventually) will check against your run's tool-call transcript — assertions you can't back up with a real fetch will be rejected, not just downweighted.
 
 ### Format rules (validation will reject submissions that violate these)
 6. evidence[].url must be a bare URL string starting with https:// or http://. NEVER wrap it in markdown link syntax. Concretely:

@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(20);
+    expect(PROMPT_VERSION).toBe(21);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             20");
+    expect(p).toContain("prompt_version:             21");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -225,7 +225,7 @@ describe("buildPrompt", () => {
     expect(p).toContain("Anti-fabrication gate");
     expect(p).toContain("PERSONALLY FETCHED");
     expect(p).toContain("internal evidence ledger");
-    expect(p).toContain("inventing one is fabrication");
+    expect(p).toContain("Inventing a fetched_at is fabrication");
     // Plausibility-as-failure-mode rule.
     expect(p).toContain("Plausibility is a failure mode");
     expect(p).toContain("Optimize for reproducibility");
@@ -234,6 +234,28 @@ describe("buildPrompt", () => {
     expect(p).toContain("Demote the unsupported claims to unknowns[]");
     // Strengthened URL-relay paragraph: explicit fabrication framing.
     expect(p).toContain("Producing JSON for an address you have not fetched");
+  });
+
+  it("preamble v21 tightens against ChatGPT-flagged loopholes", () => {
+    const p = buildPrompt("control", INPUTS);
+    // Rule-5 EXCEPTION resolves the JSON-only vs URL-FETCH-REQUEST conflict.
+    expect(p).toContain("EXCEPTION TO JSON-ONLY");
+    expect(p).toContain("Rule 5 applies only when the assessment is COMPLETE");
+    // "Constructed from memory" reframed: every variable part must be sourced.
+    expect(p).toContain("every variable part of the constructed URL");
+    expect(p).toContain("guessed API methods is fabrication");
+    // Search snippets are discovery only.
+    expect(p).toContain("Search-result snippets are discovery only");
+    // Status fallback for browser tools that don't expose HTTP status.
+    expect(p).toContain("if the tool does not expose status");
+    // fetched_at: omit rather than invent.
+    expect(p).toContain("omit the field entirely rather than inventing");
+    // Initial-address-discovery rule for null address_book.
+    expect(p).toContain("Initial address discovery");
+    expect(p).toContain("even for famous tokens like USDC, WBTC, stETH, UNI");
+    // Evidence receipt invariant — explicit four-question check.
+    expect(p).toContain("Evidence receipt invariant");
+    expect(p).toContain("Did this exact URL appear in the model's actual fetch transcript");
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
