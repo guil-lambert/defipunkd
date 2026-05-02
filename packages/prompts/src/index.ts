@@ -5,7 +5,7 @@ import { autonomyBody } from "./slices/autonomy";
 import { accessBody } from "./slices/access";
 import { verifiabilityBody } from "./slices/verifiability";
 
-export const PROMPT_VERSION = 19;
+export const PROMPT_VERSION = 20;
 
 // Chain-name → numeric chainId for the read API. Mirrors
 // apps/web/src/lib/onchain/chains.ts. Kept inline (not imported from

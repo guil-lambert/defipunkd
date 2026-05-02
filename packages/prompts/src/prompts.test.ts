@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(19);
+    expect(PROMPT_VERSION).toBe(20);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             19");
+    expect(p).toContain("prompt_version:             20");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -213,6 +213,27 @@ describe("buildPrompt", () => {
     // Notes the address_book is heuristic, not curated.
     expect(p).toContain("noisy address_book");
     expect(p).toContain("Don't feel obligated to fetch all 12");
+  });
+
+  it("preamble carries the v20 anti-fabrication / receipt-trail rules", () => {
+    const p = buildPrompt("control", INPUTS);
+    // Memory firewall — explicit list of claim types that need fetched evidence.
+    expect(p).toContain("MEMORY FIREWALL");
+    expect(p).toContain("multisig threshold and signer set");
+    expect(p).toContain("audit firm names");
+    // Anti-fabrication gate — receipt ledger.
+    expect(p).toContain("Anti-fabrication gate");
+    expect(p).toContain("PERSONALLY FETCHED");
+    expect(p).toContain("internal evidence ledger");
+    expect(p).toContain("inventing one is fabrication");
+    // Plausibility-as-failure-mode rule.
+    expect(p).toContain("Plausibility is a failure mode");
+    expect(p).toContain("Optimize for reproducibility");
+    // Final verification check before emitting JSON.
+    expect(p).toContain("FINAL VERIFICATION CHECK");
+    expect(p).toContain("Demote the unsupported claims to unknowns[]");
+    // Strengthened URL-relay paragraph: explicit fabrication framing.
+    expect(p).toContain("Producing JSON for an address you have not fetched");
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
