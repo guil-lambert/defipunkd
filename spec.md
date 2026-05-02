@@ -135,7 +135,7 @@ All enrichment rows render as `unknown` with em-dash provenance at Phase 0.
 - final admin/control-surface judgment
 - audit quality scoring
 - contract-level onchain privilege analysis
-- public API (website only)
+- public API (website only) — except a narrow read-only RPC-shaped surface at `/api/{safe/owners,contract/abi,contract/read}` for LLM/agent crawlability; see README "Machine-readable read API"
 - authentication
 - TVL sparklines / historical charts
 - analytics / user tracking
