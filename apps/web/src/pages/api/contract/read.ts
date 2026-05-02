@@ -24,6 +24,7 @@ import {
 } from "viem";
 import { toChecksumAddress } from "@defipunkd/enrichment";
 import { resolveAbi, AbiNotFoundError } from "../../../lib/onchain/abi.js";
+import { canonicalSignature } from "../../../lib/onchain/canonical.js";
 import { getPublicClient, OnchainConfigError } from "../../../lib/onchain/client.js";
 import { errorResponse, jsonResponse, cacheControlForBlock } from "../../../lib/onchain/error.js";
 import { summarizeContractRead } from "../../../lib/onchain/summary.js";
@@ -173,6 +174,7 @@ export const GET: APIRoute = async ({ url }) => {
     provenance: {
       rpc: rpcLabel,
       abiSource: resolvedAbi.source,
+      implementation: resolvedAbi.proxy?.implementation ?? null,
       calldata,
       rawReturnData,
     },
@@ -229,20 +231,6 @@ function matchFunction(abi: readonly unknown[], requested: string): MatchOk | Ma
     message: `method ${requested} not found in this contract's ABI`,
     hint: "Use /api/contract/abi to list available methods.",
   };
-}
-
-function canonicalSignature(fn: AbiFunction): string {
-  const inputs = (fn.inputs ?? []).map(canonicalType).join(",");
-  return `${fn.name}(${inputs})`;
-}
-
-function canonicalType(input: { type: string; components?: ReadonlyArray<{ type: string; components?: unknown }> }): string {
-  // Solidity ABI canonicalization: tuples expand to (t1,t2,...).
-  if (input.type.startsWith("tuple") && input.components) {
-    const inner = input.components.map((c) => canonicalType(c as never)).join(",");
-    return input.type.replace("tuple", `(${inner})`);
-  }
-  return input.type;
 }
 
 interface EncodedArgsOk {

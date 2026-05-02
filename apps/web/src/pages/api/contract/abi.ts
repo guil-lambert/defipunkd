@@ -55,6 +55,7 @@ export const GET: APIRoute = async ({ url }) => {
     contractName: abi.contractName,
     abiSource: abi.source,
     verified: abi.verified,
+    proxy: abi.proxy,
     abi: abi.abi,
     counts: { functions: fnCount, events: eventCount },
     warnings: abi.warnings,
@@ -65,6 +66,7 @@ export const GET: APIRoute = async ({ url }) => {
       contractName: abi.contractName,
       fnCount,
       eventCount,
+      proxy: abi.proxy,
     }),
   };
 

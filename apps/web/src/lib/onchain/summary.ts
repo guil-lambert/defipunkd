@@ -40,11 +40,15 @@ export function summarizeContractAbi(args: {
   contractName: string | null;
   fnCount: number;
   eventCount: number;
+  proxy?: { implementation: string } | null;
 }): string {
   const name = args.contractName ? ` "${args.contractName}"` : "";
+  const proxyClause = args.proxy
+    ? ` Proxy detected; merged with implementation at ${args.proxy.implementation}.`
+    : "";
   return (
     `ABI for${name} ${args.address} (${args.chain}) sourced from ${args.source}: ` +
-    `${args.fnCount} functions, ${args.eventCount} events.`
+    `${args.fnCount} functions, ${args.eventCount} events.${proxyClause}`
   );
 }
 
