@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(21);
+    expect(PROMPT_VERSION).toBe(22);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             21");
+    expect(p).toContain("prompt_version:             22");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -176,9 +176,9 @@ describe("buildPrompt", () => {
     expect(p).toContain("Browser tools normalize");
   });
 
-  it("preamble points the LLM at the /address/<chainId>/<addr> surfacer to bypass web_fetch URL allowlists (v17)", () => {
+  it("preamble references the /address/<chainId>/<addr> surfacer (v17, retained in v22)", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("Bypass for browser-tool URL allowlists");
+    expect(p).toContain("Pre-built read-API surfacer URLs");
     expect(p).toContain("appeared verbatim in conversation context");
   });
 
@@ -199,20 +199,36 @@ describe("buildPrompt", () => {
     expect(p).toContain("(stETH)");
   });
 
-  it("when address_book is null, emits a fallback note about needing user paste", () => {
+  it("when address_book is null, emits a fallback note about discovering from fetched sources (v22)", () => {
     const p = buildPrompt("control", { ...INPUTS, addressBook: null });
-    expect(p).toContain("no addresses pinned");
-    expect(p).toContain("ask the user to paste the surfacer URL");
+    expect(p).toContain("no addresses pinned in this run");
+    expect(p).toContain("discover candidates from fetched website / GitHub / audit / explorer pages");
+    expect(p).toContain("The next assessment will inherit your discoveries");
   });
 
-  it("preamble teaches the URL-relay escape hatch (v19)", () => {
+  it("preamble has NO URL-relay / paste-back flow (removed in v22 — JSON-only is binding)", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("URL FETCH REQUEST");
-    expect(p).toContain("Please paste these URLs back");
-    expect(p).toContain("Do NOT emit the JSON output yet");
-    // Notes the address_book is heuristic, not curated.
-    expect(p).toContain("noisy address_book");
-    expect(p).toContain("Don't feel obligated to fetch all 12");
+    expect(p).not.toContain("URL FETCH REQUEST");
+    expect(p).not.toContain("Please paste these URLs back");
+    expect(p).not.toContain("EXCEPTION TO JSON-ONLY");
+    expect(p).not.toContain("Do NOT emit the JSON output yet");
+  });
+
+  it("preamble v22 carries the iterative-ratchet rule for non-pinned addresses", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("iterative ratchet");
+    expect(p).toContain("inherits a richer address_book");
+    // Non-pinned discovery: record under admin_addresses + unknowns[], no relay.
+    expect(p).toContain("Populate protocol_metadata.admin_addresses");
+    expect(p).toContain("The next assessment");
+    // Empty unknowns on a complex protocol is a red flag, not quality.
+    expect(p).toContain("Empty unknowns[] on a non-trivial protocol is a red flag");
+  });
+
+  it("preamble v22 retains the address_book hint about noise", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("Note on noisy address_book");
+    expect(p).toContain("role hints (parenthesized labels)");
   });
 
   it("preamble carries the v20 anti-fabrication / receipt-trail rules", () => {
@@ -231,16 +247,13 @@ describe("buildPrompt", () => {
     expect(p).toContain("Optimize for reproducibility");
     // Final verification check before emitting JSON.
     expect(p).toContain("FINAL VERIFICATION CHECK");
-    expect(p).toContain("Demote the unsupported claims to unknowns[]");
-    // Strengthened URL-relay paragraph: explicit fabrication framing.
-    expect(p).toContain("Producing JSON for an address you have not fetched");
+    expect(p).toContain("demote the unsupported claims to unknowns[]");
+    // v22: even when verification fails, the answer is still JSON (with grade=unknown).
+    expect(p).toContain("the only valid response is");
   });
 
-  it("preamble v21 tightens against ChatGPT-flagged loopholes", () => {
+  it("preamble v21+ tightens against ChatGPT-flagged loopholes (v22 retains all anti-fab rules)", () => {
     const p = buildPrompt("control", INPUTS);
-    // Rule-5 EXCEPTION resolves the JSON-only vs URL-FETCH-REQUEST conflict.
-    expect(p).toContain("EXCEPTION TO JSON-ONLY");
-    expect(p).toContain("Rule 5 applies only when the assessment is COMPLETE");
     // "Constructed from memory" reframed: every variable part must be sourced.
     expect(p).toContain("every variable part of the constructed URL");
     expect(p).toContain("guessed API methods is fabrication");

@@ -5,7 +5,7 @@ import { autonomyBody } from "./slices/autonomy";
 import { accessBody } from "./slices/access";
 import { verifiabilityBody } from "./slices/verifiability";
 
-export const PROMPT_VERSION = 21;
+export const PROMPT_VERSION = 22;
 
 // Chain-name → numeric chainId for the read API. Mirrors
 // apps/web/src/lib/onchain/chains.ts. Kept inline (not imported from
@@ -44,7 +44,7 @@ function surfacerUrlFor(chain: string, address: string): string | null {
 function buildSurfacerUrlBlock(
   addressBook: Array<{ chain: string; address: string; role?: string }> | null,
 ): string {
-  if (!addressBook || addressBook.length === 0) return "(no addresses pinned — when you discover an address transitively, ask the user to paste the surfacer URL https://defipunkd.com/address/<chainId>/<address> for it)";
+  if (!addressBook || addressBook.length === 0) return "(no addresses pinned in this run — discover candidates from fetched website / GitHub / audit / explorer pages, record discovered addresses in evidence[] and protocol_metadata.admin_addresses, and put any reads you couldn't perform in unknowns[]. The next assessment will inherit your discoveries.)";
   const lines: string[] = [];
   const seen = new Set<string>();
   for (const entry of addressBook) {

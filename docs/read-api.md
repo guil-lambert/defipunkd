@@ -147,19 +147,25 @@ address book.
 
 For addresses discovered transitively during the assessment (e.g. an
 admin returned by `owner()`), the LLM cannot construct a fetchable
-surfacer URL on its own. As of PROMPT_VERSION 19 the preamble teaches a
-**URL-relay** escape hatch: the LLM emits a "URL FETCH REQUEST" fenced
-code block listing the surfacer URLs it needs, asks the user to paste
-them back as a new message, and pauses without emitting JSON. Once the
-user pastes, the URLs are in user-message context and become fetchable;
-the LLM resumes the assessment with the answers in `evidence[]`. The
-contributor's role becomes a one-click copy-paste relay, not a curl
-runner. Falling back to `grade="unknown"` is reserved for cases where
-the user declines or the surfacer fetch returns a non-200.
+surfacer URL on its own. PROMPT_VERSION 22 reframes this as an
+**iterative ratchet**: the discovered address goes into
+`protocol_metadata.admin_addresses` with whatever role the LLM can
+support from what it DID fetch, and the on-chain reads it couldn't
+perform go into `unknowns[]` with checklist-coded entries. The current
+run grades on what it could verify (often `grade="unknown"` with honest
+unknowns); the *next* assessment inherits the discovered address in
+its pre-built surfacer list and reads it on-chain.
+
+The URL-relay user-paste flow we shipped in v17–v21 was removed in v22:
+in practice it triggered "breach of terms" warnings on some chat
+providers, broke JSON formatting on others, and worked unreliably even
+when neither happened. JSON-only output is now binding — the prompt
+never asks the user to paste anything mid-run. Single-run completeness
+is traded for cross-run reproducibility.
 
 After `defipunkd.com` lands on Anthropic's / OpenAI's standard
-fetchable-domain allowlist (the proper long-term fix), this restriction
-goes away entirely and the URL relay becomes vestigial.
+fetchable-domain allowlist (the proper long-term fix), the iteration
+collapses to one run.
 
 If you add new common-method URLs to the surfacer, edit `groups[]` in
 the `.astro` file — keep the list short and well-named so the LLM picks
