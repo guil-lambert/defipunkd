@@ -13,6 +13,7 @@ debug a production incident, scan this first.
 | `/api/contract/abi` | Verified ABI lookup; auto-resolves proxies | Etherscan v2 → Sourcify |
 | `/api/contract/read` | Encode/decode any view/pure call | viem `eth_call` via Alchemy → public RPC |
 | `/api/safe/owners` | threshold + owners + version in one call | viem `multicall`-style aggregate |
+| `/address/[chainId]/[address]` | HTML surfacer that emits the above URLs for a given address | None — pure URL synthesis |
 
 Shared shape: every successful response returns `chainId`, `chain`, `contract`
 (EIP-55), `blockNumber`, `blockHash`, decoded `result`, and a `provenance`
@@ -111,6 +112,32 @@ responds to the selector but returns malformed data shouldn't crash the
 function either.
 
 ## LLM client quirks
+
+### Browser-tool URL allowlists: use `/address/<chainId>/<addr>` as the bypass
+
+ChatGPT's browser tool and Claude.ai's `web_fetch` both refuse to fetch
+URLs that haven't appeared verbatim in conversation context (user message,
+assistant message, prior tool result). LLMs reading our prompt know the
+URL *template* but each new concrete URL they construct is unfetchable
+until something pastes that exact URL into the chat first.
+
+`apps/web/src/pages/address/[chainId]/[address].astro` is the bypass: a
+server-rendered HTML page whose body contains concrete `/api/contract/abi`,
+`/api/contract/read`, and `/api/safe/owners` URLs for the queried address
+(plus a curated battery of common methods — owner, admin, paused,
+implementation, totalSupply, name/symbol/decimals, MIN_DELAY, etc.). The
+LLM:
+
+1. fetches `https://defipunkd.com/address/1/0x...`
+2. reads the response body, sees the URLs
+3. fetches them directly — they're now "previously seen" by web_fetch
+
+No user paste in the loop. The page is path-keyed and has no data
+dependencies, so it ISR-caches well; render is pure URL synthesis.
+
+If you add new common-method URLs, edit `groups[]` in the `.astro` file —
+keep the list short and well-named so the LLM picks meaningful URLs to
+fetch instead of spamming the API.
 
 ### `()` in `method=` triggers safety rejection
 

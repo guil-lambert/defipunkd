@@ -1,0 +1,164 @@
+---
+// Surfacer page: emits concrete /api/* URLs for any address so an LLM's
+// web_fetch / browser tool accepts them as "previously seen" and can call
+// them directly. Without this, ChatGPT and Claude.ai both refuse to fetch
+// API URLs that haven't appeared verbatim in the conversation context.
+//
+// Usage from an LLM:
+//   1. fetch /address/<chainId>/<address>     — this page
+//   2. read the response body, see the API URLs
+//   3. fetch them directly without further user paste
+//
+// Server-rendered, cacheable, no curated-data lookups — works for any valid
+// address, not just protocols already in the registry.
+import Base from "../../../layouts/Base.astro";
+import { getAddress, isAddress } from "viem";
+import {
+  getChainEntry,
+  listSupportedChainIds,
+} from "../../../lib/onchain/chains.js";
+
+export const prerender = false;
+
+const chainIdRaw = Astro.params.chainId!;
+const addressRaw = Astro.params.address!;
+
+const chainIdNum = /^\d+$/.test(chainIdRaw) ? Number(chainIdRaw) : NaN;
+const chainEntry = Number.isInteger(chainIdNum) ? getChainEntry(chainIdNum) : null;
+
+if (!chainEntry) {
+  return new Response(
+    `Unsupported chainId: ${chainIdRaw}. Supported: ${listSupportedChainIds().join(", ")}.`,
+    { status: 415 },
+  );
+}
+if (!isAddress(addressRaw)) {
+  return new Response(`Invalid address: ${addressRaw}`, { status: 400 });
+}
+
+const address = getAddress(addressRaw); // EIP-55 checksum
+const chainId = chainEntry.viemChain.id;
+const chainName = chainEntry.name;
+
+const base = "https://defipunkd.com";
+function readUrl(method: string, args?: string): string {
+  const argsPart = args ? `&args=${args}` : "";
+  return `${base}/api/contract/read?chainId=${chainId}&address=${address}&method=${method}${argsPart}`;
+}
+function abiUrl(): string {
+  return `${base}/api/contract/abi?chainId=${chainId}&address=${address}`;
+}
+function safeUrl(): string {
+  return `${base}/api/safe/owners?chainId=${chainId}&address=${address}`;
+}
+
+// Battery of common reads. The LLM will only call the ones that fit the
+// contract type (Safe vs token vs admin vs proxy) — they're cheap to list.
+const groups = [
+  {
+    title: "Metadata",
+    urls: [
+      { label: "ABI (auto-resolves proxies)", url: abiUrl() },
+    ],
+  },
+  {
+    title: "Admin / control",
+    urls: [
+      { label: "owner", url: readUrl("owner") },
+      { label: "admin", url: readUrl("admin") },
+      { label: "pendingOwner", url: readUrl("pendingOwner") },
+      { label: "governor", url: readUrl("governor") },
+      { label: "implementation (proxy admin slot)", url: readUrl("implementation") },
+    ],
+  },
+  {
+    title: "Pause state",
+    urls: [
+      { label: "paused", url: readUrl("paused") },
+    ],
+  },
+  {
+    title: "Safe (Gnosis Safe) shortcut",
+    urls: [
+      { label: "threshold + owners + version", url: safeUrl() },
+      { label: "getOwners (raw)", url: readUrl("getOwners") },
+      { label: "getThreshold (raw)", url: readUrl("getThreshold") },
+    ],
+  },
+  {
+    title: "ERC-20 token reads",
+    urls: [
+      { label: "totalSupply", url: readUrl("totalSupply") },
+      { label: "name", url: readUrl("name") },
+      { label: "symbol", url: readUrl("symbol") },
+      { label: "decimals", url: readUrl("decimals") },
+    ],
+  },
+  {
+    title: "Timelock constants (any TimelockController-compatible contract)",
+    urls: [
+      { label: "MIN_DELAY", url: readUrl("MIN_DELAY") },
+      { label: "getMinDelay", url: readUrl("getMinDelay") },
+    ],
+  },
+];
+
+const cacheControl = "public, s-maxage=86400, stale-while-revalidate=604800";
+Astro.response.headers.set("Cache-Control", cacheControl);
+---
+<Base
+  title={`Read API URLs for ${address} on ${chainName}`}
+  description={`Machine-readable read API surface for ${address} on ${chainName}.`}
+  noindex={true}
+>
+  <main style="max-width: 60rem; margin: 2rem auto; padding: 0 1.5rem;">
+    <h1 style="font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; line-height: 1.4; word-break: break-all;">
+      {address}
+    </h1>
+    <p style="color: var(--text-muted, #666); margin-top: 0.5rem;">
+      Chain: <code>{chainName}</code> (chainId <code>{chainId}</code>)
+    </p>
+
+    <p style="margin: 1.5rem 0;">
+      This page lists the DeFiPunkd machine-readable read API URLs for this address.
+      Each URL returns deterministic JSON with <code>blockNumber</code>, <code>blockHash</code>,
+      raw <code>calldata</code>, and raw <code>rawReturnData</code>, so an LLM agent can
+      cite the URL directly in evidence and anyone re-running it gets a byte-identical answer.
+    </p>
+
+    <p style="margin: 1.5rem 0;">
+      The <code>method=</code> values are <strong>bare names</strong> (no parens). For methods
+      with multiple overloads, the API returns a <code>method-ambiguous</code> error with the
+      canonical signatures listed in <code>hint</code>. Append <code>&amp;block=&lt;n&gt;</code>
+      to any read URL to pin a specific block (recommended for evidence — the response is then
+      content-addressed via <code>Cache-Control: immutable</code>).
+    </p>
+
+    {groups.map((group) => (
+      <section style="margin: 2rem 0;">
+        <h2 style="font-size: 1rem; margin-bottom: 0.75rem;">{group.title}</h2>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          {group.urls.map((u) => (
+            <li style="margin: 0.4rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; word-break: break-all;">
+              <a href={u.url} style="color: inherit;">{u.url}</a>
+              <span style="color: var(--text-muted, #888); margin-left: 0.5em;">— {u.label}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    <section style="margin: 2rem 0; padding-top: 1rem; border-top: 1px solid var(--border, #e0e0e0); color: var(--text-muted, #666); font-size: 0.85rem;">
+      <p>
+        <strong>For arbitrary view methods not in this list:</strong> first call the ABI
+        endpoint above to discover available functions, then call
+        <code>/api/contract/read?chainId={chainId}&amp;address={address}&amp;method=&lt;name&gt;&amp;args=&lt;csv&gt;</code>
+        with the bare method name. See the <a href="https://github.com/guil-lambert/defipunkd/blob/main/docs/read-api.md">read-api docs</a> for endpoint shapes and verification examples.
+      </p>
+    </section>
+  </main>
+</Base>
+<style>
+  a { text-decoration: underline; }
+  code { font-family: 'IBM Plex Mono', monospace; font-size: 0.85em; padding: 0 0.2em; background: var(--code-bg, #f5f5f5); border-radius: 2px; }
+</style>

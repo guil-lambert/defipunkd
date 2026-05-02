@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(16);
+    expect(PROMPT_VERSION).toBe(17);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             16");
+    expect(p).toContain("prompt_version:             17");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -174,6 +174,13 @@ describe("buildPrompt", () => {
     expect(p).toContain("BARE method name");
     expect(p).toContain("&method=totalSupply");
     expect(p).toContain("Browser tools normalize");
+  });
+
+  it("preamble points the LLM at the /address/<chainId>/<addr> surfacer to bypass web_fetch URL allowlists (v17)", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("/address/<chainId>/<address>");
+    expect(p).toContain("Bypass for browser-tool URL allowlists");
+    expect(p).toContain("appeared verbatim in conversation context");
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
