@@ -48,7 +48,13 @@ export function parseChainId(raw: string | null): Validated<number> {
 
 export function parseAddress(raw: string | null): Validated<`0x${string}`> {
   if (!raw) return { ok: false, error: "missing-address", message: "address query param is required" };
-  if (!isAddress(raw)) {
+  // Non-strict: accept any case (lowercase, mixed-case-with-wrong-checksum,
+  // ALL-CAPS, …). Real-world callers — LLMs reading from explorers and docs
+  // — frequently lose the EIP-55 checksum on round-trips, and strict mode
+  // doesn't protect against anything meaningful (wrong-case still resolves
+  // to the same address). The route's own response normalizes via
+  // toChecksumAddress so output is canonical.
+  if (!isAddress(raw, { strict: false })) {
     return { ok: false, error: "invalid-address", message: `address "${raw}" is not a valid 0x-hex address` };
   }
   return { ok: true, value: raw as `0x${string}` };

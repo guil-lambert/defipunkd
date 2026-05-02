@@ -32,11 +32,13 @@ if (!chainEntry) {
     { status: 415 },
   );
 }
-if (!isAddress(addressRaw)) {
+// Non-strict so we accept lowercase / wrong-checksum mixed-case from
+// explorers, docs, and LLM round-trips. We re-checksum below for output.
+if (!isAddress(addressRaw, { strict: false })) {
   return new Response(`Invalid address: ${addressRaw}`, { status: 400 });
 }
 
-const address = getAddress(addressRaw); // EIP-55 checksum
+const address = getAddress(addressRaw); // EIP-55 checksum (canonicalizes whatever case we received)
 const chainId = chainEntry.viemChain.id;
 const chainName = chainEntry.name;
 
