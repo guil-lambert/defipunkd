@@ -112,6 +112,27 @@ function either.
 
 ## LLM client quirks
 
+### `()` in `method=` triggers safety rejection
+
+ChatGPT's web tool (and likely others) normalizes URLs before fetching:
+reorders query params, percent-encodes parens (`(` → `%28`, `)` → `%29`).
+Its safety layer then refuses to fetch the normalized URL because it no
+longer matches the user-provided / context URL exactly. Net effect: a URL
+written as `?method=totalSupply()` in chat is unfetchable through the
+browser tool, even if the user just pasted it verbatim.
+
+The fix is on the prompt side — teach the LLM to use the BARE method
+name. `apps/web/src/pages/api/contract/read.ts:matchFunction` already
+falls through to bare-name matching when the requested string lacks
+parens, so `?method=totalSupply` works for any method without overloads
+(which is most of them). Multi-overload methods still need the full
+signature; the API returns `error: "method-ambiguous"` with a hint
+listing the canonical signatures so the LLM can retry.
+
+The preamble's "On-chain reading via the DeFiPunkd API" section as of
+PROMPT_VERSION 16 spells this out and uses bare names in every example.
+If you add a slice-body URL example, use bare names too.
+
 ### `&amp;` query-string separators
 
 When an LLM (observed: Claude.ai) renders a URL into its chat / thinking

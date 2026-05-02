@@ -44,10 +44,12 @@ Don't encode calldata, decode return data, or guess at ABIs by hand. DeFiPunkd e
   ABI (auto-resolves proxies; merges proxy + implementation):
     https://defipunkd.com/api/contract/abi?chainId=<id>&address=0x...
   View / pure call (any view method on the merged ABI; flat scalar args only — address, bool, uint*, int*, bytes*, string):
-    https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=getOwners()
-    https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=balanceOf(address)&args=0x...
+    https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=getOwners
+    https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=balanceOf&args=0x...
   Safe shortcut (threshold + owners + version in one call):
     https://defipunkd.com/api/safe/owners?chainId=<id>&address=0x...
+
+URL-construction rule (important for browser/web_fetch tools): use the BARE method name in &method= — e.g. &method=totalSupply, &method=balanceOf — NOT the full signature with parens like &method=totalSupply() or &method=balanceOf(address). The API resolves the bare name against the ABI; the full signature still works when a method is overloaded but is rarely needed. Browser tools normalize "(" to "%28" before fetching and then reject the normalized URL because it doesn't match the user-provided URL exactly; bare names dodge that entirely. Pass arguments via the separate &args= param (comma-separated, in declaration order).
 
 Append &block=<n> to pin a specific block — recommended for evidence URLs, since the response is then content-addressed (Cache-Control: immutable). Supported chainIds: 1 (ethereum), 10 (optimism), 56 (bsc), 130 (unichain), 137 (polygon), 324 (zksync), 8453 (base), 42161 (arbitrum), 43114 (avalanche), 59144 (linea), 81457 (blast), 534352 (scroll), 11155111 (sepolia).
 
