@@ -1,10 +1,17 @@
 /**
- * Memoized viem PublicClient per chainId.
+ * Memoized viem PublicClient per chainId, with a fallback RPC.
  *
- * Uses Alchemy as the sole RPC provider for now — one key, ~10 chains. The
- * client is constructed lazily on first request to keep cold-start cheap.
+ * Primary: Alchemy (paid, fast). Secondary: a curated public RPC per chain
+ * (slower, stricter limits but free). viem's `fallback` transport rotates
+ * to the next provider on errors so a single Alchemy hiccup doesn't
+ * surface to the caller as a 502.
+ *
+ * If ALCHEMY_API_KEY is missing we still construct a client using the
+ * public RPC alone, so the API stays usable in dev / preview environments
+ * where the operator hasn't provisioned a key yet — same code path, just
+ * slower with more rate-limit risk under load.
  */
-import { createPublicClient, http, type PublicClient } from "viem";
+import { createPublicClient, fallback, http, type PublicClient, type Transport } from "viem";
 import { getChainEntry, type ChainEntry } from "./chains.js";
 
 const CLIENTS = new Map<number, PublicClient>();
@@ -16,19 +23,14 @@ export class OnchainConfigError extends Error {
   }
 }
 
-function alchemyKey(): string {
-  const k = import.meta.env.ALCHEMY_API_KEY ?? process.env.ALCHEMY_API_KEY;
-  if (!k) {
-    throw new OnchainConfigError(
-      "ALCHEMY_API_KEY is not set. Configure it in Vercel project env (Production + Preview).",
-    );
-  }
-  return k;
+function alchemyKey(): string | null {
+  return import.meta.env.ALCHEMY_API_KEY ?? process.env.ALCHEMY_API_KEY ?? null;
 }
 
 export interface ResolvedClient {
   client: PublicClient;
   chain: ChainEntry;
+  /** Comma-joined ordered list of providers backing this client (for the response provenance). */
   rpcLabel: string;
 }
 
@@ -38,10 +40,31 @@ export function getPublicClient(chainId: number): ResolvedClient {
     throw new OnchainConfigError(`unsupported chainId: ${chainId}`);
   }
   let client = CLIENTS.get(chainId);
+  let rpcLabel: string;
   if (!client) {
-    const url = `https://${entry.alchemySlug}.g.alchemy.com/v2/${alchemyKey()}`;
-    client = createPublicClient({ chain: entry.viemChain, transport: http(url) });
+    const transports: Transport[] = [];
+    const labels: string[] = [];
+    const key = alchemyKey();
+    if (key) {
+      transports.push(http(`https://${entry.alchemySlug}.g.alchemy.com/v2/${key}`));
+      labels.push(`alchemy/${entry.alchemySlug}`);
+    }
+    transports.push(http(entry.publicRpc));
+    labels.push(`public/${new URL(entry.publicRpc).host}`);
+    // viem's `fallback` retries the next transport on transport-level errors
+    // (timeouts, 5xx, network failures). It does NOT retry on JSON-RPC
+    // application errors like reverts, which is what we want.
+    const transport = transports.length === 1 ? transports[0]! : fallback(transports);
+    client = createPublicClient({ chain: entry.viemChain, transport });
     CLIENTS.set(chainId, client);
+    rpcLabel = labels.join(",");
+  } else {
+    // Re-derive label from the entry; cheap and avoids storing it alongside
+    // the cached client.
+    const key = alchemyKey();
+    rpcLabel = key
+      ? `alchemy/${entry.alchemySlug},public/${new URL(entry.publicRpc).host}`
+      : `public/${new URL(entry.publicRpc).host}`;
   }
-  return { client, chain: entry, rpcLabel: `alchemy/${entry.alchemySlug}` };
+  return { client, chain: entry, rpcLabel };
 }

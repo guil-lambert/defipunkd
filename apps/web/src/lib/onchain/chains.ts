@@ -17,22 +17,28 @@ export interface ChainEntry {
   viemChain: Chain;
   /** Alchemy subdomain slug, e.g. "eth-mainnet" → https://eth-mainnet.g.alchemy.com/v2/<key> */
   alchemySlug: string;
+  /**
+   * Public RPC URL used as a fallback when Alchemy is unreachable or rate-limited.
+   * No API key — these are free shared endpoints, slower with stricter limits, but
+   * sufficient for degraded-but-working over a 502.
+   */
+  publicRpc: string;
 }
 
 const SUPPORTED: Record<number, ChainEntry> = {
-  1: { name: "ethereum", viemChain: viemChains.mainnet, alchemySlug: "eth-mainnet" },
-  10: { name: "optimism", viemChain: viemChains.optimism, alchemySlug: "opt-mainnet" },
-  137: { name: "polygon", viemChain: viemChains.polygon, alchemySlug: "polygon-mainnet" },
-  42161: { name: "arbitrum", viemChain: viemChains.arbitrum, alchemySlug: "arb-mainnet" },
-  8453: { name: "base", viemChain: viemChains.base, alchemySlug: "base-mainnet" },
-  59144: { name: "linea", viemChain: viemChains.linea, alchemySlug: "linea-mainnet" },
-  534352: { name: "scroll", viemChain: viemChains.scroll, alchemySlug: "scroll-mainnet" },
-  81457: { name: "blast", viemChain: viemChains.blast, alchemySlug: "blast-mainnet" },
-  324: { name: "zksync", viemChain: viemChains.zksync, alchemySlug: "zksync-mainnet" },
-  43114: { name: "avalanche", viemChain: viemChains.avalanche, alchemySlug: "avax-mainnet" },
-  56: { name: "bsc", viemChain: viemChains.bsc, alchemySlug: "bnb-mainnet" },
-  130: { name: "unichain", viemChain: viemChains.unichain, alchemySlug: "unichain-mainnet" },
-  11155111: { name: "sepolia", viemChain: viemChains.sepolia, alchemySlug: "eth-sepolia" },
+  1: { name: "ethereum", viemChain: viemChains.mainnet, alchemySlug: "eth-mainnet", publicRpc: "https://eth.llamarpc.com" },
+  10: { name: "optimism", viemChain: viemChains.optimism, alchemySlug: "opt-mainnet", publicRpc: "https://mainnet.optimism.io" },
+  137: { name: "polygon", viemChain: viemChains.polygon, alchemySlug: "polygon-mainnet", publicRpc: "https://polygon-rpc.com" },
+  42161: { name: "arbitrum", viemChain: viemChains.arbitrum, alchemySlug: "arb-mainnet", publicRpc: "https://arb1.arbitrum.io/rpc" },
+  8453: { name: "base", viemChain: viemChains.base, alchemySlug: "base-mainnet", publicRpc: "https://mainnet.base.org" },
+  59144: { name: "linea", viemChain: viemChains.linea, alchemySlug: "linea-mainnet", publicRpc: "https://rpc.linea.build" },
+  534352: { name: "scroll", viemChain: viemChains.scroll, alchemySlug: "scroll-mainnet", publicRpc: "https://rpc.scroll.io" },
+  81457: { name: "blast", viemChain: viemChains.blast, alchemySlug: "blast-mainnet", publicRpc: "https://rpc.blast.io" },
+  324: { name: "zksync", viemChain: viemChains.zksync, alchemySlug: "zksync-mainnet", publicRpc: "https://mainnet.era.zksync.io" },
+  43114: { name: "avalanche", viemChain: viemChains.avalanche, alchemySlug: "avax-mainnet", publicRpc: "https://api.avax.network/ext/bc/C/rpc" },
+  56: { name: "bsc", viemChain: viemChains.bsc, alchemySlug: "bnb-mainnet", publicRpc: "https://bsc-dataseed.bnbchain.org" },
+  130: { name: "unichain", viemChain: viemChains.unichain, alchemySlug: "unichain-mainnet", publicRpc: "https://mainnet.unichain.org" },
+  11155111: { name: "sepolia", viemChain: viemChains.sepolia, alchemySlug: "eth-sepolia", publicRpc: "https://ethereum-sepolia-rpc.publicnode.com" },
 };
 
 export function getChainEntry(chainId: number): ChainEntry | null {
