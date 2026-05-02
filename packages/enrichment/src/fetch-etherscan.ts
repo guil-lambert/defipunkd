@@ -129,3 +129,79 @@ export async function fetchEtherscanSourceCode(
   }
   return { contract: parseRow(body.result[0]!), warnings: [] };
 }
+
+// ---------------------------------------------------------------------------
+// ABI fetcher (module=contract&action=getabi)
+//
+// Used by the read API to encode/decode arbitrary view calls. Distinct from
+// fetchEtherscanSourceCode above because it takes a numeric chainId directly
+// (the read API receives ?chainId=1 in its query string and skips the
+// name→id translation).
+
+export type EtherscanAbi = ReadonlyArray<Record<string, unknown>>;
+
+export interface EtherscanAbiResult {
+  abi: EtherscanAbi | null;
+  /** True when Etherscan responded "Contract source code not verified". */
+  unverified: boolean;
+  warnings: string[];
+}
+
+export interface FetchAbiOptions {
+  chainId: number;
+  address: string;
+  apiKey: string;
+  fetch: FetchFn;
+}
+
+interface GetAbiResponse {
+  status?: string;
+  message?: string;
+  result?: string;
+}
+
+export async function fetchEtherscanAbi(opts: FetchAbiOptions): Promise<EtherscanAbiResult> {
+  const url =
+    `${API_BASE}?chainid=${opts.chainId}` +
+    `&module=contract&action=getabi` +
+    `&address=${opts.address}` +
+    `&apikey=${encodeURIComponent(opts.apiKey)}`;
+  let res: Awaited<ReturnType<FetchFn>>;
+  try {
+    res = await opts.fetch(url);
+  } catch (err) {
+    return { abi: null, unverified: false, warnings: [`etherscan fetch failed: ${(err as Error).message}`] };
+  }
+  if (!res.ok) {
+    return { abi: null, unverified: false, warnings: [`etherscan http ${res.status}`] };
+  }
+  let body: GetAbiResponse;
+  try {
+    body = (await res.json()) as GetAbiResponse;
+  } catch (err) {
+    return { abi: null, unverified: false, warnings: [`etherscan non-json response: ${(err as Error).message}`] };
+  }
+  // Etherscan signals "no ABI" with status="0" and result="Contract source
+  // code not verified". Surface that distinctly so callers can fall back to
+  // Sourcify without treating it as a hard error.
+  if (body.status !== "1") {
+    const msg = typeof body.result === "string" ? body.result : (body.message ?? "unknown error");
+    if (/not verified|no records/i.test(msg)) {
+      return { abi: null, unverified: true, warnings: [] };
+    }
+    return { abi: null, unverified: false, warnings: [`etherscan status=${body.status}: ${msg}`] };
+  }
+  if (typeof body.result !== "string") {
+    return { abi: null, unverified: false, warnings: ["etherscan abi result not a string"] };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body.result);
+  } catch (err) {
+    return { abi: null, unverified: false, warnings: [`etherscan abi parse failed: ${(err as Error).message}`] };
+  }
+  if (!Array.isArray(parsed)) {
+    return { abi: null, unverified: false, warnings: ["etherscan abi not an array"] };
+  }
+  return { abi: parsed as EtherscanAbi, unverified: false, warnings: [] };
+}

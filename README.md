@@ -114,6 +114,26 @@ Open a GitHub issue or PR. The repo is the review surface — no contact form by
 
 Visual direction: radiographic — clinical, monochrome, evidentiary. One typeface (IBM Plex), muted neutrals with surgical accent colors that each carry a single meaning (link, verified-onchain, contradiction). Density over breathing room. See `.impeccable.md` for the full design context.
 
+## Machine-readable read API
+
+LLM agents and crawlers routinely fail when they need on-chain state mid-prompt. DeFiPunkd exposes three deterministic GET endpoints that return JSON plus a one-line plain-English summary, so an agent can paste the response straight into context.
+
+```
+GET /api/safe/owners?chainId=1&address=0x...
+GET /api/contract/abi?chainId=1&address=0x...
+GET /api/contract/read?chainId=1&address=0x...&method=getOwners()&args=&block=latest
+```
+
+- `/api/safe/owners` — threshold + owners + Safe version, one multicall round-trip.
+- `/api/contract/abi` — Etherscan-verified ABI (Sourcify fallback), with verified flag and method/event counts.
+- `/api/contract/read` — encode a view/pure call, eth_call at the requested block, decode and return. ABI is auto-resolved per the rules above. Pin `&block=N` for fully cacheable, content-addressed responses.
+
+Every successful response includes `chainId`, `chain`, `contract` (EIP-55), `blockNumber`, `blockHash`, decoded `result`, and a `provenance` block with the raw `calldata` and `rawReturnData` so callers can re-verify or re-decode independently. Errors share a uniform `{ error, message, hint? }` envelope.
+
+Supported chains (MVP): ethereum, optimism, polygon, arbitrum, base, linea, scroll, blast, zksync, avalanche, bsc, unichain, sepolia. Cache headers: `s-maxage=12, stale-while-revalidate=60` for `block=latest`; `immutable` for pinned blocks; `s-maxage=86400` for ABIs.
+
+Setup: requires `ALCHEMY_API_KEY` (RPC) and `ETHERSCAN_API_KEY` (ABI lookup, optional — falls back to Sourcify) in the deploy environment. See `apps/web/.env.example`.
+
 ## License
 
 MIT. The Defiscan rubric is adapted with attribution.
