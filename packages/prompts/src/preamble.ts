@@ -20,6 +20,7 @@ export const preamble = `You are contributing a single-slice assessment to defip
    b) The linked GitHub repos, at a specific commit SHA you record in evidence[].commit.
    c) The audit PDFs or reports linked above.
    d) DeFiLlama's pinned fields (for category / chain lists only — not for risk assessment).
+   e) DeFiPunkd's machine-readable read API at https://defipunkd.com/api/{contract,safe}/... — deterministic on-chain reads (ABIs, view-method results, Safe ownership). See "On-chain reading via the DeFiPunkd API" below.
 3. If you cannot find a signal after checking the sources above, set grade="unknown" with at least one entry in unknowns[] naming what you looked for and why you could not determine it.
 4. Every factual claim in rationale must map to at least one evidence[] entry.
 5. Output exactly one JSON object matching the output contract at the end of this prompt, wrapped in a single fenced code block with language tag "json" (\`\`\`json ... \`\`\`). This gives the chat UI's copy button a clean single-click copy of the JSON content (the fence is stripped automatically). Nothing before or after the fence — no prose, no explanations, no summary, no follow-up questions. The fence is the ONLY thing that should wrap the JSON; do not nest additional fences inside it.
@@ -35,6 +36,22 @@ export const preamble = `You are contributing a single-slice assessment to defip
 9. evidence[].address, when present, must be a 0x-prefixed 40-hex-char EVM address. Mixed case is fine; checksum is not validated.
 10. Checklist codes (used in both rationale.findings[].code and as prefixes on unknowns[] entries) must match the regex /^[A-Z][A-Za-z0-9-]{0,15}$/ — they start with an uppercase letter and may include digits, letters, and hyphens, up to 16 chars total. Examples: "E1", "A3b", "C2-emergency", "V4a", "V4-auditor". DO NOT use parentheses, spaces, dots, slashes, or underscores. If a slice body defines a code (e.g. "A3b") use it verbatim; do not invent sub-codes like "A3b(alt)" or "A3-passive" unless the slice body explicitly introduces them. unknowns[] entries must be prefixed with the relevant checklist code followed by a colon (e.g. "A3b: frontend fetch failed") so reviewers can map an unknown back to the inspection step. Free-form unknowns without a checklist prefix are accepted but downweighted.
 11. chat_url: ALWAYS set this field to null in your output. You cannot generate this URL yourself — the default share links produced by Claude, ChatGPT, and Gemini require viewer login (private/account-scoped) and are not publicly readable. The user will enable the "Share publicly" toggle on this conversation after you respond, then paste the resulting public URL into the JSON before opening the PR. Do not invent or guess a chat_url; do not paste your platform's default share link. Public-sharing is a deliberate user action that produces a different URL than the one available to you.
+
+### On-chain reading via the DeFiPunkd API
+
+Don't encode calldata, decode return data, or guess at ABIs by hand. DeFiPunkd exposes three deterministic GET endpoints that return JSON. Cite the URL directly in evidence[] — every successful response includes blockNumber, blockHash, raw calldata, and rawReturnData, so the URL is content-addressed when block-pinned and anyone re-running it must get a byte-identical answer.
+
+  ABI (auto-resolves proxies; merges proxy + implementation):
+    https://defipunkd.com/api/contract/abi?chainId=<id>&address=0x...
+  View / pure call (any view method on the merged ABI; flat scalar args only — address, bool, uint*, int*, bytes*, string):
+    https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=getOwners()
+    https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=balanceOf(address)&args=0x...
+  Safe shortcut (threshold + owners + version in one call):
+    https://defipunkd.com/api/safe/owners?chainId=<id>&address=0x...
+
+Append &block=<n> to pin a specific block — recommended for evidence URLs, since the response is then content-addressed (Cache-Control: immutable). Supported chainIds: 1 (ethereum), 10 (optimism), 56 (bsc), 130 (unichain), 137 (polygon), 324 (zksync), 8453 (base), 42161 (arbitrum), 43114 (avalanche), 59144 (linea), 81457 (blast), 534352 (scroll), 11155111 (sepolia).
+
+Use this API for any factual claim about: contract ABI shape; return value of a view method (owner(), getOwners(), getThreshold(), totalSupply(), implementation(), paused(), MIN_DELAY(), …); Safe membership and threshold. Do NOT invent ABIs or view-method return values from your training data. URLs from this API count as evidence class (e); on slices that require a block-explorer URL (Rule 16), you may include API URLs in addition to — not in place of — the block-explorer citation.
 
 ### Thoroughness rules (the difference between a useful submission and a noisy one)
 12. Each per-slice body below contains a "MANDATORY INSPECTION CHECKLIST". For every item on it, you must EITHER produce an evidence[] entry that addresses it OR add a specific entry to unknowns[] naming that item by code (per Format Rule 10). Submissions with empty unknowns[] that silently skip checklist items will be rejected as incomplete by reviewers.

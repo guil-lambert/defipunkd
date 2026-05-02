@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(12);
+    expect(PROMPT_VERSION).toBe(13);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -110,7 +110,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             12");
+    expect(p).toContain("prompt_version:             13");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -126,6 +126,18 @@ describe("buildPrompt", () => {
     });
     expect(p).toContain("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
     expect(p).toContain('"role": "stETH"');
+  });
+
+  it("teaches the LLM about the DeFiPunkd machine-readable read API (v13)", () => {
+    const p = buildPrompt("control", INPUTS);
+    expect(p).toContain("On-chain reading via the DeFiPunkd API");
+    expect(p).toContain("https://defipunkd.com/api/contract/abi");
+    expect(p).toContain("https://defipunkd.com/api/contract/read");
+    expect(p).toContain("https://defipunkd.com/api/safe/owners");
+    expect(p).toContain("blockNumber");
+    expect(p).toContain("rawReturnData");
+    // Evidence class (e) — distinguished from class (a) (block explorers).
+    expect(p).toContain("e) DeFiPunkd's machine-readable read API");
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
