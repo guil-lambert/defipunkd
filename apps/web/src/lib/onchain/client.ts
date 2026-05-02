@@ -16,6 +16,11 @@ import { getChainEntry, type ChainEntry } from "./chains.js";
 
 const CLIENTS = new Map<number, PublicClient>();
 
+const ALCHEMY_ORIGIN_HEADERS = {
+  Origin: "https://defipunkd.com",
+  Referer: "https://defipunkd.com/",
+};
+
 export class OnchainConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -50,7 +55,21 @@ export function getPublicClient(chainId: number): ResolvedClient {
     const labels: string[] = [];
     const key = alchemyKey();
     if (key) {
-      transports.push(http(`https://${entry.alchemySlug}.g.alchemy.com/v2/${key}`));
+      // Alchemy's "Allowed Domains" feature checks Origin / Referer on
+      // incoming requests. Server-to-server fetch() in Node doesn't send
+      // either by default, so a key with defipunkd.com on its allowlist
+      // gets rejected with a 403 in ~6ms unless we attach the headers
+      // explicitly. (These headers are spoofable by any HTTP client and
+      // are not auth — the API key itself is the auth — so sending them
+      // here just opts our server-side calls into the allowlist that the
+      // Alchemy app is already configured for.)
+      transports.push(
+        http(`https://${entry.alchemySlug}.g.alchemy.com/v2/${key}`, {
+          fetchOptions: {
+            headers: ALCHEMY_ORIGIN_HEADERS,
+          },
+        }),
+      );
       labels.push(`alchemy/${entry.alchemySlug}`);
     }
     transports.push(http(entry.publicRpc));
