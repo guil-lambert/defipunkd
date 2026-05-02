@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(13);
+    expect(PROMPT_VERSION).toBe(14);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -39,10 +39,13 @@ describe("buildPrompt", () => {
     expect(p).toContain("E3:");
   });
 
-  it("requires at least one block-explorer URL for on-chain slices", () => {
+  it("requires at least one on-chain evidence URL for on-chain slices (block-explorer or DeFiPunkd API; v14)", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("AT LEAST ONE block-explorer URL");
+    expect(p).toContain("AT LEAST ONE on-chain evidence URL");
     expect(p).toContain("control, ability-to-exit, autonomy, verifiability");
+    // Both evidence shapes are accepted on Rule 16.
+    expect(p).toContain("block-explorer URL");
+    expect(p).toContain("DeFiPunkd /api/{contract/read,safe/owners}");
   });
 
   it("instructs the LLM to leave chat_url null and explains why", () => {
@@ -110,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             13");
+    expect(p).toContain("prompt_version:             14");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 

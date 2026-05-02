@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { crossCheck, isExplorerUrl, isPublicChatShareUrl, verifyChatUrlReachable, type CrossCheckContext } from "./cross-check";
+import {
+  crossCheck,
+  isDefipunkdOnchainApiUrl,
+  isExplorerUrl,
+  isOnchainEvidenceUrl,
+  isPublicChatShareUrl,
+  verifyChatUrlReachable,
+  type CrossCheckContext,
+} from "./cross-check";
 import type { Submission } from "./schema";
 
 const sub = (over: Partial<Submission> = {}): Submission => ({
@@ -71,6 +79,57 @@ describe("crossCheck", () => {
       ctx({ filePath: "data/submissions/lido/open-access/x.json" }),
     );
     expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(false);
+  });
+
+  it("accepts a DeFiPunkd /api/contract/read URL as on-chain evidence", () => {
+    const issues = crossCheck(
+      sub({
+        evidence: [
+          {
+            url: "https://defipunkd.com/api/contract/read?chainId=1&address=0x889edC2e&method=getOwners()&block=22000000",
+            shows: "owners list",
+            fetched_at: "2026-04-23T00:00:00Z",
+          },
+        ],
+      }),
+      ctx(),
+    );
+    expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(false);
+  });
+
+  it("accepts a DeFiPunkd /api/safe/owners URL as on-chain evidence", () => {
+    const issues = crossCheck(
+      sub({
+        evidence: [
+          {
+            url: "https://defipunkd.com/api/safe/owners?chainId=1&address=0x889edC2e",
+            shows: "threshold + owners",
+            fetched_at: "2026-04-23T00:00:00Z",
+          },
+        ],
+      }),
+      ctx(),
+    );
+    expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(false);
+  });
+
+  it("rejects /api/contract/abi alone — ABI metadata is not proof of state", () => {
+    // /contract/abi returns Etherscan/Sourcify-sourced metadata, not eth_call
+    // results, so it doesn't satisfy "what the deployed contract actually does
+    // today". The submitter should pair it with /contract/read or an explorer URL.
+    const issues = crossCheck(
+      sub({
+        evidence: [
+          {
+            url: "https://defipunkd.com/api/contract/abi?chainId=1&address=0x889edC2e",
+            shows: "abi shape",
+            fetched_at: "2026-04-23T00:00:00Z",
+          },
+        ],
+      }),
+      ctx(),
+    );
+    expect(issues.some((i) => i.field === "evidence" && /block-explorer/.test(i.message))).toBe(true);
   });
 
   it("does not require explorer URL when grade is unknown", () => {
@@ -172,6 +231,40 @@ describe("isExplorerUrl", () => {
     expect(isExplorerUrl("https://github.com/x/y")).toBe(false);
     expect(isExplorerUrl("https://docs.lido.fi/")).toBe(false);
     expect(isExplorerUrl("not a url")).toBe(false);
+  });
+});
+
+describe("isDefipunkdOnchainApiUrl", () => {
+  it("matches /api/contract/read and /api/safe/owners on defipunkd.com", () => {
+    expect(isDefipunkdOnchainApiUrl("https://defipunkd.com/api/contract/read?chainId=1&address=0x123&method=owner()")).toBe(true);
+    expect(isDefipunkdOnchainApiUrl("https://defipunkd.com/api/safe/owners?chainId=1&address=0x123")).toBe(true);
+  });
+
+  it("matches the www. variant", () => {
+    expect(isDefipunkdOnchainApiUrl("https://www.defipunkd.com/api/contract/read?chainId=1&address=0x123&method=owner()")).toBe(true);
+  });
+
+  it("rejects /api/contract/abi (metadata only, not eth_call)", () => {
+    expect(isDefipunkdOnchainApiUrl("https://defipunkd.com/api/contract/abi?chainId=1&address=0x123")).toBe(false);
+  });
+
+  it("rejects non-API paths and other hosts", () => {
+    expect(isDefipunkdOnchainApiUrl("https://defipunkd.com/protocol/lido")).toBe(false);
+    expect(isDefipunkdOnchainApiUrl("https://defipunkd.com/")).toBe(false);
+    expect(isDefipunkdOnchainApiUrl("https://example.com/api/contract/read")).toBe(false);
+    expect(isDefipunkdOnchainApiUrl("not a url")).toBe(false);
+  });
+});
+
+describe("isOnchainEvidenceUrl", () => {
+  it("accepts both block-explorer URLs and DeFiPunkd onchain API URLs", () => {
+    expect(isOnchainEvidenceUrl("https://etherscan.io/address/0x123")).toBe(true);
+    expect(isOnchainEvidenceUrl("https://defipunkd.com/api/contract/read?chainId=1&address=0x123&method=owner()")).toBe(true);
+  });
+
+  it("rejects everything else", () => {
+    expect(isOnchainEvidenceUrl("https://github.com/x/y")).toBe(false);
+    expect(isOnchainEvidenceUrl("https://defipunkd.com/api/contract/abi?chainId=1&address=0x123")).toBe(false);
   });
 });
 

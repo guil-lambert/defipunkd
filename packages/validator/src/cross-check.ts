@@ -160,6 +160,33 @@ function isExplorerUrl(url: string): boolean {
   }
 }
 
+// DeFiPunkd's machine-readable read API. We only count endpoints that
+// actually call eth_call / surface live contract state (read, safe/owners) —
+// /api/contract/abi alone returns metadata sourced from Etherscan/Sourcify
+// and doesn't constitute proof of what the deployed contract does today.
+const DEFIPUNKD_ONCHAIN_API_PATHS = ["/api/contract/read", "/api/safe/owners"];
+
+function isDefipunkdOnchainApiUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (host !== "defipunkd.com" && host !== "www.defipunkd.com") return false;
+    return DEFIPUNKD_ONCHAIN_API_PATHS.some((p) => u.pathname === p || u.pathname.startsWith(p + "/"));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Either a recognized block-explorer URL or a DeFiPunkd read-API URL whose
+ * response is itself a deterministic, content-addressed eth_call result. Both
+ * satisfy "evidence shows what the deployed contract actually does today" —
+ * which is what Rule 16 in the prompt preamble cares about.
+ */
+function isOnchainEvidenceUrl(url: string): boolean {
+  return isExplorerUrl(url) || isDefipunkdOnchainApiUrl(url);
+}
+
 export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIssue[] {
   const issues: CrossCheckIssue[] = [];
 
@@ -230,12 +257,12 @@ export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIss
   }
 
   if (s.grade !== "unknown" && ONCHAIN_SLICES.has(s.slice)) {
-    const hasExplorer = s.evidence.some((e) => isExplorerUrl(e.url));
-    if (!hasExplorer) {
+    const hasOnchain = s.evidence.some((e) => isOnchainEvidenceUrl(e.url));
+    if (!hasOnchain) {
       issues.push({
         severity: "warning",
         field: "evidence",
-        message: `on-chain slice "${s.slice}" has no block-explorer URL in evidence[]; downweighted by quorum`,
+        message: `on-chain slice "${s.slice}" has no block-explorer URL or DeFiPunkd /api/{contract/read,safe/owners} URL in evidence[]; downweighted by quorum`,
       });
     }
   }
@@ -276,4 +303,4 @@ export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIss
   return issues;
 }
 
-export { isExplorerUrl };
+export { isExplorerUrl, isDefipunkdOnchainApiUrl, isOnchainEvidenceUrl };
