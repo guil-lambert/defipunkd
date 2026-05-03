@@ -282,7 +282,17 @@ const fallbackGroups: FallbackGroup[] = [
   },
 ];
 
-const cacheControl = "public, s-maxage=86400, stale-while-revalidate=604800";
+// Successful renders cache for 24h with a 7-day SWR window. Fallback
+// renders (resolveAbi failed — transient Etherscan blip, key issue, etc.)
+// MUST NOT cache: if the failed render gets baked into the edge for 24h,
+// every subsequent request sees the fallback even after Etherscan has
+// recovered, which is exactly how `0x972Eed…` ended up serving a
+// "No verified ABI found" page for hours after the API itself was happy.
+// Observed in prod: x-vercel-cache: HIT, age: 650, fallback body — while
+// /api/contract/abi for the same address returned verified=true.
+const cacheControl = resolved
+  ? "public, s-maxage=86400, stale-while-revalidate=604800"
+  : "no-store";
 Astro.response.headers.set("Cache-Control", cacheControl);
 
 // Front-loaded crawl manifest. Concatenates every /address/{chainId}/0x…
