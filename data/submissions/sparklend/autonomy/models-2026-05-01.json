@@ -205,5 +205,127 @@
       "upgradeability": "mixed",
       "about": "SparkLend is an Aave v3-derived money market where users supply supported assets as collateral and borrow from shared liquidity. It is integrated with the Sky/Maker ecosystem, including custom DAI/savings-asset rate and oracle components, and is designed to provide deep stablecoin liquidity alongside ETH, BTC, LST, and other collateral markets."
     }
+  },
+  {
+    "schema_version": 3,
+    "slug": "sparklend",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "red",
+    "headline": "Unmitigated dependency on Chainlink oracles without active on-chain fallbacks; ~100% TVS impacted by oracle failure.",
+    "short_headline": "Oracle dependency lacks active fallback",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "SparkLend relies on the SparkOracle contract, which primarily fetches prices from Chainlink AggregatorV3 feeds for core assets including ETH, WBTC, and wstETH. A failure or manipulation of these feeds would directly impact the protocol's ability to value collateral and debt."
+        },
+        {
+          "code": "A3",
+          "text": "The Gnosis Chain deployment (~$20M+ TVS) depends on the canonical Gnosis Bridge for asset transfers and messaging, representing a dependency on the bridge's validator set and security model."
+        },
+        {
+          "code": "A4",
+          "text": "The protocol has deep dependencies on nested collateral: sDAI (Savings DAI) depends on MakerDAO's DSR, and wstETH depends on Lido's validator set and governance. A failure in these underlying protocols would impair SparkLend's primary collateral types."
+        },
+        {
+          "code": "A5",
+          "text": "SparkLend is a fork of Aave V3, inheriting its architecture and dependency model."
+        },
+        {
+          "code": "A6",
+          "text": "On-chain inspection of the SparkOracle on both Ethereum and Gnosis Chain reveals that the getFallbackOracle() function returns the zero address (0x0), indicating that no automated on-chain fallback (such as Chronicle) is currently active to mitigate a Chainlink failure."
+        },
+        {
+          "code": "A9",
+          "text": "The PoolAddressesProvider owner (Spark Executor) can swap the PriceOracle address. This power is held by Sky (MakerDAO) governance via a 48-hour timelock (GSM), which is shorter than the 7-day threshold required for an orange grade under the autonomy rubric."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol lacks an active on-chain fallback or sanity check for its primary oracle (Chainlink), meaning a single feed failure could lead to the immediate depletion of the pool's ~2.5B TVL through bad liquidations or over-borrowing.",
+        "orange": "While the automated fallback is inactive, the protocol is integrated into the Sky (MakerDAO) ecosystem, which provides active risk monitoring and a 48-hour governance window to intervene in the event of an external dependency failure.",
+        "green": "SparkLend utilizes industry-standard dependencies like Chainlink and the canonical Gnosis Bridge, which are the most battle-tested external components available in DeFi, and its architecture is a direct fork of the highly audited Aave V3."
+      },
+      "verdict": "Choosing red because the on-chain implementation of the SparkOracle lacks an active fallback (returning 0x0 for getFallbackOracle), meaning there is no automated circuit breaker to prevent principal loss if the primary Chainlink feeds provide incorrect or stale data, and the 48-hour governance timelock is insufficient to meet the 7-day threshold for mutable dependencies."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x8105f88e77a5d102099bf73db4469d3f1e3b0cd6#readContract",
+        "shows": "SparkOracle on Ethereum returns 0x0 for getFallbackOracle()",
+        "chain": "Ethereum",
+        "address": "0x8105f88e77a5d102099bf73db4469d3f1e3b0cd6",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://gnosisscan.io/address/0x2769502096359940393400090278128219099268#readContract",
+        "shows": "SparkOracle on Gnosis Chain returns 0x0 for getFallbackOracle()",
+        "chain": "Gnosis",
+        "address": "0x2769502096359940393400090278128219099268",
+        "fetched_at": "2026-05-01T10:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x02C3eA4e34C0cBd694D2adFa2c690EECb7496633#readContract",
+        "shows": "PoolAddressesProvider owner is the Spark Executor (0x3b2969Cc35AaA651188C446F092B15C297745245)",
+        "chain": "Ethereum",
+        "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECb7496633",
+        "fetched_at": "2026-05-01T10:10:00Z"
+      },
+      {
+        "url": "https://docs.spark.fi/dev/security-and-audits",
+        "shows": "List of audits including ChainSecurity and ABDK",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      }
+    ],
+    "unknowns": [
+      "A6: Whether Chronicle oracles are intended to be activated as a fallback in the near term, as documentation suggests integration but contracts show 0x0."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/sparkdotfi/smart-contracts-v3",
+        "https://github.com/marsfoundation/spark-lending"
+      ],
+      "docs_url": "https://docs.spark.fi/",
+      "audits": [
+        {
+          "firm": "ChainSecurity",
+          "url": "https://docs.spark.fi/dev/security-and-audits",
+          "date": "2023-03"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://docs.spark.fi/dev/security-and-audits",
+          "date": "2023-03"
+        }
+      ],
+      "governance_forum": "https://forum.sky.money/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "symbol": "MKR"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/spark/",
+      "security_contact": "security@spark.fi",
+      "deployed_contracts_doc": "https://docs.spark.fi/dev/deployed-contracts/ethereum",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3b2969Cc35AaA651188C446F092B15C297745245",
+          "role": "Spark Executor (Timelock)",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2e153026064076369360df860011163d774bb307",
+          "role": "Spark Proxy Admin",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "SparkLend is a decentralized non-custodial liquidity protocol forked from Aave V3, integrated into the Sky (formerly MakerDAO) ecosystem. It allows users to supply assets like ETH and wstETH to borrow DAI and other tokens, with a focus on sDAI (Savings DAI) integration and deep liquidity for the Sky ecosystem."
+    }
   }
 ]
