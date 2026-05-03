@@ -12,11 +12,16 @@ export function summarizeSafeOwners(args: {
   owners: readonly string[];
   version: string | null;
   blockNumber: bigint;
+  /** Optional crawl URLs to append in prose form — survives JSON-key-dropping content extractors. */
+  surfacers?: readonly string[];
 }): string {
   const v = args.version ? ` (Safe ${args.version})` : "";
+  const crawlClause = args.surfacers && args.surfacers.length > 0
+    ? ` Crawl each owner: ${args.surfacers.join(" ")}.`
+    : "";
   return (
     `Safe ${args.address} on ${args.chain}${v} at block ${args.blockNumber}: ` +
-    `${args.threshold}-of-${args.owners.length} multisig. Owners: ${args.owners.join(", ")}.`
+    `${args.threshold}-of-${args.owners.length} multisig. Owners: ${args.owners.join(", ")}.${crawlClause}`
   );
 }
 
@@ -26,10 +31,15 @@ export function summarizeContractRead(args: {
   method: string;
   result: unknown;
   blockNumber: bigint;
+  /** Optional crawl URLs to append in prose form — survives JSON-key-dropping content extractors. */
+  surfacers?: readonly string[];
 }): string {
+  const crawlClause = args.surfacers && args.surfacers.length > 0
+    ? ` Crawl: ${args.surfacers.join(" ")}.`
+    : "";
   return (
     `Method ${args.method} on ${args.address} (${args.chain}) at block ${args.blockNumber} ` +
-    `returned ${formatResult(args.result)}.`
+    `returned ${formatResult(args.result)}.${crawlClause}`
   );
 }
 

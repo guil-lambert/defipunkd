@@ -149,6 +149,8 @@ export const GET: APIRoute = async ({ url }) => {
     version,
     // Surfacer URLs for each owner — see surfacer.ts for the rationale
     // (allowlists only accept URLs that appeared verbatim in context).
+    // Also injected into `summary` prose below as belt-and-suspenders for
+    // any content extractor that summarizes JSON by dropping unfamiliar keys.
     crawl: {
       surfacers: buildSurfacerUrls(chainResult.value, owners),
     },
@@ -169,6 +171,7 @@ export const GET: APIRoute = async ({ url }) => {
       owners,
       version,
       blockNumber,
+      surfacers: buildSurfacerUrls(chainResult.value, owners),
     }),
   };
 

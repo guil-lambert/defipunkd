@@ -188,6 +188,7 @@ export const GET: APIRoute = async ({ url }) => {
       method: canonicalSignature(fn),
       result: normalized,
       blockNumber,
+      surfacers: crawl.surfacers,
     }),
   };
 
