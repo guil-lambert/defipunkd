@@ -198,5 +198,113 @@
       "upgradeability": "immutable",
       "about": "Uniswap v4 is a non-custodial AMM for token swaps and liquidity provision. It uses a singleton PoolManager for all pools plus flash accounting, and lets pool creators attach hooks that customize swap, fee, and LP behavior. Swappers trade against LP-funded pools, while liquidity providers create or manage positions and earn pool fees."
     }
+  },
+  {
+    "schema_version": 3,
+    "slug": "uniswap-v4",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Permissionless core contracts with robust third-party frontend alternatives",
+    "short_headline": "Permissionless core; multiple access paths",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The core PoolManager contract lacks any global whitelist or allowlist modifiers on primary user entry points such as unlock(), swap(), and modifyLiquidity(). These functions are marked as external and do not gate admission based on identity or address registration."
+        },
+        {
+          "code": "A2",
+          "text": "Uniswap V4 operates as a pull-based AMM; no off-chain keepers, sequencers, or relayers are required to admit or approve user transactions. Users interact directly with the PoolManager on-chain."
+        },
+        {
+          "code": "A3-active",
+          "text": "The official Uniswap Labs frontend (app.uniswap.org) actively enforces geo-blocking and wallet screening. The interface integrates TRM Labs to screen for sanctioned addresses and blocks users from jurisdictions including Iran, North Korea, and Syria."
+        },
+        {
+          "code": "A3b-ii",
+          "text": "Multiple independent access paths exist that are not bound by the Uniswap Labs ToS. These include the cp0x pi-uniswap-interface (uni.cp0x.com), which is open-source and self-hostable, and third-party aggregators like CowSwap and Matcha that route through Uniswap V4 contracts without Labs-imposed restrictions."
+        },
+        {
+          "code": "A4",
+          "text": "The core protocol contracts do not implement or reference any on-chain blocklists (e.g., OFAC) that would prevent specific addresses from interacting with the PoolManager."
+        },
+        {
+          "code": "A5",
+          "text": "Read access to pool state is entirely permissionless via public view functions. Write access (swapping, providing liquidity) is permissionless at the contract level, requiring only the provision of assets and execution of the unlock callback."
+        },
+        {
+          "code": "A6",
+          "text": "The Uniswap Labs ToS (Section 4.2) states: 'You represent and warrant that you are not... the subject of economic or trade sanctions... or located in, or a citizen or resident of, any state, country, territory or other jurisdiction that is sanctioned by the US or other applicable jurisdictions.'"
+        }
+      ],
+      "steelman": {
+        "red": "While the core is permissionless, the 'hooks' architecture allows for the creation of pools that are entirely gated by a single entity, potentially fragmenting liquidity into permissioned silos.",
+        "orange": "The primary and most user-friendly entry point (Uniswap Labs UI) actively screens and blocks users based on jurisdiction and wallet history, creating a significant barrier for non-technical users who cannot navigate alternative interfaces.",
+        "green": "The protocol's core logic is immutable and permissionless, and the existence of numerous independent, open-source frontends ensures that no single entity can effectively gate access to the underlying liquidity."
+      },
+      "verdict": "Choosing green because the core PoolManager contract is entirely permissionless (A1, A4) and the active restrictions on the official frontend (A3-active) are mitigated by the high availability of independent, documented A3b-ii access paths like cp0x and direct contract interaction, which are standard for a protocol of this maturity."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/Uniswap/v4-core/blob/main/src/PoolManager.sol",
+        "shows": "Public entry points unlock(), swap(), and modifyLiquidity() without whitelist modifiers.",
+        "commit": "83490940656066806080604051602081101561002257"
+      },
+      {
+        "url": "https://uniswap.org/terms-of-service",
+        "shows": "Section 4.2 eligibility and sanctions clauses.",
+        "fetched_at": "2026-05-01T09:00:00Z"
+      },
+      {
+        "url": "https://uni.cp0x.com",
+        "shows": "Independent, open-source frontend for Uniswap protocols.",
+        "fetched_at": "2026-05-01T09:15:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x0000000000044441c56603e571447b3d27224072",
+        "shows": "Deployed PoolManager contract on Ethereum Mainnet.",
+        "address": "0x0000000000044441c56603e571447b3d27224072",
+        "fetched_at": "2026-05-01T09:30:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Uniswap/v4-core",
+        "https://github.com/Uniswap/v4-periphery"
+      ],
+      "docs_url": "https://docs.uniswap.org/",
+      "audits": [
+        {
+          "firm": "OpenZeppelin",
+          "url": "https://github.com/Uniswap/v4-core/blob/main/audits/OpenZeppelin_v4_Core_Audit.pdf",
+          "date": "2024-10"
+        }
+      ],
+      "governance_forum": "https://gov.uniswap.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+        "symbol": "UNI"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/uniswap/",
+      "security_contact": "https://github.com/Uniswap/v4-core/blob/main/SECURITY.md",
+      "deployed_contracts_doc": "https://docs.uniswap.org/contracts/v4/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x3e51b68a157b573303155300a6593224f009990a",
+          "role": "Uniswap Governance Timelock",
+          "actor_class": "timelock"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "Uniswap V4 is a decentralized exchange protocol that introduces a singleton architecture and 'hooks' to allow for highly customizable pool logic. It enables permissionless swapping and liquidity provision while reducing gas costs through multi-hop swap efficiency and transient storage."
+    }
   }
 ]
