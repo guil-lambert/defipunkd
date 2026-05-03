@@ -217,12 +217,17 @@ describe("buildPrompt", () => {
     expect(p).toContain("The next assessment will inherit your discoveries");
   });
 
-  it("preamble has NO URL-relay / paste-back flow (removed in v22 — JSON-only is binding)", () => {
+  it("preamble has NO URL-relay / paste-back flow (removed in v22, residual language scrubbed in v23 — JSON-only is binding)", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).not.toContain("URL FETCH REQUEST");
     expect(p).not.toContain("Please paste these URLs back");
     expect(p).not.toContain("EXCEPTION TO JSON-ONLY");
     expect(p).not.toContain("Do NOT emit the JSON output yet");
+    // v23: scrub the lingering "paste them back" / "paste-back" hints — the
+    // surfacer page now embeds crawl links directly, so paste-back is no
+    // longer a fallback, and prompt language hinting at it is misleading.
+    expect(p).not.toContain("paste them back");
+    expect(p).not.toContain("paste-back");
   });
 
   it("preamble v22 carries the iterative-ratchet rule for non-pinned addresses", () => {
