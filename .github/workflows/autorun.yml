@@ -13,6 +13,10 @@ on:
         description: "Anthropic model ID"
         required: false
         default: "claude-sonnet-4-6"
+      slice:
+        description: "Slice to run (leave empty for all slices)"
+        required: false
+        default: "discovery"
 
 concurrency:
   group: autorun
@@ -43,10 +47,12 @@ jobs:
         env:
           TARGET_COUNT: ${{ inputs.target_count || '50' }}
           MODEL: ${{ inputs.model || 'claude-sonnet-4-6' }}
+          SLICE: ${{ inputs.slice || 'discovery' }}
         run: |
           pnpm --filter @defipunkd/validator exec tsx src/cli/autorun-generate.ts \
             --count "$TARGET_COUNT" \
-            --model "$MODEL"
+            --model "$MODEL" \
+            --slice "$SLICE"
 
       - name: Open PR with new submissions
         uses: peter-evans/create-pull-request@v7
@@ -58,6 +64,7 @@ jobs:
 
             Model: `${{ inputs.model || 'claude-sonnet-4-6' }}`
             Target count: `${{ inputs.target_count || '50' }}`
+            Slice filter: `${{ inputs.slice || 'discovery' }}`
 
             Each submission's `model` field is suffixed with `(autorun)` so the quorum bot can weight appropriately.
           branch: autorun/run-${{ github.run_number }}

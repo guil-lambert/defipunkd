@@ -3,19 +3,21 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { buildPrompt, PROMPT_VERSION, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
+import { getProtocolMetadata } from "@defipunkd/registry";
 import { SubmissionSchema } from "../schema";
 import { cleanupSubmission } from "../cleanup";
 import { findRepoRoot, loadSnapshot } from "../repo";
 
 type QueueEntry = { slug: string; slice: SliceId };
 
-type Args = { count: number; model: string };
+type Args = { count: number; model: string; slice: SliceId | null };
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { count: 10, model: "claude-sonnet-4-6" };
+  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count") out.count = parseInt(argv[++i] ?? "10", 10);
     else if (argv[i] === "--model") out.model = argv[++i] ?? out.model;
+    else if (argv[i] === "--slice") out.slice = (argv[++i] ?? null) as SliceId | null;
   }
   return out;
 }
@@ -32,7 +34,7 @@ async function main(): Promise<number> {
   const snapshot = loadSnapshot(root);
   const submissionsDir = join(root, "data", "submissions");
 
-  const queue = buildQueue(snapshot, submissionsDir).slice(0, args.count);
+  const queue = buildQueue(snapshot, submissionsDir, args.slice).slice(0, args.count);
   if (queue.length === 0) {
     console.log("queue empty — nothing to do");
     return 0;
@@ -47,6 +49,20 @@ async function main(): Promise<number> {
   for (const { slug, slice } of queue) {
     const protocol = snapshot.protocols[slug];
     if (!protocol) continue;
+    // Cross-run ratchet: pull previously-discovered admin addresses (from
+    // master/assessments via the registry) and feed them as the addressBook so
+    // the prompt's surfacer-URL block is non-empty. Discovery's own runs see
+    // any prior catalogue and extend rather than re-discover from scratch.
+    const meta = getProtocolMetadata(slug);
+    const addressBook =
+      meta?.admin_addresses && meta.admin_addresses.length > 0
+        ? meta.admin_addresses.map((a) => ({
+            chain: a.chain,
+            address: a.address,
+            role: a.role,
+          }))
+        : null;
+
     const prompt = buildPrompt(slice, {
       slug,
       name: protocol.name,
@@ -57,7 +73,7 @@ async function main(): Promise<number> {
       auditLinks: protocol.audit_links ?? [],
       snapshotGeneratedAt: snapshot.generated_at,
       analysisDate,
-      addressBook: null,
+      addressBook,
     });
 
     try {
@@ -123,20 +139,38 @@ async function main(): Promise<number> {
   return 0;
 }
 
-function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string): QueueEntry[] {
-  const tasks: Array<QueueEntry & { priority: number; tvl: number | null }> = [];
+function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string, sliceFilter: SliceId | null): QueueEntry[] {
+  const tasks: Array<QueueEntry & { priority: number; tvl: number | null; isDiscovery: boolean }> = [];
   for (const [slug, p] of Object.entries(snapshot.protocols)) {
     if (p.delisted_at || p.is_dead) continue;
+
+    const discoveryDir = join(submissionsDir, slug, "discovery");
+    const discoveryCount = existsSync(discoveryDir)
+      ? readdirSync(discoveryDir).filter((f) => f.endsWith(".json")).length
+      : 0;
+    const meta = getProtocolMetadata(slug);
+    const hasRatchet = (meta?.admin_addresses?.length ?? 0) > 0;
+    // Evaluation slices need a non-empty addressBook to be useful. Until
+    // discovery has produced one OR the registry already has admin addresses
+    // from earlier runs, gate the 5 risk slices and let discovery go first.
+    const evaluationGated = !hasRatchet && discoveryCount === 0;
+
     for (const slice of SLICE_IDS) {
+      if (sliceFilter !== null && slice !== sliceFilter) continue;
+      const isDiscovery = slice === "discovery";
+      if (!isDiscovery && evaluationGated) continue;
       const dir = join(submissionsDir, slug, slice);
       const count = existsSync(dir)
         ? readdirSync(dir).filter((f) => f.endsWith(".json")).length
         : 0;
       if (count >= 3) continue;
-      tasks.push({ slug, slice, priority: count, tvl: p.tvl });
+      tasks.push({ slug, slice, priority: count, tvl: p.tvl, isDiscovery });
     }
   }
   tasks.sort((a, b) => {
+    // Discovery first per (slug, priority) so a fresh protocol catalogues
+    // before its evaluation slices run in the same autorun pass.
+    if (a.isDiscovery !== b.isDiscovery) return a.isDiscovery ? -1 : 1;
     if (a.priority !== b.priority) return b.priority - a.priority;
     if (a.tvl === null && b.tvl === null) return a.slug.localeCompare(b.slug);
     if (a.tvl === null) return 1;
