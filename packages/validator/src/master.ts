@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SLICES, ProtocolMetadataSchema, type Submission } from "./schema";
+import { SLICES, RISK_SLICES, ProtocolMetadataSchema, type Submission } from "./schema";
 import {
   mergeProtocolMetadata,
   type Assessment,
@@ -107,10 +107,13 @@ export function buildDraftMaster(inputs: DraftInputs): Master {
   const sourceSubmissions: Master["source_submissions"] = [];
   const flags: string[] = [];
 
+  // Record every submission (including discovery) in source_submissions so
+  // the audit trail is complete. But only the 5 graded risk slices populate
+  // master.slices — discovery is a cataloguing slice and feeds
+  // protocol_metadata.admin_addresses via the standard mergeProtocolMetadata
+  // path below.
   for (const sliceId of SLICES) {
     const entries = inputs.submissionsBySlice.get(sliceId) ?? [];
-    const assessment = inputs.assessmentsBySlice.get(sliceId) ?? null;
-
     for (const e of entries) {
       sourceSubmissions.push({
         slice: sliceId,
@@ -119,7 +122,11 @@ export function buildDraftMaster(inputs: DraftInputs): Master {
         grade: e.submission.grade,
       });
     }
+  }
 
+  for (const sliceId of RISK_SLICES) {
+    const entries = inputs.submissionsBySlice.get(sliceId) ?? [];
+    const assessment = inputs.assessmentsBySlice.get(sliceId) ?? null;
     slices[sliceId] = buildSliceConsensus(sliceId, entries, assessment, flags);
   }
 

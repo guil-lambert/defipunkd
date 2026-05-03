@@ -150,6 +150,18 @@ const auditSlices = slices.map((s) => ({
   grade: s.grade,
 }));
 
+// Address discovery is a cataloguing slice that runs before the 5 risk
+// slices and seeds their addressBook via protocol_metadata.admin_addresses.
+// Only show it for on-chain, non-family protocols — CEXes have no contract
+// surface to discover, and family pages redirect to sub-products.
+const isCex = protocol.category === "CEX";
+const showDiscovery = !isCex && !isFamily;
+const discoverySubmissionCount = submissions?.get("discovery")?.length ?? 0;
+const discoveredAddressCount = metadata?.admin_addresses?.length ?? 0;
+const discoveryPrompt = showDiscovery ? promptFor("discovery") : "";
+const discoverySubmitUrl = showDiscovery ? submitUrl("discovery") : "";
+const discoveryNeedsBootstrap = showDiscovery && discoveredAddressCount === 0;
+
 const TAXONOMY_LABEL: Record<string, string> = {
   red: "Steel-man argument",
   orange: "Steel-man argument",
@@ -199,6 +211,26 @@ function partialPillText(modelCount: number): string {
         DEFI@home is a distributed audit network modeled on SETI@home: instead of CPU cycles, it crowdsources LLM reasoning. Paste a slice prompt into Claude, ChatGPT, Gemini, or any browsing-capable model, and submit the JSON output as a pull request. The quorum bot merges it once ≥3 independent runs (from different models) reach the same grade — no single model, and no single contributor, can move the needle alone. <a href="/contribute" class="link">How it works →</a>
       </p>
       <ul class="audit-list">
+        {showDiscovery && (
+          <li class="discovery-row" title="Address discovery catalogues every contract before the 5 risk slices grade them. Run this first if no addresses are on file.">
+            <span class="audit-list-label">
+              <span class="discovery-label">Address discovery</span>
+              <span class="discovery-state">
+                {discoveredAddressCount} address{discoveredAddressCount === 1 ? "" : "es"} on file
+                <span class="discovery-sep">·</span>
+                {discoverySubmissionCount} run{discoverySubmissionCount === 1 ? "" : "s"}
+              </span>
+              {discoveryNeedsBootstrap && (
+                <span class="discovery-bootstrap" title="No addresses on file — run discovery first so the 5 evaluation slices below have a seeded addressBook.">
+                  ⚑ Run first
+                </span>
+              )}
+            </span>
+            <button type="button" class="copy-btn" data-copy-target={`#prompt-${idp}discovery`}>Copy prompt</button>
+            <a href={discoverySubmitUrl} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
+            <pre id={`prompt-${idp}discovery`} class="prompt-hidden" hidden>{discoveryPrompt}</pre>
+          </li>
+        )}
         {auditSlices.map((a) => (
           <li>
             <span class="audit-list-label">
@@ -614,6 +646,43 @@ function partialPillText(modelCount: number): string {
     white-space: nowrap;
   }
   .consensus-chat-url { color: var(--text-muted); }
+
+  .discovery-row {
+    border-top: 1px dashed color-mix(in oklab, var(--accent-link) 35%, var(--surface-raised));
+    border-bottom: 1px dashed color-mix(in oklab, var(--accent-link) 35%, var(--surface-raised));
+    padding: 0.45rem 0;
+    margin-bottom: 0.2rem;
+    background: color-mix(in oklab, var(--accent-link) 4%, transparent);
+  }
+  .discovery-label {
+    color: var(--accent-link);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+  }
+  .discovery-state {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--surface-raised);
+    background: var(--surface-raised);
+    white-space: nowrap;
+  }
+  .discovery-sep { margin: 0 0.2rem; opacity: 0.55; }
+  .discovery-bootstrap {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    color: var(--accent-link);
+    border: 1px solid color-mix(in oklab, var(--accent-link) 40%, var(--surface-raised));
+    background: color-mix(in oklab, var(--accent-link) 8%, transparent);
+    white-space: nowrap;
+  }
 
   .cards {
     list-style: none;

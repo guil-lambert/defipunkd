@@ -3,6 +3,19 @@ import { z } from "zod";
 export const GRADES = ["green", "orange", "red", "unknown"] as const;
 export const GRADING_BASES = ["on-chain", "off-chain-only", "mixed"] as const;
 export const SLICES = [
+  "discovery",
+  "control",
+  "ability-to-exit",
+  "autonomy",
+  "open-access",
+  "verifiability",
+] as const;
+
+// The 5 graded "risk" slices (excludes discovery, which is a cataloguing slice
+// that always emits grade="unknown" and feeds protocol_metadata.admin_addresses
+// rather than producing a verdict). Use this for master-record assembly,
+// quorum visualization, and anywhere that expects a verdict per slice.
+export const RISK_SLICES = [
   "control",
   "ability-to-exit",
   "autonomy",
