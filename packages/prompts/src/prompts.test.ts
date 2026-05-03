@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(22);
+    expect(PROMPT_VERSION).toBe(23);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             22");
+    expect(p).toContain("prompt_version:             23");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -176,10 +176,21 @@ describe("buildPrompt", () => {
     expect(p).toContain("Browser tools normalize");
   });
 
-  it("preamble references the /address/<chainId>/<addr> surfacer (v17, retained in v22)", () => {
+  it("preamble references the /address/<chainId>/<addr> surfacer (v17, retained in v23)", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("Pre-built read-API surfacer URLs");
     expect(p).toContain("appeared verbatim in conversation context");
+  });
+
+  it("preamble v23 tells the model embedded surfacer links are fetchable in-run", () => {
+    const p = buildPrompt("control", INPUTS);
+    // The address page now renders address-typed view-method results as
+    // /address/{chainId}/0x… links, which appear verbatim post-fetch and
+    // are therefore accepted by the allowlist on follow-up.
+    expect(p).toContain("renders any address-typed return values");
+    expect(p).toContain("you may follow them directly");
+    // Residual ratchet still covers JSON-only and non-defipunkd discoveries.
+    expect(p).toContain("Two cases still hit the allowlist wall");
   });
 
   it("emits concrete pre-built surfacer URLs per address_book entry (v18)", () => {
