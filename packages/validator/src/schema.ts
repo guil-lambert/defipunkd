@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const GRADES = ["green", "orange", "red", "unknown"] as const;
+export const GRADING_BASES = ["on-chain", "off-chain-only", "mixed"] as const;
 export const SLICES = [
   "control",
   "ability-to-exit",
@@ -85,7 +86,7 @@ export const ProtocolMetadataSchema = z
 
 const base = z
   .object({
-    schema_version: z.union([z.literal(2), z.literal(3)]),
+    schema_version: z.union([z.literal(2), z.literal(3), z.literal(4)]),
     slug: z.string().regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/),
     slice: z.enum(SLICES),
     snapshot_generated_at: z.string().datetime(),
@@ -93,6 +94,7 @@ const base = z
     analysis_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     model: z.string().min(1).max(120),
     chat_url: z.string().url().nullable().optional(),
+    grading_basis: z.enum(GRADING_BASES).optional(),
     grade: z.enum(GRADES),
     headline: z.string().min(1),
     short_headline: z.string().min(1).max(80).optional(),
@@ -104,6 +106,14 @@ const base = z
   .strict();
 
 export const SubmissionSchema = base.superRefine((val, ctx) => {
+  if (val.grading_basis === "off-chain-only" && val.evidence.length < 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["evidence"],
+      message:
+        'grading_basis="off-chain-only" requires evidence[] to have ≥1 entry (a successfully fetched docs/forum/audit/GitHub URL). If you have no fetch capability at all, omit grading_basis and set grade="unknown" — off-chain-only is for "RPC blocked but web reachable", not "no network".',
+    });
+  }
   if (val.grade === "unknown") {
     if (val.unknowns.length < 1) {
       ctx.addIssue({

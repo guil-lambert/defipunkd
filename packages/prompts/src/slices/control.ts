@@ -2,6 +2,20 @@ export const controlBody = `### Slice: CONTROL
 
 Evaluate who can change the protocol's rules, how fast, and how broadly.
 
+### Step 0 — Capability probe (do this before anything else)
+
+Before producing JSON, you MUST attempt at least two fetches in this run and observe the result of each:
+  (a) the protocol's website / docs page (use the \`protocol.website\` pinned input above), AND
+  (b) one of the pre-built surfacer URLs in the "Pre-built read-API surfacer URLs" block at the top of the preamble (or the protocol's primary block-explorer page if no surfacer URL is pinned).
+
+For each attempted fetch, record what you observed: tool used (any fetch / search / browse / url-context / url-loading tool exposed in your environment counts — not just "web_fetch"), the URL, and the result (response body summary if it succeeded; HTTP status, allowlist rejection text, or "tool not present in this environment: <name you tried>" if it failed).
+
+If EITHER probe succeeded, you have working fetch capability — the off-chain corpus is reachable; do not claim blocked. Proceed with the assessment.
+
+If BOTH probes failed, document each attempted URL + observed failure in \`unknowns[]\` with the relevant checklist code; only then is \`grade="unknown"\` with empty \`evidence[]\` justified. A submission that claims fetch is unavailable without citing the two concrete attempted URLs and their observed failure modes is treated by the quorum bot as a non-submission (zero weight), not a useful "blocked" signal.
+
+This step is non-negotiable. Describing a hypothetical attempt ("I would have tried X but no tool was available") does not satisfy it — actually invoke whatever tool you have and report what came back.
+
 MANDATORY INSPECTION CHECKLIST (every item below must appear in evidence[] OR unknowns[]):
 - C1. For each address you assess: who is the contract owner / admin / pendingAdmin / governor — read these via the block explorer's "Read Contract" tab OR https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=owner (use the BARE method name without parens; similarly &method=admin, &method=pendingOwner, &method=governor). For Safes use the shortcut https://defipunkd.com/api/safe/owners?chainId=<id>&address=0x.... When a protocol has multiple major versions deployed (v2/v3/v4, or v1/v2), perform C1 reads on the NEWEST deployment's admin/owner separately — newer deployments often have different (and sometimes weaker) control surfaces than the legacy core. If you did not read a newer-version owner on-chain, list it in unknowns[] with the checklist code.
 - C2. Upgrade mechanism: transparent proxy / UUPS / Beacon / Diamond / immutable. Identify the proxy admin address. Check upgradeability of the GOVERNANCE contracts too, not just the core protocol — a GovernorBravoDelegator / Aragon Voting / OZ Governor is often itself a proxy whose admin is the Timelock, which means governance can rewrite its own voting rules through the same path it uses for protocol changes. Record this explicitly. Important asymmetry: when the fund-holding core contracts (AMM pools, lending markets, vaults) are immutable AND governance has no admin path that reaches them, an upgradable Governor/Timelock is a T3-only power (it can rewrite voting rules but cannot touch user funds) and must NOT drag the verdict below green on that basis alone — see grade rules. Upgradable periphery (routers, quoters, frontends) that users can route around is similarly not a T1 path. Only call the protocol "mixed" upgradability in a way that affects the grade if you can name a concrete function on the upgradable surface that reaches a T1 or T2 power on user funds.
@@ -30,6 +44,27 @@ Every numeric constant you cite — timelock delays, voting periods, multisig th
   (b) an entry in unknowns[] prefixed with the checklist code.
 
 Citing a docs page or blog post as the sole source for a value that is also readable on-chain is not enough — docs and blog posts drift, on-chain constants do not. Docs are fine as CORROBORATION but cannot be the only citation. Empty unknowns[] on a protocol with more than ~3 admin-class contracts will be flagged by the quorum bot as suspiciously thorough-looking; if you did not actually read a given constant on-chain during this run, say so in unknowns[]. If unknowns[] is empty, you are asserting that every numeric constant in C3/C5 came from a Read Contract URL listed in evidence[] — reviewers will sample-check. Fabricated thoroughness (citing docs as if they were on-chain reads, or restating constructor args from a deployment tx as if they were live storage reads) is worse than an honest unknowns[] entry.
+
+### Off-chain-only fallback (when on-chain reads are genuinely unavailable in this run)
+
+This is a TRIGGER-GATED fallback for environments where the model has working web fetch but cannot reach on-chain reads (defipunkd /api/contract/read and /api/safe/owners are blocked, AND block-explorer Read Contract panels did not render). It is NOT a shortcut to skip on-chain work. If you can fetch on-chain reads, you must — this section does not apply.
+
+To opt in, set the top-level output field \`grading_basis: "off-chain-only"\` and record at least one entry in unknowns[] documenting the failed on-chain fetch attempt, prefixed with the relevant checklist code and the \`-offchain\` suffix. Example: "C1-offchain: tried /api/contract/read for owner() at 0xABC and got allowlist rejection; tried etherscan.io/address/0xABC#readContract and the panel did not render in this environment".
+
+When this fallback is active, the C1–C7 checklist remains binding, but the eligible substitute sources change. The substitute hierarchy, in priority order:
+
+  1. Linked audit PDFs — these usually enumerate admin roles, multisig members, and timelock delays explicitly. Audits authored by the firms named in protocol_metadata.audits or in the pinned audit_links count; pirated copies on third-party blogs do not.
+  2. Protocol governance forum posts (Discourse, Commonwealth, Aragon forum) that quote constants from a successful on-chain proposal — cite the post URL and the linked execution-tx URL even if you cannot follow the tx link.
+  3. Official protocol docs pages with named addresses and roles. The page must be on a domain owned by the protocol (the docs_url metadata field anchors this).
+  4. GitHub README / SECURITY.md / governance/*.md files at a pinned commit SHA in one of the linked repos.
+
+FORBIDDEN substitutes (these are still fabrication, fallback or not): third-party blog posts, Twitter / X threads, search-result snippets, model memory, generic "well-known protocol" reasoning. The anti-fabrication gate from the preamble is unchanged — every cited URL must still have been fetched in this run.
+
+REQUIRED DEGRADATION: any C-code that depends on a numeric constant (delay seconds, multisig threshold, quorum, voting period, proposal threshold, signer count) and is sourced ONLY from docs / forum / audit prose MUST also carry an unknowns[] entry with the \`-offchain\` suffix noting "value not re-read on-chain in this run; corroboration only — docs drift, on-chain constants do not". A C3/C5 numeric without that paired unknowns[] entry under off-chain-only basis is treated as fabricated thoroughness.
+
+The grade you produce under off-chain-only basis is held to the same rubric below, but it will be downweighted by the quorum bot relative to on-chain submissions. That is the design — your run becomes a useful corroboration signal, not a substitute for contract state. If the off-chain corpus does not yield enough specifics to ground a grade, return grade="unknown" with the appropriate -offchain unknowns[] entries; do not stretch docs prose to cover gaps.
+
+If SOME C-codes were readable on-chain in this run and others required the off-chain fallback, set \`grading_basis: "mixed"\`. The same -offchain suffix discipline applies to the codes that fell back. Pure on-chain runs use \`grading_basis: "on-chain"\` and need not include the \`grading_basis\` field at all (it defaults to "on-chain" when omitted).
 
 Then write the steel-man section per Hard Rule 11.
 

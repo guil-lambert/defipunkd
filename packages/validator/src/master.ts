@@ -43,6 +43,17 @@ const SliceConsensusSchema = z
         })
         .strict(),
     ),
+    // Distribution of grading_basis across the submissions that produced this
+    // consensus. Surfaces verifiability tension: a green grade backed entirely
+    // by docs/forum is a weaker signal than a green backed by on-chain reads.
+    basis_mix: z
+      .object({
+        "on-chain": z.number().int().min(0),
+        "off-chain-only": z.number().int().min(0),
+        mixed: z.number().int().min(0),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -160,6 +171,7 @@ function buildSliceConsensus(
           model: e.submission.model,
           grade: e.submission.grade,
         })),
+      basis_mix: tallyBasis(entries),
     };
   }
 
@@ -183,7 +195,21 @@ function buildSliceConsensus(
         .flatMap((e) => e.submission.evidence),
     ),
     dissent,
+    basis_mix: tallyBasis(
+      entries.filter((e) => e.submission.grade === assessment.consensus_grade),
+    ),
   };
+}
+
+function tallyBasis(
+  entries: Array<{ submission: Submission }>,
+): { "on-chain": number; "off-chain-only": number; mixed: number } {
+  const counts = { "on-chain": 0, "off-chain-only": 0, mixed: 0 };
+  for (const e of entries) {
+    const basis = e.submission.grading_basis ?? "on-chain";
+    counts[basis] += 1;
+  }
+  return counts;
 }
 
 function emptyConsensus(): SliceConsensus {
@@ -198,6 +224,7 @@ function emptyConsensus(): SliceConsensus {
     },
     evidence: [],
     dissent: [],
+    basis_mix: { "on-chain": 0, "off-chain-only": 0, mixed: 0 },
   };
 }
 

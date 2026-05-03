@@ -78,6 +78,21 @@ function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): Scored
   if (hallucinationProne) weight *= 0.05;
   else if (nonThinking) weight *= 0.2;
 
+  // grading_basis modifier: on-chain reads are gold; docs/forum/audit corroboration
+  // is a useful fallback signal but must not outweigh contract state. Applied
+  // after the model classification so a thinking model on off-chain-only still
+  // sits below a non-thinking model on full on-chain evidence.
+  const basis = s.grading_basis ?? "on-chain";
+  if (basis === "off-chain-only") {
+    weight *= 0.3;
+  } else if (basis === "mixed") {
+    // Linear blend: assume half-credit for mixed unless the submission
+    // signals more precision via -offchain unknowns count vs. checklist size.
+    // Without that telemetry we use a flat 0.65 — closer to on-chain than to
+    // off-chain-only, since at least one constant was contract-verified.
+    weight *= 0.65;
+  }
+
   const floor = hallucinationProne ? 0.0025 : nonThinking ? 0.02 : 0.1;
   if (weight < floor) weight = floor;
   return { submission: s, sourcePath, weight };

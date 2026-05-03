@@ -256,13 +256,36 @@ export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIss
     });
   }
 
+  const basis = s.grading_basis ?? "on-chain";
   if (s.grade !== "unknown" && ONCHAIN_SLICES.has(s.slice)) {
     const hasOnchain = s.evidence.some((e) => isOnchainEvidenceUrl(e.url));
-    if (!hasOnchain) {
+    if (!hasOnchain && basis !== "off-chain-only") {
       issues.push({
         severity: "warning",
         field: "evidence",
-        message: `on-chain slice "${s.slice}" has no block-explorer URL or DeFiPunkd /api/{contract/read,safe/owners} URL in evidence[]; downweighted by quorum`,
+        message: `on-chain slice "${s.slice}" has no block-explorer URL or DeFiPunkd /api/{contract/read,safe/owners} URL in evidence[]; downweighted by quorum (set grading_basis="off-chain-only" if on-chain reads were genuinely unreachable in this run)`,
+      });
+    }
+    if (hasOnchain && basis === "off-chain-only") {
+      issues.push({
+        severity: "warning",
+        field: "grading_basis",
+        message: `grading_basis="off-chain-only" but evidence[] contains on-chain URLs — set basis to "on-chain" or "mixed" to reflect what was actually read`,
+      });
+    }
+  }
+  if (basis === "off-chain-only") {
+    issues.push({
+      severity: "warning",
+      field: "grading_basis",
+      message: `grading_basis="off-chain-only"; quorum weight reduced by 70% — this is the documented fallback for environments without on-chain fetch capability, not a substitute for on-chain verification`,
+    });
+    const hasOffchainAttemptUnknown = s.unknowns.some((u) => /-offchain\b/.test(u));
+    if (!hasOffchainAttemptUnknown) {
+      issues.push({
+        severity: "warning",
+        field: "unknowns",
+        message: `grading_basis="off-chain-only" requires at least one unknowns[] entry with a "-offchain" suffix documenting the failed on-chain fetch attempt (per preamble Rule 18); downweighted further when missing`,
       });
     }
   }
