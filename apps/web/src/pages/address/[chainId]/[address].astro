@@ -110,10 +110,16 @@ if (resolved) {
   for (const entry of resolved.abi as Abi) {
     if (entry.type === "function") {
       const fn = entry as AbiFunction;
-      const isView = fn.stateMutability === "view" || fn.stateMutability === "pure";
+      // Read-eligibility heuristic: outputs.length > 0 && !payable.
+      // Legacy contracts (pre-0.4.16 Solidity, e.g. Gnosis
+      // MultiSigWalletWithDailyLimit) ship ABIs where every getter is
+      // tagged "nonpayable" because view/pure didn't exist as a language
+      // feature yet. Output-count is the reliable read signal there.
+      const outputCount = fn.outputs?.length ?? 0;
+      const isReadable = outputCount > 0 && fn.stateMutability !== "payable";
       const argCount = fn.inputs?.length ?? 0;
-      if (isView && argCount === 0) zeroArgViews.push(fn);
-      else if (isView) argViews.push(fn);
+      if (isReadable && argCount === 0) zeroArgViews.push(fn);
+      else if (isReadable) argViews.push(fn);
       else writeMethods.push(fn);
     } else if (entry.type === "event") {
       events.push(entry as AbiEvent);

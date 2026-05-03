@@ -78,11 +78,21 @@ export const GET: APIRoute = async ({ url }) => {
   if (!fnMatch.ok) return errorResponse(400, fnMatch);
   const fn = fnMatch.value;
 
-  if (fn.stateMutability !== "view" && fn.stateMutability !== "pure") {
+  // Read-eligibility heuristic: a function is read-eligible iff it returns
+  // data and is not payable. Pre-Solidity-0.4.16 contracts (Gnosis
+  // MultiSigWalletWithDailyLimit and similar 2017-era code) don't carry
+  // view/pure annotations — Etherscan tags everything as "nonpayable" — so
+  // gating strictly on view/pure locks legitimate getters like required(),
+  // getOwners(), dailyLimit() out of this API. Output count is the more
+  // reliable signal: nonpayable + outputs is overwhelmingly a getter;
+  // nonpayable + no outputs is overwhelmingly a state mutator. eth_call
+  // never mutates state regardless of the tag.
+  const outputCount = fn.outputs?.length ?? 0;
+  if (outputCount === 0 || fn.stateMutability === "payable") {
     return errorResponse(400, {
-      error: "method-not-view",
-      message: `method ${methodRaw} is "${fn.stateMutability ?? "nonpayable"}", not view/pure`,
-      hint: "This API only exposes read-only methods. eth_call doesn't mutate state, but exposing non-view methods would mislead callers about production semantics.",
+      error: "method-not-readable",
+      message: `method ${methodRaw} is "${fn.stateMutability ?? "nonpayable"}" with ${outputCount} outputs; only methods with at least one output and not "payable" are read-eligible`,
+      hint: "This API only exposes read-only methods. eth_call doesn't mutate state, but functions with no return data or that accept value transfer have no useful read semantics.",
     });
   }
   if ((fn.inputs?.length ?? 0) !== argsList.length) {
