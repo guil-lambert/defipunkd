@@ -2,19 +2,39 @@ export const controlBody = `### Slice: CONTROL
 
 Evaluate who can change the protocol's rules, how fast, and how broadly.
 
-### Step 0 — Capability probe (do this before anything else)
+### Step 0 — Capability probe & Data Gathering Mode (do this before anything else)
 
-Before producing JSON, you MUST attempt at least two fetches in this run and observe the result of each:
+Before producing JSON, you MUST attempt at least two direct fetches in this run and observe the result of each:
   (a) the protocol's website / docs page (use the \`protocol.website\` pinned input above), AND
   (b) one of the pre-built surfacer URLs in the "Pre-built read-API surfacer URLs" block at the top of the preamble (or the protocol's primary block-explorer page if no surfacer URL is pinned).
 
 For each attempted fetch, record what you observed: tool used (any fetch / search / browse / url-context / url-loading tool exposed in your environment counts — not just "web_fetch"), the URL, and the result (response body summary if it succeeded; HTTP status, allowlist rejection text, or "tool not present in this environment: <name you tried>" if it failed).
 
-If EITHER probe succeeded, you have working fetch capability — the off-chain corpus is reachable; do not claim blocked. Proceed with the assessment.
+**Search-only fast path:** if your environment exposes a search-grounding tool but no raw HTTP client (no \`web_fetch\`, no \`browser\`, no \`url_context\` — only \`google_search\` / \`google:search\` / Bing grounding / Perplexity tools / similar), you may skip the direct URL fetches in (a) and (b) and go straight to Data Gathering Mode below. Direct URL fetches against unindexed JSON endpoints will always fail under search-only tools — that is a known environment shape, not a tool error worth probing for. To claim this fast path you MUST name the search tool you have (e.g. "available tools: google_search; no raw fetch tool exposed") in your first \`unknowns[]\` entry; "I'm search-only" without naming the actual tool is treated as the laziness path and zero-weighted.
 
-If BOTH probes failed, document each attempted URL + observed failure in \`unknowns[]\` with the relevant checklist code; only then is \`grade="unknown"\` with empty \`evidence[]\` justified. A submission that claims fetch is unavailable without citing the two concrete attempted URLs and their observed failure modes is treated by the quorum bot as a non-submission (zero weight), not a useful "blocked" signal.
+If EITHER direct probe succeeded, you have working fetch capability — proceed with the assessment.
+
+**If both direct probes failed, DO NOT STOP. You must enter Data Gathering Mode before claiming blocked.** Tool errors on a direct fetch ("allowlist rejection", "404", "no tool named X") tell you nothing about whether SEARCH is available. Hitting one error and short-circuiting to \`grade="unknown"\` is a failure mode — the prompt explicitly grants you permission to keep trying with different tools.
+
+Data Gathering Mode (mandatory when direct fetches fail):
+  1. Issue at least TWO broad search queries via any search-grounding tool exposed in your environment (e.g. \`google_search\`, Bing grounding, Perplexity tools). Suggested queries: the protocol name + "Etherscan", protocol name + "official docs", protocol name + "GitHub", protocol name + "audit report".
+  2. Use \`site:\` operators as a proxy when direct URL fetching is blocked: \`site:etherscan.io "0x<address>"\`, \`site:github.com <protocol> contract\`, \`site:<docs-domain> admin OR multisig OR governance\`. If the search-grounding tool returns the underlying page body for a site:-narrowed query, that page URL is fetched evidence and goes in \`evidence[]\` with a fetched_at timestamp (see preamble's snippet-vs-grounded-body distinction).
+  3. If the search returns the page body, set \`grading_basis: "off-chain-only"\` and CONTINUE the assessment with whatever you can extract.
+
+You may ONLY return \`grade="unknown"\` with empty \`evidence[]\` if BOTH direct fetches AND at least two broad search queries returned absolutely nothing useful. In that case, log the attempted query strings and the observed-zero-results outcome in \`unknowns[]\` (e.g. \`"C1-offchain: searched 'Tether USDT contract owner' and 'site:etherscan.io 0xdAC17...' via google_search; both returned zero indexed results / no grounded body"\`). Claiming "tools disabled" without logging attempted search queries is a zero-weight non-submission.
 
 This step is non-negotiable. Describing a hypothetical attempt ("I would have tried X but no tool was available") does not satisfy it — actually invoke whatever tool you have and report what came back.
+
+### Partial discovery is a successful run (the ratchet)
+
+If you can find a contract's ABI, audit report, or docs page but cannot read live state (\`owner()\`, \`getOwners()\`, \`MIN_DELAY\`) because RPC reads or block-explorer Read Contract panels failed, you MUST still record the partial discovery rather than emitting an empty submission:
+
+  - Extract privileged functions from the ABI you found and log them in \`rationale.findings\` with their checklist code (e.g. \`"C7: Controller exposes mint() and pause(); ABI surfaces a T1-tier mint power on the upgradable surface"\`). Cite the ABI URL in \`evidence[]\`.
+  - Populate \`protocol_metadata\` with every github / docs_url / audits / admin_addresses entry you can scrape from the off-chain corpus. Each becomes a seed for the next run's \`address_book\`.
+  - Set \`grade="unknown"\` and state in the verdict what specifically remained unverified — e.g. "ABI surfaces T1 mint/burn powers on the Controller, but the live owner identity and timelock delays were unverified in this run."
+  - Do NOT invent a grade based on the ABI alone; ABI shape tells you what the contract CAN do, not who currently holds the powers or whether a timelock fronts them. The grade is for the live control surface, which requires on-chain reads.
+
+The ratchet is the design: this run produces seeds (addresses, audit URLs, ABI evidence), the next run reads them on-chain. A submission that documents partial discovery + unverified gaps is a real contribution; a submission with empty \`evidence[]\` because the model gave up after the first tool error is not.
 
 MANDATORY INSPECTION CHECKLIST (every item below must appear in evidence[] OR unknowns[]):
 - C1. For each address you assess: who is the contract owner / admin / pendingAdmin / governor — read these via the block explorer's "Read Contract" tab OR https://defipunkd.com/api/contract/read?chainId=<id>&address=0x...&method=owner (use the BARE method name without parens; similarly &method=admin, &method=pendingOwner, &method=governor). For Safes use the shortcut https://defipunkd.com/api/safe/owners?chainId=<id>&address=0x.... When a protocol has multiple major versions deployed (v2/v3/v4, or v1/v2), perform C1 reads on the NEWEST deployment's admin/owner separately — newer deployments often have different (and sometimes weaker) control surfaces than the legacy core. If you did not read a newer-version owner on-chain, list it in unknowns[] with the checklist code.
