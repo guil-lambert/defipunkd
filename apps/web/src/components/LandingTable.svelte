@@ -201,38 +201,38 @@
       </colgroup>
       <thead>
         <tr>
-          <th class="sortable name-col">
-            <button type="button" onclick={() => showSort && onSortClick("name")} disabled={!showSort} aria-sort={ariaSort("name")}
+          <th class="sortable name-col" aria-sort={ariaSort("name")}>
+            <button type="button" onclick={() => showSort && onSortClick("name")} disabled={!showSort}
               class:is-active={showSort && sortField === "name"}>
               Name<span class="arrow">{arrow("name")}</span>
             </button>
           </th>
-          <th class="sortable">
-            <button type="button" onclick={() => showSort && onSortClick("risks")} disabled={!showSort} aria-sort={ariaSort("risks")}
+          <th class="sortable" aria-sort={ariaSort("risks")}>
+            <button type="button" onclick={() => showSort && onSortClick("risks")} disabled={!showSort}
               class:is-active={showSort && sortField === "risks"}>
               Risks<span class="arrow">{arrow("risks")}</span>
             </button>
           </th>
-          <th class="sortable">
-            <button type="button" onclick={() => showSort && onSortClick("stage")} disabled={!showSort} aria-sort={ariaSort("stage")}
+          <th class="sortable" aria-sort={ariaSort("stage")}>
+            <button type="button" onclick={() => showSort && onSortClick("stage")} disabled={!showSort}
               class:is-active={showSort && sortField === "stage"}>
               Stage<span class="arrow">{arrow("stage")}</span>
             </button>
           </th>
-          <th class="sortable">
-            <button type="button" onclick={() => showSort && onSortClick("chain")} disabled={!showSort} aria-sort={ariaSort("chain")}
+          <th class="sortable" aria-sort={ariaSort("chain")}>
+            <button type="button" onclick={() => showSort && onSortClick("chain")} disabled={!showSort}
               class:is-active={showSort && sortField === "chain"}>
               Chain<span class="arrow">{arrow("chain")}</span>
             </button>
           </th>
-          <th class="sortable">
-            <button type="button" onclick={() => showSort && onSortClick("type")} disabled={!showSort} aria-sort={ariaSort("type")}
+          <th class="sortable" aria-sort={ariaSort("type")}>
+            <button type="button" onclick={() => showSort && onSortClick("type")} disabled={!showSort}
               class:is-active={showSort && sortField === "type"}>
               Type<span class="arrow">{arrow("type")}</span>
             </button>
           </th>
-          <th class="sortable right">
-            <button type="button" onclick={() => showSort && onSortClick("tvl")} disabled={!showSort} aria-sort={ariaSort("tvl")}
+          <th class="sortable right" aria-sort={ariaSort("tvl")}>
+            <button type="button" onclick={() => showSort && onSortClick("tvl")} disabled={!showSort}
               class:is-active={showSort && sortField === "tvl"}>
               TVL<span class="arrow">{arrow("tvl")}</span>
             </button>
@@ -510,7 +510,6 @@
   }
   thead tr { text-align: left; color: var(--text-muted); font-size: 0.8rem; }
   th { padding: 0.45rem 0.6rem; font-weight: 500; }
-  th.rank { width: 3rem; }
   th.sortable { padding: 0; }
   th.right { text-align: right; }
   th.sortable button {
@@ -535,7 +534,6 @@
   tbody tr { border-top: 1px solid var(--surface-raised); }
   tbody tr.child { background: var(--surface); }
   td { padding: 0.45rem 0.6rem; }
-  .rank-cell { color: var(--text-muted); }
   .name-cell.child-cell { padding-left: calc(0.6rem + 44px + 6px + 1rem); }
   .toggle {
     box-sizing: border-box;
