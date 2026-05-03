@@ -160,32 +160,6 @@ function chipLabel(grade: string): string {
   return grade === "gray" ? "unknown" : grade;
 }
 
-const GRADE_VAR: Record<string, string> = {
-  red: "var(--grade-red)",
-  orange: "var(--grade-orange)",
-  green: "var(--grade-green)",
-  gray: "var(--grade-gray)",
-};
-
-function partialStripeStyle(s: SliceAssessment): string {
-  // Build a diagonal repeating stripe alternating each tentative grade with gray.
-  const grades = (s.partialModelGrades ?? []).map((g) => g.grade);
-  const uniq = Array.from(new Set(grades));
-  const fallback = GRADE_VAR[s.grade] ?? "var(--grade-gray)";
-  const colors = uniq.length > 0 ? uniq.map((g) => GRADE_VAR[g] ?? "var(--grade-gray)") : [fallback];
-  const band = 8;
-  const grayBand = "var(--surface)";
-  const segments: string[] = [];
-  let pos = 0;
-  for (const c of colors) {
-    segments.push(`${c} ${pos}px ${pos + band}px`);
-    pos += band;
-    segments.push(`${grayBand} ${pos}px ${pos + band}px`);
-    pos += band;
-  }
-  return `background: repeating-linear-gradient(135deg, ${segments.join(", ")});`;
-}
-
 const TOP_EVIDENCE = 2;
 
 function partialPillText(modelCount: number): string {
@@ -266,7 +240,7 @@ function partialPillText(modelCount: number): string {
 
   <ol class="cards">
     {gradedSlices.map((s) => (
-      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: isUncertain(s) }]} style={isUncertain(s) ? partialStripeStyle(s) : undefined} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
+      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: isUncertain(s) }]} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
         <details class="body card-details">
           <summary class="card-summary">
             <div class="meta">
@@ -738,20 +712,31 @@ function partialPillText(modelCount: number): string {
     font-weight: 600;
   }
   .card.partial {
-    /* inline `style` provides the diagonal stripes; clear the side bar overlay */
-    background-blend-mode: normal;
+    border-style: dashed;
+    border-width: 2px;
+    border-color: color-mix(in oklab, var(--grade-gray) 55%, var(--surface-raised));
+    border-left: 0;
+    background:
+      repeating-linear-gradient(135deg, var(--grade-gray) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      var(--surface);
   }
-  .card.partial::before { display: none; }
-  .card.partial .body {
-    /* Slight inner panel so text remains legible over stripes */
-    background: color-mix(in oklab, var(--surface) 88%, transparent);
-    border-radius: 4px;
-    margin: 0.35rem;
-    padding: 0.65rem 0.9rem 0.8rem 0.9rem;
+  .card.partial.grade-green {
+    border-color: color-mix(in oklab, var(--grade-green) 55%, var(--surface-raised));
+    background:
+      repeating-linear-gradient(135deg, var(--grade-green) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      var(--surface);
   }
-  .card.partial .card-summary {
-    margin: -0.65rem -0.9rem 0 -0.9rem;
-    padding: 0.65rem 0.9rem 0.65rem 0.9rem;
+  .card.partial.grade-orange {
+    border-color: color-mix(in oklab, var(--grade-orange) 55%, var(--surface-raised));
+    background:
+      repeating-linear-gradient(135deg, var(--grade-orange) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      var(--surface);
+  }
+  .card.partial.grade-red {
+    border-color: color-mix(in oklab, var(--grade-red) 55%, var(--surface-raised));
+    background:
+      repeating-linear-gradient(135deg, var(--grade-red) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      var(--surface);
   }
 
   .partial-grades {
