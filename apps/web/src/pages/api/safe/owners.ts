@@ -13,6 +13,7 @@ import { getPublicClient, OnchainConfigError } from "../../../lib/onchain/client
 import { errorResponse, jsonResponse, cacheControlForBlock } from "../../../lib/onchain/error.js";
 import { SAFE_ABI } from "../../../lib/onchain/safe-abi.js";
 import { summarizeSafeOwners } from "../../../lib/onchain/summary.js";
+import { buildSurfacerUrls } from "../../../lib/onchain/surfacer.js";
 import { getTolerantSearchParams, parseAddress, parseBlock, parseChainId } from "../../../lib/onchain/validate.js";
 
 export const prerender = false;
@@ -146,6 +147,11 @@ export const GET: APIRoute = async ({ url }) => {
     threshold: Number(threshold),
     owners,
     version,
+    // Surfacer URLs for each owner — see surfacer.ts for the rationale
+    // (allowlists only accept URLs that appeared verbatim in context).
+    crawl: {
+      surfacers: buildSurfacerUrls(chainResult.value, owners),
+    },
     provenance: {
       rpc: rpcLabel,
       abiSource: "hardcoded Safe ABI",

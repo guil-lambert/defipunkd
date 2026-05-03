@@ -27,6 +27,7 @@ import { getPublicClient, OnchainConfigError } from "../../../lib/onchain/client
 import { errorResponse, jsonResponse, cacheControlForBlock } from "../../../lib/onchain/error.js";
 import { executeRead } from "../../../lib/onchain/execute-read.js";
 import { summarizeContractRead } from "../../../lib/onchain/summary.js";
+import { buildSurfacerUrls, collectAddressesFromResult } from "../../../lib/onchain/surfacer.js";
 import {
   getTolerantSearchParams,
   parseAddress,
@@ -156,6 +157,15 @@ export const GET: APIRoute = async ({ url }) => {
   const { calldata, rawReturnData, value: normalized } = exec;
 
   const checksummed = toChecksumAddress(addrResult.value);
+  // Surfacer URLs for any address-typed result values — the LLM that hits
+  // this endpoint without going through the surfacer page first still needs
+  // a verbatim /address/<chainId>/0x… URL to follow the discovery, since
+  // the browser/web_fetch allowlist only accepts URLs that appeared in
+  // fetched conversation context.
+  const discoveredAddresses = collectAddressesFromResult(fn, normalized);
+  const crawl = {
+    surfacers: buildSurfacerUrls(chainResult.value, discoveredAddresses),
+  };
   const payload = {
     chainId: chainResult.value,
     chain: chain.name,
@@ -164,6 +174,7 @@ export const GET: APIRoute = async ({ url }) => {
     blockNumber: Number(blockNumber),
     blockHash,
     result: serializeForJson(normalized),
+    crawl,
     provenance: {
       rpc: rpcLabel,
       abiSource: resolvedAbi.source,

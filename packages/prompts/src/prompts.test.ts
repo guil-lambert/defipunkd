@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(23);
+    expect(PROMPT_VERSION).toBe(24);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
@@ -113,7 +113,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             23");
+    expect(p).toContain("prompt_version:             24");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -189,8 +189,16 @@ describe("buildPrompt", () => {
     // are therefore accepted by the allowlist on follow-up.
     expect(p).toContain("renders any address-typed return values");
     expect(p).toContain("you may follow them directly");
-    // Residual ratchet still covers JSON-only and non-defipunkd discoveries.
-    expect(p).toContain("Two cases still hit the allowlist wall");
+  });
+
+  it("preamble v24 advertises crawl.surfacers in API responses", () => {
+    const p = buildPrompt("control", INPUTS);
+    // /api/contract/read and /api/safe/owners now embed the surfacer URLs
+    // for every address-typed result, so API-first crawling no longer dead-ends.
+    expect(p).toContain("crawl.surfacers");
+    expect(p).toContain("you can crawl directly from API responses");
+    // Only one residual class remains (non-defipunkd sources).
+    expect(p).toContain("One case still hits the allowlist wall");
   });
 
   it("emits concrete pre-built surfacer URLs per address_book entry (v18)", () => {
