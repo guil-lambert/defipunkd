@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export type AssessmentGrade = "green" | "orange" | "red" | "unknown";
 export type AssessmentStrength = "strong" | "weak";
-export type SliceId = "control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability";
+export type SliceId = "discovery" | "control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability";
 
 export type Finding = { code: string; text: string };
 export type Steelman = { red: string; orange: string; green: string };

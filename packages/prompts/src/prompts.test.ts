@@ -16,34 +16,36 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(24);
+    expect(PROMPT_VERSION).toBe(27);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("NEVER wrap it in markdown link syntax");
-    expect(p).toContain('NEVER use branch names ("main", "master"');
+    expect(p).toContain("NEVER markdown link syntax");
+    expect(p).toContain("NEVER branch names");
     expect(p).toContain("^[0-9a-f]{7,40}$");
   });
 
-  it("shows concrete CORRECT/WRONG examples for the markdown-URL anti-pattern", () => {
+  it("shows a concrete WRONG/RIGHT counterexample for the markdown-URL anti-pattern", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("CORRECT:");
+    // The condensed format rules show one inline counterexample using
+    // WRONG: ... / RIGHT: ... — both labels must be present.
     expect(p).toContain("WRONG:");
-    expect(p).toContain("[https://etherscan.io");
+    expect(p).toContain("RIGHT:");
+    expect(p).toContain("[Etherscan]");
   });
 
   it("requires a checklist-code prefix on unknowns[] entries", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("prefixed with the relevant checklist code");
+    expect(p).toContain("prefixed with the relevant code");
     expect(p).toContain("E3:");
   });
 
-  it("requires at least one on-chain evidence URL for on-chain slices (block-explorer or DeFiPunkd API; v14)", () => {
+  it("requires at least one on-chain evidence URL for on-chain slices", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("AT LEAST ONE on-chain evidence URL");
+    // Either "AT LEAST ONE" or "≥1" satisfies the rule; the condensed prompt uses ≥1.
+    expect(p).toContain("≥1 on-chain URL");
     expect(p).toContain("control, ability-to-exit, autonomy, verifiability");
-    // Both evidence shapes are accepted on Rule 16.
     expect(p).toContain("block-explorer URL");
     expect(p).toContain("DeFiPunkd /api/{contract/read,safe/owners}");
   });
@@ -51,7 +53,7 @@ describe("buildPrompt", () => {
   it("instructs the LLM to leave chat_url null and explains why", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("chat_url");
-    expect(p).toContain("ALWAYS set this field to null");
+    expect(p).toContain("ALWAYS null");
     expect(p).toContain('"chat_url": null');
     expect(p).toContain("Share publicly");
   });
@@ -71,24 +73,25 @@ describe("buildPrompt", () => {
     }
   });
 
-  it("control grades on the uncontested-fast-path delay (v10)", () => {
+  it("control grades on the uncontested-fast-path delay", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("uncontested-fast-path delay");
     expect(p).toContain("SUM OF DELAYS ON THE UNCONTESTED FAST PATH");
     expect(p).toContain("Dynamic / contested extensions");
   });
 
-  it("control walks the full execution path, not just the first timelock (v10)", () => {
+  it("control walks the full execution path, not just the first timelock", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("EXECUTION PATH (enumerate every stage");
     expect(p).toContain("Do NOT stop at the first timelock-shaped contract");
   });
 
-  it("control requires Read Contract discipline for numeric constants (v10)", () => {
+  it("control requires Read Contract discipline for numeric constants", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("Read Contract discipline");
-    expect(p).toContain("Every numeric constant you cite");
-    expect(p).toContain("Empty unknowns[] on a protocol with more than ~3 admin-class contracts");
+    expect(p).toContain("Every numeric constant cited");
+    // "Empty unknowns[] is a red flag" lives in the preamble's anti-fab section.
+    expect(p).toContain("Empty unknowns[] on a non-trivial protocol is a red flag");
   });
 
   it("ability-to-exit calls out the emergency-vs-governance pause distinction", () => {
@@ -104,7 +107,7 @@ describe("buildPrompt", () => {
       expect(p).toContain(INPUTS.slug);
       expect(p).toContain(INPUTS.snapshotGeneratedAt);
       expect(p).toContain(INPUTS.analysisDate);
-      expect(p).toContain('"schema_version": 3');
+      expect(p).toContain('"schema_version": 4');
       expect(p).toContain('"protocol_metadata"');
     }
   });
@@ -113,7 +116,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             24");
+    expect(p).toContain("prompt_version:             27");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -131,7 +134,7 @@ describe("buildPrompt", () => {
     expect(p).toContain('"role": "stETH"');
   });
 
-  it("teaches the LLM about the DeFiPunkd machine-readable read API (v13+)", () => {
+  it("teaches the LLM about the DeFiPunkd machine-readable read API", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("On-chain reading via the DeFiPunkd API");
     expect(p).toContain("https://defipunkd.com/api/contract/abi");
@@ -139,20 +142,18 @@ describe("buildPrompt", () => {
     expect(p).toContain("https://defipunkd.com/api/safe/owners");
     expect(p).toContain("blockNumber");
     expect(p).toContain("rawReturnData");
-    // Evidence class (e) — distinguished from class (a) (block explorers).
-    expect(p).toContain("e) DeFiPunkd's machine-readable read API");
+    // Source class (e) is the DeFiPunkd read API.
+    expect(p).toContain("e) DeFiPunkd's read API");
   });
 
-  it("slice bodies wire concrete API methods into their checklists (bare method names, v16+)", () => {
-    // Bare method names (no parens) — chat browser tools normalize "(" to
-    // "%28" and then reject the URL as not matching the user-provided one.
-    // control: C1 (owner reads), C3 (timelock constants), Read Contract discipline
+  it("slice bodies wire concrete API methods into their checklists (bare method names)", () => {
+    // Bare method names (no parens) — chat browser tools normalize "(" to "%28"
+    // and reject the URL as not matching the user-provided one.
     const control = buildPrompt("control", INPUTS);
     expect(control).toContain("&method=owner");
     expect(control).not.toContain("&method=owner()");
     expect(control).toContain("/api/safe/owners?chainId=<id>&address=0x...");
     expect(control).toContain("MIN_DELAY");
-    expect(control).toContain("a-bis"); // the new accepted-source bullet
     // ability-to-exit: pause-state checks
     const exit = buildPrompt("ability-to-exit", INPUTS);
     expect(exit).toContain("&method=paused");
@@ -169,39 +170,34 @@ describe("buildPrompt", () => {
     expect(auto).toContain("/api/contract/read?chainId=<id>&address=<oracle>");
   });
 
-  it("preamble explicitly tells the LLM to use bare method names (v16)", () => {
+  it("preamble explicitly tells the LLM to use bare method names", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("BARE method name");
     expect(p).toContain("&method=totalSupply");
     expect(p).toContain("Browser tools normalize");
   });
 
-  it("preamble references the /address/<chainId>/<addr> surfacer (v17, retained in v23)", () => {
+  it("preamble references the /address/<chainId>/<addr> surfacer", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("Pre-built read-API surfacer URLs");
-    expect(p).toContain("appeared verbatim in conversation context");
+    expect(p).toContain("appear verbatim above");
   });
 
-  it("preamble v23 tells the model embedded surfacer links are fetchable in-run", () => {
+  it("preamble tells the model embedded surfacer links are fetchable in-run", () => {
     const p = buildPrompt("control", INPUTS);
-    // The address page now renders address-typed view-method results as
-    // /address/{chainId}/0x… links, which appear verbatim post-fetch and
-    // are therefore accepted by the allowlist on follow-up.
     expect(p).toContain("renders any address-typed return values");
-    expect(p).toContain("you may follow them directly");
+    expect(p).toContain("rendered links are also fetchable post-fetch");
   });
 
-  it("preamble v24 advertises crawl.surfacers in API responses", () => {
+  it("preamble advertises crawl.surfacers in API responses", () => {
     const p = buildPrompt("control", INPUTS);
-    // /api/contract/read and /api/safe/owners now embed the surfacer URLs
-    // for every address-typed result, so API-first crawling no longer dead-ends.
     expect(p).toContain("crawl.surfacers");
-    expect(p).toContain("you can crawl directly from API responses");
-    // Only one residual class remains (non-defipunkd sources).
-    expect(p).toContain("One case still hits the allowlist wall");
+    expect(p).toContain("crawl directly from API responses");
+    // Residual case: addresses from non-defipunkd sources still hit the allowlist.
+    expect(p).toContain("non-defipunkd sources");
   });
 
-  it("emits concrete pre-built surfacer URLs per address_book entry (v18)", () => {
+  it("emits concrete pre-built surfacer URLs per address_book entry", () => {
     const p = buildPrompt("control", {
       ...INPUTS,
       addressBook: [
@@ -218,81 +214,70 @@ describe("buildPrompt", () => {
     expect(p).toContain("(stETH)");
   });
 
-  it("when address_book is null, emits a fallback note about discovering from fetched sources (v22)", () => {
+  it("when address_book is null, emits a fallback note about discovering from fetched sources", () => {
     const p = buildPrompt("control", { ...INPUTS, addressBook: null });
     expect(p).toContain("no addresses pinned in this run");
     expect(p).toContain("discover candidates from fetched website / GitHub / audit / explorer pages");
     expect(p).toContain("The next assessment will inherit your discoveries");
   });
 
-  it("preamble has NO URL-relay / paste-back flow (removed in v22, residual language scrubbed in v23 — JSON-only is binding)", () => {
+  it("preamble has NO URL-relay / paste-back flow (JSON-only is binding)", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).not.toContain("URL FETCH REQUEST");
     expect(p).not.toContain("Please paste these URLs back");
     expect(p).not.toContain("EXCEPTION TO JSON-ONLY");
     expect(p).not.toContain("Do NOT emit the JSON output yet");
-    // v23: scrub the lingering "paste them back" / "paste-back" hints — the
-    // surfacer page now embeds crawl links directly, so paste-back is no
-    // longer a fallback, and prompt language hinting at it is misleading.
     expect(p).not.toContain("paste them back");
     expect(p).not.toContain("paste-back");
   });
 
-  it("preamble v22 carries the iterative-ratchet rule for non-pinned addresses", () => {
+  it("preamble carries the ratchet rule for non-pinned addresses", () => {
     const p = buildPrompt("control", INPUTS);
-    expect(p).toContain("iterative ratchet");
-    expect(p).toContain("inherits a richer address_book");
-    // Non-pinned discovery: record under admin_addresses + unknowns[], no relay.
-    expect(p).toContain("Populate protocol_metadata.admin_addresses");
-    expect(p).toContain("The next assessment");
-    // Empty unknowns on a complex protocol is a red flag, not quality.
+    // Discovered-but-unread addresses go to admin_addresses + checklist-coded unknowns[];
+    // the next run inherits them as fetchable surfacers.
+    expect(p).toContain("protocol_metadata.admin_addresses");
+    expect(p).toContain("the next run will inherit it as a fetchable surfacer");
+    // Empty unknowns[] on a non-trivial protocol is a red flag, not a quality signal.
     expect(p).toContain("Empty unknowns[] on a non-trivial protocol is a red flag");
   });
 
-  it("preamble v22 retains the address_book hint about noise", () => {
+  it("preamble retains the address_book hint about noise", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("Note on noisy address_book");
-    expect(p).toContain("role hints (parenthesized labels)");
+    expect(p).toContain("role hints");
   });
 
-  it("preamble carries the v20 anti-fabrication / receipt-trail rules", () => {
+  it("preamble carries the consolidated anti-fabrication invariants", () => {
     const p = buildPrompt("control", INPUTS);
-    // Memory firewall — explicit list of claim types that need fetched evidence.
-    expect(p).toContain("MEMORY FIREWALL");
-    expect(p).toContain("multisig threshold and signer set");
-    expect(p).toContain("audit firm names");
-    // Anti-fabrication gate — receipt ledger.
-    expect(p).toContain("Anti-fabrication gate");
-    expect(p).toContain("PERSONALLY FETCHED");
-    expect(p).toContain("internal evidence ledger");
-    expect(p).toContain("Inventing a fetched_at is fabrication");
-    // Plausibility-as-failure-mode rule.
-    expect(p).toContain("Plausibility is a failure mode");
-    expect(p).toContain("Optimize for reproducibility");
-    // Final verification check before emitting JSON.
-    expect(p).toContain("FINAL VERIFICATION CHECK");
-    expect(p).toContain("demote the unsupported claims to unknowns[]");
-    // v22: even when verification fails, the answer is still JSON (with grade=unknown).
-    expect(p).toContain("the only valid response is");
-  });
-
-  it("preamble v21+ tightens against ChatGPT-flagged loopholes (v22 retains all anti-fab rules)", () => {
-    const p = buildPrompt("control", INPUTS);
-    // "Constructed from memory" reframed: every variable part must be sourced.
-    expect(p).toContain("every variable part of the constructed URL");
-    expect(p).toContain("guessed API methods is fabrication");
-    // Search snippets are discovery only.
-    expect(p).toContain("Search-result snippets are discovery only");
-    // Status fallback for browser tools that don't expose HTTP status.
-    expect(p).toContain("if the tool does not expose status");
+    // Single consolidated anti-fab section (collapsed from v20–v27 patches).
+    expect(p).toContain("Anti-fabrication");
+    expect(p).toContain("Memory is not evidence");
+    expect(p).toContain("fetched in this run");
+    // The 5-item evidence ledger.
+    expect(p).toContain("evidence ledger check");
     // fetched_at: omit rather than invent.
-    expect(p).toContain("omit the field entirely rather than inventing");
-    // Initial-address-discovery rule for null address_book.
-    expect(p).toContain("Initial address discovery");
-    expect(p).toContain("even for famous tokens like USDC, WBTC, stETH, UNI");
-    // Evidence receipt invariant — explicit four-question check.
-    expect(p).toContain("Evidence receipt invariant");
-    expect(p).toContain("Did this exact URL appear in the model's actual fetch transcript");
+    expect(p).toContain("never invent one");
+    // Plausibility is a failure mode — collapsed phrasing.
+    expect(p).toContain("plausible-sounding answer");
+    expect(p).toContain("WORSE than grade=\"unknown\"");
+    expect(p).toContain("Optimize for reproducibility");
+    // Initial-address-discovery: famous tokens are not exempt.
+    expect(p).toContain("even for famous tokens");
+    // Demote-on-failure path.
+    expect(p).toContain("demote dependent claims to unknowns[]");
+  });
+
+  it("preamble authorizes search-grounding tools and distinguishes snippets from grounded bodies", () => {
+    const p = buildPrompt("control", INPUTS);
+    // Step 0 — capability probe lives in preamble.
+    expect(p).toContain("Step 0 — Capability probe");
+    expect(p).toContain("Search-grounding tools ARE valid fetch paths");
+    // Snippet-vs-grounded-body distinction.
+    expect(p).toContain("grounded response with the underlying page body");
+    expect(p).toContain("bare 1–3-line preview snippet");
+    // DO-NOT-STOP fallback to broad search when direct fetch fails.
+    expect(p).toContain("DO NOT STOP");
+    expect(p).toContain('grading_basis: "off-chain-only"');
   });
 
   it("asks the LLM to refresh protocol_metadata as a side-effect", () => {
