@@ -21,6 +21,7 @@ import {
 import type { Abi } from "viem";
 import { canonicalAbiKey } from "./canonical.js";
 import { getChainEntry } from "./chains.js";
+import { readServerEnv } from "./env.js";
 
 export type AbiSource = "etherscan" | "sourcify";
 
@@ -91,7 +92,7 @@ async function resolveAbiInternal(
 
   const warnings: string[] = [];
   // Server-only secret — see lib/onchain/client.ts for rationale.
-  const etherscanKey = process.env.ETHERSCAN_API_KEY ?? null;
+  const etherscanKey = readServerEnv("ETHERSCAN_API_KEY");
   const chainEntry = getChainEntry(chainId);
 
   let baseAbi: Abi | null = null;

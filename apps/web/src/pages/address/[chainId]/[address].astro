@@ -1,22 +1,34 @@
 ---
-// Surfacer page: emits concrete /api/* URLs for any address so an LLM's
-// web_fetch / browser tool accepts them as "previously seen" and can call
-// them directly. Without this, ChatGPT and Claude.ai both refuse to fetch
-// API URLs that haven't appeared verbatim in the conversation context.
+// Per-contract surface page for LLM agents.
 //
-// Usage from an LLM:
-//   1. fetch /address/<chainId>/<address>     — this page
-//   2. read the response body, see the API URLs
-//   3. fetch them directly without further user paste
+// Resolves the ABI server-side (Etherscan → Sourcify, with proxy merge), then:
+//   1. Renders the ABI inline (no need to fetch /api/contract/abi separately).
+//   2. Lists every view/pure function as a concrete /api/contract/read URL.
+//   3. Pre-executes every zero-arg view/pure function and shows the result
+//      inline, so an LLM can read the contract's state directly off the page.
+//   4. Turns address-typed return values into /address/{chainId}/0x… links so
+//      the LLM can keep crawling the system.
 //
-// Server-rendered, cacheable, no curated-data lookups — works for any valid
-// address, not just protocols already in the registry.
+// When the contract isn't verified (no ABI from Etherscan or Sourcify) we
+// fall back to a generic battery of common method URLs — preserving the
+// "any address has something useful" contract this page used to provide.
 import Base from "../../../layouts/Base.astro";
-import { getAddress, isAddress } from "viem";
+import {
+  getAddress,
+  isAddress,
+  type Abi,
+  type AbiFunction,
+  type AbiEvent,
+  type AbiParameter,
+} from "viem";
 import {
   getChainEntry,
   listSupportedChainIds,
 } from "../../../lib/onchain/chains.js";
+import { resolveAbi, AbiNotFoundError, type ResolvedAbi } from "../../../lib/onchain/abi.js";
+import { getPublicClient } from "../../../lib/onchain/client.js";
+import { canonicalSignature } from "../../../lib/onchain/canonical.js";
+import { executeRead } from "../../../lib/onchain/execute-read.js";
 
 export const prerender = false;
 
@@ -32,20 +44,19 @@ if (!chainEntry) {
     { status: 415 },
   );
 }
-// Non-strict so we accept lowercase / wrong-checksum mixed-case from
-// explorers, docs, and LLM round-trips. We re-checksum below for output.
 if (!isAddress(addressRaw, { strict: false })) {
   return new Response(`Invalid address: ${addressRaw}`, { status: 400 });
 }
 
-const address = getAddress(addressRaw); // EIP-55 checksum (canonicalizes whatever case we received)
+const address = getAddress(addressRaw);
 const chainId = chainEntry.viemChain.id;
 const chainName = chainEntry.name;
-
 const base = "https://defipunkd.com";
-function readUrl(method: string, args?: string): string {
-  const argsPart = args ? `&args=${args}` : "";
-  return `${base}/api/contract/read?chainId=${chainId}&address=${address}&method=${method}${argsPart}`;
+
+function readUrl(method: string, args?: string, block?: number): string {
+  const argsPart = args !== undefined ? `&args=${encodeURIComponent(args)}` : "";
+  const blockPart = block !== undefined ? `&block=${block}` : "";
+  return `${base}/api/contract/read?chainId=${chainId}&address=${address}&method=${encodeURIComponent(method)}${argsPart}${blockPart}`;
 }
 function abiUrl(): string {
   return `${base}/api/contract/abi?chainId=${chainId}&address=${address}`;
@@ -53,16 +64,180 @@ function abiUrl(): string {
 function safeUrl(): string {
   return `${base}/api/safe/owners?chainId=${chainId}&address=${address}`;
 }
+function addressLink(addr: string): string {
+  return `/address/${chainId}/${getAddress(addr as `0x${string}`)}`;
+}
 
-// Battery of common reads. The LLM will only call the ones that fit the
-// contract type (Safe vs token vs admin vs proxy) — they're cheap to list.
-const groups = [
-  {
-    title: "Metadata",
-    urls: [
-      { label: "ABI (auto-resolves proxies)", url: abiUrl() },
-    ],
-  },
+// Cap server-side execution to keep cold renders bounded. 40 zero-arg view
+// methods × ~150ms each parallelized is well under 2s; bigger contracts still
+// render, just with the surplus listed as URL links instead of pre-executed.
+const MAX_PRE_EXECUTE = 40;
+const PARALLEL = 8;
+
+interface ExecutedRow {
+  fn: AbiFunction;
+  signature: string;
+  url: string;
+  result: { ok: true; value: unknown } | { ok: false; stage: string; message: string } | null;
+}
+
+let resolved: ResolvedAbi | null = null;
+let resolveError: string | null = null;
+try {
+  resolved = await resolveAbi(chainId, address);
+} catch (err) {
+  if (err instanceof AbiNotFoundError) {
+    resolveError = err.message;
+  } else {
+    resolveError = `unexpected error resolving ABI: ${(err as Error).message}`;
+  }
+}
+
+let blockNumber: number | null = null;
+let blockHash: string | null = null;
+let rpcLabel: string | null = null;
+
+const zeroArgViews: AbiFunction[] = [];
+const argViews: AbiFunction[] = [];
+const writeMethods: AbiFunction[] = [];
+const events: AbiEvent[] = [];
+
+const executedRows: ExecutedRow[] = [];
+const overflowZeroArg: AbiFunction[] = [];
+
+if (resolved) {
+  for (const entry of resolved.abi as Abi) {
+    if (entry.type === "function") {
+      const fn = entry as AbiFunction;
+      const isView = fn.stateMutability === "view" || fn.stateMutability === "pure";
+      const argCount = fn.inputs?.length ?? 0;
+      if (isView && argCount === 0) zeroArgViews.push(fn);
+      else if (isView) argViews.push(fn);
+      else writeMethods.push(fn);
+    } else if (entry.type === "event") {
+      events.push(entry as AbiEvent);
+    }
+  }
+
+  // Pin all reads to the same block so results are mutually consistent.
+  try {
+    const { client, rpcLabel: label } = getPublicClient(chainId);
+    rpcLabel = label;
+    const block = await client.getBlock({ blockTag: "latest" });
+    blockNumber = Number(block.number!);
+    blockHash = block.hash!;
+
+    const toExecute = zeroArgViews.slice(0, MAX_PRE_EXECUTE);
+    overflowZeroArg.push(...zeroArgViews.slice(MAX_PRE_EXECUTE));
+
+    // Simple bounded parallelism: chunked allSettled.
+    for (let i = 0; i < toExecute.length; i += PARALLEL) {
+      const batch = toExecute.slice(i, i + PARALLEL);
+      const results = await Promise.allSettled(
+        batch.map((fn) =>
+          executeRead({
+            client,
+            address,
+            fn,
+            args: [],
+            blockNumber: block.number!,
+          }),
+        ),
+      );
+      results.forEach((r, j) => {
+        const fn = batch[j]!;
+        const sig = canonicalSignature(fn);
+        const row: ExecutedRow = {
+          fn,
+          signature: sig,
+          url: readUrl(fn.name, undefined, Number(block.number!)),
+          result:
+            r.status === "fulfilled"
+              ? r.value.ok
+                ? { ok: true, value: r.value.value }
+                : { ok: false, stage: r.value.stage, message: r.value.message }
+              : { ok: false, stage: "throw", message: (r.reason as Error)?.message ?? String(r.reason) },
+        };
+        executedRows.push(row);
+      });
+    }
+  } catch (err) {
+    // RPC unreachable — page still renders ABI, just without inline results.
+    rpcLabel = `error: ${(err as Error).message}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Result rendering (ABI-aware: walks outputs and links address-typed values)
+
+interface RenderedFragment {
+  kind: "text" | "address" | "list";
+  text?: string;
+  href?: string;
+  items?: RenderedFragment[];
+}
+
+function abiComponents(p: AbiParameter): readonly AbiParameter[] | undefined {
+  // Tuple AbiParameters carry `components`; the discriminated union doesn't surface it on the base type.
+  return (p as { components?: readonly AbiParameter[] }).components;
+}
+
+function renderValue(type: string, value: unknown, components?: readonly AbiParameter[]): RenderedFragment {
+  if (value === null || value === undefined) return { kind: "text", text: "null" };
+  if (type === "address" && typeof value === "string") {
+    const checksummed = getAddress(value as `0x${string}`);
+    return { kind: "address", text: checksummed, href: addressLink(checksummed) };
+  }
+  if (type.endsWith("[]") && Array.isArray(value)) {
+    const inner = type.slice(0, -2);
+    return {
+      kind: "list",
+      items: value.map((v) => renderValue(inner, v, components)),
+    };
+  }
+  if (type.startsWith("tuple") && Array.isArray(value) && components) {
+    return {
+      kind: "list",
+      items: value.map((v, i) => renderValue(components[i]!.type, v, abiComponents(components[i]!))),
+    };
+  }
+  if (typeof value === "bigint") return { kind: "text", text: value.toString() };
+  if (typeof value === "string") return { kind: "text", text: value };
+  if (typeof value === "boolean") return { kind: "text", text: value ? "true" : "false" };
+  if (typeof value === "number") return { kind: "text", text: String(value) };
+  // Fallback: stringify objects/arrays whose ABI shape we don't have.
+  try {
+    return { kind: "text", text: JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? v.toString() : v)) };
+  } catch {
+    return { kind: "text", text: String(value) };
+  }
+}
+
+function renderFunctionResult(fn: AbiFunction, decoded: unknown): RenderedFragment {
+  const outputs = fn.outputs ?? [];
+  if (outputs.length === 0) return { kind: "text", text: "(void)" };
+  if (outputs.length === 1) {
+    return renderValue(outputs[0]!.type, decoded, abiComponents(outputs[0]!));
+  }
+  // Multi-output: viem returns a tuple array.
+  if (Array.isArray(decoded)) {
+    return {
+      kind: "list",
+      items: decoded.map((v, i) => renderValue(outputs[i]!.type, v, abiComponents(outputs[i]!))),
+    };
+  }
+  return { kind: "text", text: String(decoded) };
+}
+
+// ---------------------------------------------------------------------------
+// Fallback (unverified contracts) — same generic battery the page used to emit.
+
+interface FallbackGroup {
+  title: string;
+  urls: { label: string; url: string }[];
+}
+const fallbackGroups: FallbackGroup[] = [
+  { title: "Metadata", urls: [{ label: "ABI (auto-resolves proxies)", url: abiUrl() }] },
   {
     title: "Admin / control",
     urls: [
@@ -73,12 +248,7 @@ const groups = [
       { label: "implementation (proxy admin slot)", url: readUrl("implementation") },
     ],
   },
-  {
-    title: "Pause state",
-    urls: [
-      { label: "paused", url: readUrl("paused") },
-    ],
-  },
+  { title: "Pause state", urls: [{ label: "paused", url: readUrl("paused") }] },
   {
     title: "Safe (Gnosis Safe) shortcut",
     urls: [
@@ -97,7 +267,7 @@ const groups = [
     ],
   },
   {
-    title: "Timelock constants (any TimelockController-compatible contract)",
+    title: "Timelock constants",
     urls: [
       { label: "MIN_DELAY", url: readUrl("MIN_DELAY") },
       { label: "getMinDelay", url: readUrl("getMinDelay") },
@@ -107,36 +277,193 @@ const groups = [
 
 const cacheControl = "public, s-maxage=86400, stale-while-revalidate=604800";
 Astro.response.headers.set("Cache-Control", cacheControl);
+
+function fnTemplate(fn: AbiFunction): string {
+  const params = (fn.inputs ?? []).map((i) => `<${i.type}${i.name ? `:${i.name}` : ""}>`).join(",");
+  return `${base}/api/contract/read?chainId=${chainId}&address=${address}&method=${encodeURIComponent(fn.name)}&args=${params}`;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderFragmentHtml(frag: RenderedFragment): string {
+  if (frag.kind === "text") return escapeHtml(frag.text ?? "");
+  if (frag.kind === "address") {
+    return `<a href="${escapeHtml(frag.href!)}">${escapeHtml(frag.text!)}</a>`;
+  }
+  if (frag.kind === "list") {
+    const items = (frag.items ?? []).map(renderFragmentHtml);
+    return `[${items.join(", ")}]`;
+  }
+  return "";
+}
 ---
 <Base
-  title={`Read API URLs for ${address} on ${chainName}`}
-  description={`Machine-readable read API surface for ${address} on ${chainName}.`}
+  title={`Read API + state for ${address} on ${chainName}`}
+  description={`Machine-readable read API surface, ABI, and live view-method results for ${address} on ${chainName}.`}
   noindex={true}
 >
-  <main style="max-width: 60rem; margin: 2rem auto; padding: 0 1.5rem;">
-    <h1 style="font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; line-height: 1.4; word-break: break-all;">
+  <main style="max-width: 64rem; margin: 2rem auto; padding: 0 1.5rem;">
+    <h1 style="font-family: 'IBM Plex Mono', monospace; font-size: 1.05rem; line-height: 1.4; word-break: break-all;">
       {address}
     </h1>
     <p style="color: var(--text-muted, #666); margin-top: 0.5rem;">
       Chain: <code>{chainName}</code> (chainId <code>{chainId}</code>)
+      {resolved?.contractName && <> · <strong>{resolved.contractName}</strong></>}
+      {resolved && <> · ABI source: <code>{resolved.source}</code></>}
+      {resolved?.proxy && (
+        <> · proxy → <a href={addressLink(resolved.proxy.implementation)}><code>{resolved.proxy.implementation}</code></a></>
+      )}
+    </p>
+    {blockNumber !== null && (
+      <p style="color: var(--text-muted, #666); margin-top: 0.25rem; font-size: 0.85rem;">
+        Reads pinned to block <code>{blockNumber}</code> · <code>{blockHash}</code> · rpc <code>{rpcLabel}</code>
+      </p>
+    )}
+
+    <p style="margin: 1.25rem 0;">
+      Each method below links to <code>/api/contract/read</code>, which returns
+      deterministic JSON with <code>blockNumber</code>, <code>blockHash</code>,
+      raw <code>calldata</code> and raw <code>rawReturnData</code>. Append
+      <code>&amp;block=&lt;n&gt;</code> to pin a specific block.
+      Address-typed results link back to <code>/address/{chainId}/0x…</code>
+      so you can keep crawling.
     </p>
 
-    <p style="margin: 1.5rem 0;">
-      This page lists the DeFiPunkd machine-readable read API URLs for this address.
-      Each URL returns deterministic JSON with <code>blockNumber</code>, <code>blockHash</code>,
-      raw <code>calldata</code>, and raw <code>rawReturnData</code>, so an LLM agent can
-      cite the URL directly in evidence and anyone re-running it gets a byte-identical answer.
-    </p>
+    {!resolved && (
+      <section style="margin: 1.5rem 0; padding: 0.75rem 1rem; border: 1px solid var(--border, #e0e0e0); border-radius: 4px;">
+        <p style="margin: 0; color: var(--text-muted, #666); font-size: 0.9rem;">
+          <strong>No verified ABI found</strong> for this address.
+          {resolveError && <> <code>{resolveError}</code></>}
+          Falling back to a generic battery of common method URLs — most will
+          return <code>method-not-found</code> if the contract doesn't
+          implement them.
+        </p>
+      </section>
+    )}
 
-    <p style="margin: 1.5rem 0;">
-      The <code>method=</code> values are <strong>bare names</strong> (no parens). For methods
-      with multiple overloads, the API returns a <code>method-ambiguous</code> error with the
-      canonical signatures listed in <code>hint</code>. Append <code>&amp;block=&lt;n&gt;</code>
-      to any read URL to pin a specific block (recommended for evidence — the response is then
-      content-addressed via <code>Cache-Control: immutable</code>).
-    </p>
+    {resolved && (
+      <>
+        <section style="margin: 2rem 0;">
+          <h2 style="font-size: 1rem; margin-bottom: 0.5rem;">
+            View methods — pre-executed
+            <span style="color: var(--text-muted, #888); font-weight: normal; font-size: 0.85rem;">
+              {" "}({executedRows.length} of {zeroArgViews.length})
+            </span>
+          </h2>
+          {executedRows.length === 0 && (
+            <p style="color: var(--text-muted, #666); font-size: 0.9rem;">
+              No zero-argument view methods on this ABI{rpcLabel?.startsWith("error:") ? ` (RPC error: ${rpcLabel})` : ""}.
+            </p>
+          )}
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            {executedRows.map((row) => (
+              <li style="margin: 0.6rem 0; padding: 0.5rem 0; border-bottom: 1px solid var(--border, #f0f0f0);">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; word-break: break-all;">
+                  <a href={row.url} style="color: inherit;">{row.signature}</a>
+                </div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; margin-top: 0.25rem; word-break: break-all;">
+                  {row.result?.ok ? (
+                    <span set:html={renderFragmentHtml(renderFunctionResult(row.fn, row.result.value))} />
+                  ) : (
+                    <span style="color: var(--text-muted, #999);">
+                      {row.result ? `${row.result.stage}: ${row.result.message}` : "not executed"}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {overflowZeroArg.length > 0 && (
+            <p style="color: var(--text-muted, #666); font-size: 0.85rem; margin-top: 0.75rem;">
+              + {overflowZeroArg.length} more zero-arg view methods not pre-executed (cap: {MAX_PRE_EXECUTE}).
+              Call <code>/api/contract/read</code> directly to read them:
+            </p>
+          )}
+          {overflowZeroArg.length > 0 && (
+            <ul style="list-style: none; padding: 0; margin: 0.4rem 0 0;">
+              {overflowZeroArg.map((fn) => (
+                <li style="margin: 0.2rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; word-break: break-all;">
+                  <a href={readUrl(fn.name, undefined, blockNumber ?? undefined)} style="color: inherit;">{canonicalSignature(fn)}</a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-    {groups.map((group) => (
+        <section style="margin: 2rem 0;">
+          <h2 style="font-size: 1rem; margin-bottom: 0.5rem;">
+            View methods — with arguments
+            <span style="color: var(--text-muted, #888); font-weight: normal; font-size: 0.85rem;">
+              {" "}({argViews.length})
+            </span>
+          </h2>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            {argViews.map((fn) => (
+              <li style="margin: 0.3rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; word-break: break-all;">
+                <a href={fnTemplate(fn)} style="color: inherit;">{canonicalSignature(fn)}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section style="margin: 2rem 0;">
+          <h2 style="font-size: 1rem; margin-bottom: 0.5rem;">
+            Write methods — listed only
+            <span style="color: var(--text-muted, #888); font-weight: normal; font-size: 0.85rem;">
+              {" "}({writeMethods.length})
+            </span>
+          </h2>
+          <p style="color: var(--text-muted, #666); font-size: 0.85rem; margin-bottom: 0.5rem;">
+            Not callable through this API — they would mutate state. Listed here so an LLM can reason about the contract's full surface.
+          </p>
+          <ul style="list-style: none; padding: 0; margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;">
+            {writeMethods.map((fn) => (
+              <li style="margin: 0.15rem 0; word-break: break-all; color: var(--text-muted, #555);">
+                {canonicalSignature(fn)} <span style="color: var(--text-muted, #999);">— {fn.stateMutability ?? "nonpayable"}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {events.length > 0 && (
+          <section style="margin: 2rem 0;">
+            <h2 style="font-size: 1rem; margin-bottom: 0.5rem;">
+              Events
+              <span style="color: var(--text-muted, #888); font-weight: normal; font-size: 0.85rem;">
+                {" "}({events.length})
+              </span>
+            </h2>
+            <ul style="list-style: none; padding: 0; margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;">
+              {events.map((ev) => (
+                <li style="margin: 0.15rem 0; word-break: break-all; color: var(--text-muted, #555);">
+                  {canonicalSignature(ev)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section style="margin: 2rem 0;">
+          <h2 style="font-size: 1rem; margin-bottom: 0.5rem;">Raw ABI</h2>
+          <p style="color: var(--text-muted, #666); font-size: 0.85rem; margin-bottom: 0.4rem;">
+            Same data as <a href={abiUrl()}><code>/api/contract/abi</code></a>.
+          </p>
+          <details>
+            <summary style="cursor: pointer; font-size: 0.85rem;">show JSON ({resolved.abi.length} entries)</summary>
+            <pre style="background: var(--code-bg, #f5f5f5); padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.75rem; max-height: 32rem;"><code>{JSON.stringify(resolved.abi, null, 2)}</code></pre>
+          </details>
+        </section>
+      </>
+    )}
+
+    {!resolved && fallbackGroups.map((group) => (
       <section style="margin: 2rem 0;">
         <h2 style="font-size: 1rem; margin-bottom: 0.75rem;">{group.title}</h2>
         <ul style="list-style: none; padding: 0; margin: 0;">
@@ -152,10 +479,10 @@ Astro.response.headers.set("Cache-Control", cacheControl);
 
     <section style="margin: 2rem 0; padding-top: 1rem; border-top: 1px solid var(--border, #e0e0e0); color: var(--text-muted, #666); font-size: 0.85rem;">
       <p>
-        <strong>For arbitrary view methods not in this list:</strong> first call the ABI
-        endpoint above to discover available functions, then call
+        For arbitrary view methods: call
         <code>/api/contract/read?chainId={chainId}&amp;address={address}&amp;method=&lt;name&gt;&amp;args=&lt;csv&gt;</code>
-        with the bare method name. See the <a href="https://github.com/guil-lambert/defipunkd/blob/main/docs/read-api.md">read-api docs</a> for endpoint shapes and verification examples.
+        with the bare method name (use the full canonical signature for overloaded methods).
+        See the <a href="https://github.com/guil-lambert/defipunkd/blob/main/docs/read-api.md">read-api docs</a>.
       </p>
     </section>
   </main>

@@ -13,6 +13,7 @@
  */
 import { createPublicClient, fallback, http, type PublicClient, type Transport } from "viem";
 import { getChainEntry, type ChainEntry } from "./chains.js";
+import { readServerEnv } from "./env.js";
 
 const CLIENTS = new Map<number, PublicClient>();
 
@@ -29,11 +30,10 @@ export class OnchainConfigError extends Error {
 }
 
 function alchemyKey(): string | null {
-  // Server-only secret. Use process.env directly: Astro/Vite's import.meta.env
-  // is build-time-replaced and only exposes PUBLIC_-prefixed vars in
-  // production, while ALCHEMY_API_KEY is a runtime Vercel project env var.
-  const k = process.env.ALCHEMY_API_KEY;
-  return k && k.length > 0 ? k : null;
+  // Server-only secret. readServerEnv prefers process.env (which Vercel
+  // populates at runtime) and falls back to import.meta.env so apps/web/.env
+  // also works in local astro dev where Vite doesn't auto-populate process.env.
+  return readServerEnv("ALCHEMY_API_KEY");
 }
 
 export interface ResolvedClient {

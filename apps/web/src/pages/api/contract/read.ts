@@ -16,8 +16,6 @@
  */
 import type { APIRoute } from "astro";
 import {
-  decodeFunctionResult,
-  encodeFunctionData,
   getAddress,
   type AbiFunction,
   type Hex,
@@ -27,6 +25,7 @@ import { resolveAbi, AbiNotFoundError } from "../../../lib/onchain/abi.js";
 import { canonicalSignature } from "../../../lib/onchain/canonical.js";
 import { getPublicClient, OnchainConfigError } from "../../../lib/onchain/client.js";
 import { errorResponse, jsonResponse, cacheControlForBlock } from "../../../lib/onchain/error.js";
+import { executeRead } from "../../../lib/onchain/execute-read.js";
 import { summarizeContractRead } from "../../../lib/onchain/summary.js";
 import {
   getTolerantSearchParams,
@@ -126,46 +125,35 @@ export const GET: APIRoute = async ({ url }) => {
     });
   }
 
-  let calldata: Hex;
-  try {
-    calldata = encodeFunctionData({
-      abi: [fn],
-      functionName: fn.name,
-      args: encoded.value,
-    });
-  } catch (err) {
-    return errorResponse(400, {
-      error: "calldata-encode-failed",
-      message: `failed to encode args for ${methodRaw}: ${(err as Error).message}`,
-    });
-  }
-
-  let rawReturnData: Hex;
-  try {
-    const ret = await client.call({ to: addrResult.value, data: calldata, blockNumber });
-    rawReturnData = (ret.data ?? "0x") as Hex;
-  } catch (err) {
-    return errorResponse(404, {
-      error: "call-reverted",
-      message: `eth_call reverted: ${(err as Error).message}`,
-      hint: "The contract may not implement this method, or args may be invalid for the contract's state at this block.",
-    });
-  }
-
-  let decoded: unknown;
-  try {
-    decoded = decodeFunctionResult({ abi: [fn], functionName: fn.name, data: rawReturnData });
-  } catch (err) {
-    console.error("[/api/contract/read] decode-failed", { method: methodRaw, rawReturnData, err });
+  const exec = await executeRead({
+    client,
+    address: addrResult.value,
+    fn,
+    args: encoded.value,
+    blockNumber,
+  });
+  if (!exec.ok) {
+    if (exec.stage === "encode") {
+      return errorResponse(400, {
+        error: "calldata-encode-failed",
+        message: `failed to encode args for ${methodRaw}: ${exec.message}`,
+      });
+    }
+    if (exec.stage === "call") {
+      return errorResponse(404, {
+        error: "call-reverted",
+        message: `eth_call reverted: ${exec.message}`,
+        hint: "The contract may not implement this method, or args may be invalid for the contract's state at this block.",
+      });
+    }
+    console.error("[/api/contract/read] decode-failed", { method: methodRaw, err: exec.message });
     return errorResponse(502, {
       error: "decode-failed",
-      message: `decode failed: ${(err as Error).message}`,
+      message: `decode failed: ${exec.message}`,
       hint: "rawReturnData is included in the response so you can re-decode with a different ABI if needed.",
     });
   }
-
-  // Normalize address-typed results to EIP-55 for tidy output.
-  const normalized = normalizeResult(fn, decoded);
+  const { calldata, rawReturnData, value: normalized } = exec;
 
   const checksummed = toChecksumAddress(addrResult.value);
   const payload = {
@@ -297,24 +285,6 @@ function encodeArgs(fn: AbiFunction, raw: string[]): EncodedArgsOk | MatchErr {
     };
   }
   return { ok: true, value: out };
-}
-
-function normalizeResult(fn: AbiFunction, decoded: unknown): unknown {
-  const outputs = fn.outputs ?? [];
-  // viem unwraps single-output methods to a scalar; multi-output becomes a tuple.
-  if (outputs.length === 1) return normalizeByType(outputs[0]!.type, decoded);
-  if (outputs.length > 1 && Array.isArray(decoded)) {
-    return decoded.map((v, i) => normalizeByType(outputs[i]!.type, v));
-  }
-  return decoded;
-}
-
-function normalizeByType(type: string, value: unknown): unknown {
-  if (type === "address" && typeof value === "string") return getAddress(value as `0x${string}`);
-  if (type === "address[]" && Array.isArray(value)) {
-    return value.map((a) => getAddress(a as `0x${string}`));
-  }
-  return value;
 }
 
 /** Recursively turn bigints into strings so JSON.stringify doesn't throw. */
