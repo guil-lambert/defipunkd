@@ -9,10 +9,14 @@ import { postProcess } from "./autorun-postprocess";
 
 type QueueEntry = { slug: string; slice: SliceId };
 
-type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean; maxCost: number | null };
+type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean; maxCost: number | null; maxFetches: number; maxSearches: number };
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false, maxCost: null };
+  // max-fetches default 8 (down from 12): Haiku 4.5's 200k context window is
+  // tight once you add the ~16k system prompt and accumulated tool results.
+  // Each web_fetch can return 5-20k tokens; 8 is a safe ceiling that still
+  // allows reasonable depth. Bump via --max-fetches if Sonnet/Opus.
+  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false, maxCost: null, maxFetches: 8, maxSearches: 3 };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count") out.count = parseInt(argv[++i] ?? "10", 10);
     else if (argv[i] === "--model") out.model = argv[++i] ?? out.model;
@@ -20,6 +24,8 @@ function parseArgs(argv: string[]): Args {
     else if (argv[i] === "--slug") out.slug = argv[++i] ?? null;
     else if (argv[i] === "--postprocess") out.postprocess = true;
     else if (argv[i] === "--max-cost") out.maxCost = parseFloat(argv[++i] ?? "");
+    else if (argv[i] === "--max-fetches") out.maxFetches = parseInt(argv[++i] ?? "8", 10);
+    else if (argv[i] === "--max-searches") out.maxSearches = parseInt(argv[++i] ?? "3", 10);
   }
   return out;
 }
@@ -118,12 +124,12 @@ async function main(): Promise<number> {
           {
             type: "web_search_20250305",
             name: "web_search",
-            max_uses: 4,
+            max_uses: args.maxSearches,
           },
           {
             type: "web_fetch_20250910",
             name: "web_fetch",
-            max_uses: 12,
+            max_uses: args.maxFetches,
           },
         ] as unknown as never,
         messages: [
