@@ -106,7 +106,7 @@ async function main(): Promise<number> {
     try {
       const resp = await client.messages.create({
         model: args.model,
-        max_tokens: 65536,
+        max_tokens: 63999,
         system: [
           {
             type: "text",
