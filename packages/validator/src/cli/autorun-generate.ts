@@ -5,18 +5,20 @@ import { createHash } from "node:crypto";
 import { buildPrompt, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { findRepoRoot, loadSnapshot } from "../repo";
+import { postProcess } from "./autorun-postprocess";
 
 type QueueEntry = { slug: string; slice: SliceId };
 
-type Args = { count: number; model: string; slice: SliceId | null; slug: string | null };
+type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean };
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null };
+  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count") out.count = parseInt(argv[++i] ?? "10", 10);
     else if (argv[i] === "--model") out.model = argv[++i] ?? out.model;
     else if (argv[i] === "--slice") out.slice = (argv[++i] ?? null) as SliceId | null;
     else if (argv[i] === "--slug") out.slug = argv[++i] ?? null;
+    else if (argv[i] === "--postprocess") out.postprocess = true;
   }
   return out;
 }
@@ -187,6 +189,11 @@ async function main(): Promise<number> {
       `web_searches=${totals.webSearches}`,
   );
   console.log(`estimated cost: $${totalCost.toFixed(4)} (model=${args.model})`);
+
+  if (args.postprocess && written > 0) {
+    console.log(`\n--- post-processing ${written} new submission(s) ---`);
+    postProcess();
+  }
   return 0;
 }
 

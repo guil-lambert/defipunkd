@@ -108,10 +108,14 @@ function processFile(file: string, args: Args): Result {
     return { file, ok: false, reason: "missing-wrapper" };
   }
 
-  // Autorun-only fixups: tag model so quorum bot can weight, null any chat_url
-  // the model invented (it has no real chat URL — it ran via API).
-  const model = typeof parsed.model === "string" ? parsed.model : "unknown";
-  if (!/\(autorun\)/.test(model)) parsed.model = `${model} (autorun)`;
+  // Autorun-only fixups. The model field the LLM wrote into the JSON is
+  // unreliable — models routinely misidentify themselves — so we ignore it
+  // and pull the real model from the filename, which the generator embeds
+  // verbatim. Filename shape: autorun-<model-slug>-<date>-<hash>.json.
+  const fname = basename(file);
+  const m = /^autorun-(.+)-\d{4}-\d{2}-\d{2}-[a-f0-9]+\.json$/.exec(fname);
+  const realModel = m ? m[1]! : "unknown";
+  parsed.model = `${realModel} (autorun)`;
   parsed.chat_url = null;
 
   const { cleaned, errors: cleanupErrors } = cleanupSubmission(parsed);
@@ -147,18 +151,14 @@ function fail(file: string, args: Args, reason: string): void {
   }
 }
 
-function main(): number {
-  const args = parseArgs(process.argv.slice(2));
+export function postProcess(opts: { paths?: string[]; keepFailures?: boolean } = {}): { ok: number; failed: number } {
+  const args: Args = { keepFailures: opts.keepFailures ?? false, paths: opts.paths ?? [] };
   const root = findRepoRoot();
   const submissionsDir = join(root, "data", "submissions");
 
   const files: string[] = [];
   if (args.paths.length > 0) {
-    // Explicit paths: accept files or directories. Resolve relative to cwd.
     for (const p of args.paths) {
-      // Resolve relative paths against the repo root so the script works the
-      // same whether invoked via `pnpm --filter` (cwd = package dir) or from
-      // the repo root.
       const abs = p.startsWith("/") ? p : join(root, p);
       const s = statSync(abs);
       if (s.isFile()) files.push(abs);
@@ -186,17 +186,22 @@ function main(): number {
 
   if (files.length === 0) {
     console.log("no autorun-*.json files to post-process");
-    return 0;
+    return { ok: 0, failed: 0 };
   }
 
   const results = files.map((f) => processFile(f, args));
   const ok = results.filter((r) => r.ok).length;
   const failed = results.length - ok;
   console.log(`\npost-process: ${ok} ok, ${failed} failed (out of ${results.length})`);
-  // Don't fail the overall job for individual extraction failures — the
-  // autorun PR should still go up with whatever passed. Operator inspects the
-  // log if the failure rate looks wrong.
+  return { ok, failed };
+}
+
+function main(): number {
+  const args = parseArgs(process.argv.slice(2));
+  postProcess({ paths: args.paths, keepFailures: args.keepFailures });
   return 0;
 }
 
-process.exit(main());
+// Run as CLI when invoked directly.
+const isMain = process.argv[1]?.endsWith("autorun-postprocess.ts") || process.argv[1]?.endsWith("autorun-postprocess.js");
+if (isMain) process.exit(main());
