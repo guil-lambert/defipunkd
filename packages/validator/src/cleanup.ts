@@ -61,6 +61,20 @@ export function cleanupSubmission(raw: unknown): CleanupResult {
           );
         }
       }
+      // Optional fields with strict format constraints: drop the field if
+      // the model emitted an invalid value (branch name in `commit`,
+      // freeform string in `fetched_at`, etc.) rather than failing the whole
+      // submission. The schema marks these optional, so dropping is safe.
+      const commit = row.commit;
+      if (typeof commit === "string" && !/^[0-9a-f]{7,40}$/.test(commit)) {
+        delete row.commit;
+        changes.push(`dropped invalid evidence[${i}].commit (${JSON.stringify(commit)})`);
+      }
+      const fetchedAt = row.fetched_at;
+      if (typeof fetchedAt === "string" && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(fetchedAt)) {
+        delete row.fetched_at;
+        changes.push(`dropped invalid evidence[${i}].fetched_at (${JSON.stringify(fetchedAt)})`);
+      }
     });
   }
 

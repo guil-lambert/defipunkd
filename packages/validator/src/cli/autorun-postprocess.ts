@@ -6,19 +6,18 @@
 // place as canonical JSON. Files that fail are deleted (or moved aside if
 // --keep-failures is passed) so the resulting PR only contains valid
 // submissions and the validate-submission workflow stays green.
-import { readFileSync, writeFileSync, readdirSync, statSync, unlinkSync, renameSync, mkdirSync } from "node:fs";
-import { join, basename, dirname } from "node:path";
+import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { join, basename } from "node:path";
 import { SubmissionSchema } from "../schema";
 import { cleanupSubmission } from "../cleanup";
 import { findRepoRoot } from "../repo";
 
-type Args = { keepFailures: boolean; paths: string[] };
+type Args = { paths: string[] };
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { keepFailures: false, paths: [] };
+  const out: Args = { paths: [] };
   for (const a of argv) {
-    if (a === "--keep-failures") out.keepFailures = true;
-    else if (!a.startsWith("--")) out.paths.push(a);
+    if (!a.startsWith("--")) out.paths.push(a);
   }
   return out;
 }
@@ -138,21 +137,12 @@ function processFile(file: string, args: Args): Result {
   return { file, ok: true };
 }
 
-function fail(file: string, args: Args, reason: string): void {
-  console.error(`[FAIL] ${file}: ${reason}`);
-  if (args.keepFailures) {
-    const quarantine = join(dirname(file), "..", "..", "..", "tmp", "autorun-failures");
-    mkdirSync(quarantine, { recursive: true });
-    renameSync(file, join(quarantine, basename(file)));
-    console.error(`        moved to ${quarantine}/${basename(file)}`);
-  } else {
-    unlinkSync(file);
-    console.error(`        deleted ${file}`);
-  }
+function fail(file: string, _args: Args, reason: string): void {
+  console.error(`[FAIL] ${file}: ${reason} — left in place for manual curation`);
 }
 
-export function postProcess(opts: { paths?: string[]; keepFailures?: boolean } = {}): { ok: number; failed: number } {
-  const args: Args = { keepFailures: opts.keepFailures ?? false, paths: opts.paths ?? [] };
+export function postProcess(opts: { paths?: string[] } = {}): { ok: number; failed: number } {
+  const args: Args = { paths: opts.paths ?? [] };
   const root = findRepoRoot();
   const submissionsDir = join(root, "data", "submissions");
 
@@ -198,7 +188,7 @@ export function postProcess(opts: { paths?: string[]; keepFailures?: boolean } =
 
 function main(): number {
   const args = parseArgs(process.argv.slice(2));
-  postProcess({ paths: args.paths, keepFailures: args.keepFailures });
+  postProcess({ paths: args.paths });
   return 0;
 }
 

@@ -180,7 +180,7 @@ describe("buildPrompt", () => {
   it("preamble references the /address/<chainId>/<addr> surfacer", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("Pre-built read-API surfacer URLs");
-    expect(p).toContain("appear verbatim above");
+    expect(p).toContain("appear verbatim in the per-protocol context");
   });
 
   it("preamble tells the model embedded surfacer links are fetchable in-run", () => {

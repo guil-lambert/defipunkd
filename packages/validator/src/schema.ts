@@ -100,7 +100,7 @@ export const ProtocolMetadataSchema = z
 const base = z
   .object({
     schema_version: z.union([z.literal(2), z.literal(3), z.literal(4)]),
-    slug: z.string().regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/),
+    slug: z.string().regex(/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/),
     slice: z.enum(SLICES),
     snapshot_generated_at: z.string().datetime(),
     prompt_version: z.number().int().min(1),

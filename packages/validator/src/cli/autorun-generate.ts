@@ -2,7 +2,7 @@
 import { writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { buildPrompt, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
+import { buildPromptParts, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { findRepoRoot, loadSnapshot } from "../repo";
 import { postProcess } from "./autorun-postprocess";
@@ -90,7 +90,7 @@ async function main(): Promise<number> {
       console.log(`[${slug}/${slice}] fresh slug — restricting to ethereum mainnet (full chain list: ${protocol.chains.join(",")})`);
     }
 
-    const prompt = buildPrompt(slice, {
+    const { system, userContext } = buildPromptParts(slice, {
       slug,
       name: protocol.name,
       chains: promptChains,
@@ -107,13 +107,11 @@ async function main(): Promise<number> {
       const resp = await client.messages.create({
         model: args.model,
         max_tokens: 16384,
-        // Cast covers SDK versions where cache_control / web_search_20250305
-        // aren't in the typed surface yet.
         system: [
           {
             type: "text",
-            text: prompt,
-            cache_control: { type: "ephemeral" },
+            text: system,
+            cache_control: { type: "ephemeral", ttl: "1h" },
           },
         ] as unknown as string,
         tools: [
@@ -132,7 +130,7 @@ async function main(): Promise<number> {
           {
             role: "user",
             content:
-              "Run the slice's discovery / evaluation steps. You have two tools: `web_fetch` (preferred — pulls a specific URL's full contents) and `web_search` (for when you need to discover a URL you don't already have). The prompt names specific URLs (block-explorer pages, docs, GitHub, audits, the read-API surfacers) — use `web_fetch` on those directly rather than searching for them. After your investigation, produce the final JSON assessment object as the last message in your response.",
+              `${userContext}\n\n---\n\nRun the slice's discovery / evaluation steps. You have two tools: \`web_fetch\` (preferred — pulls a specific URL's full contents) and \`web_search\` (for when you need to discover a URL you don't already have). The prompt names specific URLs (block-explorer pages, docs, GitHub, audits, the read-API surfacers) — use \`web_fetch\` on those directly rather than searching for them. After your investigation, produce the final JSON assessment object as the last message in your response.`,
           },
         ],
       });

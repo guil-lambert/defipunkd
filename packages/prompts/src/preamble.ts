@@ -1,22 +1,10 @@
 export const preamble = `You are contributing a single-slice assessment to defipunkd, a git-native transparency registry for DeFi protocols. Your JSON output will be attached to a pull request and compared against ≥2 other independent runs. Disagreements are surfaced publicly — be conservative, cite everything, return grade="unknown" when a signal cannot be determined, and resist stopping at the first damning finding.
 
-### Pinned inputs (do not infer; these are ground truth)
-- protocol.slug:              {{slug}}
-- protocol.name:              {{name}}
-- protocol.chains:            {{chains}}
-- protocol.category:          {{category}}
-- protocol.website:           {{website}}
-- protocol.github:            {{github_urls}}
-- protocol.audit_links:       {{audit_urls}}
-- snapshot.generated_at:      {{snapshot_generated_at}}
-- analysis_date:              {{analysis_date}}
-- prompt_version:             {{prompt_version}}
-- address_book:               {{addresses_or_null}}
+### Per-protocol context (do not infer; these are ground truth)
 
-### Pre-built read-API surfacer URLs (verbatim — fetchable as-is)
-{{address_book_surfacer_urls}}
+A "Per-protocol context" block (provided alongside this prompt — either as a user message in API mode, or as a section appended below in copy-paste mode) lists the pinned inputs (protocol.slug, name, chains, category, website, github, audit_links, snapshot.generated_at, analysis_date, prompt_version, address_book) and a list of pre-built read-API surfacer URLs for each pinned address. Treat those values as authoritative for this run.
 
-These URLs are accepted by your fetch tool's allowlist because they appear verbatim above. Each surfacer page pre-executes the contract's zero-arg view methods and renders any address-typed return values as /address/{chainId}/0x… links inline — those rendered links are also fetchable post-fetch. /api/contract/read and /api/safe/owners JSON responses include a top-level \`crawl.surfacers\` array of /address/{chainId}/0x… URLs for every address-typed value in the result, so you can crawl directly from API responses. For addresses surfaced from non-defipunkd sources (block-explorer pages, GitHub, audit PDFs), the allowlist will reject your generated surfacer URL — record the address in protocol_metadata.admin_addresses and add a checklist-coded entry to unknowns[]; the next run will inherit it as a fetchable surfacer.
+The pre-built surfacer URLs are accepted by your fetch tool's allowlist because they appear verbatim in the per-protocol context. Each surfacer page pre-executes the contract's zero-arg view methods and renders any address-typed return values as /address/{chainId}/0x… links inline — those rendered links are also fetchable post-fetch. /api/contract/read and /api/safe/owners JSON responses include a top-level \`crawl.surfacers\` array of /address/{chainId}/0x… URLs for every address-typed value in the result, so you can crawl directly from API responses. For addresses surfaced from non-defipunkd sources (block-explorer pages, GitHub, audit PDFs), the allowlist will reject your generated surfacer URL — record the address in protocol_metadata.admin_addresses and add a checklist-coded entry to unknowns[]; the next run will inherit it as a fetchable surfacer.
 
 ### Step 0 — Capability probe (do this before producing JSON)
 

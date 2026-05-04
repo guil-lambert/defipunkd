@@ -96,30 +96,37 @@ const BODIES: Record<SliceId, string> = {
   verifiability: verifiabilityBody,
 };
 
-export function buildPrompt(slice: SliceId, inputs: PromptInputs): string {
-  const preambleFilled = preamble
-    .replace("{{slug}}", inputs.slug)
-    .replace("{{name}}", inputs.name)
-    .replace("{{chains}}", inputs.chains.length > 0 ? inputs.chains.join(", ") : "(none recorded)")
-    .replace("{{category}}", inputs.category ?? "(unknown)")
-    .replace("{{website}}", inputs.website ?? "(none recorded)")
-    .replace("{{github_urls}}", inputs.github.length > 0 ? inputs.github.join(", ") : "(none recorded)")
-    .replace(
-      "{{audit_urls}}",
-      inputs.auditLinks.length > 0 ? inputs.auditLinks.join(", ") : "(none recorded)",
-    )
-    .replace("{{snapshot_generated_at}}", inputs.snapshotGeneratedAt)
-    .replace("{{analysis_date}}", inputs.analysisDate)
-    .replace(
-      "{{addresses_or_null}}",
-      inputs.addressBook && inputs.addressBook.length > 0
-        ? JSON.stringify(inputs.addressBook, null, 2)
-        : "null",
-    )
-    .replace("{{address_book_surfacer_urls}}", buildSurfacerUrlBlock(inputs.addressBook))
-    .replace("{{prompt_version}}", String(PROMPT_VERSION));
+/**
+ * Split the prompt into a slice-stable `system` block (byte-identical across
+ * protocols of the same slice — cacheable as the system prompt) and a
+ * per-protocol `userContext` block (placed in the user message; never cached).
+ */
+export function buildPromptParts(slice: SliceId, inputs: PromptInputs): { system: string; userContext: string } {
+  const system = `${preamble}\n\n---\n\n${BODIES[slice]}\n\n---\n\n### JSON output contract\n\nReturn exactly one JSON object inside a single \`\`\`json fenced block. Shape:\n\n{\n  "schema_version": ${SCHEMA_VERSION},\n  "slug": "<copy protocol.slug from the per-protocol context>",\n  "slice": "${slice}",\n  "snapshot_generated_at": "<copy snapshot.generated_at from the per-protocol context>",\n  "prompt_version": ${PROMPT_VERSION},\n  "analysis_date": "<copy analysis_date from the per-protocol context>",\n  "model": "<exact model name, e.g. claude-opus-4-7 / gpt-5-thinking / gemini-3-pro>",\n  "chat_url": null,\n  "grading_basis": "on-chain | off-chain-only | mixed (optional; omit for on-chain)",\n  "grade": "green | orange | red | unknown",\n  "headline": "<one-line summary>",\n  "short_headline": "<≤6 words, ≤80 chars; omit if you can't fit>",\n  "rationale": {\n    "findings": [{ "code": "E1", "text": "<concrete, source-cited finding>" }],\n    "steelman": { "red": "<one sentence>", "orange": "<one sentence>", "green": "<one sentence>" },\n    "verdict": "Choosing <grade> because <reason ranking one steel-man above the others, citing specific evidence>."\n  },\n  "evidence": [{ "url": "https://...", "shows": "<what this URL demonstrates>", "chain": "...", "address": "0x...", "commit": "<hex SHA>", "fetched_at": "2026-04-23T11:20:00Z" }],\n  "unknowns": ["E3: <thing you looked for but couldn't determine>"],\n  "protocol_metadata": {\n    "github": ["https://github.com/org/repo"],\n    "docs_url": "https://docs.protocol.xyz",\n    "audits": [{ "firm": "Trail of Bits", "url": "https://...report.pdf", "date": "2025-09" }],\n    "governance_forum": "https://forum.protocol.xyz",\n    "voting_token": { "chain": "Ethereum", "address": "0x...", "symbol": "XYZ" },\n    "bug_bounty_url": "https://immunefi.com/bounty/protocol",\n    "security_contact": "security@protocol.xyz",\n    "deployed_contracts_doc": "https://docs.protocol.xyz/deployments",\n    "admin_addresses": [{ "chain": "Ethereum", "address": "0x...", "role": "DAO treasury multisig", "actor_class": "multisig" }],\n    "upgradeability": "immutable | upgradeable | mixed | unknown",\n    "about": "<2–4 sentences>"\n  }\n}\n\nRules recap:\n- grade="unknown" ⇒ steelman=null; unknowns[] ≥1; evidence[] may be empty.\n- grade!="unknown" ⇒ steelman={red,orange,green}; evidence[] ≥1; verdict starts with "Choosing ".\n- findings[].code matches the slice's checklist prefix verbatim (E1, C2-emergency, V4a, …); unknowns[] entries are checklist-coded ("E3: …").\n- Wrap in a single \`\`\`json fence; nothing before or after. URLs are bare strings, never markdown links.\n`;
 
-  return `${preambleFilled}\n\n---\n\n${BODIES[slice]}\n\n---\n\n### JSON output contract\n\nReturn exactly one JSON object inside a single \`\`\`json fenced block. Shape:\n\n{\n  "schema_version": ${SCHEMA_VERSION},\n  "slug": "${inputs.slug}",\n  "slice": "${slice}",\n  "snapshot_generated_at": "${inputs.snapshotGeneratedAt}",\n  "prompt_version": ${PROMPT_VERSION},\n  "analysis_date": "${inputs.analysisDate}",\n  "model": "<exact model name, e.g. claude-opus-4-7 / gpt-5-thinking / gemini-3-pro>",\n  "chat_url": null,\n  "grading_basis": "on-chain | off-chain-only | mixed (optional; omit for on-chain)",\n  "grade": "green | orange | red | unknown",\n  "headline": "<one-line summary>",\n  "short_headline": "<≤6 words, ≤80 chars; omit if you can't fit>",\n  "rationale": {\n    "findings": [{ "code": "E1", "text": "<concrete, source-cited finding>" }],\n    "steelman": { "red": "<one sentence>", "orange": "<one sentence>", "green": "<one sentence>" },\n    "verdict": "Choosing <grade> because <reason ranking one steel-man above the others, citing specific evidence>."\n  },\n  "evidence": [{ "url": "https://...", "shows": "<what this URL demonstrates>", "chain": "...", "address": "0x...", "commit": "<hex SHA>", "fetched_at": "2026-04-23T11:20:00Z" }],\n  "unknowns": ["E3: <thing you looked for but couldn't determine>"],\n  "protocol_metadata": {\n    "github": ["https://github.com/org/repo"],\n    "docs_url": "https://docs.protocol.xyz",\n    "audits": [{ "firm": "Trail of Bits", "url": "https://...report.pdf", "date": "2025-09" }],\n    "governance_forum": "https://forum.protocol.xyz",\n    "voting_token": { "chain": "Ethereum", "address": "0x...", "symbol": "XYZ" },\n    "bug_bounty_url": "https://immunefi.com/bounty/protocol",\n    "security_contact": "security@protocol.xyz",\n    "deployed_contracts_doc": "https://docs.protocol.xyz/deployments",\n    "admin_addresses": [{ "chain": "Ethereum", "address": "0x...", "role": "DAO treasury multisig", "actor_class": "multisig" }],\n    "upgradeability": "immutable | upgradeable | mixed | unknown",\n    "about": "<2–4 sentences>"\n  }\n}\n\nRules recap:\n- grade="unknown" ⇒ steelman=null; unknowns[] ≥1; evidence[] may be empty.\n- grade!="unknown" ⇒ steelman={red,orange,green}; evidence[] ≥1; verdict starts with "Choosing ".\n- findings[].code matches the slice's checklist prefix verbatim (E1, C2-emergency, V4a, …); unknowns[] entries are checklist-coded ("E3: …").\n- Wrap in a single \`\`\`json fence; nothing before or after. URLs are bare strings, never markdown links.\n`;
+  const chains = inputs.chains.length > 0 ? inputs.chains.join(", ") : "(none recorded)";
+  const githubs = inputs.github.length > 0 ? inputs.github.join(", ") : "(none recorded)";
+  const audits = inputs.auditLinks.length > 0 ? inputs.auditLinks.join(", ") : "(none recorded)";
+  const addresses =
+    inputs.addressBook && inputs.addressBook.length > 0
+      ? JSON.stringify(inputs.addressBook, null, 2)
+      : "null";
+
+  const userContext = `### Per-protocol context (ground truth for this run)\n\n- protocol.slug:              ${inputs.slug}\n- protocol.name:              ${inputs.name}\n- protocol.chains:            ${chains}\n- protocol.category:          ${inputs.category ?? "(unknown)"}\n- protocol.website:           ${inputs.website ?? "(none recorded)"}\n- protocol.github:            ${githubs}\n- protocol.audit_links:       ${audits}\n- snapshot.generated_at:      ${inputs.snapshotGeneratedAt}\n- analysis_date:              ${inputs.analysisDate}\n- prompt_version:             ${PROMPT_VERSION}\n- address_book:               ${addresses}\n\n### Pre-built read-API surfacer URLs (verbatim — fetchable as-is)\n${buildSurfacerUrlBlock(inputs.addressBook)}\n`;
+
+  return { system, userContext };
+}
+
+/**
+ * Single-string prompt for the copy-paste flow (Copy-prompt buttons, tests).
+ * Puts per-protocol context first so a human reader sees the ground-truth
+ * values up-front, the way the original prompt structure presented them.
+ * The autorun API path uses buildPromptParts directly to keep `system`
+ * byte-stable for prefix caching.
+ */
+export function buildPrompt(slice: SliceId, inputs: PromptInputs): string {
+  const { system, userContext } = buildPromptParts(slice, inputs);
+  return `${userContext}\n\n---\n\n${system}`;
 }
 
 export { preamble } from "./preamble";
