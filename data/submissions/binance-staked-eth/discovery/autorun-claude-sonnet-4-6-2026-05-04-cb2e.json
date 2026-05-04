@@ -1,0 +1,157 @@
+{
+  "schema_version": 4,
+  "slug": "binance-staked-eth",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "6 contracts catalogued across Ethereum and BSC; 1 token proxy (both chains share same address), 2 active implementations, 1 ETH staking vault address, 1 BSC deployer, 1 inactive BSC implementation; proxy admin addresses not yet live-read.",
+  "short_headline": "6 contracts across 2 chains",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Etherscan name-tag search: wBETH token at 0xa2E3356610840701BDf5611a53974510Ae27E2e1 surfaced on both Ethereum and BSC with label 'Wrapped Binance Beacon ETH (wBETH)' / 'Binance: wBETH Token'. Current Ethereum implementation 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB (WrapTokenV3ETH, upgraded 2024-11-22) and BSC implementation 0xfe928A7D8be9c8cece7e97f0ed5704f4fa2cb42A (WrapTokenV2BSC) also surfaced. BSC deployer labelled 'Binance: Deployer 5' at 0x86fd4673527f9d5999c5e490ab98766c0cfa8801."
+      },
+      {
+        "code": "D2",
+        "text": "No canonical dedicated 'Deployed Contracts' doc page found. Binance's FAQ/announcement pages (binance.com/en/support/faq and binance.com/en/support/announcement) explicitly list both BNB Smart Chain and Ethereum contract addresses as 0xa2E3356610840701BDf5611a53974510Ae27E2e1. Binance.com/en/wbeth is the product page but does not list all addresses. Set deployed_contracts_doc to the Binance support FAQ URL as the closest match."
+      },
+      {
+        "code": "D3",
+        "text": "Audit PDF at github.com/peckshield/publications/.../PeckShield-Audit-Report-wBETH-v1.0.pdf could not be fetched (domain access blocked). PeckShield v1.0 audit confirmed to exist from search results and Binance's own Square post referencing it. No in-scope address table could be extracted this run. Added as unknowns."
+      },
+      {
+        "code": "D4",
+        "text": "No protocol.github provided; no deployment artifacts available. The implementation contract source on Etherscan (WrapTokenV3ETH) references a hardcoded constant address 0x79973d557cd9dd87eb61e250cc2572c990E20196 in the moveToStakingAddress function (used as ETH staking vault/receiver). Recorded as 'other' role."
+      },
+      {
+        "code": "D5",
+        "text": "Both chains (Ethereum chainId=1 and BSC chainId=56) inspected. The wBETH proxy uses the identical address on both chains: 0xa2E3356610840701BDf5611a53974510Ae27E2e1. Separate admin_addresses entries created per chain. BSC has an additional inactive implementation 0xA77E9Ac1a564d56e0a36b6f5126e881e3c5208ed (WrapTokenV1BSC, upgraded away 2023-05-10 per BscScan proxy upgrade log)."
+      },
+      {
+        "code": "D6",
+        "text": "No factory contracts identified in scope; wBETH is a single-token deployment on each chain. D6 not applicable."
+      },
+      {
+        "code": "D7",
+        "text": "Role taxonomy applied: proxy contract labelled 'token'; implementation contracts labelled 'other (implementation)'; ETH staking vault labelled 'vault'; deployer EOA labelled 'other (deployer)'. Proxy admin address for both chains not live-read this run (defipunkd.com API blocked; Etherscan readContract page also blocked). Actor class for proxy admin therefore 'unknown'."
+      },
+      {
+        "code": "D8",
+        "text": "All addresses in admin_addresses[] trace to fetched Etherscan/BscScan pages or the Binance support FAQ page (for token address confirmation). The hardcoded staking address 0x79973d557cd9dd87eb61e250cc2572c990E20196 is derived from the Ethereum implementation contract ABI/source fetched from Etherscan — recorded with a derived note. Proxy admin addresses for both chains not added to admin_addresses because they were not read on-chain this run; added to unknowns instead."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery run walked Etherscan (Ethereum), BscScan (BSC), Binance support/announcement pages, and the Etherscan implementation contract page. 6 core addresses catalogued: 1 shared wBETH proxy (both chains), 2 active implementations (one per chain), 1 inactive BSC implementation, 1 hardcoded ETH staking vault address, and 1 Binance deployer EOA. Proxy admin addresses for both chains could not be read due to DeFiPunkd API and Etherscan readContract page access restrictions; these are the primary gap for the next run."
+  },
+  "evidence": [
+    {
+      "url": "https://www.binance.com/en/support/faq/what-is-wbeth-e252366155174ba6887f6b32e3798273",
+      "shows": "Binance official FAQ confirming wBETH contract address 0xa2E3356610840701BDf5611a53974510Ae27E2e1 on both BNB Smart Chain and Ethereum; description of wBETH as a value-accruing liquid staking token",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/support/announcement/binance-introduces-wrapped-beacon-eth-wbeth-on-eth-staking-a1197f34d832445db41654ad01f56b4d",
+      "shows": "Binance announcement confirming wBETH contract address 0xa2E3356610840701BDf5611a53974510Ae27E2e1 on BNB Smart Chain and Ethereum, launch date 2023-04-27",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/token/0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "shows": "Ethereum wBETH proxy contract (FiatTokenProxy / ZeppelinOS AdminUpgradeabilityProxy pattern), current implementation 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB (WrapTokenV3ETH), previous implementation 0xfe928A7D8be9c8cece7e97f0ed5704f4fa2cb42A; proxy upgraded 2024-11-22 at block 21242166; proxy also upgraded 2023-09-12 at block 18118944; total supply ~3.17M wBETH on Ethereum; token labelled as Binance liquid staking",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    },
+    {
+      "url": "https://bscscan.com/address/0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "shows": "BSC wBETH proxy contract (FiatTokenProxy / same ZeppelinOS pattern), current BSC implementation 0xfe928A7D8be9c8cece7e97f0ed5704f4fa2cb42A (WrapTokenV2BSC, upgraded 2023-09-12), previous BSC implementation 0xA77E9Ac1a564d56e0a36b6f5126e881e3c5208ed (upgraded 2023-05-10); contract creator 0x86fd4673527f9d5999c5e490ab98766c0cfa8801 labelled 'Binance: Deployer 5'",
+      "chain": "Binance",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x9e021c9607bd3adb7424d3b25a2d35763ff180bb",
+      "shows": "Ethereum wBETH current implementation contract WrapTokenV3ETH; verified source contains StakedTokenV3 and WrapTokenV3ETH files; ABI exposes owner(), pauser(), masterMinter(), operator(), oracle(), ethReceiver(), exchangeRate(), moveToStakingAddress(), moveToUnwrapAddress(), updateOperator(), updateOracle(), updateEthReceiver(), requestWithdrawEth(), deposit() functions; hardcoded constant address 0x79973d557cd9dd87eb61e250cc2572c990E20196 used as staking vault in moveToStakingAddress; creator 0xAf19D92056636ed9b911bcd6ccd148773ec92a23",
+      "chain": "Ethereum",
+      "address": "0x9e021c9607bd3adb7424d3b25a2d35763ff180bb",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: proxy admin address for Ethereum wBETH proxy 0xa2E3356610840701BDf5611a53974510Ae27E2e1 not read on-chain this run — DeFiPunkd API and Etherscan readContract page both access-blocked; must be fetched by next run via defipunkd.com/api/contract/read?chainId=1&address=0xa2E3356610840701BDf5611a53974510Ae27E2e1&method=admin",
+    "D1: proxy admin address for BSC wBETH proxy 0xa2E3356610840701BDf5611a53974510Ae27E2e1 not read on-chain this run; must be fetched by next run via defipunkd.com/api/contract/read?chainId=56&address=0xa2E3356610840701BDf5611a53974510Ae27E2e1&method=admin",
+    "D1: owner(), masterMinter(), pauser(), operator(), oracle(), ethReceiver() values for Ethereum implementation 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB not live-read this run; needed for complete admin surface",
+    "D1: owner(), masterMinter(), pauser(), operator(), oracle(), ethReceiver() values for BSC implementation 0xfe928A7D8be9c8cece7e97f0ed5704f4fa2cb42A not live-read this run",
+    "D3: PeckShield-Audit-Report-wBETH-v1.0.pdf in-scope address table not extractable — github.com/peckshield domain access blocked; in-scope addresses from audit-era may differ from current deployment",
+    "D4: no protocol.github provided; no deployment broadcast artifacts available; Binance does not appear to publish a public GitHub for wBETH contracts",
+    "D8: hardcoded staking vault address 0x79973d557cd9dd87eb61e250cc2572c990E20196 role not fully verified on-chain — derived from Etherscan source code view only; actor class unknown"
+  ],
+  "protocol_metadata": {
+    "docs_url": "https://www.binance.com/en/support/faq/what-is-wbeth-e252366155174ba6887f6b32e3798273",
+    "audits": [
+      {
+        "firm": "PeckShield",
+        "url": "https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-wBETH-v1.0.pdf",
+        "date": "2023-04"
+      }
+    ],
+    "deployed_contracts_doc": "https://www.binance.com/en/support/announcement/binance-introduces-wrapped-beacon-eth-wbeth-on-eth-staking-a1197f34d832445db41654ad01f56b4d",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+        "role": "token (wBETH proxy, ZeppelinOS AdminUpgradeabilityProxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB",
+        "role": "other (wBETH implementation WrapTokenV3ETH, active since 2024-11-22)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xfe928A7D8be9c8cece7e97f0ed5704f4fa2cb42A",
+        "role": "other (wBETH implementation, inactive on Ethereum since 2024-11-22; still active on BSC as WrapTokenV2BSC)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x79973d557cd9dd87eb61e250cc2572c990E20196",
+        "role": "vault (hardcoded ETH staking vault address referenced in WrapTokenV3ETH moveToStakingAddress, derived from source)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+        "role": "token (wBETH proxy, ZeppelinOS AdminUpgradeabilityProxy, same address as Ethereum)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xfe928A7D8be9c8cece7e97f0ed5704f4fa2cb42A",
+        "role": "other (wBETH implementation WrapTokenV2BSC, active on BSC since 2023-09-12)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xA77E9Ac1a564d56e0a36b6f5126e881e3c5208ed",
+        "role": "other (wBETH implementation WrapTokenV1BSC, inactive since 2023-05-10, audit-era)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0x86fd4673527f9d5999c5e490ab98766c0cfa8801",
+        "role": "other (deployer EOA labelled Binance: Deployer 5)",
+        "actor_class": "eoa"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Binance Staked ETH (wBETH) is a liquid staking token issued by Binance. Users stake ETH through Binance's ETH Staking service and receive wBETH, a value-accruing receipt token that represents 1 staked ETH plus all accumulated staking rewards since 2023-04-27. Unlike BETH (the earlier Binance staking token), wBETH is transferable and usable in external DeFi protocols while rewards compound inside the token's exchange rate, which is updated daily. The token is deployed as a ZeppelinOS AdminUpgradeabilityProxy on both Ethereum and BNB Smart Chain, with Binance acting as sole administrator of the validator set, oracle, and proxy upgrade keys."
+  }
+}

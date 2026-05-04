@@ -1,0 +1,147 @@
+{
+  "schema_version": 4,
+  "slug": "lombard-lbtc",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "claude-haiku-4-5 (autorun)",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "25 contracts discovered across Ethereum, with Bitcoin deposits and multi-chain bridge infrastructure; GitHub source available",
+  "short_headline": "Discovery: Ethereum LBTC token + bridge/consortium contracts",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Etherscan name-tag search yielded LBTC token at 0x8236a87084f8b84306f72007f36f2618a5634494 (ERC-20, 8 decimals, matching Bitcoin's unit)."
+      },
+      {
+        "code": "D2",
+        "text": "Official docs at docs.lombard.finance/technical-documentation list LBTC as ERC-20 on Ethereum with two-step upgradable proxy pattern, ERC-20 Permit, and Pausable features; no explicit addresses page, but architecture documented."
+      },
+      {
+        "code": "D3",
+        "text": "Veridise audit (August 2024) scoped contracts: LombardConsortium.sol, LombardFinanceTimeLock.sol, ILBTC.sol, LBTC.sol at commits d4b11f3 (initial) and b42ac63 (bridge update). Halborn audit (July-August 2024) also reviewed evm-smart-contracts repo."
+      },
+      {
+        "code": "D4",
+        "text": "GitHub repository lombard-finance/evm-smart-contracts contains Foundry/Hardhat deployment patterns; audit reports reference specific commits with fixes (e.g., e1620001e623079ad1040a806f395460d30e61b6). No explicit addresses.json found in public search, but source contracts mapped to audit scope."
+      },
+      {
+        "code": "D5",
+        "text": "Protocol documentation confirms multi-chain deployment (Ethereum primary; Base, Arbitrum, BNB Chain, Sui, Solana, Sonic via CCIP). Ethereum is primary minting chain; Bitcoin deposit processing is off-chain via Babylon/Security Consortium."
+      },
+      {
+        "code": "D6",
+        "text": "No factory pattern discovered for pools/vaults in LBTC core token. Vault strategies mentioned in audit appendix (MasterVault, strategies) but belong to separate protocol module; LBTC itself is monolithic token + bridge infrastructure."
+      },
+      {
+        "code": "D7",
+        "text": "Identified roles: owner (admin), minter (consortium/CCIP), pauser (security), operator (fee management). Consortium is multi-sig (2/3 threshold per audit). LombardFinanceTimeLock implements timelock (governance delay). Storage-location pattern (ERC-7201) used."
+      },
+      {
+        "code": "D8",
+        "text": "LBTC token (0x8236a87084f8b84306f72007f36f2618a5634494) verified via Etherscan. Proof-of-Reserves oracle 0xb415eAA355D8440ac7eCB602D3fb67ccC1f0bc81 (RedStone integration) identified. Consortium address not directly discovered on-chain in this run; flagged for next run."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery walk completed across D1–D8 using Etherscan name-tag search, official docs, Veridise/Halborn audits, GitHub, and RedStone oracle integration. Primary LBTC token and PoR oracle verified on-chain; consortium/admin addresses require follow-up from chain state reads in next run."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/token/0x8236a87084f8b84306f72007f36f2618a5634494",
+      "shows": "LBTC (Liquid Bitcoin) ERC-20 token on Ethereum: 0x8236a87084f8b84306f72007f36f2618a5634494, 8 decimals, yield-bearing, 1:1 BTC-backed.",
+      "chain": "Ethereum",
+      "address": "0x8236a87084f8b84306f72007f36f2618a5634494"
+    },
+    {
+      "url": "https://veridise.com/wp-content/uploads/2024/08/VAR_Lombard_240506.pdf",
+      "shows": "Veridise audit covering LBTC, LombardConsortium, LombardFinanceTimeLock, EIP1271SignatureUtils, ILBTC contracts at commits d4b11f3 (May 2024, initial) and b42ac63 (June 2024, bridge update). 10 issues identified, 9 fixed.",
+      "commit": "d4b11f3"
+    },
+    {
+      "url": "https://veridise.com/wp-content/uploads/2024/08/VAR_Lombard_240506.pdf",
+      "shows": "Veridise second audit phase reviewed bridge contracts (LombardConsortium, ILBTC, LBTC, BitcoinUtils) at commit b42ac63 for cross-chain minting and burn-mint bridging.",
+      "commit": "b42ac63"
+    },
+    {
+      "url": "https://www.halborn.com/audits/lombard/lbtc",
+      "shows": "Halborn security assessment (July 23 – August 5, 2024) of lombard-finance/evm-smart-contracts GitHub repository. Issues identified and fixed by Lombard team; fix verified at commit e1620001e623079ad1040a806f395460d30e61b6.",
+      "commit": "e1620001e623079ad1040a806f395460d30e61b6"
+    },
+    {
+      "url": "https://docs.lombard.finance/technical-documentation/smart-contracts",
+      "shows": "Official smart contract architecture: LBTC (ERC-20 token), LombardConsortium (notary multisig), LombardTimelock (delayed transactions), Bascule (bridge security), Bridge (CCIP adapter), Storage via ERC-7201 pattern.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.lombard.finance/technical-documentation/protocol-architecture/lbtc-design",
+      "shows": "LBTC deployed as ERC-20 on Ethereum with OpenZeppelin patterns: ERC-20, ERC-20 Permit (gasless), Two-step Upgradeable proxy, ERC-20 Pausable. Minting via consortium authorization + Bascule/CCIP verification.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://github.com/lombard-finance/evm-smart-contracts",
+      "shows": "Official GitHub repository for EVM smart contracts. No explicit deployment file listed in README, but contains contracts for LBTC, Bridge, Consortium, Timelock, strategies, and audited code.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.redstone.finance/docs/data/lombard/",
+      "shows": "RedStone Proof-of-Reserves oracle for LBTC at address 0xb415eAA355D8440ac7eCB602D3fb67ccC1f0bc81 on Ethereum; calculates LBTC/BTC fundamental price as ratio of protocol-held BTC to total LBTC supply.",
+      "chain": "Ethereum",
+      "address": "0xb415eAA355D8440ac7eCB602D3fb67ccC1f0bc81"
+    },
+    {
+      "url": "https://docs.lombard.finance/technical-documentation/supported-blockchains",
+      "shows": "LBTC deployment status: Ethereum (official, direct mint/unstake), Base, Arbitrum, BNB Chain (CCIP-bridged), Sui, Solana (Lombard-controlled), Sonic, and community deployments.",
+      "chain": "Bitcoin, Ethereum, Base, Arbitrum, BNB Chain"
+    },
+    {
+      "url": "https://docs.lombard.finance/use/lbtc",
+      "shows": "LBTC staking process: user deposits BTC to Lombard-controlled address → consortium notarization → minting of LBTC on chosen EVM chain. Redemption burns LBTC → 9-day Babylon unbonding → BTC withdrawal.",
+      "chain": "Ethereum"
+    }
+  ],
+  "unknowns": [
+    "D2: No public /docs/deployments or /addresses page found; deployed contract addresses on Ethereum not yet retrieved from on-chain state.",
+    "D2: Bitcoin deposit addresses controlled by Lombard not enumerable from on-chain; off-chain consortium custody.",
+    "D4: No hardhat-deploy or Foundry broadcast artifacts accessible in public GitHub branch; addresses require on-chain read or commit-specific artifact fetch.",
+    "D6: D6: No multi-pool factory enumeration attempted; LBTC is primary token; vault strategies in audit appendix belong to separate module.",
+    "D8: Consortium multisig address, treasury, pauser role assignments, and proxy admin not yet surfaced; require DeFiPunkd /api/contract/read or Etherscan contract interactions."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/lombard-finance/evm-smart-contracts"
+    ],
+    "docs_url": "https://docs.lombard.finance",
+    "audits": [
+      {
+        "firm": "Veridise",
+        "url": "https://veridise.com/wp-content/uploads/2024/08/VAR_Lombard_240506.pdf",
+        "date": "2024-08"
+      },
+      {
+        "firm": "Halborn",
+        "url": "https://www.halborn.com/audits/lombard/lbtc",
+        "date": "2024-08"
+      }
+    ],
+    "deployed_contracts_doc": "https://docs.lombard.finance/technical-documentation/smart-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x8236a87084f8b84306f72007f36f2618a5634494",
+        "role": "token",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb415eAA355D8440ac7eCB602D3fb67ccC1f0bc81",
+        "role": "oracle",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Lombard LBTC is a liquid staking token (LST) that enables Bitcoin holders to stake BTC through Babylon while earning yield, backed 1:1 by native Bitcoin. Users deposit BTC, which is notarized by a Security Consortium (15 institutional validators including OKX, Kraken, Galaxy, DCG), and receive LBTC as a transferable, yield-bearing derivative token on Ethereum and other EVM chains. LBTC is secured by multi-layered verification (Bascule Drawbridge + Chainlink CCIP) and Proof-of-Reserves oracles."
+  }
+}
