@@ -35,11 +35,48 @@ export function cleanupSubmission(raw: unknown): CleanupResult {
   const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
   const COMMIT_RE = /^[0-9a-fA-F]{7,40}$/;
   const FETCHED_AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+  const AUDIT_DATE_RE = /^\d{4}(-\d{2}){0,2}$/;
   const ACTOR_CLASSES = new Set(["eoa", "multisig", "timelock", "governance", "unknown"]);
 
   if (cloned.protocol_metadata && typeof cloned.protocol_metadata === "object") {
     stripNulls(cloned.protocol_metadata, "protocol_metadata", changes);
     const meta = cloned.protocol_metadata as Record<string, unknown>;
+
+    // audits: smaller models routinely emit entries with missing/non-URL urls
+    // (placeholders like "(GitBook reference)") or non-conforming date strings
+    // ("unknown", "2021-Q2", bare year that's fine, "2024" works). Drop entries
+    // without a usable url; drop the date field if it doesn't match the schema
+    // pattern. url is required; date is optional, so this preserves the entry.
+    const audits = meta.audits;
+    if (Array.isArray(audits)) {
+      const kept = audits.filter((entry, i) => {
+        if (!entry || typeof entry !== "object") return false;
+        const row = entry as Record<string, unknown>;
+        const url = row.url;
+        if (typeof url !== "string") {
+          changes.push(`dropped protocol_metadata.audits[${i}] (missing url)`);
+          return false;
+        }
+        const norm = normalizeUrl(url);
+        try {
+          new URL(norm.value);
+        } catch {
+          changes.push(`dropped protocol_metadata.audits[${i}] (invalid url ${JSON.stringify(url)})`);
+          return false;
+        }
+        if (norm.value !== url) {
+          row.url = norm.value;
+          changes.push(`normalized protocol_metadata.audits[${i}].url (${norm.reason})`);
+        }
+        const date = row.date;
+        if (typeof date === "string" && !AUDIT_DATE_RE.test(date)) {
+          delete row.date;
+          changes.push(`dropped invalid protocol_metadata.audits[${i}].date (${JSON.stringify(date)})`);
+        }
+        return true;
+      });
+      if (kept.length !== audits.length) meta.audits = kept;
+    }
 
     // voting_token: require a valid address; if missing/malformed, drop the
     // whole object (it's optional, partial entries fail validation).
