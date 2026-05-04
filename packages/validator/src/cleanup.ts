@@ -26,6 +26,16 @@ export function cleanupSubmission(raw: unknown): CleanupResult {
     return value;
   });
 
+  // Models routinely emit `null` for optional protocol_metadata fields the
+  // schema declares as optional-but-not-nullable (arrays like `github`,
+  // `audits`, `admin_addresses`; nested fields like `audits[].date`). Every
+  // nullable schema field is also `.optional()`, so dropping null entries
+  // anywhere inside protocol_metadata is always safe and handles nested
+  // cases without enumerating each field.
+  if (cloned.protocol_metadata && typeof cloned.protocol_metadata === "object") {
+    stripNulls(cloned.protocol_metadata, "protocol_metadata", changes);
+  }
+
   const evidence = cloned.evidence;
   if (Array.isArray(evidence)) {
     evidence.forEach((entry, i) => {
@@ -55,6 +65,29 @@ export function cleanupSubmission(raw: unknown): CleanupResult {
   }
 
   return { cleaned: cloned, changes, errors };
+}
+
+function stripNulls(obj: unknown, path: string, changes: string[]): void {
+  if (Array.isArray(obj)) {
+    obj.forEach((item, i) => {
+      if (item !== null && typeof item === "object") {
+        stripNulls(item, `${path}[${i}]`, changes);
+      }
+    });
+    return;
+  }
+  if (obj && typeof obj === "object") {
+    const rec = obj as Record<string, unknown>;
+    for (const key of Object.keys(rec)) {
+      const val = rec[key];
+      if (val === null) {
+        delete rec[key];
+        changes.push(`stripped null at ${path}.${key}`);
+      } else if (typeof val === "object") {
+        stripNulls(val, `${path}.${key}`, changes);
+      }
+    }
+  }
 }
 
 function normalizeUrl(raw: string): { value: string; reason: string } {
