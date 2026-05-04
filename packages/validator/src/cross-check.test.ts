@@ -166,14 +166,14 @@ describe("crossCheck", () => {
   });
 
   it("does not warn for thinking-capable models", () => {
-    for (const model of ["claude-opus-4-7", "gpt-5.5-thinking", "gemini-3-pro", "o3-mini"]) {
+    for (const model of ["claude-opus-4-7", "gpt-5.5-thinking", "gemini-3-pro", "o3-mini", "grok-4", "grok-xai-4", "grok-built-by-xai"]) {
       const issues = crossCheck(sub({ model }), ctx());
       expect(issues.some((i) => i.field === "model")).toBe(false);
     }
   });
 
   it("warns when model does not run with extended thinking", () => {
-    for (const model of ["claude-sonnet-4-6", "gpt-5.5", "gemini-3-flash", "grok-4"]) {
+    for (const model of ["claude-sonnet-4-6", "gpt-5.5", "gemini-3-flash", "grok-3"]) {
       const issues = crossCheck(sub({ model }), ctx());
       expect(
         issues.some(
