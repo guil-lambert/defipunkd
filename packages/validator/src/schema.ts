@@ -27,10 +27,10 @@ const EvidenceSchema = z
   .object({
     url: z.string().url(),
     shows: z.string().min(1),
-    chain: z.string().optional(),
-    address: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
-    commit: z.string().regex(/^[0-9a-fA-F]{7,40}$/).optional(),
-    fetched_at: z.string().datetime().optional(),
+    chain: z.string().nullish(),
+    address: z.string().regex(/^0x[0-9a-fA-F]{40}$/).nullish(),
+    commit: z.string().regex(/^[0-9a-fA-F]{7,40}$/).nullish(),
+    fetched_at: z.string().datetime().nullish(),
   })
   .passthrough();
 
@@ -84,16 +84,16 @@ const AdminAddressSchema = z
 
 export const ProtocolMetadataSchema = z
   .object({
-    github: z.array(z.string().url()).optional(),
-    docs_url: z.string().url().nullable().optional(),
-    audits: z.array(AuditEntrySchema).optional(),
-    governance_forum: z.string().url().nullable().optional(),
-    voting_token: VotingTokenSchema.nullable().optional(),
-    bug_bounty_url: z.string().url().nullable().optional(),
-    security_contact: z.string().min(1).nullable().optional(),
-    deployed_contracts_doc: z.string().url().nullable().optional(),
-    admin_addresses: z.array(AdminAddressSchema).optional(),
-    upgradeability: z.enum(["immutable", "upgradeable", "mixed", "unknown"]).optional(),
+    github: z.array(z.string().url()).nullish(),
+    docs_url: z.string().url().nullish(),
+    audits: z.array(AuditEntrySchema).nullish(),
+    governance_forum: z.string().url().nullish(),
+    voting_token: VotingTokenSchema.nullish(),
+    bug_bounty_url: z.string().url().nullish(),
+    security_contact: z.string().min(1).nullish(),
+    deployed_contracts_doc: z.string().url().nullish(),
+    admin_addresses: z.array(AdminAddressSchema).nullish(),
+    upgradeability: z.enum(["immutable", "upgradeable", "mixed", "unknown"]).nullish(),
   })
   .passthrough();
 
