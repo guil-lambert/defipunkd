@@ -57,13 +57,23 @@ const rows: LandingRow[] = protocols.map((p) => {
     }
   }
   const tier = deriveTier(tierInput);
-  const slice_summary = sliceList.map((s) => ({
-    id: s.id,
-    label: s.label,
-    grade: s.grade,
-    headline: s.short_headline || s.headline || "",
-    partial: s.partial,
-  }));
+  const SEVERITY: Record<string, number> = { red: 0, orange: 1, gray: 2, green: 3 };
+  const slice_summary = sliceList.map((s) => {
+    let grade = s.grade;
+    if (s.partial && s.partialModelGrades && s.partialModelGrades.length > 0) {
+      const sorted = [...s.partialModelGrades].sort(
+        (a, b) => (SEVERITY[a.grade] ?? 9) - (SEVERITY[b.grade] ?? 9),
+      );
+      grade = sorted[0]?.grade ?? s.grade;
+    }
+    return {
+      id: s.id,
+      label: s.label,
+      grade,
+      headline: s.short_headline || s.headline || "",
+      partial: s.partial,
+    };
+  });
   return {
     slug: p.slug,
     name: p.name,

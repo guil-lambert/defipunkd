@@ -352,9 +352,13 @@
                 {#each [...row.slice_summary].sort((a, b) => (SLICE_ORDER[a.id] ?? 9) - (SLICE_ORDER[b.id] ?? 9)) as ss}
                   <li class="pp-row">
                     <span class="pp-label">{ss.label}</span>
-                    <span class="pp-chip" style:background={GRADE_BG[ss.grade]} style:color={GRADE_FG[ss.grade]}>
-                      {ss.partial ? "tentative" : ss.grade === "gray" ? "unknown" : ss.grade}
-                    </span>
+                    {#if ss.partial}
+                      <span class="pp-chip pp-chip-tentative" style:background={GRADE_BG[ss.grade]}>tentative</span>
+                    {:else}
+                      <span class="pp-chip" style:background={GRADE_BG[ss.grade]} style:color={GRADE_FG[ss.grade]}>
+                        {ss.grade === "gray" ? "unknown" : ss.grade}
+                      </span>
+                    {/if}
                     <span class="pp-headline">{ss.headline}</span>
                   </li>
                 {/each}
@@ -728,6 +732,11 @@
     border-radius: 999px;
     justify-self: start;
     white-space: nowrap;
+  }
+  .pp-chip-tentative {
+    color: #fff;
+    border: 1px dashed rgba(255, 255, 255, 0.55);
+    padding: 0.02rem 0.35rem;
   }
   .pp-headline {
     color: var(--text);

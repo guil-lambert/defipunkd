@@ -75,16 +75,19 @@ function partialFillGrade(s: SliceAssessment): string {
       <a href={`#${idp}${s.id}`} class="row-link">
         <span class="swatch" aria-hidden="true"></span>
         <span class="dim">{s.label}</span>
-        {isUncertain(s) ? (
+        {s.partial ? (
           <span
             class="chip chip-partial"
-            title={s.partial
-              ? `tentative — ${s.models?.length ?? 0}/3 models submitted`
-              : `tentative consensus${s.tentative_reasons?.length ? ` — ${s.tentative_reasons.join("; ")}` : ""}`}
+            title={`tentative — ${s.models?.length ?? 0}/3 models submitted`}
           >
-            {chipLabel(fillGrade)}{s.partial && (
-              <span class="chip-suffix"> · {s.models?.length ?? 0}/3</span>
-            )}
+            {chipLabel(fillGrade)}<span class="chip-suffix"> · {s.models?.length ?? 0}/3</span>
+          </span>
+        ) : s.tentative ? (
+          <span
+            class="chip chip-tentative"
+            title={`tentative consensus${s.tentative_reasons?.length ? ` — ${s.tentative_reasons.join("; ")}` : ""}`}
+          >
+            tentative
           </span>
         ) : (
           <span class="chip">{chipLabel(s.grade)}</span>
@@ -168,13 +171,20 @@ function partialFillGrade(s: SliceAssessment): string {
       rgba(255,255,255,0.35) 4px 8px
     );
   }
-  .chip-partial {
-    border: 1px dashed rgba(0,0,0,0.45);
+  .chip.chip-partial,
+  .row .chip.chip-partial {
+    color: #171717;
+    border: 1px dashed rgba(255,255,255,0.55);
     background-image: repeating-linear-gradient(
       135deg,
       transparent 0 4px,
       rgba(255,255,255,0.35) 4px 7px
     );
+  }
+  .chip-tentative {
+    background: oklch(0.88 0.085 75);
+    color: #2a1a00;
+    border: 1px dashed oklch(0.65 0.120 75);
   }
   .chip-suffix {
     font-weight: 600;

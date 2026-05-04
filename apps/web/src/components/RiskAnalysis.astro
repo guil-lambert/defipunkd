@@ -177,6 +177,15 @@ const TOP_EVIDENCE = 2;
 function partialPillText(modelCount: number): string {
   return `${modelCount}/${QUORUM_MIN} model${modelCount === 1 ? "" : "s"} submitted`;
 }
+
+function partialFillGrade(s: SliceAssessment): string {
+  if (!s.partial || !s.partialModelGrades || s.partialModelGrades.length === 0) return s.grade;
+  const order: Record<string, number> = { red: 0, orange: 1, gray: 2, green: 3 };
+  const sorted = [...s.partialModelGrades].sort(
+    (a, b) => (order[a.grade] ?? 9) - (order[b.grade] ?? 9),
+  );
+  return sorted[0]?.grade ?? "gray";
+}
 ---
 <section class="risk-analysis" id={`${idp}risk-analysis`}>
   <h2>Risk analysis</h2>
@@ -272,7 +281,7 @@ function partialPillText(modelCount: number): string {
 
   <ol class="cards">
     {gradedSlices.map((s) => (
-      <li id={`${idp}${s.id}`} class:list={["card", `grade-${s.grade}`, { partial: isUncertain(s) }]} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
+      <li id={`${idp}${s.id}`} class:list={["card", `grade-${partialFillGrade(s)}`, { partial: isUncertain(s) }]} title={!s.partial && s.tentative_reasons && s.tentative_reasons.length > 0 ? `Tentative consensus — ${s.tentative_reasons.join("; ")}` : undefined}>
         <details class="body card-details">
           <summary class="card-summary">
             <div class="meta">
@@ -773,38 +782,51 @@ function partialPillText(modelCount: number): string {
   .chip.grade-gray   { background: oklch(0.72 0.015 235); color: #0d1114; }
   .chip-partial {
     background: var(--surface-raised);
-    color: var(--text);
-    border: 1px dashed color-mix(in oklab, var(--text-muted) 50%, transparent);
+    color: #171717;
+    border: 1px dashed rgba(255,255,255,0.55);
     font-size: 0.68rem;
     letter-spacing: 0.04em;
     text-transform: none;
     font-weight: 600;
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 4px,
+      rgba(255,255,255,0.35) 4px 7px
+    );
   }
+  .card.grade-red    .chip.chip-partial { background-color: oklch(0.62 0.170 22); }
+  .card.grade-orange .chip.chip-partial { background-color: oklch(0.78 0.140 75); }
+  .card.grade-green  .chip.chip-partial { background-color: oklch(0.74 0.140 150); }
+  .card.grade-gray   .chip.chip-partial { background-color: oklch(0.72 0.015 235); }
   .card.partial {
     border-style: dashed;
     border-width: 2px;
     border-color: color-mix(in oklab, var(--grade-gray) 55%, var(--surface-raised));
     border-left: 0;
     background:
-      repeating-linear-gradient(135deg, var(--grade-gray) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      repeating-linear-gradient(135deg, transparent 0 4px, rgba(255,255,255,0.35) 4px 8px) left / 10px 100% no-repeat,
+      linear-gradient(var(--grade-gray), var(--grade-gray)) left / 10px 100% no-repeat,
       var(--surface);
   }
   .card.partial.grade-green {
     border-color: color-mix(in oklab, var(--grade-green) 55%, var(--surface-raised));
     background:
-      repeating-linear-gradient(135deg, var(--grade-green) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      repeating-linear-gradient(135deg, transparent 0 4px, rgba(255,255,255,0.35) 4px 8px) left / 10px 100% no-repeat,
+      linear-gradient(var(--grade-green), var(--grade-green)) left / 10px 100% no-repeat,
       var(--surface);
   }
   .card.partial.grade-orange {
     border-color: color-mix(in oklab, var(--grade-orange) 55%, var(--surface-raised));
     background:
-      repeating-linear-gradient(135deg, var(--grade-orange) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      repeating-linear-gradient(135deg, transparent 0 4px, rgba(255,255,255,0.35) 4px 8px) left / 10px 100% no-repeat,
+      linear-gradient(var(--grade-orange), var(--grade-orange)) left / 10px 100% no-repeat,
       var(--surface);
   }
   .card.partial.grade-red {
     border-color: color-mix(in oklab, var(--grade-red) 55%, var(--surface-raised));
     background:
-      repeating-linear-gradient(135deg, var(--grade-red) 0 4px, var(--surface) 4px 8px) left / 10px 100% no-repeat,
+      repeating-linear-gradient(135deg, transparent 0 4px, rgba(255,255,255,0.35) 4px 8px) left / 10px 100% no-repeat,
+      linear-gradient(var(--grade-red), var(--grade-red)) left / 10px 100% no-repeat,
       var(--surface);
   }
 
