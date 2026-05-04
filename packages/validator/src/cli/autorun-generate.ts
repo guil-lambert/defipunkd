@@ -1,23 +1,22 @@
 #!/usr/bin/env tsx
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { buildPrompt, PROMPT_VERSION, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
+import { buildPrompt, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { getProtocolMetadata } from "@defipunkd/registry";
-import { SubmissionSchema } from "../schema";
-import { cleanupSubmission } from "../cleanup";
 import { findRepoRoot, loadSnapshot } from "../repo";
 
 type QueueEntry = { slug: string; slice: SliceId };
 
-type Args = { count: number; model: string; slice: SliceId | null };
+type Args = { count: number; model: string; slice: SliceId | null; slug: string | null };
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null };
+  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count") out.count = parseInt(argv[++i] ?? "10", 10);
     else if (argv[i] === "--model") out.model = argv[++i] ?? out.model;
     else if (argv[i] === "--slice") out.slice = (argv[++i] ?? null) as SliceId | null;
+    else if (argv[i] === "--slug") out.slug = argv[++i] ?? null;
   }
   return out;
 }
@@ -34,7 +33,7 @@ async function main(): Promise<number> {
   const snapshot = loadSnapshot(root);
   const submissionsDir = join(root, "data", "submissions");
 
-  const queue = buildQueue(snapshot, submissionsDir, args.slice).slice(0, args.count);
+  const queue = buildQueue(snapshot, submissionsDir, args.slice, args.slug).slice(0, args.count);
   if (queue.length === 0) {
     console.log("queue empty — nothing to do");
     return 0;
@@ -45,6 +44,13 @@ async function main(): Promise<number> {
 
   const analysisDate = new Date().toISOString().slice(0, 10);
   let written = 0;
+  const totals = {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheCreateTokens: 0,
+    cacheReadTokens: 0,
+    webSearches: 0,
+  };
 
   for (const { slug, slice } of queue) {
     const protocol = snapshot.protocols[slug];
@@ -63,10 +69,21 @@ async function main(): Promise<number> {
           }))
         : null;
 
+    // Mainnet-first for fresh slugs: when there is no addressBook ratchet yet,
+    // restrict the prompt's chain list to ethereum (if present) so the model
+    // doesn't burn web_search calls cataloguing L2 deployments before the
+    // canonical mainnet contracts are pinned. Once a ratchet exists, expose
+    // the full chain list so subsequent runs can extend coverage.
+    const mainnetFocus = addressBook === null && protocol.chains.includes("ethereum");
+    const promptChains = mainnetFocus ? ["ethereum"] : protocol.chains;
+    if (mainnetFocus) {
+      console.log(`[${slug}/${slice}] fresh slug — restricting to ethereum mainnet (full chain list: ${protocol.chains.join(",")})`);
+    }
+
     const prompt = buildPrompt(slice, {
       slug,
       name: protocol.name,
-      chains: protocol.chains,
+      chains: promptChains,
       category: protocol.category || null,
       website: protocol.website,
       github: protocol.github ?? [],
@@ -79,8 +96,9 @@ async function main(): Promise<number> {
     try {
       const resp = await client.messages.create({
         model: args.model,
-        max_tokens: 4096,
-        // Cast covers SDK versions where cache_control isn't in TextBlockParam yet.
+        max_tokens: 16384,
+        // Cast covers SDK versions where cache_control / web_search_20250305
+        // aren't in the typed surface yet.
         system: [
           {
             type: "text",
@@ -88,8 +106,19 @@ async function main(): Promise<number> {
             cache_control: { type: "ephemeral" },
           },
         ] as unknown as string,
+        tools: [
+          {
+            type: "web_search_20250305",
+            name: "web_search",
+            max_uses: 8,
+          },
+        ] as unknown as never,
         messages: [
-          { role: "user", content: "Produce the JSON assessment now." },
+          {
+            role: "user",
+            content:
+              "Run the slice's discovery / evaluation steps. You have a `web_search` tool available — use it to fetch the URLs the prompt instructs you to fetch (block-explorer pages, docs, GitHub, audits, the read-API surfacers). After your investigation, produce the final JSON assessment object as the last message in your response.",
+          },
         ],
       });
 
@@ -97,51 +126,100 @@ async function main(): Promise<number> {
         .filter((c: { type: string }) => c.type === "text")
         .map((c) => (c as { type: "text"; text: string }).text)
         .join("");
-      const jsonStart = text.indexOf("{");
-      const jsonEnd = text.lastIndexOf("}");
-      if (jsonStart === -1 || jsonEnd === -1) {
-        console.error(`[${slug}/${slice}] no JSON in response; skipping`);
-        continue;
-      }
-      const raw = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
-      raw.model = `${args.model} (autorun)`;
-      raw.chat_url = null;
 
-      const { cleaned, errors } = cleanupSubmission(raw);
-      if (errors.length > 0) {
-        console.error(`[${slug}/${slice}] cleanup errors: ${errors.join("; ")}`);
+      if (text.length === 0) {
+        console.error(`[${slug}/${slice}] empty response; skipping`);
         continue;
       }
 
-      const parsed = SubmissionSchema.safeParse(cleaned);
-      if (!parsed.success) {
-        console.error(
-          `[${slug}/${slice}] schema invalid: ${parsed.error.issues
-            .slice(0, 3)
-            .map((i) => `${i.path.join(".")}: ${i.message}`)
-            .join(" | ")}`,
-        );
-        continue;
+      const stopReason = (resp as { stop_reason?: string }).stop_reason;
+      if (stopReason && stopReason !== "end_turn") {
+        console.warn(`[${slug}/${slice}] stop_reason=${stopReason} — saving raw output anyway`);
       }
 
-      const filename = buildFilename(args.model, analysisDate, parsed.data);
+      const filename = buildFilename(args.model, analysisDate, slug, slice);
       const outDir = join(submissionsDir, slug, slice);
       mkdirSync(outDir, { recursive: true });
-      writeFileSync(resolve(outDir, filename), JSON.stringify(parsed.data, null, 2) + "\n");
-      console.log(`[${slug}/${slice}] wrote ${filename} (grade=${parsed.data.grade})`);
+      writeFileSync(resolve(outDir, filename), text);
+
+      const usage = (resp as unknown as {
+        usage?: {
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_creation_input_tokens?: number;
+          cache_read_input_tokens?: number;
+          server_tool_use?: { web_search_requests?: number };
+        };
+      }).usage ?? {};
+      const inTok = usage.input_tokens ?? 0;
+      const outTok = usage.output_tokens ?? 0;
+      const cacheCreate = usage.cache_creation_input_tokens ?? 0;
+      const cacheRead = usage.cache_read_input_tokens ?? 0;
+      const searches = usage.server_tool_use?.web_search_requests ?? 0;
+      totals.inputTokens += inTok;
+      totals.outputTokens += outTok;
+      totals.cacheCreateTokens += cacheCreate;
+      totals.cacheReadTokens += cacheRead;
+      totals.webSearches += searches;
+      const callCost = estimateCost(args.model, {
+        inputTokens: inTok,
+        outputTokens: outTok,
+        cacheCreateTokens: cacheCreate,
+        cacheReadTokens: cacheRead,
+        webSearches: searches,
+      });
+      console.log(
+        `[${slug}/${slice}] wrote ${filename} (${text.length} bytes) — ` +
+          `in=${inTok} out=${outTok} cache_w=${cacheCreate} cache_r=${cacheRead} ` +
+          `searches=${searches} cost=$${callCost.toFixed(4)}`,
+      );
       written++;
     } catch (err) {
       console.error(`[${slug}/${slice}] ${(err as Error).message}`);
     }
   }
 
+  const totalCost = estimateCost(args.model, totals);
   console.log(`\nautorun wrote ${written} / ${queue.length} submissions`);
+  console.log(
+    `usage: input=${totals.inputTokens} output=${totals.outputTokens} ` +
+      `cache_write=${totals.cacheCreateTokens} cache_read=${totals.cacheReadTokens} ` +
+      `web_searches=${totals.webSearches}`,
+  );
+  console.log(`estimated cost: $${totalCost.toFixed(4)} (model=${args.model})`);
   return 0;
 }
 
-function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string, sliceFilter: SliceId | null): QueueEntry[] {
+// Per-million-token rates (USD). Pricing is best-effort and may drift; treat
+// the printed cost as an estimate, not a bill. Web search is $10 per 1k calls.
+const PRICING: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
+  "claude-sonnet-4-6": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
+  "claude-opus-4-7": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
+  "claude-opus-4-6": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
+  "claude-opus-4-5": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
+  "claude-haiku-4-5": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
+};
+
+function estimateCost(
+  model: string,
+  u: { inputTokens: number; outputTokens: number; cacheCreateTokens: number; cacheReadTokens: number; webSearches: number },
+): number {
+  const key = Object.keys(PRICING).find((k) => model.startsWith(k));
+  if (!key) return 0;
+  const p = PRICING[key]!;
+  return (
+    (u.inputTokens * p.input) / 1_000_000 +
+    (u.outputTokens * p.output) / 1_000_000 +
+    (u.cacheCreateTokens * p.cacheWrite) / 1_000_000 +
+    (u.cacheReadTokens * p.cacheRead) / 1_000_000 +
+    (u.webSearches * 10) / 1000
+  );
+}
+
+function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string, sliceFilter: SliceId | null, slugFilter: string | null): QueueEntry[] {
   const tasks: Array<QueueEntry & { priority: number; tvl: number | null; isDiscovery: boolean }> = [];
   for (const [slug, p] of Object.entries(snapshot.protocols)) {
+    if (slugFilter !== null && slug !== slugFilter) continue;
     if (p.delisted_at || p.is_dead) continue;
 
     const discoveryDir = join(submissionsDir, slug, "discovery");
@@ -180,13 +258,13 @@ function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: s
   return tasks.map(({ slug, slice }) => ({ slug, slice }));
 }
 
-function buildFilename(model: string, date: string, submission: { slug: string; slice: string }): string {
+function buildFilename(model: string, date: string, slug: string, slice: string): string {
   const modelSlug = model
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   const hash = createHash("sha256")
-    .update(`${submission.slug}|${submission.slice}|${model}|${date}|${process.pid}|${Date.now()}`)
+    .update(`${slug}|${slice}|${model}|${date}|${process.pid}|${Date.now()}`)
     .digest("hex")
     .slice(0, 4);
   return `autorun-${modelSlug}-${date}-${hash}.json`;
