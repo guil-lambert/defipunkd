@@ -1,0 +1,117 @@
+---
+import type { Protocol, LoadedAssessment, AssessmentSliceId, LoadedSubmission } from "@defipunkd/registry";
+import { assessProtocol, cexAssessment, isUncertain, type SliceAssessment } from "../lib/rationale";
+
+interface Props {
+  protocol: Protocol;
+  assessments?: Map<AssessmentSliceId, LoadedAssessment>;
+  submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
+}
+const { protocol, assessments, submissions } = Astro.props;
+
+// Flip when the schema/registry gains a real human/AI distinction.
+const HUMAN_AUDITORS_PRESENT = false;
+
+const QUORUM_MIN = 3;
+const slices: SliceAssessment[] = protocol.category === "CEX"
+  ? cexAssessment()
+  : assessProtocol(protocol, assessments, submissions);
+
+let unverified = 0;
+let incomplete = 0;
+let aiOnly = 0;
+let verified = 0;
+
+for (const s of slices) {
+  const modelCount = s.models?.length ?? 0;
+  if (modelCount === 0 && !isUncertain(s) && s.grade === "gray") {
+    unverified++;
+  } else if (s.partial) {
+    incomplete++;
+  } else if (modelCount >= QUORUM_MIN || (s.models && s.models.length > 0)) {
+    if (!HUMAN_AUDITORS_PRESENT) aiOnly++;
+    else verified++;
+  } else {
+    unverified++;
+  }
+}
+
+const total = slices.length;
+
+const parts: string[] = [];
+if (verified > 0) parts.push(`${verified} human-verified`);
+if (aiOnly > 0) parts.push(`${aiOnly} AI-only`);
+if (incomplete > 0) parts.push(`${incomplete} incomplete`);
+if (unverified > 0) parts.push(`${unverified} unverified`);
+
+const allClean = unverified === 0 && incomplete === 0 && aiOnly === 0 && verified === total && total > 0;
+
+let headline = "Preliminary data — read with caution";
+let subline = "";
+let tone: "warn" | "ok" = "warn";
+if (total === 0) {
+  headline = "No analysis on file";
+  subline = "No dimensions are tracked for this protocol yet.";
+} else if (unverified === total) {
+  headline = "No analysis on file";
+  subline = "This page is a placeholder — no model has graded any dimension yet.";
+} else if (allClean) {
+  headline = "Human-verified across all dimensions";
+  subline = `${parts.join(" · ")} of ${total} dimension${total === 1 ? "" : "s"}.`;
+  tone = "ok";
+} else if (aiOnly > 0 && unverified === 0 && incomplete === 0) {
+  headline = "AI-only consensus — not human-verified";
+  subline = `All ${aiOnly} graded dimension${aiOnly === 1 ? "" : "s"} rely on LLM runs alone. No human auditor has signed off yet.`;
+} else {
+  subline = `${parts.join(" · ")} of ${total} dimension${total === 1 ? "" : "s"}. Treat grades as a starting point, not a verdict.`;
+}
+---
+<aside class:list={["dq-banner", `dq-${tone}`]} role="status" aria-label="Data quality summary">
+  <span class="dq-icon" aria-hidden="true">{tone === "ok" ? "✓" : "⚠"}</span>
+  <div class="dq-text">
+    <strong class="dq-headline">{headline}</strong>
+    <span class="dq-subline">{subline}</span>
+  </div>
+</aside>
+
+<style>
+  .dq-banner {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin: 1rem 0 1.25rem;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid var(--grade-orange);
+    background: color-mix(in oklab, var(--grade-orange) 14%, var(--surface));
+    border-radius: 4px;
+    color: var(--text);
+  }
+  .dq-banner.dq-ok {
+    border-left-color: var(--grade-green);
+    background: color-mix(in oklab, var(--grade-green) 12%, var(--surface));
+  }
+  .dq-icon {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    color: var(--grade-orange);
+  }
+  .dq-banner.dq-ok .dq-icon {
+    color: var(--grade-green);
+  }
+  .dq-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    line-height: 1.4;
+  }
+  .dq-headline {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+  }
+  .dq-subline {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+</style>
