@@ -89,14 +89,8 @@ export function isThinkingModel(model: string): boolean {
   // Gemini: Pro tier (3+) ships with built-in deep thinking; -flash is
   // speed-tuned and does not.
   if (/gemini-(?:3|[4-9])(?:\.\d+)?-pro/.test(m)) return true;
-  // xAI: Grok 4+ runs extended reasoning by default. Match grok-4, grok-xai-4,
-  // grok-5, etc. — also treat version-less aliases (e.g. grok-built-by-xai)
-  // as thinking, since they identify the current default model (Grok 4+).
-  if (/\bgrok\b/.test(m)) {
-    const versions = m.match(/\d+/g);
-    if (!versions) return true;
-    if (versions.some((v) => parseInt(v, 10) >= 4)) return true;
-  }
+  // Claude Sonnet 4.6 runs with extended thinking by default in our autorun.
+  if (/claude-sonnet-4-6/.test(m)) return true;
   return false;
 }
 
