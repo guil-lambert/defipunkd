@@ -15,7 +15,8 @@
  *
  * Tip: set GITHUB_TOKEN to lift the unauthenticated rate limit.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { writeStableTimestampedJson } from "../stable-write";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -155,8 +156,8 @@ async function main(): Promise<void> {
         }),
       };
       mkdirSync(dirname(loaded.path), { recursive: true });
-      writeFileSync(loaded.path, `${JSON.stringify(out, null, 2)}\n`);
-      written++;
+      const result = writeStableTimestampedJson(loaded.path, out as unknown as Record<string, unknown>, "extracted_at");
+      if (result.wrote) written++;
     }
   }
 

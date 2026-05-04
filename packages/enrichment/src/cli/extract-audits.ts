@@ -15,7 +15,8 @@
  *   pnpm --filter @defipunkd/enrichment exec tsx src/cli/extract-audits.ts
  *   pnpm --filter @defipunkd/enrichment exec tsx src/cli/extract-audits.ts --slug uniswap
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { writeStableTimestampedJson } from "../stable-write";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -126,7 +127,7 @@ function writeOutput(repoRoot: string, slug: string, audits: AuditOut[], extract
     extracted_at: extractedAt,
     audits,
   };
-  writeFileSync(join(outDir, "audits.json"), `${JSON.stringify(out, null, 2)}\n`);
+  writeStableTimestampedJson(join(outDir, "audits.json"), out, "extracted_at");
 }
 
 function loadSnapshot(repoRoot: string): Snapshot {

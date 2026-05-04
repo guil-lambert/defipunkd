@@ -16,7 +16,8 @@
  *   pnpm --filter @defipunkd/enrichment exec tsx src/cli/extract-bounties.ts
  *   pnpm --filter @defipunkd/enrichment exec tsx src/cli/extract-bounties.ts --slug aave
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { writeStableTimestampedJson } from "../stable-write";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -119,7 +120,7 @@ function writeOutput(
     chosen_url: chosenUrl,
     matched,
   };
-  writeFileSync(join(outDir, "bounties.json"), `${JSON.stringify(out, null, 2)}\n`);
+  writeStableTimestampedJson(join(outDir, "bounties.json"), out, "extracted_at");
 }
 
 function loadSnapshot(repoRoot: string): Snapshot {

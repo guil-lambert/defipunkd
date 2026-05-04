@@ -25,8 +25,8 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
+import { writeStableTimestampedJson } from "../stable-write";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -292,7 +292,7 @@ function writeOutput(
     out.warnings = result.parsed.warnings;
   }
   const outPath = join(outDir, "adapter.json");
-  writeFileSync(outPath, `${JSON.stringify(out, null, 2)}\n`);
+  writeStableTimestampedJson(outPath, out, "extracted_at");
 }
 
 /**
