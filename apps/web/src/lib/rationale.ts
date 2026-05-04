@@ -237,6 +237,9 @@ export function assessProtocol(
     if (subs && subs.length > 0 && s.grade === "gray") {
       return { ...s, ...partialFromSubmissions(subs) };
     }
+    if ((s.id === "verifiability" || s.id === "autonomy") && s.grade !== "gray") {
+      return { ...s, tentative: true };
+    }
     return s;
   });
 }
