@@ -1,0 +1,546 @@
+[
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "claude-sonnet-4-6",
+  "chat_url": "https://claude.ai/share/0b4e0812-3ae3-4268-b356-50300973fb5c",
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "No external DeFi dependencies, but instant-upgrade governance power (no timelock) can silently introduce new dependencies for ~100% of ~$2B TVS; Guardian pause is bounded to 3 months",
+  "short_headline": "Stage 1 bridge, no oracle deps, no exit window",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The OptimismPortal (0x49048044D57e1C92A77f79988d21Fa8fAF74E97e) calls only internal OP Stack contracts: DisputeGameFactoryProxy (0x43edB88C4B80fDD2AdFF2412A7BebF9dD42cB40e) to verify withdrawal dispute games, MIPS (0x6463dEE3828677F6270d83d45408044fc5eDB908) as the fault-proof execution engine, and PreimageOracle (0x1fb8cdFc6831fc866Ed9C51aF8817Da5c287aDD3) used by MIPS. There are no external price oracles (no Chainlink, Pyth, Redstone), no AMM pool reads, and no third-party yield wrappers. The L1StandardBridge (0x3154Cf16ccdb4C6d922629664174b904d80F2C35) is a simple ERC-20 escrow with no external integrations. Bridging correctness depends solely on the Ethereum L1 state and OP Stack's own dispute-game logic."
+      },
+      {
+        "code": "A2",
+        "text": "Three off-chain actor roles exist. (1) Batch Sender (Sequencer): EOA 0x5050f69a9786f081509234f1a7f4684b5e5b76c9 managed by Coinbase Technologies — sole permissioned actor for ordering and submitting L2 transaction batches to Ethereum. A sequencer failure causes a liveness issue: users can force transactions via L1, but with up to a 12-hour delay. This cannot cause principal loss. (2) Output Proposer: EOA 0x642229f238fb9de03374be34b0ed8d9de80752c5 managed by Coinbase. Since permissionless fault proofs activated on Base mainnet on October 30, 2024, anyone can propose state roots via DisputeGameFactory — the Coinbase proposer is now a convenience, not a trust requirement. (3) Challenger: EOA 0x8Ca1E12404d16373Aef756179B185F27b2994F3a managed by Coinbase; Base operates a challenger continuously, but challenges are also fully permissionless. The permissionless proof system means a single honest challenger guarantees safety regardless of Coinbase's behavior."
+      },
+      {
+        "code": "A3",
+        "text": "The Base Bridge IS the canonical L1↔L2 bridge. Deposits are native ETH/ERC-20 locking on L1; withdrawals are verified via the on-chain FaultDisputeGame + 7-day challenge window. No non-canonical bridge (LayerZero, Wormhole, Axelar, custom multisig) carries material TVL in the core bridge flow. The Base-Solana bridge (0x3eff766C76a1be2Ce1aCF2B69c78bCae257D5188) is documented but is a separate, opt-in product entirely outside the canonical Ethereum↔Base bridge scope assessed here."
+      },
+      {
+        "code": "A4",
+        "text": "Not applicable. The canonical bridge holds native ETH and ERC-20 tokens directly in escrow on L1; there is no nested collateral, restaking chain, or receipt-of-receipt design."
+      },
+      {
+        "code": "A5",
+        "text": "Base is built on Optimism's open-source OP Stack. Contracts are substantially derived from the OP Stack codebase."
+      },
+      {
+        "code": "A6",
+        "text": "Three LIVE fallback mechanisms are active: (i) Guardian role (0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2, Gnosis Safe — 'Base Multisig 1' per L2Beat) can pause withdrawals globally via SuperchainConfig; each pause auto-expires after 3 months if not extended or unpaused by the Base Governance Multisig. This covers catastrophic bugs. (ii) Guardian can blacklist individual FaultDisputeGame contracts whose resolution is detected as incorrect, requiring affected users to re-prove against a valid game. (iii) Guardian can change RESPECTED_GAME_TYPE back to PermissionedDisputeGame as an emergency fallback if the FaultDisputeGame implementation has a critical class-wide bug. All three mechanisms are live and enforcing on-chain today. The 3-month auto-expiry on pauses prevents indefinite censorship via Guardian. The DisputeGameFactory's 7-day dispute window itself is a live fallback against invalid withdrawal proposals."
+      },
+      {
+        "code": "A7",
+        "text": "Base runs a single centralized sequencer (Coinbase EOA 0x5050f69a9786f081509234f1a7f4684b5e5b76c9). Sequencer failure halts normal L2 throughput, but users can bypass it by submitting forced transactions directly to the L1 inbox, with up to a 12-hour inclusion delay. All batch data is published to Ethereum L1 as blobs/calldata, enabling full permissionless state reconstruction. This is a liveness dependency but not a safety dependency. The sequencer cannot steal funds or prevent eventual withdrawals."
+      },
+      {
+        "code": "A8",
+        "text": "Since October 2024, output proposals and challenge participation are fully permissionless via DisputeGameFactory. Any party can run op-proposer or op-challenger. Base operates its own challenger to ensure at least one honest challenger is always running. If ALL parties stopped proposing, new withdrawals could not finalize until a new proposal is made — a liveness issue, not a principal-loss issue, since existing proven withdrawals would still finalize through the timelock expiry."
+      },
+      {
+        "code": "A9",
+        "text": "The ProxyAdmin Owner on L1 is 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c (Gnosis Safe), which per L2Beat is a 2/2 multisig composed of the Base Coordinator Multisig and the Base Security Council (9/12 of independent entities, activated April 2025). L2Beat explicitly states: 'There is no delay on upgrades.' This means governance can: (a) upgrade OptimismPortal to a new implementation that calls a malicious or different external DisputeGameFactory, (b) change the MIPS fault-proof program to an altered version, (c) add or replace any core component — all without a timelock or exit window for users. As of analysis date, Base is Stage 1 (not Stage 2), precisely because this instant upgrade power exists. The Security Council's 9/12 composition from independent entities (Aerodrome, Moonwell, ChainSafe, Talent Protocol, individuals in diverse jurisdictions) reduces but does not eliminate this trust assumption."
+      }
+    ],
+    "steelman": {
+      "red": "The 2/2 Base Governance Multisig holds instant upgrade power over ~$2B in the OptimismPortal with no timelock or user exit window, meaning a governance compromise or collusion could swap DisputeGameFactory or OptimismPortal logic to drain the escrow without users having any on-chain recourse.",
+      "orange": "While instant upgrades are possible, they require 9/12 Security Council (independent, geographically diverse entities) plus the Base Coordinator Multisig to both sign; Guardian pauses auto-expire in 3 months; there are no external oracle or AMM dependencies that can fail autonomously; and permissionless fault proofs ensure any valid withdrawal can be finalized by any honest participant.",
+      "green": "The bridge has zero external price oracle or DeFi protocol dependencies that could cause autonomous principal loss; fault proofs are permissionless so even if Coinbase disappears any single honest challenger keeps withdrawals safe; and Guardian's pause powers are bounded by a 3-month auto-expiry preventing indefinite censorship."
+    },
+    "verdict": "Choosing orange because the dominant unmitigated risk is the instant-upgrade governance path (A9): Base Governance Multisig can upgrade the OptimismPortal or DisputeGameFactory without any timelock, potentially introducing malicious external dependencies affecting ~100% of TVS (~$2B+ ETH held in OptimismPortal 0x49048044D57e1C92A77f79988d21Fa8fAF74E97e). The green steel-man's observation that there are no autonomous external dependencies is correct — the bridge has no oracle feeds or AMM pool calls that can fail on their own — but this does not eliminate the governance-mutation path. The red steel-man overstates the risk: collusion requires both the 9/12 Security Council (11 independent entities) and the Base Coordinator to act maliciously simultaneously, making spontaneous principal loss very unlikely. Orange fits: governance can materially change expected behavior or introduce new deps without user exit window (Stage 1 characteristic), but the trust model meaningfully bounds the practical blast radius relative to a red single-actor-controlled system. Module: single canonical bridge holds ~100% of protocol TVS; grade orange."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/base-contracts",
+      "shows": "Authoritative list of Base mainnet L1 and L2 contract addresses, including OptimismPortal (0x49048044D57e1C92A77f79988d21Fa8fAF74E97e), L1StandardBridge (0x3154Cf16ccdb4C6d922629664174b904d80F2C35), DisputeGameFactoryProxy (0x43edB88C4B80fDD2AdFF2412A7BebF9dD42cB40e), and admin addresses including Proxy Admin Owner (0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c, Gnosis Safe), Guardian (0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2, Gnosis Safe), Batch Sender EOA (0x5050f69a9786f081509234f1a7f4684b5e5b76c9), Challenger EOA (0x8Ca1E12404d16373Aef756179B185F27b2994F3a)",
+      "fetched_at": "2026-05-04T08:30:00Z"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/security/security-council",
+      "shows": "Base Security Council structure: 12 total members (11 independent + Coinbase), 9/12 quorum required to approve upgrades; council activated April 2025; Base claims Stage 1 decentralization. Lists individual signer addresses for independent council members.",
+      "fetched_at": "2026-05-04T08:32:00Z"
+    },
+    {
+      "url": "https://blog.base.org/fault-proofs-are-now-live-on-base-mainnet",
+      "shows": "Permissionless fault proofs activated on Base mainnet October 30, 2024; anyone can permissionlessly propose state roots and challenge invalid proposals; Base team operates a challenger continuously; withdrawals no longer require trusted third parties.",
+      "fetched_at": "2026-05-04T08:35:00Z"
+    },
+    {
+      "url": "https://docs.optimism.io/stack/fault-proofs/fp-security",
+      "shows": "OptimismPortal security model: Guardian can globally pause, blacklist specific FaultDisputeGame contracts, or change RESPECTED_GAME_TYPE back to PermissionedDisputeGame; SystemOwner (ProxyAdmin Owner) can recover dispute bonds from DelayedWETH; 7-day delay on DelayedWETH withdrawals; Guardian responds quickly while SystemOwner handles structural failures.",
+      "fetched_at": "2026-05-04T08:36:00Z"
+    },
+    {
+      "url": "https://l2beat.com/scaling/projects/base",
+      "shows": "L2Beat confirms Base is Stage 1; 'There is no delay on upgrades'; upgrades require 2/2 from Base Coordinator Multisig and Base Security Council; Guardian role can pause and unpause withdrawals; each pause auto-expires after 3 months; sequencer failure allows forced transactions on L1 with up to 12h delay; all proof-construction data published on Ethereum L1.",
+      "fetched_at": "2026-05-04T08:37:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x49048044D57e1C92A77f79988d21Fa8fAF74E97e",
+      "shows": "Base Portal (OptimismPortal proxy) on Ethereum mainnet holds ~822,965 ETH (~$1.94B) plus ERC-20 tokens. Active transactions include depositTransaction, proveWithdrawalTransaction, finalizeWithdrawalTransaction — confirms live bridge operations. Implementation at 0x97cebbf8959e2a5476fbe9b98a21806ec234609b. Labeled 'Base: Base Portal' by Etherscan.",
+      "chain": "Ethereum",
+      "address": "0x49048044D57e1C92A77f79988d21Fa8fAF74E97e",
+      "fetched_at": "2026-05-04T08:40:00Z"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges",
+      "shows": "bridge.base.org is deprecated; Superbridge and Brid.gg are third-party frontends using the canonical OP Stack bridge contracts; Base-Solana bridge is a separate system using validator-based cross-chain messaging distinct from the canonical ETH↔Base bridge.",
+      "fetched_at": "2026-05-04T08:29:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: Could not fetch live on-chain read of OptimismPortal.disputeGameFactory() return value via defipunkd API (allowlist rejection) — address sourced from docs instead; next run should pin this via surfacer URL",
+    "A2: Guardian multisig (0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2) signer count and threshold not verified on-chain this run — Safe owners/threshold unknown",
+    "A6: Activation status of SuperchainConfig.paused() not verified on-chain this run (Etherscan read-proxy tab not accessible); assumed not currently paused given active transaction flow visible on Etherscan",
+    "A9: Exact composition (threshold, signers) of Base Coordinator Multisig (the first leg of the 2/2 ProxyAdmin Owner) not verified on-chain this run"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/base/base",
+      "https://github.com/base/docs"
+    ],
+    "docs_url": "https://docs.base.org",
+    "audits": null,
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://docs.base.org/base-chain/security/report-vulnerability",
+    "security_contact": "https://docs.base.org/base-chain/security/report-vulnerability",
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x49048044D57e1C92A77f79988d21Fa8fAF74E97e",
+        "role": "OptimismPortal (Base: Base Portal) — main L1 deposit/withdrawal entry point",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+        "role": "L1StandardBridge — ERC-20 token escrow on L1",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x43edB88C4B80fDD2AdFF2412A7BebF9dD42cB40e",
+        "role": "DisputeGameFactoryProxy — creates FaultDisputeGame instances for L2 state proposals",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E",
+        "role": "ProxyAdmin — controls upgrades to all L1 OP Stack contracts",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "Proxy Admin Owner (L1) — 2/2 multisig: Base Coordinator Multisig + Base Security Council; can instantly upgrade all core L1 contracts",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "Guardian — can pause withdrawals via SuperchainConfig, blacklist dispute games, change respected game type; pauses auto-expire 3 months",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+        "role": "SystemConfig owner — Gnosis Safe; controls sequencer address and chain configuration",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5050f69a9786f081509234f1a7f4684b5e5b76c9",
+        "role": "Batch Sender (Sequencer) — Coinbase-operated EOA; submits L2 transaction batches to L1",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x642229f238fb9de03374be34b0ed8d9de80752c5",
+        "role": "Output Proposer — Coinbase-operated EOA; submits state roots (permissionless since Oct 2024)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8Ca1E12404d16373Aef756179B185F27b2994F3a",
+        "role": "Challenger — Coinbase-operated EOA; challenges invalid proposals (permissionless since Oct 2024)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x866E82a600A1414e583f7F13623F1aC5d58b0Afa",
+        "role": "L1CrossDomainMessenger — relays cross-domain messages between L1 and L2",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x73a79Fab69143498Ed3712e519A88a918e1f4072",
+        "role": "SystemConfig — stores chain configuration parameters; owner is 0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge is the canonical OP Stack bridge connecting Ethereum (L1) to Base (L2), enabling users to deposit ETH and ERC-20 tokens from Ethereum to Base and withdraw them back. Deposits are instant; withdrawals require a 7-day challenge window via the permissionless FaultDisputeGame dispute system. The bridge holds assets in a simple lock-and-mint model with no yield or DeFi components. Since October 2024, fault proofs are permissionless, allowing any participant to propose state roots and challenge invalid withdrawal claims without relying on Coinbase."
+  }
+},
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "grok-built-by-xai",
+  "chat_url": "https://grok.com/share/c2hhcmQtNQ_a76fdfc1-9008-4168-bfdd-5373448b2888",
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Orange: Base L2 centralized sequencer liveness can pause L2-initiated withdrawals for material bridged TVS (no principal loss; ~100% of canonical bridge TVS affected temporarily)",
+  "short_headline": "Orange: Sequencer pauses withdrawals",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "No material external contract calls to oracles, price feeds, AMMs, or third-party providers in core contracts (L1StandardBridge 0x3154Cf16ccdb4c6d922629664174b904d80F2C35, L2StandardBridge 0x4200000000000000000000000000000000000010, OptimismPortal 0x49048044D57e1C92A77f79988d21Fa8fAF74E97e). Contracts interact only with internal L1/L2CrossDomainMessenger and predeployed OP Stack components. No oracle/grep hits or external dependencies in docs or explorer pages."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain actor committees, oracle reporters, guardian sets, or validator committees reporting into the protocol. No mentions in Base docs or contract pages of any such structures for the canonical bridge (distinct from Base sequencer operator)."
+      },
+      {
+        "code": "A3",
+        "text": "This is the primary canonical L1↔L2 bridge itself (OP Stack standard); no dependency on other bridges for core flows. Third-party bridges (Superbridge, Brid.gg) recommended in docs but optional and not required for canonical path. No material TVL on non-canonical bridges cited."
+      },
+      {
+        "code": "A4",
+        "text": "No nested collateral, restaking, LRT, or receipt-of-receipt designs. Direct asset bridging (ETH/ERC-20) with no layered slashing/freeze propagation."
+      },
+      {
+        "code": "A6",
+        "text": "Fallbacks exist and are live: OptimismPortal + PermissionedDisputeGame (address 0x58bf355C5d4EdFc723eF89d99582ECCfd143266A from docs) enforce challenge/dispute period (typically 7 days) against invalid L2 state roots before finalizing withdrawals. This mitigates adversarial L2 state but does not mitigate sequencer liveness. Activation status: LIVE and enforcing on-chain (standard OP Stack deployment, no zero-address or unassigned roles noted)."
+      },
+      {
+        "code": "A7",
+        "text": "Base L2 uses centralized sequencer (operated by Base/Coinbase team; confirmed in multiple L2 sequencer analyses). This is beyond base-chain (Ethereum) substrate. Failure delays deposit processing on L2 and prevents initiation of withdrawals from L2 (users cannot call withdraw on L2StandardBridge without L2 tx inclusion). Deposits from L1 remain safe and process when sequencer recovers. No additional DA committee dependency noted."
+      },
+      {
+        "code": "A8",
+        "text": "No permissionless keeper/relayer/off-chain bot liveness required for core bridge functions (deposits, withdrawals, messaging are user-initiated and on-chain). No degradation from bot absence (no auto-compounding, liquidations, or intent solving in canonical bridge)."
+      },
+      {
+        "code": "A9",
+        "text": "Upgrade power exists (via Gnosis Safes: Proxy Admin Owner (L1) 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c, Guardian 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2, SystemConfig owner 0x14536667Cd30e52C0b458BaACcB9faDA7046E056 from docs). However, no evidence of current governance-mutable external dependency surface (no oracles/feeds/bridges/vaults that can be hot-swapped). Any new external dep would require implementation upgrade (CONTROL slice issue, not A9). No timelock/exit window details for hypothetical swaps verifiable in fetched sources."
+      }
+    ],
+    "steelman": {
+      "red": "If sequencer failure or L1 portal compromise could directly steal escrowed funds or allow unauthorized mints without challenge period, this would be red; however, dispute game and L1 finality prevent principal theft.",
+      "orange": "Centralized Base sequencer (A7) can pause all L2 withdrawals and delay deposits for 100% of canonical bridged assets (material TVS frozen temporarily) with no fallback for sequencer liveness, while all other A1-A9 risks are absent or mitigated by live dispute game (A6); this matches orange exactly as performance degradation without principal loss.",
+      "green": "If Base had decentralized sequencer with fallback (e.g., permissionless force-inclusion or L1-only exit path), or if bridge was L1-only immutable, it would be green; current design has no such sequencer mitigation."
+    },
+    "verdict": "Choosing orange because the sole unmitigated external dependency (Base L2 centralized sequencer liveness per A7, evidenced by Base contracts docs listing L2StandardBridge/OptimismPortal and independent L2 sequencer reports) can freeze withdrawals for material bridged TVS without any live fallback or exit path, while A1/A2/A3/A4/A6/A8/A9 show zero or fully mitigated risks and no principal-loss vectors (dispute game live); this ranks above green (no sequencer mitigation) but below red (no theft possible)."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges-mainnet",
+      "shows": "Canonical bridge deprecated at bridge.base.org; recommends third-party bridges (Superbridge, Brid.gg); no oracles, external contracts, or committees mentioned; architecture relies on L1 Ethereum and L2 Base.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-04T18:27:00Z"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/base-contracts",
+      "shows": "Full L1/L2 addresses: L1StandardBridge 0x3154Cf16ccdb4c6d922629664174b904d80F2C35, OptimismPortal 0x49048044D57e1C92A77f79988d21Fa8fAF74E97e, L2StandardBridge 0x4200000000000000000000000000000000000010, ProxyAdmin 0x4200000000000000000000000000000000000018 (owner 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c Gnosis Safe on L1), Guardian 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 (Gnosis Safe), SystemConfig owner 0x14536667Cd30e52C0b458BaACcB9faDA7046E056 (Gnosis Safe); no oracles or external deps listed.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-04T18:23:11Z"
+    },
+    {
+      "url": "https://basescan.org/address/0x4200000000000000000000000000000000000010",
+      "shows": "L2StandardBridge proxy (implementation 0xC0d3c0d3...3C0D30010); standard OP Stack; interacts with L2CrossDomainMessenger 0x4200000000000000000000000000000000000007; no external oracle/price calls visible; proxy upgrade functions present but no paused/owner in proxy layer.",
+      "chain": "Base",
+      "address": "0x4200000000000000000000000000000000000010",
+      "fetched_at": "2026-05-04T18:27:59Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+      "shows": "L1StandardBridge (L1ChugSplashProxy); implementation 0x61525Eaa...4fd0Bf62A; constructor owner 0x6606D3c20CC94cc7aA1D430C0E83a5129976153A (EOA); holds >$174M tokens; standard bridge for deposits (ETH/ERC20 to Base).",
+      "chain": "Ethereum",
+      "address": "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+      "fetched_at": "2026-05-04T18:30:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x49048044D57e1C92A77f79988d21Fa8fAF74E97e",
+      "shows": "OptimismPortal proxy for Base (implementation 0x97cEbbf8...Ec234609B); key contract for L1 withdrawals and deposits; no paused/guardian values shown but standard live OP Stack deployment.",
+      "chain": "Ethereum",
+      "address": "0x49048044D57e1C92A77f79988d21Fa8fAF74E97e",
+      "fetched_at": "2026-05-04T18:32:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x6606D3c20CC94cc7aA1D430C0E83a5129976153A",
+      "shows": "EOA (old constructor owner of L1 bridge proxy); last active ~3 years ago; historical txs include ownership changes on bridge contracts; no current control evidence.",
+      "chain": "Ethereum",
+      "address": "0x6606D3c20CC94cc7aA1D430C0E83a5129976153A",
+      "fetched_at": "2026-05-04T18:33:00Z"
+    },
+    {
+      "url": "https://blog.jarrodwatts.com/the-ultimate-guide-to-sequencers-in-l2-blockchains",
+      "shows": "Base uses centralized sequencer operated by core team (Coinbase/Base); common for OP Stack L2s; liveness risk for tx inclusion (deposits/withdrawals).",
+      "fetched_at": "2026-05-04T18:37:36Z"
+    }
+  ],
+  "unknowns": [
+    "A1: Full enumeration of every possible external call in current implementation bytecode (proxy delegates to 0xC0d3c0d3...3C0D30010 and 0x97cEbbf8...Ec234609B; source not fully extracted).",
+    "A9: Exact current owner of L1StandardBridge proxy (constructor shows EOA but may have been transferred; no live read of getOwner() performed).",
+    "A7: Precise sequencer operator address and any fallback inclusion mechanism details for Base (docs confirm centralized but no on-chain sequencer contract address listed).",
+    "protocol_metadata.audits: No audit reports fetched or linked in provided docs/pages."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/base-org/guides/tree/main/bridge/native"
+    ],
+    "docs_url": "https://docs.base.org/base-chain/network-information/bridges-mainnet",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "Proxy Admin Owner (L1)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "Guardian",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+        "role": "SystemConfig owner",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Canonical OP Stack bridge enabling ETH and ERC-20 deposits from Ethereum L1 (via L1StandardBridge 0x3154Cf16ccdb4c6d922629664174b904d80F2C35 and OptimismPortal 0x49048044D57e1C92A77f79988d21Fa8fAF74E97e) to mint on Base L2 (L2StandardBridge at 0x4200000000000000000000000000000000000010). Withdrawals require L2 initiation + L1 proof with dispute game challenge period. Third-party bridges (Superbridge, Brid.gg) now recommended as primary UX; canonical contracts remain operational for direct bridging. No oracles or external yield/price dependencies in core flows."
+  }
+},
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "GPT-5.5 Thinking",
+  "chat_url": "https://chatgpt.com/share/69f8e860-1784-8333-b89b-f607e385ea2d",
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Sequencer, batcher, proposer/challenger, and SystemConfig dependencies can freeze or materially delay ~100% of verified canonical bridge TVS (>~$2.1B), but fetched evidence did not prove a single external dependency can steal principal.",
+  "short_headline": "Proof liveness risk",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The canonical Ethereum-Base bridge core is not oracle-priced, but it does depend on external protocol contracts/modules: L1StandardBridge calls the L1CrossDomainMessenger/other bridge path for ETH/ERC20 bridge initiation and finalization, while OptimismPortal2 exposes dependencies on DisputeGameFactory, SystemConfig, SuperchainConfig, guardian, and pause state. If these modules pause, misbehave, or stop progressing, bridge deposits or withdrawals can fail or be delayed."
+      },
+      {
+        "code": "A2",
+        "text": "For the canonical module, Base documentation describes withdrawal safety as depending on permissionless proposer/challenger participation during a seven-day dispute window, with the claim that only one honest challenger is needed and Base will operate honest proposer/challenger services. Official contract metadata also identifies Coinbase-managed EOAs for Batch Sender, Output Proposer, and Challenger, plus Gnosis Safe roles for Proxy Admin Owner, SystemConfig owner, and Guardian."
+      },
+      {
+        "code": "A3",
+        "text": "The main product is a canonical Ethereum-Base OP Stack bridge: deposits are usually sequencer-included quickly, while Base-to-Ethereum withdrawals wait a seven-day finality/dispute period before proof and finalization. The separate Base-Solana bridge is explicitly validator-relayed, with SOL/SPL assets locked or burned on one side and minted or unlocked on the other."
+      },
+      {
+        "code": "A4",
+        "text": "No nested collateral, restaking, receipt-of-receipt, or oracleized collateral chain was found for the canonical Ethereum-Base bridge. User exposure is bridge escrow/mint/release risk rather than recursively wrapped yield-bearing collateral risk."
+      },
+      {
+        "code": "A5",
+        "text": "No non-empty fork lineage was supplied in the pinned protocol context or discovered from fetched protocol docs during this run."
+      },
+      {
+        "code": "A6",
+        "text": "The canonical bridge has a live documented fallback against invalid output roots: withdrawals wait seven days, dispute games can be challenged, a successful challenge requires affected withdrawals to be reproven, and Base states permissionless fault proofs launched in October 2024. Etherscan also showed live DisputeGameFactory create activity from the documented Output Proposer on the analysis date, supporting that the dispute-game path is active rather than merely proposed."
+      },
+      {
+        "code": "A7",
+        "text": "Base adds L2 liveness and block-building dependencies beyond Ethereum L1: docs describe L2 inclusion by the Base sequencer, batch inclusion to Ethereum, and block building via op-rbuilder/Flashblocks or op-geth. Sequencer, batcher, or block-builder failure can freeze or materially degrade deposits, transaction inclusion, and withdrawal progression, but fetched evidence did not show that this alone lets an external actor steal escrowed L1 assets."
+      },
+      {
+        "code": "A8",
+        "text": "The canonical bridge relies on liveness of off-chain but permissionless actors/users for proposing, challenging, proving, and finalizing withdrawals; if nobody performs these actions, withdrawals stall rather than automatically complete. The Base-Solana docs separately describe optional relaying: without PayForRelay, users can still execute transactions themselves, so the relayer is a convenience/liveness dependency rather than a sole custody dependency."
+      },
+      {
+        "code": "A9",
+        "text": "The external dependency surface is governance-mutable: SystemConfig ABI exposes owner-gated setters for batcherHash and unsafeBlockSigner, and DisputeGameFactory ABI exposes owner-gated setImplementation/setInitBond mutators. Base's Security Council docs say upgrades and role changes require 9-of-12 approval, but no fetched evidence established a user exit window before these dependency changes."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red case is A9: if the owner-governed dispute-game or sequencing/batching dependency surface were changed maliciously without an exit window, effectively all verified canonical bridge TVS could be exposed to invalid finalization or frozen withdrawals.",
+      "orange": "The strongest orange case is that the normal, verified operating dependencies mainly affect liveness and withdrawal timing, while the seven-day fault-proof/challenge path mitigates invalid output roots and no fetched evidence proves single-external-dependency principal theft in the canonical bridge.",
+      "green": "The strongest green case is that the main bridge is canonical, not price-oracle-dependent, uses a seven-day dispute window, and documents permissionless proposer/challenger participation with one-honest-party safety."
+    },
+    "verdict": "Choosing orange because the canonical Ethereum-Base module holds >99% of verified bridge TVS in this run, with OptimismPortal holding ~816,706 ETH (~$1.93B at fetch) and L1StandardBridge holding >$176M of ERC20 tokens, while the fetched evidence shows live fault-proof fallback and liveness dependencies but not a concrete single external dependency that can steal principal under normal operation. The Base-Solana module has validator-message dependency risk, but its TVS share was not verified because BaseScan address fetches were blocked, so it is not used to upgrade the whole assessment to red. Weighted overall = orange: Canonical Ethereum-Base bridge holds ~100% of verified TVS (grade: orange); Base-Solana bridge holds unknown/unverified TVS (grade: unknown); the verified blast radius is ~100% freeze/delay risk and 0% demonstrated principal-loss risk from a single external dependency."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges",
+      "shows": "Base's bridge documentation states that bridging assets to Base includes Ethereum, Solana, and Bitcoin paths; bridge.base.org is deprecated; Superbridge/Brid.gg are third-party Superchain bridge UIs; and the Base-Solana bridge uses validators with lock/mint/burn/unlock flows."
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/base-contracts",
+      "shows": "Official Base contract registry lists L2 bridge predeploys, Ethereum mainnet L1 contracts including OptimismPortal, L1StandardBridge, L1CrossDomainMessenger, DisputeGameFactory, SystemConfig, ProxyAdmin, and admin roles including Batch Sender, Output Proposer, Challenger, Proxy Admin Owner, SystemConfig owner, and Guardian."
+    },
+    {
+      "url": "https://docs.base.org/base-chain/quickstart/base-solana-bridge",
+      "shows": "Base-Solana bridge docs describe Solana-side locking/burning, validator relay/pre-approval, Base-side minting, Base-to-Solana proof flow, optional relayer behavior, official bridge repository, and deployed Base/Solana bridge addresses.",
+      "chain": "Base",
+      "address": "0x3eff766C76a1be2Ce1aCF2B69c78bCae257D5188"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/transaction-finality",
+      "shows": "Base transaction finality docs describe sequencer inclusion, L1 batch inclusion, seven-day Base-to-Ethereum withdrawal finality, permissionless proposer/challenger roles, one-honest-party challenge safety, and withdrawal reproving after a successful challenge."
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/block-building",
+      "shows": "Base block-building docs describe op-rbuilder/Flashblocks and op-geth block production, establishing a Base-specific block-building/sequencer liveness and performance dependency."
+    },
+    {
+      "url": "https://docs.base.org/base-chain/security/security-council",
+      "shows": "Base Security Council docs describe Stage 1 decentralization, decentralized control of contract upgrades as of April 2025, 12 signers, and 9-of-12 approval for upgrades and security-critical actions."
+    },
+    {
+      "url": "https://docs.base.org/base-chain/security/report-vulnerability",
+      "shows": "Base security documentation says Base network and Base bridge contracts are covered by Coinbase's HackerOne bug bounty process, with reports triaged by Coinbase engineers."
+    },
+    {
+      "url": "https://etherscan.io/address/0x49048044D57e1C92A77f79988d21Fa8fAF74E97e",
+      "shows": "Etherscan identifies the OptimismPortal proxy for Base Bridge, its implementation address, and an ETH balance of approximately 816,706 ETH, giving the main verified ETH TVS anchor.",
+      "chain": "Ethereum",
+      "address": "0x49048044D57e1C92A77f79988d21Fa8fAF74E97e"
+    },
+    {
+      "url": "https://etherscan.io/address/0x97cebbf8959e2a5476fbe9b98a21806ec234609b",
+      "shows": "Etherscan verified implementation contract OptimismPortal2 exposes bridge deposit/finalize paths and dependency/state methods including disputeGameFactory, guardian, paused, proofMaturityDelaySeconds, respectedGameType, superchainConfig, and systemConfig.",
+      "chain": "Ethereum",
+      "address": "0x97cebbf8959e2a5476fbe9b98a21806ec234609b"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+      "shows": "Etherscan identifies the L1StandardBridge proxy for Base Bridge, its implementation address, and token holdings over $176M, giving the main verified ERC20 TVS anchor.",
+      "chain": "Ethereum",
+      "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35"
+    },
+    {
+      "url": "https://etherscan.io/address/0x61525eaacddb97d9184afc205827e6a4fd0bf62a",
+      "shows": "Etherscan verified implementation contract L1StandardBridge exposes MESSENGER, OTHER_BRIDGE, bridgeERC20, bridgeETH, depositERC20, depositETH, finalizeBridgeERC20, finalizeBridgeETH, paused, superchainConfig, and systemConfig, showing bridge messaging dependencies and function classes.",
+      "chain": "Ethereum",
+      "address": "0x61525eaacddb97d9184afc205827e6a4fd0bf62a"
+    },
+    {
+      "url": "https://etherscan.io/address/0x43edB88C4B80fDD2AdFF2412A7BebF9dF42cB40e",
+      "shows": "Etherscan identifies the DisputeGameFactory proxy and shows recent create transactions from the documented Output Proposer, supporting that dispute game creation was active during the run.",
+      "chain": "Ethereum",
+      "address": "0x43edB88C4B80fDD2AdFF2412A7BebF9dF42cB40e"
+    },
+    {
+      "url": "https://etherscan.io/address/0xc040f392e52cb6970ca8e110c280fe24e07c5e2c",
+      "shows": "Etherscan verified implementation contract DisputeGameFactory exposes create, gameImpls, owner, setImplementation, setInitBond, and transferOwnership, showing owner-mutable dispute-game implementation surface.",
+      "chain": "Ethereum",
+      "address": "0xc040f392E52Cb6970CA8E110c280fE24E07C5e2c"
+    },
+    {
+      "url": "https://etherscan.io/address/0x0507aaa21c678976fcdc7e804836acd6ebc17a44",
+      "shows": "Etherscan verified implementation contract SystemConfig exposes owner, batcherHash, unsafeBlockSigner, disputeGameFactory, getAddresses, setBatcherHash, setUnsafeBlockSigner, and related setters, showing mutable sequencing/batching dependency surface.",
+      "chain": "Ethereum",
+      "address": "0x0507AaA21C678976FCDC7e804836acD6EBC17A44"
+    },
+    {
+      "url": "https://etherscan.io/address/0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+      "shows": "Etherscan identifies the Proxy Admin Owner L1 address as a Safe smart account/proxy, corroborating the official docs' Gnosis Safe actor classification.",
+      "chain": "Ethereum",
+      "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c"
+    }
+  ],
+  "unknowns": [
+    "A1: DeFiPunkd read API calls for live view-method values were blocked by fetch allowlist, so current on-chain values such as paused(), guardian(), systemConfig(), disputeGameFactory(), and owner() were not read through the preferred JSON API.",
+    "A2: Safe owner and threshold reads for 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c, 0x14536667Cd30e52C0b458BaACcB9faDA7046E056, and 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 were not independently read; official docs identify these as Gnosis Safe roles, but this run did not verify signer sets.",
+    "A2: Base-Solana BridgeValidator committee size, quorum, validator selection mechanism, and mis-reporting blast radius were not present in the fetched docs.",
+    "A3: Exact live TVS for the Base-Solana bridge module was not verified because direct BaseScan address fetches for 0x3eff766C76a1be2Ce1aCF2B69c78bCae257D5188 and 0xAF24c1c24Ff3BF1e6D882518120fC25442d6794B were blocked by the web fetch allowlist.",
+    "A5: DeFiLlama forkedFrom was not separately fetched in this run; no forkedFrom field was supplied in the pinned context.",
+    "A6: The current activation state of paused() circuit breakers was not read live for OptimismPortal, L1StandardBridge, or SystemConfig.",
+    "A9: The current owner() of DisputeGameFactory was not read live; ABI evidence shows owner-gated mutators, but the exact current actor for those mutators remains unverified."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/base/bridge"
+    ],
+    "docs_url": "https://docs.base.org/base-chain/network-information/bridges",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://docs.base.org/base-chain/security/report-vulnerability",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x5050f69a9786f081509234f1a7f4684b5e5b76c9",
+        "role": "Batch Sender",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x642229f238fb9de03374be34b0ed8d9de80752c5",
+        "role": "Output Proposer",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8Ca1E12404d16373Aef756179B185F27b2994F3a",
+        "role": "Challenger",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "Proxy Admin Owner L1",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+        "role": "SystemConfig owner",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "Guardian",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Base",
+        "address": "0xAF24c1c24Ff3BF1e6D882518120fC25442d6794B",
+        "role": "Base-Solana BridgeValidator",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge lets users move ETH and ERC20 assets between Ethereum and Base through OP Stack bridge contracts, escrowing assets on L1 and releasing or minting corresponding assets across L2. Base-to-Ethereum withdrawals use output proofs, a seven-day dispute window, and fault-dispute games before finalization. A separate Base-Solana bridge module locks or burns SOL/SPL assets and mints or unlocks wrapped assets using validator-approved messages."
+  }
+}
+]

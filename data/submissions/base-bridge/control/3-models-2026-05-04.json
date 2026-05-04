@@ -1,0 +1,393 @@
+[{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "grok-4",
+  "chat_url": "https://grok.com/share/c2hhcmQtNQ_75bbda62-fede-46aa-a7a1-f6550cd79ab2",
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "2-of-2 multisig (no timelock) controls upgrades to L1StandardBridge and OptimismPortal",
+  "short_headline": "2/2 multisig, 0-delay T1 upgrades",
+  "rationale": {
+    "findings": [
+      { "code": "C1", "text": "L1StandardBridge (0x3154Cf16ccdb4C6d922629664174b904d80F2C35) getOwner() returns ProxyAdmin (0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E) at block 25023401[](https://defipunkd.com/api/contract/read?chainId=1&address=0x3154Cf16ccdb4C6d922629664174b904d80F2C35&method=getOwner)." },
+      { "code": "C1", "text": "ProxyAdmin (0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E) owner() returns Gnosis Safe 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c at block 25023400[](https://defipunkd.com/api/contract/read?chainId=1&address=0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E&method=owner)." },
+      { "code": "C1", "text": "OptimismPortal (0x49048044d57e1c92a77f79988d21fa8faf74e97e) admin() returns same ProxyAdmin at recent block[](https://defipunkd.com/api/contract/read?chainId=1&address=0x49048044d57e1c92a77f79988d21fa8faf74e97e&method=admin)." },
+      { "code": "C2", "text": "L1StandardBridge and OptimismPortal are upgradeable proxies (L1ChugSplashProxy and standard proxy) administered by ProxyAdmin; L2StandardBridge (0x4200000000000000000000000000000000000010) uses L2 ProxyAdmin (0x4200000000000000000000000000000000000018) per https://docs.base.org/base-chain/network-information/base-contracts." },
+      { "code": "C3", "text": "Execution path: 2-of-2 Gnosis Safe signs/executes upgradeTo/upgradeToAndCall or changeProxyAdmin directly on ProxyAdmin (0 delay, no timelock contract in path). Confirmed via Safe owners API and absence of any MIN_DELAY / timelock in bridge contracts." },
+      { "code": "C4", "text": "Primary control multisig: 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c (threshold 2/2, version 1.3.0, owners 0x9855054731540A48b28990B63DcF4f33d8AE46A1 and 0x20AcF55A3DCfe07fC4cecaCFa1628F788EC8A4Dd) at block 25023401[](https://defipunkd.com/api/safe/owners?chainId=1&address=0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c). Guardian Safe 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 is 1/1[](https://defipunkd.com/api/safe/owners?chainId=1&address=0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2)." },
+      { "code": "C6", "text": "Guardian role exists (separate 1/1 Safe listed in official contracts doc) but upgrade authority remains with governance multisig; no evidence of Guardian holding upgrade or broad T1 powers on main bridge contracts." },
+      { "code": "C7", "text": "Highest tier T1: upgrade implementation of L1StandardBridge (deposit/bridge logic) and OptimismPortal (withdrawal proving/finalization, fund custody) via ProxyAdmin.upgrade / changeProxyAdmin. No on-chain bounds or timelock; 2-of-2 multisig executes instantly." }
+    ],
+    "steelman": {
+      "red": "2-of-2 insider multisig (failing all Security Council criteria) holds direct no-delay upgrade authority over contracts that custody/ route user bridged funds and control withdrawal finalization — classic centralized bridge risk with zero exit window after upgrade.",
+      "orange": "Multisig fails Security Council thresholds and sits on T1 path, but contracts are auditable smart contracts (not raw EOA) and Guardian provides some emergency separation.",
+      "green": "OP Stack heritage and public contract addresses allow community monitoring; 7-day withdrawal challenge period exists on L2 side even if L1 upgrades are fast."
+    },
+    "verdict": "Choosing red because T1 (arbitrary upgrade of bridge/portal logic and fund-handling contracts) is reachable with zero timelock by a 2-of-2 multisig that meets none of the Security Council criteria (only 2 signers, 100% threshold, presumed insiders); this matches the explicit red example of small multisig + no timelock on T1 and exceeds the orange 'failing SC criteria' case."
+  },
+  "evidence": [
+    { "url": "https://docs.base.org/base-chain/network-information/base-contracts", "shows": "Lists canonical L1/L2 bridge contracts (L1StandardBridge 0x3154Cf16ccdb4C6d922629664174b904d80F2C35, OptimismPortal 0x49048044d57e1c92a77f79988d21fa8faf74e97e, L2StandardBridge 0x4200000000000000000000000000000000000010), ProxyAdmin addresses, and admin Safes (Proxy Admin Owner L1 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c as Gnosis Safe, Guardian 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2).", "chain": "ethereum", "address": null, "fetched_at": "2026-05-04T18:23:11Z" },
+    { "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E&method=owner", "shows": "ProxyAdmin owner is exactly the 2-of-2 Safe at block 25023400.", "chain": "ethereum", "address": "0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E", "fetched_at": "2026-05-04T18:34:00Z" },
+    { "url": "https://defipunkd.com/api/safe/owners?chainId=1&address=0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c", "shows": "Threshold exactly 2, exactly two owners, Safe v1.3.0 at block 25023401 — confirms 2-of-2 multisig with no public non-insider signers disclosed.", "chain": "ethereum", "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c", "fetched_at": "2026-05-04T18:35:00Z" },
+    { "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x3154Cf16ccdb4C6d922629664174b904d80F2C35&method=getOwner", "shows": "L1StandardBridge (ChugSplash proxy) owner is the ProxyAdmin at block 25023401.", "chain": "ethereum", "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35", "fetched_at": "2026-05-04T18:36:00Z" },
+    { "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x49048044d57e1c92a77f79988d21fa8faf74e97e&method=admin", "shows": "OptimismPortal proxy admin is the same ProxyAdmin (upgrade surface).", "chain": "ethereum", "address": "0x49048044d57e1c92a77f79988d21fa8faf74e97e", "fetched_at": "2026-05-04T18:37:00Z" },
+    { "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x49048044d57e1c92a77f79988d21fa8faf74e97e", "shows": "Portal proxy exposes admin(), changeAdmin(), upgradeTo(), upgradeToAndCall() — confirms upgrade path through ProxyAdmin with no guardian/pause in this ABI.", "chain": "ethereum", "address": "0x49048044d57e1c92a77f79988d21fa8faf74e97e", "fetched_at": "2026-05-04T18:38:00Z" },
+    { "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35", "shows": "Verified L1ChugSplashProxy implementation with getOwner/setOwner/setCode/setStorage — upgrade surface controlled by owner (ProxyAdmin).", "chain": "ethereum", "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35", "fetched_at": "2026-05-04T17:40:00Z" }
+  ],
+  "unknowns": [
+    "C3: No on-chain timelock or Governor contract found in bridge/portal/proxy path (all evidence points to direct multisig execution; could not locate MIN_DELAY or queue/execute pattern).",
+    "C6: Exact Guardian powers (pause, blackhole, or limited to specific functions) not readable on Portal/L1StandardBridge ABIs; only existence of separate 1/1 Guardian Safe confirmed in docs.",
+    "C4: Identities and insider status of the two Safe owners (0x9855... and 0x20Ac...) not publicly verifiable in this run; presumed Coinbase team but not explicitly labeled.",
+    "C7: Whether L2StandardBridge or L2 ProxyAdmin owner grants additional T1 reach from L2 side (predeploy admin read failed; L2 alias/governance multisig noted in secondary sources only)."
+  ],
+  "protocol_metadata": {
+    "github": ["https://github.com/base/contract-deployments", "https://github.com/ethereum-optimism/optimism"],
+    "docs_url": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "audits": null,
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      { "chain": "Ethereum", "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c", "role": "ProxyAdmin owner (L1 bridge/portal upgrades)", "actor_class": "multisig" },
+      { "chain": "Ethereum", "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2", "role": "Guardian", "actor_class": "multisig" }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Canonical bridge between Ethereum L1 and Base L2 using OP Stack contracts (L1StandardBridge for deposits, OptimismPortal for withdrawals/proofs). Assets are locked/minted with a 7-day challenge window on withdrawals. Upgrades and admin actions are controlled by a 2-of-2 Gnosis Safe via ProxyAdmin with no timelock."
+  }
+},
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "claude-sonnet-4-6",
+  "chat_url": "https://claude.ai/share/37b853ce-016c-4d10-b41f-896b610383da",
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Security Council 9/12 Safe owns the ProxyAdmin with no on-chain timelock; T1 upgrades executable immediately after multisig quorum",
+  "short_headline": "T1 path, 0-delay, Security Council",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "ProxyAdmin (0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E) on Ethereum is owned by a Gnosis Safe 1.3.0 at 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c, which the official Base docs label 'Proxy Admin Owner (L1)'. This Safe corresponds to the Security Council established April 2025, comprising Coinbase plus 11 independent entities/individuals with a 9/12 (75%) threshold per published documentation. SystemConfig (0x73a79Fab69143498Ed3712e519A88a918e1f4072) is owned by a separate Gnosis Safe at 0x14536667Cd30e52C0b458BaACcB9faDA7046E056. Guardian role is held by 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 ('Optimism: Guardian Multisig' per Etherscan label)."
+      },
+      {
+        "code": "C2",
+        "text": "The ProxyAdmin contract (OZ-style, v0.8.15 compiled) exposes upgrade() and upgradeAndCall() callable by its owner (the Security Council Safe). No Timelock contract appears in the official L1 contract list at docs.base.org/base-chain/network-information/base-contracts; no timelock address was discovered transitively from the ProxyAdmin or Proxy Admin Owner Safe. All key L1 OP Stack contracts (L1StandardBridge, OptimismPortal, L1CrossDomainMessenger, L1ERC721Bridge, DisputeGameFactoryProxy, etc.) are behind this ProxyAdmin and therefore upgradeable by the Security Council Safe directly. The ProxyAdmin itself is not a proxy."
+      },
+      {
+        "code": "C3",
+        "text": "Uncontested fast path: Security Council Safe (9/12 threshold) calls execTransaction → ProxyAdmin.upgrade(proxy, newImpl) → proxy implementation replaced. No queuing step, no timelock delay, no veto window — delay = 0 seconds. The ProxyAdmin's most recent on-chain transaction was block 24816510 (April 5, 2026), confirming active use. This fast path reaches T1 targets (L1StandardBridge holds user-deposited ETH and ERC-20s; OptimismPortal is the withdrawal finalization entry point)."
+      },
+      {
+        "code": "C4",
+        "text": "Three privileged multisigs identified. (1) Security Council Safe 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c (Gnosis Safe 1.3.0): upgrade authority over all L1 bridge/portal contracts via ProxyAdmin — 12 members per docs (Aerodrome, Moonwell, Blackbird, ChainSafe, Talent Protocol, Moshicam, Seneca, Juan Suarez, Toady Hawk, Roberto Bayardo, Yele Bademosi + Coinbase), required threshold 9/12 per docs; 10 of 11 external-member signer addresses published; Yele Bademosi's address and Coinbase's individual signer address are not published. (2) SystemConfig Owner Safe 0x14536667Cd30e52C0b458BaACcB9faDA7046E056 (Gnosis Safe 1.3.0): controls gas limit, resource config, sequencer address, fee recipient on SystemConfig — T2 economic parameters; threshold and owners not fully read on-chain this run. (3) Guardian Safe 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 (Gnosis Safe 1.3.0, labeled 'Optimism: Guardian Multisig'): can pause withdrawal logic on OptimismPortal — T1 emergency power; threshold and owners not fully read on-chain this run."
+      },
+      {
+        "code": "C5",
+        "text": "No on-chain governor or token-weighted voting contract identified for Base Bridge. Governance is entirely multisig-based."
+      },
+      {
+        "code": "C6",
+        "text": "The Guardian Safe (0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2, labeled 'Optimism: Guardian Multisig') holds emergency pause power over OptimismPortal withdrawals. Per Etherscan's label description, it 'can be used to pause several system contracts on OP Stack chains … particularly of withdrawal logic, in the event of a security concern.' This is a T1-capable emergency path (pausing withdrawals prevents user exit). The Guardian Safe is shared across OP Stack chains and held by Optimism, not the Base Security Council specifically; it has 2 on-chain transactions showing exercised activity."
+      },
+      {
+        "code": "C7",
+        "text": "Highest tier on the uncontested fast path: T1. (a) ProxyAdmin.upgrade(L1StandardBridgeProxy, newImpl) — replaces implementation of a contract holding user funds; callable by Security Council Safe 9/12 with 0 on-chain delay. (b) ProxyAdmin.upgrade(OptimismPortalProxy, newImpl) — same tier, same path. (c) Guardian.pause() on OptimismPortal — T1, blocks all user withdrawals; separate actor. SystemConfig owner can change gas config / sequencer address — T2 at most (no direct access to user funds). No on-chain upper bound was found for SystemConfig fee parameters."
+      }
+    ],
+    "steelman": {
+      "red": "The upgrade admin is a Gnosis Safe with 9/12 threshold and no timelock, so a coordinated compromise of 9 of 12 signers could immediately replace all bridge implementations and drain user funds with zero warning to users.",
+      "orange": "A 9/12 Security Council Safe with broadly independent membership (11/12 non-Coinbase) sits on a T1 upgrade path with no on-chain timelock delay, meaning there is no exit window for users after an upgrade is signed, and two of twelve signer addresses are not publicly disclosed.",
+      "green": "The Security Council's 9/12 threshold, geographic diversity, published member identities, and track record of controlled upgrades (several exercised without incident) provide meaningful resistance to unilateral or compromised upgrades; the dispute game provides independent withdrawal validation."
+    },
+    "verdict": "Choosing orange because T1 (upgrade of fund-holding bridge contracts via ProxyAdmin.upgrade()) is reachable on the uncontested fast path with zero on-chain delay — the Security Council Safe 9/12 can execute immediately once quorum is reached. This fails the green condition requiring ≥7-day uncontested delay combined with a Security Council. Additionally, the Security Council fails the 'every signer publicly announced' criterion (Yele Bademosi's signer address and Coinbase's individual signer key are not disclosed), placing it further into orange under 'a multisig failing one or more Security Council criteria sits on a T1/T2 path.' The green steel-man is real but cannot override the absence of a timelock exit window."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/base-contracts",
+      "shows": "Official Base docs listing all L1 mainnet contract addresses: ProxyAdmin 0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E, L1StandardBridge 0x3154Cf16ccdb4C6d922629664174b904d80F2C35, OptimismPortal 0x49048044D57e1C92A77f79988d21Fa8fAF74E97e, SystemConfig 0x73a79Fab69143498Ed3712e519A88a918e1f4072. Also lists admin roles: Proxy Admin Owner (L1) = 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c (Gnosis Safe); SystemConfig owner = 0x14536667Cd30e52C0b458BaACcB9faDA7046E056 (Gnosis Safe); Guardian = 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 (Gnosis Safe).",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-04T18:23:00Z"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/security/security-council",
+      "shows": "Base Security Council structure: 12 members (Coinbase + 11 independent), required quorum 9/12 (75%), launched April 2025 as part of Stage 1 decentralization. Lists individual signer addresses for 10 of 11 external members; Yele Bademosi's signer address is omitted. Cohort terms through Oct 2026 and Jan 2027.",
+      "fetched_at": "2026-05-04T18:23:30Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+      "shows": "Proxy Admin Owner (L1) confirmed as Gnosis Safe Proxy (Safe Singleton 1.3.0) with 15 total transactions; most recent execTransaction block 24578433 (March 3, 2026). Contract labeled 'Smart Account by Safe'.",
+      "chain": "Ethereum",
+      "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+      "fetched_at": "2026-05-04T18:23:10Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E",
+      "shows": "ProxyAdmin contract (OP Stack ProxyAdmin, Solidity 0.8.15, not itself a proxy, verified exact match). ABI exposes upgrade() and upgradeAndCall() functions restricted to owner. Constructor arg decoded as _owner = 0x6606D3c20CC94cc7aA1D430C0E83a5129976153A; two subsequent transferOwnership txs moved control to 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c per tx history. Most recent tx block 24816510 (April 5, 2026).",
+      "chain": "Ethereum",
+      "address": "0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E",
+      "fetched_at": "2026-05-04T18:23:20Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+      "shows": "Guardian address confirmed as 'Optimism: Guardian Multisig' (public name tag on Etherscan). Gnosis Safe 1.3.0 proxy. Etherscan Overview note: 'The Guardian is an address that can be used to pause several system contracts on OP Stack chains … particularly of withdrawal logic, in the event of a security concern.' Two on-chain execTransaction events in Jul 2025.",
+      "chain": "Ethereum",
+      "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+      "fetched_at": "2026-05-04T18:23:45Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+      "shows": "SystemConfig Owner Safe confirmed as Gnosis Safe 1.3.0 with 397 total transactions, active through April 2026. Multiple execTransaction calls visible. Created by 0x8e5de5ca… (same deployer as Proxy Admin Owner Safe), suggesting same team.",
+      "chain": "Ethereum",
+      "address": "0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+      "fetched_at": "2026-05-04T18:24:00Z"
+    }
+  ],
+  "unknowns": [
+    "C4: on-chain threshold and owner list for Proxy Admin Owner Safe 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c not read via /api/safe/owners this run; Security Council structure cited from docs only — offchain",
+    "C4: on-chain threshold and owner list for SystemConfig Owner Safe 0x14536667Cd30e52C0b458BaACcB9faDA7046E056 not read via /api/safe/owners this run — offchain",
+    "C4: on-chain threshold and owner list for Guardian Safe 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 not read via /api/safe/owners this run — offchain",
+    "C3: no timelock contract address was found in the official docs or discovered transitively; absence of timelock is inferred from docs and observed direct Safe→ProxyAdmin history, not from a positive on-chain read of MIN_DELAY"
+  ],
+  "protocol_metadata": {
+    "github": ["https://github.com/base/base"],
+    "docs_url": "https://docs.base.org",
+    "audits": null,
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": "https://docs.base.org/base-chain/security/report-vulnerability",
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E",
+        "role": "L1 ProxyAdmin — controls implementation upgrades for all L1 OP Stack bridge contracts",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "Proxy Admin Owner (L1) — Security Council Safe, 9/12 threshold, owns ProxyAdmin",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+        "role": "SystemConfig owner — controls gas limits, sequencer address, fee vault parameters",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "Guardian — Optimism Guardian Multisig, can pause OptimismPortal withdrawals",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8Ca1E12404d16373Aef756179B185F27b2994F3a",
+        "role": "Challenger — EOA managed by Coinbase Technologies, can challenge fault proofs",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5050f69a9786f081509234f1a7f4684b5e5b76c9",
+        "role": "Batch Sender — EOA managed by Coinbase, submits L2 transaction batches to L1",
+        "actor_class": "eoa"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge is the canonical OP Stack bridge between Ethereum (L1) and Base (L2), enabling users to deposit ETH and ERC-20 tokens from Ethereum into Base via the L1StandardBridge and OptimismPortal contracts, and to withdraw them back through a 7-day fault-proof challenge window. It uses the Optimism Bedrock architecture with permissionless fault proofs (enabled October 2024) and is controlled by a Security Council multisig (established April 2025) that holds upgrade authority over all L1 bridge contracts."
+  }
+},
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "gpt-5.5-pro",
+  "chat_url": "https://chatgpt.com/share/69f8e5ca-abd4-8330-9cc7-6990609f410f",
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Base Bridge has T1 upgrade control through a Safe/Security-Council path, but no 7-day timelock was verified.",
+  "short_headline": "Untimelocked T1 upgrades",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Official Base contract-address documentation identifies the Ethereum L1 ProxyAdmin owner as Gnosis Safe 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c, the SystemConfig owner as Gnosis Safe 0x14536667Cd30e52C0b458BaACcB9faDA7046E056, and the Guardian as Gnosis Safe 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2; live owner and Safe reads were not completed in this run."
+      },
+      {
+        "code": "C2",
+        "text": "The fetched Etherscan page for the L1 ProxyAdmin shows a verified ProxyAdmin ABI exposing owner, changeProxyAdmin, getProxyAdmin, getProxyImplementation, upgrade, and upgradeAndCall, while fetched BaseScan pages show proxy upgrade surfaces on L2 predeploy bridge/admin contracts."
+      },
+      {
+        "code": "C3",
+        "text": "The verified path found in this run is council/Safe approval followed by ProxyAdmin or proxy upgrade execution; no fetched evidence showed a timelock, scheduler, MIN_DELAY, voting delay, queue delay, or other 7-day uncontested-fast-path delay before execution."
+      },
+      {
+        "code": "C4",
+        "text": "Base's Security Council documentation states Base upgrades require 9 of 12 council approvals, with 11 independent entities or individuals plus Coinbase, and lists public signer addresses for the roster entries shown on the page; however, Safe owners, threshold, and version were not re-read on-chain in this run, and Base says individual representatives for entities are not published."
+      },
+      {
+        "code": "C5",
+        "text": "No token-weighted Governor, GovernorBravo, OZ Governor, or Aragon Voting path was verified in the fetched evidence; the fetched Base control documentation describes Security Council signatures for upgrades and role changes rather than proposal-threshold, voting-period, quorum, and timelock constants."
+      },
+      {
+        "code": "C6",
+        "text": "Official Base contract-address documentation identifies a Guardian Gnosis Safe, but the emergency function scope, reachable contracts, and any emergency time cap were not read on-chain in this run."
+      },
+      {
+        "code": "C7",
+        "text": "The highest reachable tier is T1 fund-critical: the ProxyAdmin and proxy ABIs expose implementation-replacement functions, and the fetched L1 StandardBridge explorer page identifies the Base Bridge proxy and shows ERC-20 token holdings at that bridge address."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that fund-critical bridge implementations can be replaced through upgrade functions and no timelock was verified on the fetched fast path.",
+      "orange": "The strongest orange argument is that T1 control appears to sit behind a Safe/Security-Council-style approval path, but the Safe owner/threshold state and a 7-day delay were not re-read or verified on-chain.",
+      "green": "The strongest green argument is that Base documents a 9-of-12 upgrade approval council with 11 independent members plus Coinbase, materially reducing single-party control."
+    },
+    "verdict": "Choosing orange because the fetched evidence supports a T1 upgrade path to fund-holding bridge logic and does not establish a 7-day timelock; the documented 9-of-12 council/Safe path prevents a red single-EOA or 2-of-3 classification, but the unverified Safe state, undisclosed entity representatives, and missing exit-window delay fall short of green."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges",
+      "shows": "Official Base bridge documentation describes bridging assets to Base, Ethereum-to-Base bridge options, and programmatic bridging context.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/base-contracts",
+      "shows": "Official Base contract-address documentation lists Ethereum L1 bridge/protocol contracts including L1StandardBridge, OptimismPortal, L1CrossDomainMessenger, SystemConfig, and L1 ProxyAdmin, plus admin addresses for Proxy Admin Owner, SystemConfig owner, and Guardian.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://etherscan.io/address/0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E",
+      "shows": "Fetched Etherscan page for Base L1 ProxyAdmin shows verified contract name ProxyAdmin and ABI functions including owner, changeProxyAdmin, getProxyAdmin, getProxyImplementation, upgrade, and upgradeAndCall.",
+      "chain": "Ethereum",
+      "address": "0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E"
+    },
+    {
+      "url": "https://etherscan.io/address/0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+      "shows": "Fetched Etherscan page for the documented L1 ProxyAdmin owner address identifies it as a Safe smart account proxy using Safe Singleton 1.3.0 implementation; owner list and threshold were not present in the fetched body.",
+      "chain": "Ethereum",
+      "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c"
+    },
+    {
+      "url": "https://etherscan.io/address/0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+      "shows": "Fetched Etherscan page for Safe Singleton 1.3.0 shows Safe ABI functions including execTransaction, getOwners, getThreshold, addOwnerWithThreshold, changeThreshold, enableModule, and execTransactionFromModule.",
+      "chain": "Ethereum",
+      "address": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/security/security-council",
+      "shows": "Official Base Security Council documentation states Base upgrades require 9 of 12 council approvals, describes 11 independent entities or individuals plus Coinbase, lists roster signer addresses shown on the page, and says council members approve upgrades and role changes.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://basescan.org/address/0x4200000000000000000000000000000000000018",
+      "shows": "Fetched BaseScan page for the L2 ProxyAdmin/predeploy proxy shows proxy source and ABI functions including admin, changeAdmin, implementation, upgradeTo, and upgradeToAndCall.",
+      "chain": "Base",
+      "address": "0x4200000000000000000000000000000000000018"
+    },
+    {
+      "url": "https://basescan.org/address/0x4200000000000000000000000000000000000010",
+      "shows": "Fetched BaseScan page for L2StandardBridge shows it is a proxy whose ABI includes admin, changeAdmin, implementation, upgradeTo, and upgradeToAndCall, with L2StandardBridge implementation files visible on the page.",
+      "chain": "Base",
+      "address": "0x4200000000000000000000000000000000000010"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+      "shows": "Fetched Etherscan page identifies 0x3154Cf16ccdb4C6d922629664174b904d80F2C35 as Base Bridge / L1StandardBridge proxy and shows ERC-20 token holdings at the bridge address, supporting fund-critical classification.",
+      "chain": "Ethereum",
+      "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35"
+    },
+    {
+      "url": "https://github.com/base/base",
+      "shows": "Official Base GitHub repository states Base is a rollup built on Ethereum and contains components used to run Base.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://github.com/base/base/blob/main/SECURITY.md",
+      "shows": "Official Base repository SECURITY.md lists vulnerability-reporting channels, bug bounty references, and security@coinbase.com for other security inquiries.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/security/report-vulnerability",
+      "shows": "Official Base vulnerability-reporting documentation says Coinbase HackerOne covers Base network and Base bridge contracts, with OP Stack-related scope also referenced.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://cantina.xyz/bounties/55316f42-3c5e-4746-9bd0-0f18dcbc344b",
+      "shows": "Cantina bounty page for Coinbase/Base shows a live bounty scope covering mainnet contracts deployed by Coinbase and Base-related contracts, with a maximum reward stated on the page.",
+      "chain": "Ethereum"
+    }
+  ],
+  "unknowns": [
+    "C1-offchain: DeFiPunkd live owner reads for L1 ProxyAdmin and SystemConfig, and Safe owner reads for 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c, 0x14536667Cd30e52C0b458BaACcB9faDA7046E056, and 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2 were blocked by the fetch environment, so current owner/admin state was not re-read on-chain.",
+    "C2: Current proxy admin storage values for the L1 and L2 proxies were not read through DeFiPunkd or block-explorer Read Contract output; upgradeability was classified from fetched verified proxy/ProxyAdmin ABI pages and the official Base contract-address page.",
+    "C3-offchain: No on-chain timelock, scheduler, MIN_DELAY, queue delay, or execution delay was fetched for the ProxyAdmin/Safe upgrade path; the value was not re-read on-chain and corroboration is limited to the absence of a discovered timelock in fetched official pages.",
+    "C4-offchain: Safe threshold, owners, and Safe version for each reachable Safe were not read via /api/safe/owners; the 9-of-12 upgrade approval rule and council roster are from official Base documentation only, and Base says entity representatives are not all publicly disclosed.",
+    "C5: No on-chain Governor, GovernorBravo, OZ Governor, Aragon Voting, proposalThreshold, votingDelay, votingPeriod, quorum, or governance timelock constants were discovered or read in this run.",
+    "C6: Guardian Safe emergency powers, callable functions, reachable contracts, and any time cap were not established from on-chain reads in this run.",
+    "C7: Exact blast-radius bounds for Guardian and SystemConfig owner actions were not classified because their live callable surfaces and owner-linked paths were not read on-chain."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/base/base"
+    ],
+    "docs_url": "https://docs.base.org/base-chain/network-information/bridges",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://cantina.xyz/bounties/55316f42-3c5e-4746-9bd0-0f18dcbc344b",
+    "security_contact": "security@coinbase.com",
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "L1 ProxyAdmin owner / Base upgrade approval Safe",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+        "role": "SystemConfig owner Safe",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "Guardian Safe",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E",
+        "role": "L1 ProxyAdmin contract",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0x4200000000000000000000000000000000000018",
+        "role": "L2 ProxyAdmin / predeploy proxy contract",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge is the canonical OP Stack bridge path for moving ETH and ERC-20 assets between Ethereum L1 and Base L2. Users deposit assets through L1/L2 standard bridge and portal/messenger contracts, while withdrawals rely on Base's L1-anchored rollup and fault-proof mechanism. The core L1StandardBridge and L2StandardBridge surfaces fetched in this run are proxies, placing bridge accounting and finalization logic inside the upgrade-control surface."
+  }
+}
+]
