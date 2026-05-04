@@ -266,7 +266,7 @@
 
 {#snippet row(row: LandingNode, isFamilyHead: boolean, isExpanded: boolean, isChild: boolean)}
   {@const extraChains = Math.max(0, row.chains.length - 1)}
-  {@const grades = { ...pizzaGradesFor(row.category, row.verifiability_grade, row.autonomy_grade), ...(row.assessment_grades ?? {}) }}
+  {@const grades = { ...pizzaGradesFor(row.category, row.verifiability_grade, row.autonomy_grade), ...(row.assessment_grades ?? {}), ...(row.pizza_grades ?? {}) }}
   {@const pz = pizzaPaths(grades, "sm")}
   {@const initial = row.name.charAt(0).toUpperCase()}
   {@const tier = row.tier ?? "none"}

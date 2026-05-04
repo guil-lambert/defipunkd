@@ -21,6 +21,10 @@ export type LandingRow = {
   verifiability_grade: GradeColor;
   autonomy_grade: GradeColor;
   assessment_grades?: Partial<Record<"control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability", GradeColor>>;
+  /** Resolved per-slice grade for the pizza chart: assessment > tentative
+   * (worst partial submission) > heuristic > gray. Set per-row in
+   * pages/index.astro. */
+  pizza_grades?: Partial<Record<"control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability", GradeColor>>;
   slice_summary?: Array<{
     id: "control" | "ability-to-exit" | "autonomy" | "open-access" | "verifiability";
     label: string;
@@ -116,7 +120,7 @@ const GRADE_SCORE: Record<GradeColor, number> = { green: 4, orange: 1.5, red: 1,
 
 function risksScore(node: LandingNode): number {
   const base = pizzaGradesFor(node.category, node.verifiability_grade, node.autonomy_grade);
-  const all = { ...base, ...(node.assessment_grades ?? {}) };
+  const all = { ...base, ...(node.assessment_grades ?? {}), ...(node.pizza_grades ?? {}) };
   return PIZZA_SLICES.reduce((sum, { id }) => sum + GRADE_SCORE[all[id] ?? "gray"], 0);
 }
 export type SortDir = "asc" | "desc";

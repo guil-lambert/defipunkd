@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rationale, SliceId } from "./assessments";
+import type { ProtocolMetadata, Rationale, SliceId } from "./assessments";
 
 export type SubmissionGrade = "green" | "orange" | "red" | "unknown";
 
@@ -24,6 +24,7 @@ export type LoadedSubmission = {
   evidence: SubmissionEvidence[];
   unknowns?: string[];
   analysis_date?: string;
+  protocol_metadata?: ProtocolMetadata;
   source_path: string;
 };
 
@@ -40,6 +41,7 @@ type RawSubmission = {
   evidence?: SubmissionEvidence[];
   unknowns?: string[];
   analysis_date?: string;
+  protocol_metadata?: ProtocolMetadata;
 };
 
 /**
@@ -122,6 +124,7 @@ export function loadSubmissions(dataDir: string): Map<string, Map<SliceId, Loade
             evidence: r.evidence ?? [],
             unknowns: r.unknowns,
             analysis_date: r.analysis_date,
+            protocol_metadata: r.protocol_metadata,
             source_path: path,
           });
         }

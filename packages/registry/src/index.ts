@@ -6,6 +6,7 @@ import type { Protocol, Snapshot } from "./types";
 import {
   loadAssessments,
   aggregateProtocolMetadata,
+  aggregateProtocolMetadataFromSubmissions,
   type LoadedAssessment,
   type SliceId as AssessmentSliceId,
   type ProtocolMetadata,
@@ -30,6 +31,7 @@ export { loadSubmissions, type LoadedSubmission, type SubmissionGrade, type Subm
 export {
   loadAssessments,
   aggregateProtocolMetadata,
+  aggregateProtocolMetadataFromSubmissions,
   type LoadedAssessment,
   type AssessmentGrade,
   type AssessmentStrength,
@@ -200,6 +202,31 @@ export function getMaster(slug: string): Master | undefined {
   return getMasters().get(slug);
 }
 
+function mergeMetadata(existing: ProtocolMetadata | undefined, sub: ProtocolMetadata): ProtocolMetadata {
+  if (!existing) return sub;
+  const out: ProtocolMetadata = { ...existing };
+  const unionArr = <T,>(a: T[] | undefined, b: T[] | undefined, keyOf: (x: T) => string): T[] => {
+    const seen = new Map<string, T>();
+    for (const x of a ?? []) seen.set(keyOf(x), x);
+    for (const x of b ?? []) if (!seen.has(keyOf(x))) seen.set(keyOf(x), x);
+    return Array.from(seen.values());
+  };
+  out.github = unionArr(existing.github, sub.github, (s) => s.toLowerCase());
+  if (out.github.length === 0) delete out.github;
+  out.audits = unionArr(existing.audits, sub.audits, (a) => `${a.firm.toLowerCase()}|${a.url.toLowerCase()}`);
+  if (out.audits.length === 0) delete out.audits;
+  out.admin_addresses = unionArr(existing.admin_addresses, sub.admin_addresses, (a) => `${a.chain.toLowerCase()}|${a.address.toLowerCase()}`);
+  if (out.admin_addresses.length === 0) delete out.admin_addresses;
+  // Scalars: keep existing value if set, else take submission's.
+  const keys = ["docs_url", "governance_forum", "voting_token", "bug_bounty_url", "security_contact", "deployed_contracts_doc", "upgradeability", "about"] as const;
+  for (const k of keys) {
+    if ((existing as Record<string, unknown>)[k] == null && (sub as Record<string, unknown>)[k] != null) {
+      (out as Record<string, unknown>)[k] = (sub as Record<string, unknown>)[k];
+    }
+  }
+  return out;
+}
+
 let cachedMetadata: Map<string, ProtocolMetadata> | null = null;
 export function getProtocolMetadata(slug: string): ProtocolMetadata | undefined {
   if (!cachedMetadata) {
@@ -215,6 +242,18 @@ export function getProtocolMetadata(slug: string): ProtocolMetadata | undefined 
       if (cachedMetadata.has(s)) continue;
       const merged = aggregateProtocolMetadata(bySlice);
       if (merged) cachedMetadata.set(s, merged);
+    }
+    // Layer raw submissions (typically the discovery slice) on top so a
+    // single Haiku run still contributes github / audits / bug bounty /
+    // etc. before three runs agree. Arrays union; scalars prefer the
+    // already-set (more authoritative) value, falling back to submissions.
+    for (const [s, bySlice] of getSubmissions()) {
+      const all: LoadedSubmission[] = [];
+      for (const arr of bySlice.values()) all.push(...arr);
+      const subMeta = aggregateProtocolMetadataFromSubmissions(all);
+      if (!subMeta) continue;
+      const existing = cachedMetadata.get(s);
+      cachedMetadata.set(s, mergeMetadata(existing, subMeta));
     }
     // Last-resort fallback: overlay-supplied auto-enriched bug_bounty_url.
     // Curated assessment values always win.

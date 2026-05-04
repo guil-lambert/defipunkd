@@ -1,4 +1,4 @@
-import type { Protocol, LoadedAssessment, AssessmentSliceId, Rationale, LoadedSubmission } from "@defipunkd/registry";
+import type { Protocol, LoadedAssessment, AssessmentSliceId, Rationale, LoadedSubmission, ProtocolMetadata } from "@defipunkd/registry";
 import type { GradeColor } from "./verifiability";
 import { verifiabilityGrade } from "./verifiability";
 import { autonomyGrade } from "./autonomy";
@@ -62,14 +62,22 @@ const BRIDGE_CATS = new Set([
   "Bridge Aggregator",
 ]);
 
-function verifiabilityRationale(p: Protocol): { grade: GradeColor; headline: string; rationale: string } {
-  const hasGithub = !!(p.github && p.github.length > 0);
-  const hasAudit = (p.audit_count ?? 0) >= 1;
-  const grade = verifiabilityGrade(hasGithub, p.audit_count ?? 0);
+function verifiabilityRationale(
+  p: Protocol,
+  metadata?: ProtocolMetadata,
+): { grade: GradeColor; headline: string; rationale: string } {
+  // Union snapshot signals with whatever DEFI@home discovery has surfaced
+  // since — otherwise a Haiku run that finds the GitHub repo + audits won't
+  // promote the heuristic and the page reports "no public repo" while
+  // References cheerfully links one.
+  const hasGithub = !!(p.github && p.github.length > 0) || ((metadata?.github?.length ?? 0) > 0);
+  const auditCount = (p.audit_count ?? 0) + (metadata?.audits?.length ?? 0);
+  const hasAudit = auditCount >= 1;
+  const grade = verifiabilityGrade(hasGithub, auditCount);
   if (grade === "green") {
     return {
       grade,
-      headline: `Open source + ${p.audit_count} audit${p.audit_count === 1 ? "" : "s"}`,
+      headline: `Open source + ${auditCount} audit${auditCount === 1 ? "" : "s"}`,
       rationale:
         "Protocol publishes a GitHub repository and has at least one audit on record. This is a coarse Phase-0 signal only: auditor reputation, scope, and post-audit review coverage are not yet weighted.",
     };
@@ -85,7 +93,7 @@ function verifiabilityRationale(p: Protocol): { grade: GradeColor; headline: str
   if (grade === "orange" && hasAudit) {
     return {
       grade,
-      headline: `${p.audit_count} audit${p.audit_count === 1 ? "" : "s"}, no public repo`,
+      headline: `${auditCount} audit${auditCount === 1 ? "" : "s"}, no public repo`,
       rationale:
         "At least one audit is recorded but no GitHub repository is published. Audits of closed-source code are weaker signal since readers cannot independently verify the deployed bytecode.",
     };
@@ -186,8 +194,9 @@ export function assessProtocol(
   p: Protocol,
   assessments?: Map<AssessmentSliceId, LoadedAssessment>,
   submissions?: Map<AssessmentSliceId, LoadedSubmission[]>,
+  metadata?: ProtocolMetadata,
 ): SliceAssessment[] {
-  const v = verifiabilityRationale(p);
+  const v = verifiabilityRationale(p, metadata);
   const d = autonomyRationale(p);
   const base: SliceAssessment[] = [
     {

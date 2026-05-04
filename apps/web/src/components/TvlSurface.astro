@@ -1,35 +1,41 @@
 ---
 /**
- * Renders the contract surface that DeFiLlama's TVL adapter walks for a
- * protocol, plus mechanically-fetched verification + ownership metadata.
+ * Renders the contract surface for a protocol. Combines:
+ *   - DeFiLlama TVL adapter contracts (mechanical) with verification +
+ *     ownership metadata read from explorers / Sourcify / RPC.
+ *   - DEFI@home discovery submissions (LLM-curated): admin/owner/proxy
+ *     addresses and any other contracts the discovery prompt catalogues.
  *
  * IMPORTANT: this section is reviewer/audit context, NOT a slice score.
- * The TVL adapter enumerates every contract value flows through, which
- * for a lending protocol means every collateral token (deployed by other
- * protocols) plus the protocol's own contracts. We surface the raw set
- * here; the slice grader is responsible for distinguishing "the protocol's
- * own surface" from "third-party collateral exposure".
+ * For a lending protocol, the TVL adapter set will include third-party
+ * collateral tokens; attribution is the grader's job, not the table's.
  */
 import type {
   EnrichmentAdapterAddress,
   EnrichmentControlAddress,
   EnrichmentSourceCodeAddress,
   ProtocolEnrichment,
+  LoadedSubmission,
+  AssessmentSliceId,
 } from "@defipunkd/registry";
 
 interface Props {
   enrichment: ProtocolEnrichment;
+  /** Discovery-slice submissions whose evidence rows seed additional
+   * (chain, address) entries, deduped against the adapter set. */
+  submissions?: Map<AssessmentSliceId, LoadedSubmission[]>;
   /** Optional prefix for the section ID, used on family pages so multiple
    * deployment surfaces don't collide on `#tvl-surface`. */
   idPrefix?: string;
 }
-const { enrichment, idPrefix = "" } = Astro.props;
+const { enrichment, submissions, idPrefix = "" } = Astro.props;
 const sectionId = idPrefix ? `${idPrefix}-tvl-surface` : "tvl-surface";
 
 const adapter = enrichment.adapter;
 const sourcecode = enrichment.sourcecode;
 const control = enrichment.control;
 
+type RowSource = "tvl" | "discovery" | "both";
 interface Row {
   chain: string;
   address: string;
@@ -46,15 +52,19 @@ interface Row {
   self_is_safe: boolean | null;
   self_safe_threshold: number | null;
   self_safe_owners_count: number | null;
+  source: RowSource;
+  discovery_url?: string;
+  discovery_shows?: string;
 }
 
 function buildRows(): Row[] {
   // Address-keyed merge across the three files.
   const addrMap = new Map<string, Row>();
-  function put(chain: string | null, address: string, context: string | null) {
+  function put(chain: string | null, address: string, context: string | null, source: RowSource = "tvl") {
     if (!chain) return;
-    const key = `${chain}|${address.toLowerCase()}`;
-    if (!addrMap.has(key)) {
+    const key = `${chain.toLowerCase()}|${address.toLowerCase()}`;
+    const existing = addrMap.get(key);
+    if (!existing) {
       addrMap.set(key, {
         chain,
         address: address.toLowerCase(),
@@ -71,7 +81,11 @@ function buildRows(): Row[] {
         self_is_safe: null,
         self_safe_threshold: null,
         self_safe_owners_count: null,
+        source,
       });
+    } else if (source !== existing.source) {
+      existing.source = "both";
+      if (!existing.context && context) existing.context = context;
     }
   }
   if (adapter) {
@@ -113,13 +127,27 @@ function buildRows(): Row[] {
       }
     }
   }
+  // Layer in discovery evidence rows (chain + address) on top of the
+  // mechanical adapter set. New rows tag source="discovery"; matches on an
+  // existing row promote it to source="both" and fill in context if empty.
+  const discoverySubs = submissions?.get("discovery") ?? [];
+  for (const sub of discoverySubs) {
+    for (const ev of sub.evidence ?? []) {
+      if (!ev.chain || !ev.address) continue;
+      put(ev.chain, ev.address, ev.shows ?? null, "discovery");
+      const row = addrMap.get(`${ev.chain.toLowerCase()}|${ev.address.toLowerCase()}`);
+      if (!row) continue;
+      if (!row.discovery_url) row.discovery_url = ev.url;
+      if (!row.discovery_shows) row.discovery_shows = ev.shows;
+    }
+  }
   return [...addrMap.values()].sort((x, y) => {
     if (x.chain !== y.chain) return x.chain.localeCompare(y.chain);
     return (x.context ?? "").localeCompare(y.context ?? "");
   });
 }
 
-const rows: Row[] = adapter ? buildRows() : [];
+const rows: Row[] = (adapter || (submissions?.get("discovery")?.length ?? 0) > 0) ? buildRows() : [];
 
 const explorerBase: Record<string, string> = {
   ethereum: "https://etherscan.io/address/",
@@ -158,17 +186,18 @@ const proxyCount = rows.filter((r) => r.is_proxy).length;
 const ownerSafeCount = rows.filter((r) => r.owner_is_safe).length;
 const ownerCount = rows.filter((r) => r.owner).length;
 ---
-{adapter && rows.length > 0 && (
+{rows.length > 0 && (
   <section id={sectionId} class="tvl-surface">
     <header class="head">
-      <h2>TVL contract surface</h2>
+      <h2>Contract surface</h2>
       <p class="lede">
-        Every contract DeFiLlama's TVL adapter walks for this protocol, with
-        verified-source flags from Etherscan + Sourcify and owner / multisig
-        metadata when readable on-chain. <strong>This is reviewer audit
-        context, not a slice score.</strong> A lending protocol's TVL surface
-        will list third-party collateral tokens alongside its own contracts;
-        attribution is the grader's job, not the table's.
+        Every contract in scope for this protocol — pooled from DeFiLlama's
+        TVL adapter (mechanical) and DEFI@home discovery submissions
+        (LLM-curated). Verified-source flags come from Etherscan + Sourcify;
+        owner / multisig metadata is read on-chain when available.
+        <strong> Reviewer audit context, not a slice score.</strong> A
+        lending protocol's adapter set will list third-party collateral
+        tokens alongside its own contracts; attribution is the grader's job.
       </p>
       <ul class="stat-row">
         <li><span class="stat-num">{totalCount}</span> <span>addresses</span></li>
@@ -179,8 +208,12 @@ const ownerCount = rows.filter((r) => r.owner).length;
         )}
       </ul>
       <p class="meta">
-        Adapter pinned at
-        {" "}<a href={adapter.adapter_url} rel="noopener noreferrer" target="_blank"><code>{adapter.adapter_commit?.slice(0, 7)}</code></a>.
+        {adapter && (
+          <>
+            TVL adapter pinned at
+            {" "}<a href={adapter.adapter_url} rel="noopener noreferrer" target="_blank"><code>{adapter.adapter_commit?.slice(0, 7)}</code></a>.
+          </>
+        )}
         {sourcecode && <span> Sourcecode fetched {sourcecode.fetched_at.slice(0, 10)}.</span>}
         {control && <span> Control fetched {control.fetched_at.slice(0, 10)}.</span>}
       </p>
@@ -193,6 +226,7 @@ const ownerCount = rows.filter((r) => r.owner).length;
             <th class="th-chain">Chain</th>
             <th class="th-name">Contract</th>
             <th class="th-addr">Address</th>
+            <th class="th-source">Source</th>
             <th class="th-verified">Verified</th>
             <th class="th-proxy">Proxy</th>
             <th class="th-owner">Owner</th>
@@ -215,6 +249,11 @@ const ownerCount = rows.filter((r) => r.owner).length;
                   ) : (
                     <code>{shortAddr(r.address)}</code>
                   )}
+                </td>
+                <td class="td-source">
+                  {r.source === "tvl" && <span class="pill src-tvl" title="DeFiLlama TVL adapter">TVL</span>}
+                  {r.source === "discovery" && <span class="pill src-disc" title={r.discovery_shows ?? "DEFI@home discovery"}>discovery</span>}
+                  {r.source === "both" && <span class="pill src-both" title="In both TVL adapter and discovery submission">TVL + disc</span>}
                 </td>
                 <td class="td-verified">
                   {r.verified_etherscan === true && (
@@ -355,4 +394,7 @@ const ownerCount = rows.filter((r) => r.owner).length;
   .pill.unverified { color: oklch(0.52 0.170 22); border-color: oklch(0.40 0.100 22); }
   .pill.proxy { color: oklch(0.65 0.120 75); border-color: oklch(0.45 0.080 75); }
   .pill.safe { color: oklch(0.60 0.130 150); border-color: oklch(0.45 0.080 150); background: oklch(0.20 0.060 150 / 0.3); }
+  .pill.src-tvl  { color: var(--text-muted); border-color: var(--surface-raised); }
+  .pill.src-disc { color: oklch(0.65 0.110 245); border-color: oklch(0.45 0.080 245); background: oklch(0.20 0.060 245 / 0.3); }
+  .pill.src-both { color: oklch(0.65 0.110 245); border-color: oklch(0.45 0.080 245); }
 </style>

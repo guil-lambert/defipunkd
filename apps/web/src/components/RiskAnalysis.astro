@@ -21,7 +21,8 @@ const isFamily = protocol.is_parent && children.length > 0;
 const familyMembers = isFamily
   ? [...children].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))
   : [];
-const rawSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
+const metadata = getProtocolMetadata(protocol.slug);
+const rawSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions, metadata);
 
 const SLICE_ORDER: Record<string, number> = {
   verifiability: 0,
@@ -38,8 +39,6 @@ const graySlices = slices.filter((s) => s.grade === "gray" && !s.partial);
 
 const ANALYSIS_DATE = new Date().toISOString().slice(0, 10);
 const REPO = "guil-lambert/defipunkd";
-
-const metadata = getProtocolMetadata(protocol.slug);
 const addressBook = buildAddressBook(metadata);
 
 function promptFor(sliceId: SliceId): string {
@@ -156,8 +155,21 @@ const auditSlices = slices.map((s) => ({
 // surface to discover, and family pages redirect to sub-products.
 const isCex = protocol.category === "CEX";
 const showDiscovery = !isCex && !isFamily;
-const discoverySubmissionCount = submissions?.get("discovery")?.length ?? 0;
-const discoveredAddressCount = metadata?.admin_addresses?.length ?? 0;
+const discoverySubmissions = submissions?.get("discovery") ?? [];
+const discoverySubmissionCount = discoverySubmissions.length;
+
+const discoveredEvidenceCount = (() => {
+  const seen = new Set<string>();
+  for (const s of discoverySubmissions) {
+    for (const ev of s.evidence ?? []) {
+      if (!ev.address || !ev.chain) continue;
+      seen.add(`${ev.chain.toLowerCase()}|${ev.address.toLowerCase()}`);
+    }
+  }
+  return seen.size;
+})();
+const discoveredAddressCount = Math.max(metadata?.admin_addresses?.length ?? 0, discoveredEvidenceCount);
+
 const discoveryPrompt = showDiscovery ? promptFor("discovery") : "";
 const discoverySubmitUrl = showDiscovery ? submitUrl("discovery") : "";
 const discoveryNeedsBootstrap = showDiscovery && discoveredAddressCount === 0;
@@ -736,6 +748,7 @@ function partialFillGrade(s: SliceAssessment): string {
     background: color-mix(in oklab, var(--accent-link) 8%, transparent);
     white-space: nowrap;
   }
+
 
   .cards {
     list-style: none;

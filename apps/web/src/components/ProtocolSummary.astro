@@ -16,7 +16,8 @@ interface Props {
 const { protocol, assessments, submissions, idPrefix = "" } = Astro.props;
 const idp = idPrefix ? `${idPrefix}-` : "";
 
-const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions);
+const headerMetadata = getProtocolMetadata(protocol.slug);
+const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions, headerMetadata);
 
 let tierInput: TierInput | undefined;
 if ((assessments && assessments.size > 0) || (submissions && submissions.size > 0)) {
@@ -117,7 +118,7 @@ function safeHost(url: string | null): string | null {
   }
 }
 
-const metadata = getProtocolMetadata(protocol.slug);
+const metadata = headerMetadata;
 
 const upgradeability = metadata?.upgradeability ?? null;
 const bugBountyUrl = metadata?.bug_bounty_url ?? null;
@@ -165,6 +166,10 @@ const aboutUnknown = !curatedAbout;
           {extraChains > 0 && <span class="chip">+{extraChains}</span>}
         </span>
       </div>
+      <span class="sep" aria-hidden="true">·</span>
+      <a class="defillama-link" href={`https://defillama.com/protocol/${protocol.slug}`} rel="noreferrer" target="_blank">
+        View on DeFiLlama ↗
+      </a>
     </div>
 
     <div class="risk-row">
@@ -293,6 +298,13 @@ const aboutUnknown = !curatedAbout;
   .top-item.tvl .v { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
   .top-item.chains .v { word-break: break-word; }
   .sep { color: var(--text-muted); opacity: 0.5; }
+  .defillama-link {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .defillama-link:hover { color: var(--accent-link); text-decoration: underline; }
 
   .risk-row {
     display: grid;

@@ -1,6 +1,6 @@
 ---
 export const prerender = true;
-import { listProtocols, getAssessments, getSubmissions } from "@defipunkd/registry";
+import { listProtocols, getAssessments, getSubmissions, getProtocolMetadata } from "@defipunkd/registry";
 import type { GradeColor } from "../lib/verifiability";
 import Base from "../layouts/Base.astro";
 import LandingTable from "../components/LandingTable.svelte";
@@ -30,7 +30,8 @@ const rows: LandingRow[] = protocols.map((p) => {
       )
     : undefined;
   const subBySlice = submissions.get(p.slug);
-  const sliceList = p.category === "CEX" ? cexAssessment() : assessProtocol(p, bySlice, subBySlice);
+  const pMetadata = getProtocolMetadata(p.slug);
+  const sliceList = p.category === "CEX" ? cexAssessment() : assessProtocol(p, bySlice, subBySlice, pMetadata);
   let tierInput: TierInput | undefined;
   if (bySlice || subBySlice) {
     tierInput = {};
@@ -74,6 +75,13 @@ const rows: LandingRow[] = protocols.map((p) => {
       partial: s.partial,
     };
   });
+  // Pizza shows the resolved grade per slice — assessment > tentative >
+  // heuristic — so partial/tentative submissions render their actual color
+  // instead of falling back to gray.
+  const pizza_grades: Partial<Record<PizzaSliceId, GradeColor>> = {};
+  for (const s of slice_summary) {
+    pizza_grades[s.id as PizzaSliceId] = s.grade as GradeColor;
+  }
   return {
     slug: p.slug,
     name: p.name,
@@ -90,6 +98,7 @@ const rows: LandingRow[] = protocols.map((p) => {
     verifiability_grade: verifiabilityGrade(!!(p.github && p.github.length > 0), p.audit_count ?? 0),
     autonomy_grade: autonomyGrade(p.category, p.forked_from),
     assessment_grades,
+    pizza_grades,
     slice_summary,
     tier,
   };
@@ -118,6 +127,7 @@ const rows: LandingRow[] = protocols.map((p) => {
       r.verifiability_grade = best.verifiability_grade;
       r.autonomy_grade = best.autonomy_grade;
       r.assessment_grades = best.assessment_grades;
+      r.pizza_grades = best.pizza_grades;
     }
   }
 }
