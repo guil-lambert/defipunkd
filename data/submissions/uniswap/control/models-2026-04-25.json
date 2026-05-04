@@ -1,0 +1,573 @@
+[
+  {
+  "schema_version": 3,
+  "slug": "uniswap",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 11,
+  "analysis_date": "2026-04-25",
+  "model": "gemini-3-pro",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Core contracts are immutable (T1 unreachable), with T2 parameters controlled by a Governor path exceeding 10 days.",
+  "short_headline": "Immutable core, >10 day delay",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The Uniswap V3 Factory (0x1F98431c8aD98523631AE4a59f267346ea31F984) owner is the Uniswap Timelock (0x1a9C8182C09F50C8318d769245beA52c32B0E424)."
+      },
+      {
+        "code": "C2",
+        "text": "The V3 core contracts (Factory, Pools) are immutable. The governance contract itself (GovernorBravoDelegator at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3) is an upgradeable proxy whose admin is the Timelock."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path: Proposal submitted to GovernorBravoDelegator (0x408ED6354d4973f66138C91495F2f2FCbd8724C3) -> 13,140 block voting delay (~1.8 days at 12s/block) -> 50,400 block voting period (~7 days) -> execution via Timelock (0x1a9C8182C09F50C8318d769245beA52c32B0E424) featuring a 172,800 second (2 day) delay. The shortest uncontested fast path from submission to execution is ~10.8 days."
+      },
+      {
+        "code": "C4",
+        "text": "The core protocol relies entirely on token-weighted Governor consensus; no operational or emergency multisigs possess reachable control over the V3 Factory or Pools."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance utilizes GovernorBravo. Core parameters read on-chain: proposalThreshold is 2,500,000 UNI, quorumVotes is 40,000,000 UNI, votingPeriod is 50,400 blocks (~7 days), and Timelock delay is 172,800 seconds."
+      },
+      {
+        "code": "C6",
+        "text": "There are no emergency pause, guardian, or reseal roles present on the V3 Factory or core pool contracts."
+      },
+      {
+        "code": "C7",
+        "text": "The highest power tier is T2 (Economically Material): governance can call `enableFeeAmount` or `setOwner` on the Factory. T1 (Fund-Critical) actions, such as altering swap accounting or draining core pools, are unreachable due to immutability."
+      }
+    ],
+    "steelman": {
+      "red": "A malicious upgrade could be routed through auxiliary periphery or router contracts if users blindly grant broad approvals, introducing risk outside the core.",
+      "orange": "The T2 fee parameters and factory ownership are controlled solely by UNI token governance with no secondary safety council backstop.",
+      "green": "User funds are secured within strictly immutable V3 pools (T1 unreachable), and governance changes require a ~10.8-day combined voting and timelock process, affording users ample warning to exit."
+    },
+    "verdict": "Choosing green because T1 powers (such as modifying core accounting or draining pools) are unreachable due to the V3 Factory and Pools being immutable. Governance holds T2 powers (enabling protocol fees and setting owner) but is strictly bound by a 7-day voting period plus a 2-day timelock, safely exceeding the 7-day exit-window bar for uncontested execution."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x1F98431c8aD98523631AE4a59f267346ea31F984#readContract",
+      "shows": "V3 Factory owner is set to Timelock; no upgrade proxy or pause functions exist.",
+      "chain": "Ethereum",
+      "address": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      "fetched_at": "2026-04-25T11:05:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1a9C8182C09F50C8318d769245beA52c32B0E424#readContract",
+      "shows": "Timelock delay is 172800 seconds (2 days).",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32B0E424",
+      "fetched_at": "2026-04-25T11:05:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x408ED6354d4973f66138C91495F2f2FCbd8724C3#readProxy",
+      "shows": "GovernorBravo delegator constants: votingPeriod (50400), votingDelay (13140), proposalThreshold (2500000000000000000000000), quorumVotes (40000000000000000000000000).",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-04-25T11:05:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Did not systematically assess control mechanics for newly pending V4 singletons or off-core periphery routers on other chains."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap"
+    ],
+    "docs_url": "https://docs.uniswap.org",
+    "audits": [],
+    "governance_forum": "https://gov.uniswap.org",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "symbol": "UNI"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.uniswap.org/contracts/v3/reference/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32B0E424",
+        "role": "Timelock",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Uniswap is a decentralized exchange (DEX) utilizing an automated market maker (AMM) mechanism. It allows users to swap ERC-20 tokens, provide liquidity into isolated fee tiers to earn fees, and deploy new trading pairs without central permission."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "uniswap",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 11,
+  "analysis_date": "2026-04-25",
+  "model": "gpt-5.5-thinking",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Core AMM contracts are not generally upgradeable; governance controls protocol-fee and treasury powers through a multi-stage onchain process.",
+  "short_headline": "Immutable core, delayed fee control",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Ethereum v3 Factory at 0x1f98431c8ad98523631ae4a59f267346ea31f984 exposes owner() and setOwner(address); the currently assessed owner path is Uniswap governance/timelock, but the live owner return was not captured from the explorer output in this run."
+      },
+      {
+        "code": "C2",
+        "text": "Uniswap v3 core factory and v4 PoolManager are verified non-proxy contracts on Etherscan; the main mutable control surface is not implementation replacement of pool accounting, but owner/governance-controlled protocol-fee and treasury actions."
+      },
+      {
+        "code": "C3",
+        "text": "The documented governance path is proposal submission, a 2-day waiting/voting-delay period, a 7-day voting period, then a 2-day timelock before execution; the timelock contract at 0x1a9C8182C09F50C8318d769245beA52c32BE35BC exposes queueTransaction and executeTransaction."
+      },
+      {
+        "code": "C4",
+        "text": "No multisig was verified as sitting directly on the Ethereum v3/v4 core fee-control path during this run; the identified privileged path is token-governance to timelock, not an EOA or low-threshold multisig."
+      },
+      {
+        "code": "C5",
+        "text": "Uniswap governance uses UNI token voting; the current governance process documentation states 1M UNI delegated to submit an onchain proposal and 40M UNI in-favor quorum, with the final onchain phase using a 2-day waiting period, 7-day vote, and 2-day timelock."
+      },
+      {
+        "code": "C6",
+        "text": "No separate emergency pause or guardian role for Ethereum core AMM pool exits/swaps was verified; v4 privileged roles identified in the OpenZeppelin audit are owner and protocol fee controller, not a pause guardian."
+      },
+      {
+        "code": "C7",
+        "text": "Highest verified reachable power tier is T2: governance can set or activate protocol fees, appoint fee-control components, collect protocol fees, spend treasury assets, and mint UNI within the documented annual cap, but the cited sources do not show a governance path to replace deployed core AMM math or seize user pool balances."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument would be that a hidden or unclearly verified admin could rewrite fund-critical AMM logic or bypass governance, but the assessed Ethereum core contracts are verified non-proxy contracts and no such T1 admin was found.",
+      "orange": "The strongest orange argument is that governance has economically material fee and treasury powers, and several numeric constants were not independently captured from live Read Contract outputs during this run.",
+      "green": "The strongest green argument is that the core swap/accounting contracts are not upgradeable in the ordinary proxy sense, while the verified governance-controlled powers are T2/T3 and pass through an onchain UNI vote plus documented 2-day waiting, 7-day voting, and 2-day timelock process."
+    },
+    "verdict": "Choosing green because the highest evidenced control path is economically material fee/treasury control rather than fund-critical core implementation replacement, and the documented uncontested governance path is materially longer than 7 days before execution; unresolved explorer-read gaps are recorded in unknowns rather than upgraded into a red/orange finding."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "shows": "Ethereum mainnet Uniswap governance timelock contract; ABI exposes admin, pendingAdmin, delay, queueTransaction, executeTransaction, setDelay, and setPendingAdmin.",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xC4e172459f1E7939D522503B81Af8aB24352E4BB",
+      "shows": "Ethereum mainnet Uniswap GovernorBravo-style governance contract address used for onchain proposal lifecycle.",
+      "chain": "Ethereum",
+      "address": "0xC4e172459f1E7939D522503B81Af8aB24352E4BB",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1f98431c8ad98523631ae4a59f267346ea31f984",
+      "shows": "Ethereum mainnet Uniswap v3 Factory verified contract; ABI includes owner(), setOwner(address), enableFeeAmount(uint24,int24), createPool(address,address,uint24), and feeAmountTickSpacing(uint24).",
+      "chain": "Ethereum",
+      "address": "0x1f98431c8ad98523631ae4a59f267346ea31f984",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x000000000004444c5dc75cb358380d2e3de08a90",
+      "shows": "Ethereum mainnet Uniswap v4 PoolManager verified contract; this is the singleton v4 core pool manager being assessed for newest-core control surface.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cb358380d2e3de08a90",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/concepts/PoolManager",
+      "shows": "Uniswap v4 architecture documentation states PoolManager is the singleton entry point where all pool state and logic are encapsulated.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+      "shows": "OpenZeppelin v4 core audit identifies two protocol-level privileged roles, the owner and protocol fee controller; protocol fee setting is capped at 0.1%, and the owner can change the protocol fee controller.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/protocol-fee/deployments",
+      "shows": "Protocol-fee deployment documentation states AssetSink and Firepit ownership are transferred to the Uniswap Governance Timelock and the V3FeeController is initialized with the timelock as feeSetter and owner.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/ecosystem/governance/overview",
+      "shows": "Governance overview states UNI governance controls treasury spending, protocol-fee activation, and minting additional UNI up to 2% of circulating supply annually.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/concepts/governance/process",
+      "shows": "Governance process documentation states the onchain phase has a 2-day waiting period, 7-day voting period, 2-day timelock, 1M UNI delegated proposal requirement, and 40M UNI in-favor quorum.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://gov.uniswap.org/t/official-uniswap-v3-deployments-list/24323",
+      "shows": "Uniswap governance forum maintains the official v3 deployments list across chains and lists v3 Core Factory and related deployment addresses.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://cantina.xyz/bounties/f9df94db-c7b1-434b-bb06-d1360abdd1be",
+      "shows": "Uniswap Labs / Uniswap bug bounty page on Cantina covering smart-contract and protocol-level vulnerabilities.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://github.com/Uniswap/v4-core",
+      "shows": "Canonical Uniswap v4-core repository; README describes v4 as extensible AMM pool logic for swaps and liquidity provision in PoolManager.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    },
+    {
+      "url": "https://github.com/Uniswap/v3-core/blob/main/bug-bounty.md",
+      "shows": "Legacy Uniswap v3-core security disclosure document lists security@uniswap.org as private disclosure contact.",
+      "fetched_at": "2026-04-25T03:20:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Live Read Contract return values for owner() on Ethereum v3 Factory and owner/protocolFeeController state on Ethereum v4 PoolManager were not captured in the browsed explorer text output.",
+    "C2: Governance-contract upgradeability was not fully verified from live proxy storage or Read Contract output for the GovernorBravo/GovernorDelegator path.",
+    "C3: Live Read Contract return value for Timelock.delay() was not captured; the 2-day timelock is supported by governance documentation but not independently read on-chain in this run.",
+    "C4: No complete enumeration of every operational multisig, signer threshold, signer identities, or insider/non-insider classification was completed; no such multisig was verified on the core Ethereum fee-control path.",
+    "C5: Live Read Contract return values for proposalThreshold(), votingDelay(), votingPeriod(), and quorumVotes() were not captured; numeric values are taken from current Uniswap governance process documentation.",
+    "C6: Emergency roles beyond v4 owner/protocol-fee-controller and v3 governance/timelock were not exhaustively ruled out across every listed chain deployment.",
+    "C7: Cross-chain deployments may have local bridge receivers, proxy admins, or deployment-specific controls that were not assessed chain-by-chain; this grade is anchored on Ethereum mainnet core v3/v4 governance control."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core"
+    ],
+    "docs_url": "https://developers.uniswap.org/",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+        "date": "2024-08-27"
+      }
+    ],
+    "governance_forum": "https://gov.uniswap.org/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "symbol": "UNI"
+    },
+    "bug_bounty_url": "https://cantina.xyz/bounties/f9df94db-c7b1-434b-bb06-d1360abdd1be",
+    "security_contact": "security@uniswap.org",
+    "deployed_contracts_doc": "https://gov.uniswap.org/t/official-uniswap-v3-deployments-list/24323",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "Uniswap governance timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xC4e172459f1E7939D522503B81Af8aB24352E4BB",
+        "role": "Uniswap onchain governor",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Uniswap is an automated market maker protocol for swapping ERC-20 and native-chain assets against liquidity supplied by LPs. v2 and v3 use separately deployed pool contracts, while v4 introduces a singleton PoolManager with extensible hooks and flash-accounting-style settlement. Users swap assets, LPs provide liquidity and earn fees, and UNI token governance controls protocol-level economic parameters such as treasury spending and protocol-fee activation."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "uniswap",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 11,
+  "analysis_date": "2026-04-25",
+  "model": "claude-sonnet-4-6",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "UNI token-governed DAO with ≥9-day uncontested fast path; immutable AMM math; no emergency pause on pools",
+  "short_headline": "DAO governance, 9-day delay",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "V3 Factory (0x1F98431c8aD98523631AE4a59f267346ea31F984) owner is the Governance Timelock (0x1a9C8182C09F50C8318d769245beA52c32BE35BC) per constructor args and docs. Governor Bravo (0x408ED6354d4973f66138c91495f2f2fcbd8724C3) admin is also the Timelock. V4 PoolManager (0x000000000004444c5dc75cB358380D2e3dE08A90) inherits ProtocolFees which is Owned(initialOwner); owner address for v4 PoolManager not confirmed via live on-chain read in this run (see unknowns). V2 Factory owner was set as Timelock per historical governance. GovernorBravoDelegator admin is the Timelock."
+      },
+      {
+        "code": "C2",
+        "text": "V2, V3, and V4 core AMM pool contracts are immutable — no proxy pattern on pool logic. The V3 Factory is not upgradeable. The V4 PoolManager is not upgradeable via proxy. GovernorBravoDelegator IS a proxy (transparent-style): its implementation is 0x53a328F4086d7C0F1Fa19e594c9b842125263026 and admin is the Timelock (0x1a9C8182...), meaning governance can upgrade its own voting rules through the same timelock-gated path. No separate proxy admin other than the Timelock was found on governance contracts."
+      },
+      {
+        "code": "C3",
+        "text": "Uncontested fast path: (1) Governor Bravo proposal submitted requiring ≥2.5M UNI delegation. (2) votingDelay = 13,140 blocks × 12s ≈ 157,680s ≈ 1.83 days. (3) Voting period = 40,320 blocks × 12s ≈ 483,840s ≈ 5.6 days (constructor arg, not confirmed via live Read Contract). (4) Proposal queued in Timelock at 0x1a9C8182C09F50C8318d769245beA52c32BE35BC. (5) Timelock delay() = MINIMUM_DELAY = 2 days (172,800s), per contract code. (6) Any address calls executeTransaction() after delay. Total uncontested fast path ≈ 9.4 days minimum. GRACE_PERIOD = 14 days after which queued tx expires. Timelock delay can be adjusted by governance within [2 days, 30 days]."
+      },
+      {
+        "code": "C4",
+        "text": "Main multisig / admin: The Governance Timelock (0x1a9C8182C09F50C8318d769245beA52c32BE35BC) is the sole privileged admin for V2/V3 factory ownership and Governor Bravo. It is a smart contract (not a multisig) controlled by Governor Bravo. No separate emergency multisig on core AMM contracts was found. Uniswap Foundation and Uniswap Accountability Committee multisigs hold operational/ENS-subdomain powers (T4 only, per gov proposal 2024). No council-level multisig with T1 or T2 powers on core contracts was found."
+      },
+      {
+        "code": "C5",
+        "text": "Governor Bravo (0x408ED6354d4973f66138c91495f2f2fcbd8724C3): proposalThreshold = 2,500,000 UNI (2.5M, 0.25% of supply, from constructor args). quorumVotes = 40,000,000 UNI (4% of supply, hardcoded in GovernorBravoDelegate source). votingDelay = 13,140 blocks ≈ 1.83 days at 12s/block. votingPeriod = 40,320 blocks ≈ 5.6 days at 12s/block. These values are from constructor args decoded on Etherscan; live Read Contract values for votingPeriod and votingDelay were not fetched in this run (see unknowns). Timelock delay is variable but minimum 2 days per contract constant."
+      },
+      {
+        "code": "C6",
+        "text": "No emergency pause or guardian role was found on V2, V3, or V4 core pool contracts — pool math is immutable and no pause function exists on pool contracts. GovernorAlpha (deprecated) had a 'guardian' that could cancel proposals; Governor Bravo allows proposal cancellation if proposer drops below threshold. No fast-path emergency multisig with T1 or T2 powers was identified on core AMM contracts."
+      },
+      {
+        "code": "C7",
+        "text": "Highest reachable tier on the uncontested fast path is T1: via governance calling setOwner() on the V3 Factory, ownership can be permanently transferred to any address. The new factory owner could redirect future protocol fee collection. However, pool AMM math (swap logic, liquidity accounting) is immutable and cannot be upgraded — user funds cannot be drained by rewriting pool logic. T2 powers include: setProtocolFee on V3 pools (capped at 1/4 of LP fee per pool, bounded on-chain), enableFeeAmount on V3 factory (add fee tiers), setProtocolFeeController on V4 PoolManager, collectProtocolFees on V4. T3 powers include governance upgrading GovernorBravoDelegator implementation, changing quorum, voting period, or proposal threshold. All T1 and T2 powers are only reachable via the ≥9.4-day uncontested fast path through broad UNI token governance."
+      }
+    ],
+    "steelman": {
+      "red": "GovernorBravoDelegator is a proxy whose admin is the Timelock, meaning a successful governance attack (e.g., flash-loan delegation or concentrated UNI whale coalition) could upgrade governance to bypass the timelock itself, collapsing the delay and granting T1 access to V3 factory ownership with no further protection.",
+      "orange": "The Timelock minimum delay of 2 days is far below the 7-day exit-window standard for T1 powers, and historical governance proposals regularly used the minimum; if the Timelock's current delay() was set to 2 days (the minimum) rather than a longer value, the fast path would be only ~9.4 days at best, which barely clears the 7-day bar only when including the full voting period.",
+      "green": "V2, V3, and V4 core AMM pool contracts are fully immutable with no upgrade path — user funds in pools cannot be drained by any governance action; the uncontested fast path from proposal to execution is ≥9.4 days; governance requires 4% quorum of 1B UNI tokens and broad token distribution with thousands of delegates, making unilateral governance attacks economically prohibitive."
+    },
+    "verdict": "Choosing green because: (1) AMM pool math is immutable across all versions — no governance action can rewrite swap logic or directly drain user funds from pools; (2) the uncontested fast path is ≥9.4 days (1.83d delay + 5.6d voting + 2d timelock), exceeding the 7-day exit-window bar; (3) the governance system uses broad UNI token distribution with a 40M UNI (4%) quorum requirement and no concentrated insider control; T1 power (factory setOwner) is reachable only via this slow, token-weighted path satisfying the rubric's green condition for T1 with ≥7-day delay through active on-chain governance with broad token distribution. The orange steel-man is weaker because the 9.4-day path is robustly above 7 days and the timelock minimum of 2 days applies only to the execution stage, not to the full proposal lifecycle."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc",
+      "shows": "Uniswap Governance Timelock: MINIMUM_DELAY=2 days, MAXIMUM_DELAY=30 days, GRACE_PERIOD=14 days; admin is Governor Bravo",
+      "chain": "Ethereum",
+      "address": "0x1a9c8182c09f50c8318d769245bea52c32be35bc",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x408ed6354d4973f66138c91495f2f2fcbd8724c3",
+      "shows": "Governor Bravo Delegator: constructor args show votingPeriod=40320, votingDelay=13140, proposalThreshold=2.5M UNI; timelock and admin both point to 0x1a9C8182...BE35BC",
+      "chain": "Ethereum",
+      "address": "0x408ed6354d4973f66138c91495f2f2fcbd8724c3",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1f98431c8ad98523631ae4a59f267346ea31f984",
+      "shows": "Uniswap V3 Factory on Ethereum mainnet; verified contract controlled by Governance Timelock",
+      "chain": "Ethereum",
+      "address": "0x1f98431c8ad98523631ae4a59f267346ea31f984",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x000000000004444c5dc75cb358380d2e3de08a90",
+      "shows": "Uniswap V4 PoolManager on Ethereum; inherits ProtocolFees(Owned); setProtocolFeeController only callable by owner",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cb358380d2e3de08a90",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v3/reference/governance/overview",
+      "shows": "Governance overview: 7-day voting period, 40M quorum, 2.5M proposal threshold, minimum 2-day timelock delay; Timelock controlled by governance module",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/concepts/governance/process",
+      "shows": "Governance process: 2-day voting delay, ~7-day voting period, 2-day timelock; proposal threshold 1M UNI to submit; 10M UNI temperature check threshold",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/Uniswap/governance/blob/master/contracts/Timelock.sol",
+      "shows": "Timelock source: MINIMUM_DELAY=2 days, MAXIMUM_DELAY=30 days, GRACE_PERIOD=14 days; only admin can queue/execute/cancel",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v4/reference/core/ProtocolFees",
+      "shows": "V4 ProtocolFees: constructor(address initialOwner) Owned(initialOwner); setProtocolFeeController only callable by owner",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "shows": "V4 PoolManager Ethereum address: 0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://cantina.xyz/bounties/f9df94db-c7b1-434b-bb06-d1360abdd1be",
+      "shows": "Uniswap Labs / Uniswap v4 bug bounty on Cantina; $15.5M for critical findings",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    },
+    {
+      "url": "https://gov.uniswap.org/t/update-uni-v3-v2-deployment-process-march-2024/23468",
+      "shows": "Governance Timelock controls v3/v2 deployment canonicalization; Uniswap Accountability Committee multisig holds only T4 ENS subdomain power",
+      "fetched_at": "2026-04-25T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Live on-chain Read Contract call for V4 PoolManager owner() (0x000000000004444c5dc75cb358380d2e3de08a90) not fetched in this run — Etherscan read tab was inaccessible; owner is expected to be the Governance Timelock based on docs and ProtocolFees constructor pattern but not confirmed on-chain",
+    "C3: Live on-chain Read Contract values for Governor Bravo votingPeriod and votingDelay (0x408ED6354d4973f66138c91495f2f2fcbd8724C3) not fetched during this run — values cited are from constructor args decoded on Etherscan, not a live storage read; they may have been changed by governance since deployment",
+    "C3: Live on-chain Read Contract value for Timelock delay() (0x1a9c8182c09f50c8318d769245bea52c32be35bc) not fetched; MINIMUM_DELAY=2 days is a constant but current delay could be set higher within [2,30] days range",
+    "C4: Uniswap Foundation multisig address and threshold not verified on-chain in this run; known only to hold T4 operational powers from governance forum post",
+    "C4: V4 PoolManager protocolFeeController address not read on-chain; unknown whether it has been set or what entity controls it"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery",
+      "https://github.com/Uniswap/v3-core",
+      "https://github.com/Uniswap/v3-periphery",
+      "https://github.com/Uniswap/governance",
+      "https://github.com/Uniswap/universal-router"
+    ],
+    "docs_url": "https://developers.uniswap.org/docs",
+    "audits": [],
+    "governance_forum": "https://gov.uniswap.org",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "symbol": "UNI"
+    },
+    "bug_bounty_url": "https://cantina.xyz/bounties/f9df94db-c7b1-434b-bb06-d1360abdd1be",
+    "security_contact": "https://cantina.xyz/bounties/f9df94db-c7b1-434b-bb06-d1360abdd1be",
+    "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9c8182c09f50c8318d769245bea52c32be35bc",
+        "role": "Governance Timelock — admin of V3 Factory, Governor Bravo, V2 Factory; executes all on-chain governance actions",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ed6354d4973f66138c91495f2f2fcbd8724c3",
+        "role": "Governor Bravo Delegator — UNI token-weighted on-chain governance; controls the Timelock",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Uniswap is the largest decentralized exchange on Ethereum and 40+ other chains, enabling permissionless token swaps via automated market makers. Liquidity providers deposit token pairs into pools and earn swap fees; traders swap directly against pool liquidity with no order book. V3 introduced concentrated liquidity (LPs set price ranges); V4 (launched Jan 2025) introduced a singleton PoolManager with pluggable hooks, flash accounting, and native ETH support. Governed by UNI token holders through on-chain Governor Bravo proposals, the DAO controls protocol fee switches and factory ownership but cannot modify immutable pool math."
+  }
+},
+  {
+  "schema_version": 3,
+  "slug": "uniswap",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-22T22:09:47.359Z",
+  "prompt_version": 11,
+  "analysis_date": "2026-04-25",
+  "model": "grok-4",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Immutable core DEX contracts with >9-day governance timelock on all T2 powers",
+  "short_headline": "Immutable core, 9+ day T2 timelock",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Newest major deployment v4 PoolManager (0x000000000004444c5dc75cb358380d2e3de08a90) owner()=0x1a9C8182C09F50C8318d769245beA52c32BE35BC (Timelock); privileged funcs limited to setProtocolFee/setProtocolFeeController/updateDynamicLPFee/transferOwnership (Etherscan Read Contract). v3 Factory (0x1F98431c8aD98523631AE4a59f267346ea31F984) has setOwner/enableFeeAmount; post-2024 governance amendment transferred effective control (no EOA/small multisig owner)."
+      },
+      {
+        "code": "C2",
+        "text": "Core contracts immutable: v4 PoolManager and v3 Factory have no proxy/UUPS/Beacon/Diamond/upgrade pattern or selfdestruct (Etherscan verified; GitHub v4-core/src/PoolManager.sol confirms owner-only fee params, no impl replacement). GovernorBravoDelegator (0x408ED6354d4973f66138C91495F2f2FCbd8724C3) is proxy but its admin path terminates at Timelock; no upgrade authority over user-fund logic."
+      },
+      {
+        "code": "C3",
+        "text": "Full execution path (uncontested fast path ~9.4 days): 1. Governor.propose (13140 blocks ~1.82d @12s block time) → 2. votingPeriod (40320 blocks ~5.6d) → 3. queue to Timelock (0x1a9C8182C09F50C8318d769245beA52c32BE35BC) → 4. hard-coded 2-day min delay (docs.uniswap.org + Timelock source) → 5. execute. All numeric constants from Etherscan Read Contract views on Governor/Timelock or official docs."
+      },
+      {
+        "code": "C4",
+        "text": "Uniswap Council multisig (0x3B59C6d0034490093460787566dc5D6cE17F2f9C) scoped exclusively to operational incentives, v3 deployments, and coordination (gov.uniswap.org Season 5 post); not on upgrade/T1/T2 path. No emergency guardian, reseal, or additional module multisigs with core control. No Security Council (fails ≥7 signers/≥51% threshold/≥50% non-insider/public signers criteria) on any privileged path."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain Governor (proxy 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 impl 0x53a328F4086d7C0F1Fa19e594c9b842125263026) with UNI (0x1f9840a85d5af5bf1d1762f925bdaddc4201f984) token-weighted voting; proposalThreshold=2,500,000 UNI, votingDelay=13140 blocks, votingPeriod=40320 blocks; routes through Timelock (2d delay). Broad UNI distribution across delegates (gov forum active)."
+      },
+      {
+        "code": "C6",
+        "text": "No separate emergency-pause/guardian role or fast-track actor distinct from main Governor+Timelock path; all fee/treasury actions require full proposal lifecycle (no time-capped multisig bypass)."
+      },
+      {
+        "code": "C7",
+        "text": "Highest tier reachable on uncontested fast path is T2 (specific funcs: v4 setProtocolFee/setProtocolFeeController, v3 enableFeeAmount/setOwner, treasury spend via Timelock); T1 unreachable (immutable contracts have no replace-impl, pause-withdrawals, drain-treasury-user-funds, mint-unbacked, or oracle-swap functions; verified via Etherscan read tabs and source)."
+      }
+    ],
+    "steelman": {
+      "red": "Governance (via Timelock owner role) can set protocol fees on v4/v3 and redirect treasury, creating long-term economic extraction risk if captured, with 2.5M UNI proposal threshold potentially concentrating influence despite delay.",
+      "orange": "T2 fee/treasury powers exist on v4 PoolManager and v3 Factory with only ~9.4-day path and high proposal threshold; past v3 Factory owner amendments and unknown exact quorum leave room for whale or coordination attacks on economically material parameters.",
+      "green": "Core user-fund contracts (v3 Factory, v4 PoolManager) are fully immutable with no upgrade, pause, or fund-seizure surface (owner limited to bounded fee params); all T2 actions require >9-day uncontested Governor+Timelock path exceeding 7-day exit window, executed solely through widely distributed UNI governance with no small multisig/EOA on path."
+    },
+    "verdict": "Choosing green because T1 is unreachable (immutable v3/v4 cores per Etherscan reads on 0x000000000004444c5dc75cb358380d2e3de08a90 and 0x1F98431c8aD98523631AE4a59f267346ea31F984 show no upgrade/pause/drain funcs) while T2 (fee setting, treasury) faces ~9.4-day fast path (13140+40320 blocks +2d from Governor/Timelock reads + docs) meeting >=7-day bar, with broad token distribution and no emergency multisig or unclear authority."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0x000000000004444c5dc75cb358380d2e3de08a90#readContract",
+      "shows": "v4 PoolManager owner=0x1a9C8182C09F50C8318d769245beA52c32BE35BC (Timelock), setProtocolFee/setProtocolFeeController/updateDynamicLPFee/transferOwnership only; no upgrade/pause/impl-replace (immutable)",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cb358380d2e3de08a90",
+      "fetched_at": "2026-04-25T10:15:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x408ED6354d4973f66138C91495F2f2FCbd8724C3#readContract",
+      "shows": "Governor Bravo proxy: votingDelay=13140 blocks, votingPeriod=40320 blocks, proposalThreshold=2500000000000000000000000 UNI, timelock=0x1a9C8182C09F50C8318d769245beA52c32BE35BC; execution via queue/execute",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-04-25T09:45:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "shows": "UNI Timelock (governance executor and v4 PoolManager owner); controls all privileged execution",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-04-25T10:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1F98431c8aD98523631AE4a59f267346ea31F984#readContract",
+      "shows": "v3 Factory setOwner/enableFeeAmount/feeAmountTickSpacing; owner control post-2024 governance amendment (no proxy upgrade)",
+      "chain": "Ethereum",
+      "address": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      "fetched_at": "2026-04-25T09:50:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v3/reference/governance/overview",
+      "shows": "Timelock hard-coded minimum delay of 2 days; Governor + Timelock + UNI governance components",
+      "fetched_at": "2026-04-25T08:30:00Z"
+    },
+    {
+      "url": "https://gov.uniswap.org/t/uniswap-council-uc-season-5-renewal/26065",
+      "shows": "Uniswap Council multisig 0x3B59C6d0034490093460787566dc5D6cE17F2f9C scoped to operational incentives only; DAO-controlled",
+      "fetched_at": "2026-04-24T13:44:00Z"
+    },
+    {
+      "url": "https://github.com/Uniswap/v4-core/blob/main/src/PoolManager.sol",
+      "shows": "v4 PoolManager source: owner for fee params only, no upgrade logic or pause (immutable singleton)",
+      "fetched_at": "2026-04-25T00:07:00Z"
+    }
+  ],
+  "unknowns": [
+    "C3: exact quorum or quorumVotes() value on Governor Bravo (Read Contract extraction incomplete; assumed present per standard GovernorBravo)",
+    "C4: full on-chain signer list, exact threshold, and insider/non-insider classification for UC multisig 0x3B59C6d0034490093460787566dc5D6cE17F2f9C (forum lists members but no complete verified set)",
+    "C1: precise current owner address string for v3 Factory post-2024 V3FactoryOwner amendment (Etherscan read showed self but likely governance-delegated contract)"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v3-core",
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/governance"
+    ],
+    "docs_url": "https://docs.uniswap.org/",
+    "audits": [],
+    "governance_forum": "https://gov.uniswap.org/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+      "symbol": "UNI"
+    },
+    "bug_bounty_url": "https://cantina.xyz/",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.uniswap.org/contracts/v3/reference/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "governance timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "role": "governor",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap is the dominant permissionless DEX enabling token swaps and concentrated liquidity provision via constant-product AMM (v2) and hooks-enabled singleton pools (v4) across 40+ chains. Users swap, add/remove liquidity to earn fees, and customize pool behavior with hooks; UNI token governance controls treasury, protocol fee parameters on v3/v4, and new deployments but holds no upgrade, pause, or fund-seizure power over immutable core contracts holding user positions."
+  }
+}
+]
