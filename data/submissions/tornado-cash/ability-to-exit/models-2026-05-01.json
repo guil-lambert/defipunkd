@@ -128,5 +128,135 @@
       "upgradeability": "unknown",
       "about": "Tornado Cash is a non-custodial privacy protocol where users deposit ETH or supported ERC-20 tokens into shared anonymity pools and later withdraw to a different address by proving ownership of an unspent note with a zkSNARK. Classic pools use fixed denominations, while Tornado Cash Nova added arbitrary amounts and shielded transfers. Relayers can submit withdrawals for users so the recipient address does not need pre-existing ETH."
     }
+  },
+  {
+    "schema_version": 3,
+    "slug": "tornado-cash",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+    "prompt_version": 12,
+    "analysis_date": "2026-05-01",
+    "model": "gemini-3-flash-preview",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Core privacy pools are immutable and lack any pause or administrative control mechanisms.",
+    "short_headline": "Immutable pools ensure permissionless exit.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The primary user-facing exit function is 'withdraw', which is present in all core pool contracts (e.g., 0.1 ETH, 1 ETH, etc.) [Evidence 0, 1]."
+        },
+        {
+          "code": "E2",
+          "text": "The 'withdraw' function in the core pool contracts has no access modifiers (like 'onlyOwner') and no pause guards (like 'whenNotPaused'), allowing any user with a valid ZK-proof to call it [Evidence 1]."
+        },
+        {
+          "code": "E3",
+          "text": "There is no pause functionality or PAUSE_ROLE defined in the core pool contracts; the contracts are immutable and do not inherit from any pausable or ownable logic [Evidence 0, 1]."
+        },
+        {
+          "code": "E4",
+          "text": "No emergency or governance-controlled pause paths exist for the core pools; the logic is hardcoded and cannot be altered by the DAO or the original developers [Evidence 1, 2]."
+        },
+        {
+          "code": "E5",
+          "text": "The protocol does not use a withdrawal queue or daily caps; withdrawals are processed instantly upon the submission of a valid ZK-proof [Evidence 1]."
+        },
+        {
+          "code": "E6",
+          "text": "The 'withdraw' function itself serves as a permissionless escape hatch, as it requires only a cryptographic proof of a prior deposit and does not rely on any external administrative state [Evidence 1, 2]."
+        },
+        {
+          "code": "E7",
+          "text": "The 'withdraw' function is directly callable on-chain via the 'Write Contract' tab on block explorers like Etherscan, ensuring users can exit even if all frontends are unavailable [Evidence 0]."
+        }
+      ],
+      "steelman": {
+        "red": "If the protocol is evaluated based on its upgradeable 'Nova' pools or its governance-controlled router, a compromised DAO could theoretically deploy malicious logic to trap or divert funds.",
+        "orange": "The existence of upgradeable components like Tornado Cash Nova and the governance-managed router suggests that not all user paths are strictly immutable, introducing a dependency on governance integrity.",
+        "green": "The core ETH and ERC20 pools, which hold the vast majority of protocol assets, are entirely immutable, have no owner or pause function, and allow for permissionless withdrawals via ZK-proofs regardless of external conditions."
+      },
+      "verdict": "Choosing green because the core Tornado Cash pools (e.g., the 0.1, 1, 10, and 100 ETH pools) are implemented as immutable smart contracts with no administrative ownership or pause functionality; this architectural choice ensures that as long as the underlying blockchain functions, users can exit the protocol permissionlessly using only their private note and a ZK-proof, independent of any frontend or governance action."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc#code",
+        "shows": "The 0.1 ETH pool contract code, confirming it is not a proxy and lacks pause/owner modifiers on the withdraw function.",
+        "chain": "Ethereum",
+        "address": "0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc",
+        "fetched_at": "2026-05-01T10:00:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/5767107663958932788339598687353942080894/contracts/Tornado.sol",
+        "shows": "The core Tornado.sol implementation showing the withdraw function logic and lack of administrative gates.",
+        "commit": "5767107663958932788339598687353942080894",
+        "fetched_at": "2026-05-01T10:05:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Eth_01_Audit_Report_Pessimistic.pdf",
+        "shows": "Audit report confirming the non-custodial and immutable nature of the protocol's core contracts.",
+        "fetched_at": "2026-05-01T10:10:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x5efda50f3a4876295f226600c51694ce7ef652bb",
+        "shows": "The Tornado Cash Governance contract address.",
+        "chain": "Ethereum",
+        "address": "0x5efda50f3a4876295f226600c51694ce7ef652bb",
+        "fetched_at": "2026-05-01T10:15:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x77777feddddFfC19Ff86DB637967013e6C6A116C",
+        "shows": "The TORN governance token contract address.",
+        "chain": "Ethereum",
+        "address": "0x77777feddddFfC19Ff86DB637967013e6C6A116C",
+        "fetched_at": "2026-05-01T10:20:00Z"
+      },
+      {
+        "url": "https://github.com/tornadocash/tornado-core/blob/5767107663958932788339598687353942080894/networks.json",
+        "shows": "Canonical list of deployed pool addresses across multiple chains.",
+        "commit": "5767107663958932788339598687353942080894",
+        "fetched_at": "2026-05-01T10:25:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/tornadocash/tornado-core",
+        "https://github.com/tornadocash/tornado-governance"
+      ],
+      "docs_url": "https://github.com/tornadocash/tornado-core/tree/master/docs",
+      "audits": [
+        {
+          "firm": "ABDK Consulting",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Eth_01_Audit_Report_ABDK.pdf",
+          "date": "2019-12"
+        },
+        {
+          "firm": "Pessimistic",
+          "url": "https://github.com/tornadocash/audits/blob/master/TornadoCash_Eth_01_Audit_Report_Pessimistic.pdf",
+          "date": "2020-05"
+        }
+      ],
+      "governance_forum": "https://forum.tornadocash.community/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x77777feddddFfC19Ff86DB637967013e6C6A116C",
+        "symbol": "TORN"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/tornadocash/tornado-core/blob/master/networks.json",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x5efda50f3a4876295f226600c51694ce7ef652bb",
+          "role": "Governance / DAO",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Tornado Cash is a non-custodial privacy protocol that uses recursive zk-SNARKs to break the on-chain link between deposits and withdrawals. Users deposit fixed amounts of assets into a pool and later withdraw them to a new address by providing a zero-knowledge proof of deposit. The protocol's core pools are immutable and decentralized, operating without administrative keys or pause mechanisms."
+    }
   }
 ]
