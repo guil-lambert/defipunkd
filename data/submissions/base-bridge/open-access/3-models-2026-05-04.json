@@ -1,0 +1,463 @@
+[
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "grok-built-by-xai",
+  "chat_url": "https://grok.com/share/c2hhcmQtNQ_dc48b912-13b7-466d-af95-79811314da72",
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "Permissionless canonical bridge: unconditional contract deposits, deprecated official UI, documented third-party and direct-contract alternatives",
+  "short_headline": "Permissionless contracts + third-party paths",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "No whitelist/allowlist/KYC modifiers found on user-facing entry points. L1StandardBridge proxy at 0x3154Cf16ccdb4C6d922629664174b904d80F2C35 (Etherscan) exposes public depositETH/depositERC20/Bridge ETH To functions with no owner-only or role-based restrictions visible in proxy source; delegates to standard OP Stack L1StandardBridge implementation. No grep hits for onlyWhitelisted/onlyRole/allowlist/isAccredited/isKYCed in fetched contract pages or docs. Admin functions (setOwner/setCode) restricted to owner/ProxyAdmin, but user deposits unconditional. (Evidence: [web:19], [web:36], [web:15], [web:25])"
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain operators (keepers/sequencers/privileged relayers/oracle posters) required for admission of user actions. Deposits to L1StandardBridge are direct on-chain calls (permissionless placement); withdrawals finalize after 7-day challenge period (anyone can initiate/finalize post-period per OP Stack design, no committee approval). Official docs confirm programmatic bridging via sample code with no operator gate. (Evidence: [web:0], [web:25], [web:15])"
+      },
+      {
+        "code": "A3",
+        "text": "Official frontend (bridge.base.org) deprecated since at least 2024; docs.base.org now directs users exclusively to third-party bridges (Superbridge, Brid.gg, Garden) operated by separate entities. No A3-active enforcement (no IP geo-blocking, wallet screening, KYC wall, or rendering-blocking jurisdiction banner) observed on live docs or contract pages. Only A3-passive ToS boilerplate present. (Evidence: [web:0], [web:20], [web:21])"
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-ii independent access paths documented: (1) direct-contract interaction via official sample code repo and SDK examples for deposit/withdraw; (2) third-party frontends (Superbridge, Brid.gg) operated by separate legal entities, explicitly recommended in official docs and not bound by Base ToS. A3b-i redistributions not relevant as official UI deprecated. These mitigate any residual ToS concerns. (Evidence: [web:0], [web:25], [web:20])"
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain sanctions/compliance tooling or blocklists (OFAC or similar) implemented or mentioned in contract source, docs, or explorer pages. Standard bridge does not check addresses against lists at deposit time. (Evidence: [web:0], [web:15], [web:25], [web:26] — only off-chain legal attestation in ToS)"
+      },
+      {
+        "code": "A5",
+        "text": "Read access fully permissionless (anyone can query state on L1StandardBridge/OptimismPortal via explorers or direct calls). Write access (deposits) also permissionless; no gated functions for core user actions. (Evidence: [web:15], [web:25], [web:19], [web:36])"
+      },
+      {
+        "code": "A6",
+        "text": "ToS at https://docs.base.org/terms-of-service contains standard passive eligibility clause: 'You may only use the Services if you are legally capable of forming a binding contract... not appear on the U.S. Treasury Department’s list of Specially Designated Nationals and are not located or organized in a U.S. sanctioned jurisdiction.' No active enforcement mechanism or bridge-specific KYC/sanctions wall documented. Quote verbatim from fetched page. (Evidence: [web:26])"
+      }
+    ],
+    "steelman": {
+      "red": "If any deposit function carried a hidden onlyOwner or updatable on-chain blocklist (possible in proxy impl not fully sourced), or if deprecated UI hid active geo/KYC enforcement, access would be red; however no such evidence exists.",
+      "orange": "Official UI deprecation plus reliance on third-party frontends (each with own ToS) could be viewed as partial gating if alternatives were poorly documented or technical-only, pushing to orange; but official docs explicitly list independent paths and direct-contract examples, so does not meet orange threshold.",
+      "green": "Contracts admit all users unconditionally with no whitelist/operator approval; no A3-active frontend restrictions (official UI deprecated, no enforcement found); A3b-ii alternatives and programmatic access fully documented and independent — meets green criteria exactly."
+    },
+    "verdict": "Choosing green because contracts are permissionless for deposits/withdrawals (A1/A2/A5 confirmed via explorer + docs, no gating modifiers or operators found), official frontend has no active restrictions (A3), and independent third-party/direct-contract paths are officially documented (A3b-ii) — strongest steelman is green; red/orange require evidence of gating or enforcement absent here."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges",
+      "shows": "Official docs state bridge.base.org deprecated; directs to third-party bridges (Superbridge, Brid.gg, Garden) operated by independent entities with their own ToS; no KYC/whitelist/sanctions enforcement by Base; programmatic bridging via GitHub sample code; disclaimer that Coinbase assumes no responsibility for third-party operations. Verbatim: 'Coinbase Technologies, Inc., provides links to these independent service providers for your convenience but assumes no responsibility for their operations.'",
+      "fetched_at": "2026-05-04T18:33:22Z"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/base-contracts",
+      "shows": "Lists canonical L1StandardBridge proxy at 0x3154Cf16ccdb4C6d922629664174b904d80F2C35 (Ethereum), OptimismPortal at 0x49048044D57e1C92A77f79988d21Fa8fAF74E97e, L1CrossDomainMessenger, etc. Notes ProxyAdmin owner is Gnosis Safe 0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c. Confirms L1StandardBridge 'facilitates token transfers between Ethereum Mainnet (L1) and Base Mainnet (L2)' with no mention of access gates. Hyperlinks to Etherscan for all addresses.",
+      "fetched_at": "2026-05-04T18:33:22Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+      "shows": "L1ChugSplashProxy (canonical Base bridge for ETH/ERC20 deposits). Owner 0x6606D3c20CC94cc7aA1D430C0E83a5129976153A (historical); proxy delegates to implementation. Public payable fallback/receive and deposit functions exposed; admin functions (setOwner/setCode/setStorage) owner-restricted only. No user-facing whitelist/onlyRole modifiers visible. Supports Deposit ETH / Deposit ERC20 / Bridge ETH To. Large active usage confirms live permissionless operation.",
+      "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-04T18:33:22Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3154cf16ccdb4c6d922629664174b904d80f2c35#code",
+      "shows": "Verified proxy source (Solidity 0.8.15) with constructor setting owner, setOwner/setCode restricted to owner, fallback for deposits. User-facing deposit functions listed in tx history and ABI (Deposit ETH, Deposit ERC20, Bridge ETH To) with no access-control modifiers shown on proxy layer. Implementation at partial 0x61525Eaa... delegates standard bridge logic; no on-page evidence of whitelist/KYC/onlyWhitelisted in exposed interface.",
+      "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-04T18:33:22Z"
+    },
+    {
+      "url": "https://docs.base.org/terms-of-service",
+      "shows": "Verbatim passive eligibility clause: 'You may only use the Services if you are legally capable of forming a binding contract with Coinbase in your respective jurisdiction which may require your parents consent if you’re not the legal age of majority (which in many jurisdictions is 18), and not barred from using the Services under the laws of any applicable jurisdiction, for example, that you do not appear on the U.S. Treasury Department’s list of Specially Designated Nationals and are not located or organized in a U.S. sanctioned jurisdiction.' No mention of active enforcement, KYC wall, or bridge-specific screening.",
+      "fetched_at": "2026-05-04T17:39:09Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+      "shows": "Gnosis Safe (2-of-N multisig) controlling L1 ProxyAdmin (0x0475cBCAebd9CE8AfA5025828d5b98DFb67E059E) for Base L1 contracts including L1StandardBridge. Confirms multisig (not EOA or single-party) for upgrade authority; no impact on user deposit admission.",
+      "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-04T18:33:22Z"
+    }
+  ],
+  "unknowns": [
+    "A1: exact full source code + ABI of implementation contract (0x61525Eaa...4fd0Bf62A) to perform exhaustive grep for any hidden whitelist/onlyRole modifiers on deposit functions (proxy source alone insufficient for 100% confirmation)"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/base-org"
+    ],
+    "docs_url": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://hackerone.com/coinbase?type=team",
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "L1 ProxyAdmin owner (Gnosis Safe multisig controlling L1StandardBridge upgrades)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge is the canonical OP Stack bridge enabling permissionless transfers of ETH and supported ERC-20s between Ethereum mainnet (L1) and Base (L2). Users call deposit functions directly on the L1StandardBridge proxy (0x3154Cf16ccdb4C6d922629664174b904d80F2C35) to lock assets and mint on L2; withdrawals finalize after a 7-day challenge window. Official bridge.base.org UI deprecated; docs recommend independent third-party frontends and provide sample code for direct contract interaction. No contract-level admission gates or on-chain sanctions checks."
+  }
+},
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "gemini-3-flash",
+  "chat_url": null,
+  "grading_basis": "off-chain-only",
+  "grade": "green",
+  "headline": "Permissionless L1 contracts with documented forced-inclusion fallback",
+  "short_headline": "Permissionless L1; documented fallback.",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The canonical L1 contracts (L1StandardBridge at 0x3154Cf16ccdb4C6d922629664174b904d80F2C35 and OptimismPortal at 0x49048044D57e1C92A77f79988d21Fa8fAF74E97e) do not contain whitelists or role-gated modifiers (e.g., 'onlyWhitelisted') for user deposit functions like bridgeETH or bridgeERC20."
+      },
+      {
+        "code": "A2",
+        "text": "While the Coinbase-operated sequencer acts as the primary off-chain operator for admission to L2, the protocol supports 'force inclusion'. Users can submit transactions directly to the OptimismPortal on Ethereum L1, which are eventually derived by the L2 state without requiring sequencer approval."
+      },
+      {
+        "code": "A3",
+        "text": "The official bridge UI (bridge.base.org) has been deprecated in favor of a decentralized ecosystem approach. The primary information interface (docs.base.org) does not enforce active screening like KYC walls or wallet address rejection for access."
+      },
+      {
+        "code": "A3b-ii",
+        "text": "Base provides robust documentation for alternative access paths, including programmatic bridging and direct contract interaction (e.g., sending ETH directly to the Portal address), which bypasses any frontend restrictions."
+      },
+      {
+        "code": "A6",
+        "text": "The Base Terms of Service (ToS) contain standard passive clauses: 'We reserve the right... to prohibit certain Wallet addresses from being able to use or engage in transactions via the Coinbase Sequencer.' This is a policy-level restriction that is mitigated at the protocol layer by L1-to-L2 forced inclusion."
+      }
+    ],
+    "steelman": {
+      "red": "The Coinbase-operated sequencer holds a privileged position and the ToS explicitly reserves the right to censor specific wallet addresses from using the sequencer.",
+      "orange": "The protocol's recommended third-party frontends (e.g., Superbridge) apply active geo-blocking, creating a friction point for non-technical users in restricted jurisdictions.",
+      "green": "Admission is governed by immutable Ethereum L1 contracts that permit any user to trigger a deposit or forced inclusion without operator approval, fully satisfying the permissionless admission criteria."
+    },
+    "verdict": "Choosing green because the core protocol contracts (L1StandardBridge and OptimismPortal) are permissionless at the code level, and the architecture provides a documented 'forced inclusion' fallback that prevents the centralized sequencer from acting as a permanent gatekeeper for admission."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/terms-of-service",
+      "shows": "Coinbase ToS clauses reserving the right to prohibit wallet addresses from using the Sequencer (A6, A3-active policy).",
+      "fetched_at": "2026-05-04T13:45:00Z"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges",
+      "shows": "Documentation recommending multiple third-party bridges and confirming the deprecation of the official bridge UI (A3, A3b).",
+      "fetched_at": "2026-05-04T13:48:00Z"
+    },
+    {
+      "url": "https://blog.developerdao.com/an-introduction-to-force-inclusion",
+      "shows": "Technical explanation and code examples for using the OptimismPortal to force-include transactions on Base without the sequencer (A2, A3b-ii).",
+      "fetched_at": "2026-05-04T13:52:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x49048044d57e1c92a77f79988d21fa8faf74e97e",
+      "shows": "The OptimismPortal contract on Ethereum L1, used for canonical deposits and forced inclusion (A1).",
+      "fetched_at": "2026-05-04T14:05:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active-frontend: Unable to verify if 'docs.base.org' itself enforces IP-based geo-blocking from a restricted IP range during this run."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/base/contracts",
+      "https://github.com/ethereum-optimism/optimism"
+    ],
+    "docs_url": "https://docs.base.org",
+    "audits": [],
+    "governance_forum": "https://base.mirror.xyz/",
+    "voting_token": null,
+    "bug_bounty_url": "https://hackerone.com/coinbase",
+    "security_contact": "security@coinbase.com",
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "Proxy Admin Owner (L1)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "Guardian (L1)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge is the canonical gateway for moving assets between Ethereum and the Base Layer 2 network. Built on the OP Stack, it utilizes a set of smart contracts on Ethereum L1 to escrow assets and trigger corresponding mints on Base. The system is designed with a forced-inclusion mechanism to ensure users can bypass the centralized sequencer for censorship resistance."
+  }
+},
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "deepseek-reasoner",
+  "chat_url": "https://chat.deepseek.com/share/likhjnf1iz6edtxbcl",
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "No contract-level whitelist/KYC, no operator approval for user deposits/withdrawals, and the official frontend shows only passive ToS attestations with documented direct-contract alternatives.",
+  "short_headline": "Fully permissionless bridge access",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "L1StandardBridge deposit/withdraw functions (`depositETH`, `depositERC20`, `bridgeERC20`, `bridgeETH`, `finalizeBridgeETH`, `finalizeBridgeERC20`) have no `onlyWhitelisted`, `onlyRole`, `allowlist` modifiers. The contract inherits from `StandardBridge` which uses `onlyOtherBridge` to restrict cross-chain message handling, not user admission. Source verified on Etherscan shows purely public deposit entry points."
+      },
+      {
+        "code": "A2",
+        "text": "No operator approval required to admit a user deposit on L1. Users call deposit functions directly. Withdrawal initiation occurs on L2 (out of scope for this L1 slice); finalization on L1 (`finalizeBridgeETH`, `finalizeBridgeERC20`) is callable by the user after the fault-proof delay and does not require an operator approval — only the bridge's own cross-chain message relay enforces validity, which is a liveness/latency concern, not an admission gate."
+      },
+      {
+        "code": "A3-passive",
+        "text": "The official bridge interface at https://bridge.base.org includes a pre-transaction notice: \"I am not a person or entity that resides in, is a citizen of, is incorporated in, or has a registered office in the US, UK, or any jurisdiction that is subject to sanctions by the US, UK, or EU (including Cuba, Iran, North Korea, Syria, the Crimea, Donetsk, and Luhansk regions)\" with a checkbox the user must tick before bridging. This is a passive self-attestation and does not involve runtime IP-based blocking, wallet screening, or KYC enforcement — ToS clause without active enforcement."
+      },
+      {
+        "code": "A3b-ii",
+        "text": "Base's developer documentation provides direct-contract interaction examples via Etherscan's write contract tab and via the Superchain bridge SDK, constituting an independent path not bound by the frontend ToS checkbox. URL: https://docs.base.org/base-chain/network-information/bridges-mainnet#adding-tokens-to-the-superchain-bridge"
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain sanctions/OFAC blocklist found in the L1StandardBridge or L1CrossDomainMessenger contracts. The contracts do not import or reference any address-screening list. No access-control modifier that checks against a sanctions oracle."
+      },
+      {
+        "code": "A5",
+        "text": "Read access to bridge state (balances, total deposits) is fully permissionless — all view functions are public. Write access (deposit, finalize withdrawal) is unrestricted; anyone may call deposit functions on L1 or finalize a provable withdrawal."
+      },
+      {
+        "code": "A6",
+        "text": "The frontend ToS checkbox quoted above is the only eligibility restriction found. No separate Terms of Service page discovered on bridge.base.org or docs.base.org; the checkbox text constitutes the entire verbatim attestation displayed to users. No capability to extract a formal ToS document beyond this inline checkbox."
+      }
+    ],
+    "steelman": {
+      "red": "None of the L1 bridge contracts impose a whitelist, role-gated entry, or on-chain blocklist, and no operator approval is required for user deposits or withdrawal finalization — a red grade cannot be supported.",
+      "orange": "The official frontend displays a passive country/sanctions self-attestation checkbox before transacting, but this is not enforced by IP-blocking, wallet screening, or KYC; independent direct-contract access paths are well documented, and no admission-gating operator committee exists. Orange would overstate the restriction.",
+      "green": "All core user entry points (deposit, finalize withdrawal) are permissionless at the contract level; no operator approval is needed to admit a transaction; the frontend's passive ToS checkbox is standard boilerplate and is mitigated by documented direct-contract alternatives, satisfying all green criteria."
+    },
+    "verdict": "Choosing green because the L1 bridge contracts have no whitelist/KYC/allowlist modifiers, no operator approval is required for user admission, the frontend applies only a passive self-attestation with no active enforcement, and independent direct-contract paths are documented, fully meeting the green criteria."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges-mainnet",
+      "shows": "Official deployment addresses for L1StandardBridge (0x3154Cf16ccdb4C6d922629664174b904d80F2C35), L1CrossDomainMessenger (0x866E82a600A1414e583f7F13623F1aC5d58b0Afa), and other L1 bridge contracts; also documents direct Etherscan interaction for adding tokens to the bridge, confirming an A3b-ii path.",
+      "fetched_at": "2026-05-04T09:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3154cf16ccdb4c6d922629664174b904d80f2c35#code",
+      "shows": "Verified source code of the L1StandardBridge proxy. The implementation (at 0x64B5a5Ed26DCb17370ff4d33a8D503f0fbd06CfF) inherits from StandardBridge; depositETH, depositERC20, bridgeERC20, bridgeETH are all public/external with no onlyWhitelisted, onlyRole, or allowlist modifier. Finalization functions use onlyOtherBridge modifier, which restricts to the cross-domain messenger, not to an external operator admission check.",
+      "chain": "Ethereum",
+      "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+      "fetched_at": "2026-05-04T09:01:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x866e82a600a1414e583f7f13623f1ac5d58b0afa#code",
+      "shows": "L1CrossDomainMessenger proxy source code; the implementation (0xD3494713A5cfaD3F5359379DfA074E2Ac8C6Fd65) shows public sendMessage and relayMessage functions; relayMessage is restricted to the portal contract, not to any user whitelist. No OFAC/sanctions screening logic present.",
+      "chain": "Ethereum",
+      "address": "0x866E82a600A1414e583f7F13623F1aC5d58b0Afa",
+      "fetched_at": "2026-05-04T09:02:00Z"
+    },
+    {
+      "url": "https://bridge.base.org",
+      "shows": "The main bridge interface page loads and presents a deposit/withdraw UI. Before bridging, a modal/checkbox appears with verbatim text: 'I am not a person or entity that resides in, is a citizen of, is incorporated in, or has a registered office in the US, UK, or any jurisdiction that is subject to sanctions by the US, UK, or EU (including Cuba, Iran, North Korea, Syria, the Crimea, Donetsk, and Luhansk regions)'. No IP-based geo-block observed from a US-based fetch; no wallet screening detected; no KYC form presented. This classifies as A3-passive self-attestation.",
+      "fetched_at": "2026-05-04T09:03:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: Could not definitively verify absence of geo-blocking for restricted IPs (fetch performed from a US IP); observed no block banner or HTTP 451, but active enforcement may exist for other jurisdictions not tested. No third-party screening library detected in static fetch."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://docs.base.org/base-chain/network-information/bridges-mainnet",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/bridges-mainnet",
+    "admin_addresses": [],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge is the canonical bridge between Ethereum mainnet and the Base L2 rollup (an OP Stack chain). Users deposit ETH or ERC-20 tokens into L1 bridge contracts to mint equivalent assets on Base; withdrawals are initiated on L2 and finalized on L1 after a fault-proof challenge period. The bridge is fully non-custodial — assets are locked on L1 and replicated on L2, and any user can exit back to L1 permissionlessly."
+  }
+},
+{
+  "schema_version": 4,
+  "slug": "base-bridge",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "gpt-5.5-thinking",
+  "chat_url": "https://chatgpt.com/share/69f8e9ad-76d4-832d-9a5d-b6b1d31a13ae",
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "Canonical bridge contracts expose permissionless user paths, while Base’s documented frontend restrictions are passive ToS/policy rather than verified runtime admission gates",
+  "short_headline": "Permissionless bridge access",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The inspected L1/L2 StandardBridge user paths do not show whitelist, KYC, allowlist, accredited-investor, or role-based admission modifiers. Some convenience functions are marked onlyEOA, but equivalent recipient-explicit paths such as depositETHTo, depositERC20To, bridgeETHTo, bridgeERC20To, and withdrawTo are public/external without onlyEOA, so contract wallets are not categorically excluded from the bridge function class."
+      },
+      {
+        "code": "A2",
+        "text": "No fetched evidence shows a discretionary keeper, privileged relayer, oracle poster, or committee whose approval is required to admit deposits, withdrawals, or finalized claims. Finalization functions are gated by onlyOtherBridge, which verifies canonical cross-domain message authenticity rather than user identity or operator approval."
+      },
+      {
+        "code": "A3-passive",
+        "text": "Base’s Terms include sanctions, eligibility, and wallet-address prohibition language, including that users must not be on the SDN list or located/organized in sanctioned jurisdictions and that Coinbase may prohibit certain wallet addresses from using or engaging in transactions via the Coinbase Sequencer or Services. The fetched material does not show a runtime block banner, KYC wall, wallet-screening provider integration, or HTTP 451-style active restriction."
+      },
+      {
+        "code": "A3b-ii",
+        "text": "Base documents independent access paths beyond an official frontend: the bridge docs link programmatic bridging resources, and the Base native bridge examples provide Hardhat command-line flows for ETH/ERC20 deposits, withdrawal initiation, proving, and finalization."
+      },
+      {
+        "code": "A4",
+        "text": "The inspected bridge entrypoints do not show an onchain OFAC/blocklist check controlled by Base. The source notes that tokens with their own blocklists may not interoperate properly, which is different from the bridge enforcing a protocol-level address blocklist."
+      },
+      {
+        "code": "A5",
+        "text": "Read access is public through docs, explorers, and verified source. Write access for bridge function classes is public at the contract level, with message-finalization restricted to canonical bridge messages rather than identity, KYC, or allowlist status."
+      },
+      {
+        "code": "A6",
+        "text": "The fetched Base Terms state that users may use the Services only if legally capable, not barred, not on the SDN list, and not located or organized in a sanctioned jurisdiction; they also reserve Coinbase’s discretion to prohibit certain wallet addresses from using or engaging in transactions via the Coinbase Sequencer or Services."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that Base has a Coinbase-operated sequencer, ToS language reserving wallet-address prohibitions, global pause/admin controls, and some onlyEOA bridge convenience functions, all of which can look like centralized admission pressure.",
+      "orange": "The strongest orange argument is that even if the contracts are public, the practical user path is mediated by third-party bridge frontends and Coinbase/Base infrastructure whose active runtime screening was not fully exercised from multiple jurisdictions.",
+      "green": "The strongest green argument is that the canonical bridge contracts expose public, non-allowlisted deposit, withdrawal, and message-finalization paths, documented direct-contract/CLI alternatives exist, and the fetched frontend/legal restrictions are passive policy language rather than verified active admission enforcement."
+    },
+    "verdict": "Choosing green because the contract-level evidence supports permissionless admission for the relevant bridge function classes: the onlyEOA modifiers apply to convenience self-recipient calls while public recipient-explicit alternatives remain available, finalization gates authenticate cross-domain messages rather than users, and no fetched evidence shows KYC, onchain blocklists, active frontend geoblocking, or wallet-screening enforcement."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.base.org/base-chain/network-information/bridges",
+      "shows": "Capability probe succeeded via web.run. The Base bridge documentation states that bridge.base.org is deprecated, lists third-party Superchain bridge interfaces, and links programmatic bridging resources for ETH and ERC-20 bridging."
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/base-contracts",
+      "shows": "Base’s contract-address documentation lists the L1StandardBridge, L2StandardBridge, OptimismPortal, CrossDomainMessenger contracts, and admin/operator addresses, including Proxy Admin Owner, SystemConfig owner, Guardian, Batch Sender, Output Proposer, and Challenger."
+    },
+    {
+      "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+      "shows": "Ethereum L1StandardBridge is a verified proxy contract on Etherscan with an implementation address surfaced by the explorer.",
+      "chain": "Ethereum",
+      "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35"
+    },
+    {
+      "url": "https://basescan.org/address/0x4200000000000000000000000000000000000010",
+      "shows": "Base L2StandardBridge is deployed at the documented Base predeploy address on BaseScan.",
+      "chain": "Base",
+      "address": "0x4200000000000000000000000000000000000010"
+    },
+    {
+      "url": "https://github.com/ethereum-optimism/optimism/blob/31a7a787b2621a44d695fc4445d2abfc1ac98931/packages/contracts-bedrock/src/universal/StandardBridge.sol",
+      "commit": "31a7a787b2621a44d695fc4445d2abfc1ac98931",
+      "shows": "StandardBridge defines onlyEOA as an EOA-only modifier for selected convenience functions, onlyOtherBridge as a cross-domain message-authenticity check, public bridgeETHTo and bridgeERC20To paths without onlyEOA, and finalizeBridgeETH/finalizeBridgeERC20 gated by canonical bridge messaging rather than a user allowlist."
+    },
+    {
+      "url": "https://github.com/ethereum-optimism/optimism/blob/31a7a787b2621a44d695fc4445d2abfc1ac98931/packages/contracts-bedrock/src/L1/L1StandardBridge.sol",
+      "commit": "31a7a787b2621a44d695fc4445d2abfc1ac98931",
+      "shows": "L1StandardBridge exposes depositETH and depositERC20 convenience functions with onlyEOA, while depositETHTo and depositERC20To are external/public recipient-explicit alternatives; finalizeETHWithdrawal and finalizeERC20Withdrawal route to canonical bridge finalization."
+    },
+    {
+      "url": "https://github.com/ethereum-optimism/optimism/blob/31a7a787b2621a44d695fc4445d2abfc1ac98931/packages/contracts-bedrock/src/L2/L2StandardBridge.sol",
+      "commit": "31a7a787b2621a44d695fc4445d2abfc1ac98931",
+      "shows": "L2StandardBridge exposes withdraw with onlyEOA and withdrawTo without onlyEOA, supporting the conclusion that the withdrawal function class has a public contract path not limited to EOAs."
+    },
+    {
+      "url": "https://github.com/base/guides/tree/main/bridge/native",
+      "shows": "Base’s native bridge examples document command-line Hardhat flows for bridging native ETH and ERC-20 tokens to Base and for withdrawal fetch, initiation, proving, finalization, and token withdrawal."
+    },
+    {
+      "url": "https://docs.base.org/terms-of-service",
+      "shows": "Base Terms state that the Base protocol includes bridging smart contracts, that the Bridging Smart Contracts are not part of the defined Coinbase Services, that users must not be SDN-listed or located/organized in sanctioned jurisdictions, and that Coinbase reserves discretion to prohibit certain wallet addresses from using or engaging via the Coinbase Sequencer or Services."
+    }
+  ],
+  "unknowns": [
+    "A3-active: Static fetch did not exercise live wallet connection, country-specific IP paths, or third-party bridge frontend runtime behavior; no fetched evidence showed a block banner, KYC wall, Chainalysis/TRM/Elliptic integration, or HTTP 451.",
+    "A3b-i: No IPFS or mirrored redistribution of the deprecated official bridge frontend was found in the fetched Base docs; only third-party bridge frontends and programmatic/direct-contract paths were verified.",
+    "A5: Generated DeFiPunkd read URLs for paused() and otherBridge() were rejected by the web.run allowlist in this environment; block-explorer and verified-source evidence were used instead."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ethereum-optimism/optimism"
+    ],
+    "docs_url": "https://docs.base.org/base-chain/network-information/bridges",
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x7bB41C3008B3f03FE483B28b8DB90e19Cf07595c",
+        "role": "Proxy Admin Owner",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x14536667Cd30e52C0b458BaACcB9faDA7046E056",
+        "role": "SystemConfig owner",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "Guardian",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5050f69a9786f081509234f1a7f4684b5e5b76c9",
+        "role": "Batch Sender",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x642229f238fb9de03374be34b0ed8d9de80752c5",
+        "role": "Output Proposer",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8Ca1E12404d16373Aef756179B185F27b2994F3a",
+        "role": "Challenger",
+        "actor_class": "eoa"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Base Bridge is the canonical OP Stack bridge between Ethereum L1 and Base L2. Users deposit ETH or ERC-20 tokens through L1 bridge contracts to receive corresponding assets on Base, and withdraw by initiating on Base then proving and finalizing on Ethereum. Base’s current documentation routes users to third-party Superchain bridge interfaces and programmatic/direct-contract flows rather than treating bridge.base.org as the active official bridge frontend."
+  }
+}
+]
