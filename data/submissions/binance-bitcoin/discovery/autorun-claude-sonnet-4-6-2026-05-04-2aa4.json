@@ -1,0 +1,116 @@
+{
+  "schema_version": 4,
+  "slug": "binance-bitcoin",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "3 contracts catalogued on BSC (BNB Chain): BTCB token, BEP-20 Factory, and upgradeable logic implementation; BTCB owner address not yet read on-chain; no audit PDFs or deployed-contracts doc found.",
+  "short_headline": "3 BSC contracts found; owner unread",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "BscScan name-tag search for Binance/BTCB on BNB Smart Chain (chainId 56) surfaced 2 labelled contracts: BTCB token (0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c, label 'Binance-Peg BTCB Token') and BEP-20 Factory (0x08adbaa6a215affd711f532ec219299ba1e5b9b7, label 'Binance: BEP-20 Factory'). DeFiLlama lists protocol.chains as 'Bitcoin' but the deployed contracts are on BSC; Bitcoin has no smart contracts."
+      },
+      {
+        "code": "D2",
+        "text": "The official website https://www.binance.com/en/collateral-btokens loaded but rendered no dynamic contract list (static fetch). No canonical deployed-contracts documentation page was located. Binance's Proof of Reserves page (https://www.binance.com/en/proof-of-reserves) describes a Merkle Tree + zk-SNARKs verification mechanism for custody backing but does not enumerate contract addresses."
+      },
+      {
+        "code": "D3",
+        "text": "No audit PDFs were linked in protocol.audit_links and none were surfaced during discovery. BscScan shows 'No Contract Security Audit Submitted' for both the BTCB token contract and the BEP-20 Factory. Downstream runs should search for Binance Bridge / BTCB audit reports independently."
+      },
+      {
+        "code": "D4",
+        "text": "BscScan's overview for the BEP-20 Factory (0x08adbaa6a215affd711f532ec219299ba1e5b9b7) references GitHub repo https://github.com/binance-chain/canonical-upgradeable-bep20 for the factory/upgradeable token pattern. The factory's constructor argument reveals logic implementation address 0xBA5Fe23f8a3a24BEd3236F05F2FcF35fd0BF0B5C. Repo was not walked to a pinned SHA in this run."
+      },
+      {
+        "code": "D5",
+        "text": "DeFiLlama categorises this protocol under chain 'Bitcoin'; however, all discovered deployed contracts reside on BNB Smart Chain (chainId 56). Bitcoin has no smart-contract layer. No additional chain deployments were found. D5 chain Bitcoin: zero on-chain contract addresses (Bitcoin is a UTXO chain); all contract activity is on BSC."
+      },
+      {
+        "code": "D6",
+        "text": "The BEP-20 Factory (0x08adbaa6a215affd711f532ec219299ba1e5b9b7) creates upgradeable BEP-20 proxy tokens for Binance-Peg assets. The BTCB token itself (0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c) predates this factory and is a non-upgradeable BEP20Token contract (deployed 2020-09-02). Factory enumeration was not performed as it lacks a pool-listing view method; cap notice: factory is permissionless and has spawned many third-party tokens, not just Binance-Peg assets."
+      },
+      {
+        "code": "D7",
+        "text": "Role taxonomy applied: BTCB token = 'token' (actor_class unknown — owner() not read this run); BEP-20 Factory = 'factory' (actor_class unknown); logic implementation = 'other' (implementation contract for upgradeable proxies). BTCB contract has onlyOwner mint/burn authority; owner address is the critical admin address but was not retrieved this run."
+      },
+      {
+        "code": "D8",
+        "text": "All three admin_addresses entries (BTCB token, BEP-20 Factory, logic implementation) trace to fetched BscScan URLs. The BTCB token owner address was not fetched on-chain (defipunkd.com API returned permission error; bscscan.com readContract page also blocked); owner address goes to unknowns[] for next run."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery walked BscScan for BNB Smart Chain (chainId 56) and surfaced 3 contracts attributable to Binance's BTCB/B-Tokens system. The critical mint-authority owner address of the BTCB token contract was not readable in this run due to API access restrictions; it is listed in unknowns[] for the next assessment to inherit as a pre-built surfacer URL."
+  },
+  "evidence": [
+    {
+      "url": "https://www.binance.com/en/collateral-btokens",
+      "shows": "Official Binance B-Tokens collateral/proof-of-collateral page; page loaded but dynamic token count rendered as 0 in static fetch; confirms this is the official protocol website for Binance Bridge pegged tokens.",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    },
+    {
+      "url": "https://bscscan.com/token/0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+      "shows": "BTCB token (Binance-Peg BTCB Token) on BSC: contract name BEP20Token, verified source, Solidity 0.5.16, non-upgradeable, has onlyOwner mint() function, max supply ~65,300 BTCB, labelled Binance/Binance-Peg/Bitcoin-Pegged, deployed 2020-09-02.",
+      "chain": "BSC",
+      "address": "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    },
+    {
+      "url": "https://bscscan.com/address/0x08adbaa6a215affd711f532ec219299ba1e5b9b7",
+      "shows": "Binance BEP-20 Factory contract on BSC: creates upgradeable BEP-20 proxy tokens, references GitHub repo canonical-upgradeable-bep20, constructor arg reveals logicImplement = 0xBA5Fe23f8a3a24BEd3236F05F2FcF35fd0BF0B5C, labelled 'Binance: BEP-20 Factory' by BscScan.",
+      "chain": "BSC",
+      "address": "0x08adbaa6a215affd711f532ec219299ba1e5b9b7",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/proof-of-reserves",
+      "shows": "Binance Proof of Reserves page describing Merkle Tree + zk-SNARKs mechanism for verifying 1:1 BTC (and other asset) backing; users can verify their leaf node; does not list specific BTC reserve wallet addresses directly.",
+      "fetched_at": "2026-05-04T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: BscScan name-tag search for 'Binance Bitcoin' on Bitcoin chain returned zero results — Bitcoin has no smart-contract layer; all contract activity is on BSC (chainId 56). Mismatch between DeFiLlama chain label ('Bitcoin') and actual deployment chain (BSC).",
+    "D2: No canonical deployed-contracts documentation page found for Binance B-Tokens/BTCB; Binance website's collateral page does not render static contract addresses.",
+    "D3: No audit PDFs linked or found for BTCB token contract or BEP-20 Factory; BscScan shows no audit submitted for either contract.",
+    "D4: GitHub repo https://github.com/binance-chain/canonical-upgradeable-bep20 surfaced but not walked to a pinned commit SHA; no Foundry/hardhat deployment artifacts fetched this run.",
+    "D7: BTCB token owner() address not read on-chain this run — defipunkd.com API returned permission error; downstream run should fetch https://defipunkd.com/api/contract/read?chainId=56&address=0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c&method=owner to retrieve the controlling EOA or multisig.",
+    "D7: Actor class of BTCB token owner is unknown (could be EOA or multisig); owner has unilateral mint() and burn() authority with no timelock observed in contract code.",
+    "D6-offchain: BEP-20 Factory enumeration not performed; factory lacks a pool-listing view and creates tokens for arbitrary callers — cap notice applied."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/binance-chain/canonical-upgradeable-bep20"
+    ],
+    "docs_url": "https://www.binance.com/en/collateral-btokens",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "BSC",
+        "address": "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+        "role": "token (BTCB BEP-20, onlyOwner mint/burn)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "BSC",
+        "address": "0x08adbaa6a215affd711f532ec219299ba1e5b9b7",
+        "role": "factory (Binance BEP-20 Token Factory)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "BSC",
+        "address": "0xBA5Fe23f8a3a24BEd3236F05F2FcF35fd0BF0B5C",
+        "role": "other (logic implementation for upgradeable BEP-20 proxies)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Binance Bitcoin (BTCB) is a BEP-20 wrapped Bitcoin token issued by Binance on BNB Smart Chain, pegged 1:1 to native BTC held in Binance custody. Users deposit BTC to Binance, which mints an equivalent amount of BTCB; burning BTCB and withdrawing redeems the underlying BTC. BTCB enables Bitcoin holders to access DeFi protocols (lending, AMMs, yield farming) on BNB Chain with fast finality and low fees. Binance publishes monthly Proof of Reserves using a Merkle Tree and zk-SNARKs mechanism to allow users to verify their BTC holdings are fully backed 1:1."
+  }
+}

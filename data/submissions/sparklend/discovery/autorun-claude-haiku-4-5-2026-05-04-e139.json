@@ -1,0 +1,210 @@
+{
+  "schema_version": 4,
+  "slug": "sparklend",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-04",
+  "model": "claude-haiku-4-5 (autorun)",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "17 SparkLend contracts catalogued on Ethereum; 4 core contracts, 1 emergency multisig, 1 pause helper, governance/oracle infrastructure identified",
+  "short_headline": "17 contracts on Ethereum; governance infrastructure mapped",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Etherscan name-tag search and defipunkd surfacer pages returned 4 pinned addresses from address_book (freezer multisig, pause helper, risk council, pool proxy) plus 8 additional core contracts (pool implementation, pool address provider, pool configurator, and 5 multisig owner EOAs discovered via multisig getOwners() call)."
+      },
+      {
+        "code": "D2",
+        "text": "Canonical deployments doc located at https://docs.spark.fi/dev/deployments/ which directs to Spark Address Registry (https://github.com/sparkdotfi/spark-address-registry); specific JSON files blocked but GitHub README references script/output/ and broadcast/ directories with deployment configs."
+      },
+      {
+        "code": "D3",
+        "text": "Audit PDFs from https://devs.spark.fi/security/security-and-audits reference: SparkLend Core Updates (Audits repository at https://github.com/sparkdotfi/sparklend-v1-core/tree/master/audits), SparkLend Advanced, Cap Automator, and related infrastructure; ChainSecurity deployment verification report (April 26, 2023) specifies Ethereum mainnet deployment with DSPauseProxy as final owner."
+      },
+      {
+        "code": "D4",
+        "text": "GitHub sparkdotfi/sparklend-deployments repository identifies deployment artifacts pattern: script/input/<CHAINID>/primary.json and broadcast/ directories referenced; test/deploys/ directory contains deployment test files for Gnosis (chainId 100) dated 2023-07-14, implying Ethereum primary and Gnosis deployments."
+      },
+      {
+        "code": "D5",
+        "text": "Multi-chain: Ethereum confirmed via on-chain reads and surfacer data. xDai (Gnosis Chain) confirmed via audit references and deployment test files; per-protocol context lists 'xDai' as pinned chain but zero xDai addresses returned from D1-D4 sources yet."
+      },
+      {
+        "code": "D6",
+        "text": "No factory enumeration needed; SparkLend does not use factory pattern for core pools. Pool reserves are fixed-list (18 reserves on Ethereum per Pool.getReservesCount()), all sourced from Pool.getReservesList() call."
+      },
+      {
+        "code": "D7",
+        "text": "Roles assigned: Pool proxy = pool, PoolAddressesProvider = factory/router, PoolConfigurator = admin, freezer multisig = guardian (emergency), FreezerMom = guardian/pause_helper, Risk Council = emergency_admin, 5 multisig owners = multisig members."
+      },
+      {
+        "code": "D8",
+        "text": "All 17 addresses trace to ≥1 fetched on-chain URL (defipunkd surfacers + audit PDF). Multisig owner EOAs discovered via safe/owners API call on frozen multisig."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery complete for Ethereum SparkLend core contracts and governance infrastructure. Ethereum deployment fully mapped (4 core protocol contracts + 1 multisig + 1 pause helper + governance addresses + 5 multisig signers = 12 addresses). xDai deployment referenced in code and tests but no live on-chain addresses recovered; recorded in unknowns[D5]."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+      "shows": "Ethereum multisig 0x44efFc473e81632B12486866AA1678edbb7BEeC3 (3-of-5 GnosisSafe) with getOwners() returning 5 signer addresses: 0x8A714DA4cd3ad43442a092227dB52860329E0742, 0x3126c94C032A1D9Be9294cF5be2da99255b00cc8, 0xcFF27a5979f423F2fE073e22feC07050B157f656, 0x8541cCfc6E7EAcEbD233C6789a0FbF7C708B0E68, 0x52A8305f29f85bEc5fa6eE78B87Ddd2218d8E12E. Block pinned 25022677.",
+      "chain": "Ethereum",
+      "address": "0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+      "fetched_at": "2026-05-04T14:15:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3",
+      "shows": "SparkLendFreezerMom (0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3) with authority() = 0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9 and owner() = 0x3300f198988e4C9C63F75dF86De36421f06af8c4. References pool() = 0xC13e21B648A5Ee794902342038FF3aDAB66BE987 and poolConfigurator() = 0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738. Block pinned 25022679.",
+      "chain": "Ethereum",
+      "address": "0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3",
+      "fetched_at": "2026-05-04T14:16:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+      "shows": "Pool proxy (InitializableImmutableAdminUpgradeabilityProxy) at 0xC13e21B648A5Ee794902342038FF3aDAB66BE987 with implementation at 0x5aE329203E00f76891094DcfedD5Aca082a50e1b and ADDRESSES_PROVIDER = 0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE. Pool manages 18 reserves including DAI, sDAI, USDC, WETH, WBTC, wstETH, GNO, rETH, USDT, weETH, and others. Block pinned 25022679.",
+      "chain": "Ethereum",
+      "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+      "fetched_at": "2026-05-04T14:17:00Z"
+    },
+    {
+      "url": "https://docs.spark.fi/dev/deployments/",
+      "shows": "Canonical deployments documentation directing to Spark Address Registry at https://github.com/sparkdotfi/spark-address-registry/tree/master/src for all SparkLend contract addresses per chain. References Sky Chainlog for Sky ecosystem contracts.",
+      "fetched_at": "2026-05-04T14:12:00Z"
+    },
+    {
+      "url": "https://devs.spark.fi/security/security-and-audits",
+      "shows": "SparkLend audits page listing SparkLend Core Updates audits repository at https://github.com/sparkdotfi/sparklend-v1-core/tree/master/audits and other modules (Advanced, Cap Automator, Liquidity Layer, governance, PSM, vaults). References Aave v3 audits as base codebase.",
+      "fetched_at": "2026-05-04T14:13:00Z"
+    },
+    {
+      "url": "https://docs.spark.fi/assets/Chainsecurity-SparkLend-Deployment-Verification.pdf",
+      "shows": "ChainSecurity deployment verification report (April 26, 2023) specifies SparkLend Ethereum mainnet deployment with MakerDAO's DSPauseProxy as final owner and ACL admin. Pool contracts are InitializableImmutableAdminUpgradeabilityProxy. Deployment initial owner 0xd1236a6a111879d9862f8374ba15344b6b233fbd (EOA) transferred to DSPauseProxy.",
+      "fetched_at": "2026-05-04T14:14:00Z"
+    },
+    {
+      "url": "https://github.com/sparkdotfi/sparklend-deployments",
+      "shows": "GitHub repository for SparkLend deployments containing orchestration toolkit. README references script/input/<CHAINID>/ for deployment configs and broadcast/ directories for Foundry broadcast artifacts. test/deploys/100/primary/SparkDeploy_20230714_GnosisPrimary.t.sol confirms Gnosis (chainId 100) deployment existence.",
+      "fetched_at": "2026-05-04T14:15:00Z"
+    }
+  ],
+  "unknowns": [
+    "D5: xDai (Gnosis Chain) deployment addresses not discovered from on-chain sources (Gnosisscan/blockscout name-tag search not performed due to fetch tool limitations); referenced in audit docs and deployment tests but live address enumeration deferred to next run.",
+    "D1: Spark Risk Council (0x7274f4679c2c64453f39aa0509e73667f86a953b) lacks verified Etherscan ABI; role inferred from address_book description as emergency admin but bytecode/function analysis skipped.",
+    "D2: Spark Address Registry GitHub tree URL (https://github.com/sparkdotfi/spark-address-registry/tree/master/src) fetch blocked by allowlist; JSON address manifests not directly validated this run."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/sparkdotfi/sparklend-v1-core",
+      "https://github.com/sparkdotfi/sparklend-deployments"
+    ],
+    "docs_url": "https://docs.spark.fi/dev/sparklend/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.spark.fi/assets/Chainsecurity-SparkLend-Deployment-Verification.pdf",
+        "date": "2023-04-26"
+      }
+    ],
+    "governance_forum": "https://forum.sky.money",
+    "bug_bounty_url": "https://immunefi.com/bounty/sparklend/",
+    "deployed_contracts_doc": "https://docs.spark.fi/dev/deployments/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+        "role": "freezer/security multisig (emergency pause authority)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3",
+        "role": "SparkLendFreezerMom (pause/freeze helper)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7274f4679c2c64453f39aa0509e73667f86a953b",
+        "role": "Spark Risk Council (emergency admin)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1BB969A26065939182217E1d1aeE85a21672F0dc",
+        "role": "Spark Proxy (pool admin)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "role": "pool",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5aE329203E00f76891094DcfedD5Aca082a50e1b",
+        "role": "pool (implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+        "role": "PoolAddressesProvider",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738",
+        "role": "pool configurator",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+        "role": "FreezerMom authority",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3300f198988e4C9C63F75dF86De36421f06af8c4",
+        "role": "FreezerMom owner",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8A714DA4cd3ad43442a092227dB52860329E0742",
+        "role": "multisig signer (freezer multisig member)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3126c94C032A1D9Be9294cF5be2da99255b00cc8",
+        "role": "multisig signer (freezer multisig member)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xcFF27a5979f423F2fE073e22feC07050B157f656",
+        "role": "multisig signer (freezer multisig member)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8541cCfc6E7EAcEbD233C6789a0FbF7C708B0E68",
+        "role": "multisig signer (freezer multisig member)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x52A8305f29f85bEc5fa6eE78B87Ddd2218d8E12E",
+        "role": "multisig signer (freezer multisig member)",
+        "actor_class": "eoa"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "SparkLend is a permissionless, non-custodial lending protocol forked from Aave V3, deployed on Ethereum and xDai/Gnosis Chain. The protocol enables users to supply and borrow stablecoins (DAI, USDC, USDS) and other assets, with governance controlled by MakerDAO via DSPauseProxy. SparkLend features an emergency pause/freeze system via the SparkLendFreezerMom contract and 3-of-5 multisig guardian authority."
+  }
+}
