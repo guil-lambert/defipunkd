@@ -9,16 +9,17 @@ import { postProcess } from "./autorun-postprocess";
 
 type QueueEntry = { slug: string; slice: SliceId };
 
-type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean };
+type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean; maxCost: number | null };
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false };
+  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false, maxCost: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count") out.count = parseInt(argv[++i] ?? "10", 10);
     else if (argv[i] === "--model") out.model = argv[++i] ?? out.model;
     else if (argv[i] === "--slice") out.slice = (argv[++i] ?? null) as SliceId | null;
     else if (argv[i] === "--slug") out.slug = argv[++i] ?? null;
     else if (argv[i] === "--postprocess") out.postprocess = true;
+    else if (argv[i] === "--max-cost") out.maxCost = parseFloat(argv[++i] ?? "");
   }
   return out;
 }
@@ -55,6 +56,13 @@ async function main(): Promise<number> {
   };
 
   for (const { slug, slice } of queue) {
+    if (args.maxCost !== null) {
+      const spent = estimateCost(args.model, totals);
+      if (spent >= args.maxCost) {
+        console.log(`max-cost $${args.maxCost.toFixed(2)} reached (spent $${spent.toFixed(4)}); stopping`);
+        break;
+      }
+    }
     const protocol = snapshot.protocols[slug];
     if (!protocol) continue;
     // Cross-run ratchet: pull previously-discovered admin addresses (from
@@ -112,14 +120,19 @@ async function main(): Promise<number> {
           {
             type: "web_search_20250305",
             name: "web_search",
-            max_uses: 8,
+            max_uses: 4,
+          },
+          {
+            type: "web_fetch_20250910",
+            name: "web_fetch",
+            max_uses: 12,
           },
         ] as unknown as never,
         messages: [
           {
             role: "user",
             content:
-              "Run the slice's discovery / evaluation steps. You have a `web_search` tool available — use it to fetch the URLs the prompt instructs you to fetch (block-explorer pages, docs, GitHub, audits, the read-API surfacers). After your investigation, produce the final JSON assessment object as the last message in your response.",
+              "Run the slice's discovery / evaluation steps. You have two tools: `web_fetch` (preferred — pulls a specific URL's full contents) and `web_search` (for when you need to discover a URL you don't already have). The prompt names specific URLs (block-explorer pages, docs, GitHub, audits, the read-API surfacers) — use `web_fetch` on those directly rather than searching for them. After your investigation, produce the final JSON assessment object as the last message in your response.",
           },
         ],
       });
@@ -240,6 +253,8 @@ function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: s
     // from earlier runs, gate the 5 risk slices and let discovery go first.
     const evaluationGated = !hasRatchet && discoveryCount === 0;
 
+    if (p.category === "CEX") continue;
+
     for (const slice of SLICE_IDS) {
       if (sliceFilter !== null && slice !== sliceFilter) continue;
       const isDiscovery = slice === "discovery";
@@ -248,7 +263,7 @@ function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: s
       const count = existsSync(dir)
         ? readdirSync(dir).filter((f) => f.endsWith(".json")).length
         : 0;
-      if (count >= 3) continue;
+      if (count >= (isDiscovery ? 1 : 3)) continue;
       tasks.push({ slug, slice, priority: count, tvl: p.tvl, isDiscovery });
     }
   }

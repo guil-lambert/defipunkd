@@ -17,6 +17,10 @@ on:
         description: "Slice to run (leave empty for all slices)"
         required: false
         default: "discovery"
+      max_cost:
+        description: "Hard USD ceiling — stops between calls once estimated spend reaches this"
+        required: false
+        default: "5"
 
 concurrency:
   group: autorun
@@ -48,11 +52,13 @@ jobs:
           TARGET_COUNT: ${{ inputs.target_count || '50' }}
           MODEL: ${{ inputs.model || 'claude-sonnet-4-6' }}
           SLICE: ${{ inputs.slice || 'discovery' }}
+          MAX_COST: ${{ inputs.max_cost || '5' }}
         run: |
           pnpm --filter @defipunkd/validator exec tsx src/cli/autorun-generate.ts \
             --count "$TARGET_COUNT" \
             --model "$MODEL" \
-            --slice "$SLICE"
+            --slice "$SLICE" \
+            --max-cost "$MAX_COST"
 
       - name: Post-process raw outputs (extract JSON, validate, drop failures)
         run: |
@@ -69,6 +75,7 @@ jobs:
             Model: `${{ inputs.model || 'claude-sonnet-4-6' }}`
             Target count: `${{ inputs.target_count || '50' }}`
             Slice filter: `${{ inputs.slice || 'discovery' }}`
+            Max cost: `$${{ inputs.max_cost || '5' }}`
 
             Each submission's `model` field is suffixed with `(autorun)` so the quorum bot can weight appropriately.
           branch: autorun/run-${{ github.run_number }}
