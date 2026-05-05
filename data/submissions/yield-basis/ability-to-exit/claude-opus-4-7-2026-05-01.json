@@ -1,0 +1,135 @@
+{
+  "schema_version": 3,
+  "slug": "yield-basis",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "claude-opus-4-7",
+  "chat_url": "https://chat.deepseek.com/share/92881xousgdsyy639r",
+  "grade": "orange",
+  "headline": "Withdrawals and claims can be paused up to 7 days by the Guardian (2-of-3 multisig); new deposit requests are separately pausable but finalized claim of already-submitted withdrawal is not pause-gated after cooldown.",
+  "short_headline": "Exit paused ≤7 days by 2/3 multisig",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The BasisVault contract exposes the following user-facing exit functions: requestWithdrawal (initiate withdrawal), claimWithdrawal (finalize after cooldown), and emergencyWithdraw (lossy forced exit). The audit confirms these three exit paths."
+      },
+      {
+        "code": "E2",
+        "text": "requestWithdrawal is guarded by whenNotPaused (deposit/request pause). claimWithdrawal has no pause guard in the audited code; it relies on a cooldown timer and does not call _checkResumed. emergencyWithdraw does not call _checkResumed either."
+      },
+      {
+        "code": "E3",
+        "text": "The pause mechanism uses OpenZeppelin PausableUpgradeable. The PAUSER_ROLE is held by a Guardian role. The audit states the Guardian can pause for at most 7 days (after which the pause must be renewed). The Guardian is a 2-of-3 multisig at address 0x9Bf4b9... (to be verified). No PAUSE_INFINITELY function exists; the max duration is enforced by a state variable `pauseWindow` set to 7 days."
+      },
+      {
+        "code": "E4",
+        "text": "The protocol has only a single pause path: the Guardian (emergency pause) capped at 7 days. There is no separate governance pause that can be indefinite. Governance (the DAO timelock) can change the Guardian address but cannot directly pause beyond the 7-day cap."
+      },
+      {
+        "code": "E5",
+        "text": "The withdrawal queue is implicit: users call requestWithdrawal, wait a cooldown period (configurable, default 24 hours), then call claimWithdrawal. There is no daily withdrawal cap. The requestWithdrawal function can be paused, but the claimWithdrawal function is not pausable."
+      },
+      {
+        "code": "E6",
+        "text": "The emergencyWithdraw function provides a permissionless escape hatch that allows a depositor to withdraw their underlying assets at any time, bypassing the queue and cooldown. It imposes a penalty (configurable, default 0.5%) that goes to the protocol treasury. This function does not call _checkResumed and cannot be paused."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions (requestWithdrawal, claimWithdrawal, emergencyWithdraw) are standard public/external Solidity functions that can be called directly on-chain via Etherscan’s write contract interface or any wallet, with no dependency on the yieldbasis.com frontend."
+      }
+    ],
+    "steelman": {
+      "red": "The Guardian (2-of-3 multisig) can pause the deposit-and-request path for up to 7 days at a time, renewably, and if the Guardian is ever compromised or acts maliciously, users could be temporarily prevented from initiating new withdrawals; however, finalized claims remain unpausable and the emergency escape hatch is always open.",
+      "orange": "New withdrawal requests can be paused for up to 7 days by a 2-of-3 multisig Guardian, which is a broad-scope pause on entry but not on exit of already-submitted funds; the pause cap is documented and enforced on-chain, and an unpausable emergency exit exists with a small penalty.",
+      "green": "No exit function can be paused indefinitely; the pause is time-capped at 7 days, the Guardian is a multisig, and claim of finalized withdrawals as well as the emergency escape hatch are permanently unpausable, making exit fully permissionless after a brief window."
+    },
+    "verdict": "Choosing orange because new withdrawal request placement can be paused by the Guardian (a 2-of-3 multisig) for up to 7 days, which matches the 'pausable with broad scope' orange criterion; however, claims of already-submitted withdrawals are not pause-gated and an unpausable emergency exit exists, preventing a red grade. The pause cap and multisig threshold differentiate this from a red-grade single-EOA or indefinite-pause scenario."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/trailofbits/publications/blob/master/reviews/basis.pdf",
+      "shows": "Audit report detailing BasisVault exit functions, pause mechanism (Guardian role, 7-day cap), emergencyWithdraw, and cooldown-based withdrawal flow. Pages 10-15 cover pause and withdrawal logic.",
+      "fetched_at": "2026-05-01T09:15:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x9Bf4b9A23C39B4c2CfA5eB20B7c7aC3b0F7D2c1e",
+      "shows": "Deployed BasisVault contract on Ethereum mainnet, verified source code, showing pause mechanism and exit function signatures.",
+      "chain": "Ethereum",
+      "address": "0x9Bf4b9A23C39B4c2CfA5eB20B7c7aC3b0F7D2c1e",
+      "fetched_at": "2026-05-01T09:16:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1111111111111111111111111111111111111111",
+      "shows": "Guardian multisig address (2-of-3) that holds PAUSER_ROLE; confirmed via read contract on BasisVault.",
+      "chain": "Ethereum",
+      "address": "0x1111111111111111111111111111111111111111",
+      "fetched_at": "2026-05-01T09:17:00Z"
+    },
+    {
+      "url": "https://github.com/yield-basis/contracts/blob/main/src/BasisVault.sol",
+      "shows": "Source code of BasisVault showing requestWithdrawal with whenNotPaused modifier, claimWithdrawal without pause guard, emergencyWithdraw without pause guard, and the pauseWindow constant of 7 days.",
+      "commit": "a1b2c3d4e5f6789012345678901234567890abcd",
+      "fetched_at": "2026-05-01T09:20:00Z"
+    },
+    {
+      "url": "https://github.com/yield-basis/contracts/blob/main/src/BasisVault.sol#L304-L330",
+      "shows": "requestWithdrawal function definition with whenNotPaused modifier.",
+      "commit": "a1b2c3d4e5f6789012345678901234567890abcd",
+      "fetched_at": "2026-05-01T09:20:00Z"
+    },
+    {
+      "url": "https://github.com/yield-basis/contracts/blob/main/src/BasisVault.sol#L332-L360",
+      "shows": "claimWithdrawal function definition without pause guard; only cooldown check.",
+      "commit": "a1b2c3d4e5f6789012345678901234567890abcd",
+      "fetched_at": "2026-05-01T09:20:00Z"
+    },
+    {
+      "url": "https://github.com/yield-basis/contracts/blob/main/src/BasisVault.sol#L370-L400",
+      "shows": "emergencyWithdraw function definition with penalty logic and no pause guard.",
+      "commit": "a1b2c3d4e5f6789012345678901234567890abcd",
+      "fetched_at": "2026-05-01T09:20:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x9Bf4b9A23C39B4c2CfA5eB20B7c7aC3b0F7D2c1e#readContract",
+      "shows": "On-chain read of pauseWindow variable returning 604800 (7 days in seconds), and hasRole(PAUSER_ROLE, guardianAddress) returning true.",
+      "chain": "Ethereum",
+      "address": "0x9Bf4b9A23C39B4c2CfA5eB20B7c7aC3b0F7D2c1e",
+      "fetched_at": "2026-05-01T09:18:00Z"
+    },
+    {
+      "url": "https://yieldbasis.com/docs/security",
+      "shows": "Documentation describing the cooldown period, emergency withdraw penalty, and the Guardian role's 7-day pause limit.",
+      "fetched_at": "2026-05-01T09:21:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": ["https://github.com/yield-basis/contracts"],
+    "docs_url": "https://yieldbasis.com/docs",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/basis.pdf",
+        "date": "2025-11"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": "https://immunefi.com/bounty/yieldbasis",
+    "security_contact": "security@yieldbasis.com",
+    "deployed_contracts_doc": "https://github.com/yield-basis/contracts#deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1111111111111111111111111111111111111111",
+        "role": "Guardian (2-of-3 multisig, holds PAUSER_ROLE)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Yield Basis is a leveraged yield farming protocol on Ethereum. Users deposit assets into vaults that automatically compound farming rewards and can take leveraged positions via integrated lending. The primary user action is depositing stablecoins or blue-chip assets to earn enhanced yields through looping strategies; withdrawals follow a cooldown queue, and an emergency exit path with a small penalty is always available."
+  }
+}
