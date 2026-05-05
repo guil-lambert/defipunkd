@@ -1,0 +1,127 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Immutable singleton PoolManager owned by Uniswap DAO Timelock with 2-day delay behind GovernorBravo (≈9.4-day uncontested path). Highest reachable tier is T2 (bounded protocol fees); no upgrade, pause, or fund-draining admin functions exist.",
+  "short_headline": "Immutable core, DAO-governed fees",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Ethereum PoolManager (0x000000000004444c5dc75cB358380D2e3dE08A90) owner() returns 0x1a9C8182C09F50C8318d769245beA52c32BE35BC (Timelock). protocolFeeController() returns address(0) — no fee controller is currently set. The owner can call setProtocolFeeController(address), setProtocolFee(PoolKey, uint24), collectProtocolFees(...), and transferOwnership(address)."
+      },
+      {
+        "code": "C2",
+        "text": "The PoolManager is immutable — there is no proxy pattern, no upgradeTo, no implementation() function. The ABI has no upgrade-related methods. The GovernorBravo at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 is a proxy (implementation at 0x53a328F4086d7C0F1Fa19e594c9b842125263026) with _setImplementation callable only by admin (the Timelock). This is T3 governance-internal; it cannot reach user funds since the PoolManager is immutable."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path: (1) GovernorBravo propose → (2) votingDelay 13,140 blocks ≈ 157,680s ≈ 1.82 days → (3) votingPeriod 40,320 blocks ≈ 483,840s ≈ 5.6 days → (4) queue to Timelock → (5) Timelock delay() = 172,800s = 2 days → execute. Uncontested fast path sum ≈ 9.42 days. Timelock MINIMUM_DELAY = 172,800s, MAXIMUM_DELAY = 2,592,000s."
+      },
+      {
+        "code": "C4",
+        "text": "No multisig is on the governance execution path. The Timelock admin is the GovernorBravo contract. pendingAdmin on both the Timelock and GovernorBravo is address(0). No emergency multisig, pause committee, or gate-seal was found."
+      },
+      {
+        "code": "C5",
+        "text": "GovernorBravo at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 uses UNI token (0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984) for voting. proposalThreshold = 1,000,000 UNI. quorumVotes = 40,000,000 UNI. votingDelay = 13,140 blocks (≈1.82 days at 12s/block). votingPeriod = 40,320 blocks (≈5.6 days). proposalCount = 95. Timelock delay = 172,800s (2 days)."
+      },
+      {
+        "code": "C6",
+        "text": "No emergency powers found. The PoolManager has no pause(), no guardian, no emergency role. The only privileged functions are protocol fee management and ownership transfer, all gated by owner (Timelock)."
+      },
+      {
+        "code": "C7",
+        "text": "T1 is unreachable: PoolManager is immutable (no upgradeTo), has no pause function, and the owner cannot drain user funds (swap/liquidity logic is hardcoded). T2 is the highest reachable tier: the owner (Timelock via governance) can call setProtocolFeeController and collectProtocolFees, which redirects/collects bounded protocol fees. Protocol fees are bounded on-chain by ProtocolFeeLibrary.MAX_PROTOCOL_FEE (the ProtocolFeeTooLarge error enforces the bound). T3: GovernorBravo proxy _setImplementation can upgrade the Governor logic itself but cannot reach the PoolManager. The uncontested fast path for T2 actions is ≈9.42 days (>7 days)."
+      }
+    ],
+    "steelman": {
+      "red": "The owner could set a malicious protocolFeeController that extracts maximum protocol fees from every pool, slowly draining LP value. Since transferOwnership could hand control to an EOA, and the fee controller could be any arbitrary contract, the system could become extractive.",
+      "orange": "The 2-day Timelock alone is under 7 days; only the combination with voting delay + period pushes it above 7 days, and a governance attack with concentrated UNI could pass a malicious proposal.",
+      "green": "The PoolManager is immutable with no upgrade, pause, or fund-drain capability. The highest reachable tier is T2 (bounded protocol fees), behind a full governance path (GovernorBravo + Timelock) with an uncontested fast path of ≈9.4 days, well above the 7-day bar, backed by broad UNI token distribution and a 40M quorum."
+    },
+    "verdict": "Choosing green because the PoolManager is immutable (T1 unreachable — no upgrade, pause, or fund-drain function exists), the highest reachable tier is T2 (bounded protocol fee changes via setProtocolFeeController/setProtocolFee with on-chain MAX_PROTOCOL_FEE enforcement), and the uncontested governance fast path is ≈9.42 days (votingDelay 1.82d + votingPeriod 5.6d + Timelock 2d) which exceeds 7 days. Active on-chain governance with UNI token (40M quorum, 1M proposal threshold, 95 historical proposals) provides broad distribution. The red steelman is weakened because protocol fees are on-chain bounded and do not touch user principal — they are a capped cut of swap fees, not a drain. The orange steelman is weakened because the relevant delay is the full uncontested path (≈9.4 days), not the Timelock alone."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "PoolManager owner() = 0x1a9C8182C09F50C8318d769245beA52c32BE35BC (Timelock). protocolFeeController() = address(0). ABI shows write methods: setProtocolFeeController, setProtocolFee, collectProtocolFees, transferOwnership, but NO upgradeTo, NO pause, NO proxy-related functions. Contract is not a proxy.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "shows": "Timelock contract. delay() = 172800 (2 days). MINIMUM_DELAY() = 172800. MAXIMUM_DELAY() = 2592000. GRACE_PERIOD() = 1209600. admin() = 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 (GovernorBravo). pendingAdmin() = address(0).",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "shows": "GovernorBravoDelegator (proxy → 0x53a328F4086d7C0F1Fa19e594c9b842125263026). name = 'Uniswap Governor Bravo'. votingDelay() = 13140 blocks. votingPeriod() = 40320 blocks. proposalThreshold() = 1000000e18 UNI. quorumVotes() = 40000000e18 UNI. proposalCount() = 95. timelock() = 0x1a9C8182C09F50C8318d769245beA52c32BE35BC. uni() = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984. admin() = Timelock. _setImplementation is listed as a write method (T3: governance proxy upgrade).",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v4/concepts/PoolManager",
+      "shows": "Uniswap v4 PoolManager uses singleton design pattern — all pool state and logic encapsulated within the single PoolManager contract. Confirms architectural design of non-upgradeable singleton."
+    },
+    {
+      "url": "https://github.com/Uniswap/v4-core",
+      "shows": "Confirms v4-core uses singleton-style architecture where all pool state is managed in PoolManager.sol. PoolManager inherits from ProtocolFees, NoDelegateCall, ERC6909Claims. No proxy pattern in inheritance chain."
+    },
+    {
+      "url": "https://smithery.ai/skills/cyotee/uniswap-v4-fees",
+      "shows": "ProtocolFees.setProtocolFee validates fee bounds: fee0 and fee1 checked against ProtocolFeeLibrary.MAX_PROTOCOL_FEE, reverting with ProtocolFeeTooLarge if exceeded. Confirms on-chain fee bound enforcement."
+    }
+  ],
+  "unknowns": [
+    "C1: Owner/admin of PoolManager on non-Ethereum chains (Arbitrum, Base, Optimism, Polygon, Unichain, etc.) not individually verified this run — only Ethereum PoolManager was read on-chain. Other chains likely use similar or identical governance but this was not confirmed.",
+    "C2: PositionManager on Etherscan shows proxy label (Proxy → Implementation: Uniswap V4: Position Manager) but this contract is periphery, not the fund-holding singleton. Its upgrade authority was not checked this run.",
+    "C7: The exact numeric value of ProtocolFeeLibrary.MAX_PROTOCOL_FEE was not read on-chain from the deployed contract this run; the bound enforcement was confirmed from source code references but the specific cap value was not pinned."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery",
+      "https://github.com/Uniswap/protocol-fees"
+    ],
+    "docs_url": "https://docs.uniswap.org/contracts/v4/overview",
+    "audits": [
+      {
+        "firm": "Multiple (listed in repo)",
+        "url": "https://github.com/Uniswap/v4-core/tree/main/docs/security/audits"
+      },
+      {
+        "firm": "Multiple (listed in repo)",
+        "url": "https://github.com/Uniswap/v4-periphery/tree/main/audits"
+      }
+    ],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "symbol": "UNI"
+    },
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "Timelock (PoolManager owner, GovernorBravo executor)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "role": "GovernorBravo (Timelock admin)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Uniswap V4 is a decentralized exchange (DEX) using a singleton PoolManager contract that holds all pool state for token swaps and concentrated liquidity provision. It introduces a hooks system allowing customizable pool logic at various lifecycle points. Users swap tokens, provide concentrated liquidity, and earn LP fees. The singleton design eliminates per-pool contract deployments and enables flash accounting via EIP-1153 transient storage for gas-efficient multi-action transactions."
+  }
+}

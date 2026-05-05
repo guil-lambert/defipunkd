@@ -1,0 +1,128 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Uniswap V4 core contracts have no pause mechanism; liquidity withdrawal and swaps are fully permissionless with no admin-gatable exit paths.",
+  "short_headline": "No pause, fully permissionless exit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "User-facing exit functions on PoolManager: modifyLiquidity (with negative liquidityDelta to remove liquidity), take (withdraw tokens), burn (burn ERC6909 claim tokens), settle/settleFor (settle debts). On PositionManager: modifyLiquidities (wraps modifyLiquidity for NFT positions, supports DECREASE_LIQUIDITY and BURN actions). For swappers: swap on PoolManager. All identified from the deployed ABI via the defipunkd surfacer."
+      },
+      {
+        "code": "E2",
+        "text": "None of the exit functions (modifyLiquidity, take, burn, settle, swap) have pause guards or admin access controls. The only modifier on core functions is onlyWhenUnlocked (flash-accounting transient lock, not an admin pause) and noDelegateCall. The PositionManager is confirmed by the OpenZeppelin audit as 'non-upgradeable, permissionless, and ownerless' with no pause mechanism in its ABI."
+      },
+      {
+        "code": "E3",
+        "text": "No pause mechanism exists on PoolManager or PositionManager. The PoolManager ABI contains no pause(), unpause(), paused(), or whenNotPaused functions. Owner (0x1a9C8182C09F50C8318d769245beA52c32BE35BC, a governance Timelock with 2-day minimum delay, admin=GovernorBravo 0x408ED6354d4973f66138C91495F2f2FCbd8724C3) can only: setProtocolFeeController, transferOwnership, collectProtocolFees — none affect user exit ability."
+      },
+      {
+        "code": "E4",
+        "text": "No emergency pause or governance pause path exists on the core contracts. There is no fast-acting emergency pause nor a slow governance pause — the contracts simply have no pause functionality at all."
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption mechanism. Liquidity removal via modifyLiquidity with negative liquidityDelta is atomic within a single transaction — no queue, no waiting period, no daily caps."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism is needed because exits are already fully permissionless. Note: individual pools may optionally have hook contracts that could introduce custom restrictions, but hooks are per-pool opt-in and do not affect the core PoolManager exit paths."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions are directly callable on-chain. The PoolManager and PositionManager are verified contracts on Etherscan; users can call modifyLiquidity/modifyLiquidities/take/burn/swap via Etherscan write tabs or any generic wallet without requiring the Uniswap frontend."
+      }
+    ],
+    "steelman": {
+      "red": "Hooks attached to specific pools could theoretically introduce pause or blocking logic that prevents exits from those particular pools, and users might not realize the risk when entering a hooked pool.",
+      "orange": "The owner (governance timelock) could theoretically set a malicious protocolFeeController that extracts maximum fees from swaps, degrading exit quality even though exits remain technically possible.",
+      "green": "The core PoolManager and PositionManager contracts have zero pause functionality, no admin-gatable exit paths, no upgrade proxies, and no queued withdrawal mechanisms — exits are atomic, permissionless, and frontend-independent."
+    },
+    "verdict": "Choosing green because the core PoolManager has no pause, no admin-gated exit functions, and no upgrade path. The owner's powers are limited to protocol fee configuration and cannot block any user exit. The PositionManager is confirmed ownerless and non-upgradeable by OpenZeppelin's audit. All exit functions (modifyLiquidity, take, burn, settle, swap) are permissionless. While hooks on individual pools could theoretically restrict exits, hooks are an opt-in per-pool feature chosen at pool creation — the core protocol exit path itself has no restrictions."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Full ABI of PoolManager on Ethereum: no pause/unpause/paused functions exist. Exit functions (modifyLiquidity, take, burn, settle, swap) have no admin guards. Owner is 0x1a9C8182C09F50C8318d769245beA52c32BE35BC. Owner-only write methods limited to: setProtocolFee, setProtocolFeeController, transferOwnership, collectProtocolFees. protocolFeeController is currently 0x0000000000000000000000000000000000000000.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "shows": "Full ABI of PositionManager on Ethereum: no pause/owner/admin functions. Key exit methods: modifyLiquidities (wraps liquidity changes with NFT management). No access-restricted exit paths. Confirmed ownerless — no owner() view method in ABI.",
+      "chain": "Ethereum",
+      "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "shows": "Timelock contract that owns the Ethereum PoolManager. MINIMUM_DELAY = 172800 (2 days), MAXIMUM_DELAY = 2592000 (30 days), current delay = 172800. Admin is GovernorBravo proxy at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3. This timelock can only execute owner functions on PoolManager (fee config, ownership transfer) — none of which can pause exits.",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://blog.openzeppelin.com/uniswap-v4-periphery-and-universal-router-audit",
+      "shows": "OpenZeppelin audit confirms: 'Both the V4 Position Manager and Universal Router are non-upgradeable, permissionless, and ownerless contracts.' This confirms no admin can pause or gate exits via the periphery.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://blog.uniswap.org/uniswap-v4-is-here",
+      "shows": "Uniswap v4 launch announcement confirms nine independent audits, $2.35M security competition, $15.5M bug bounty, zero security incidents. Confirms core architecture with singleton PoolManager and hooks system.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v4/concepts/PoolManager",
+      "shows": "Derived: Official docs confirm modifyLiquidity is the function for LPs to add/remove liquidity, and all pool actions require unlock-callback pattern but no admin permission. The PoolManager uses flash accounting where only net balances must be settled.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E6: Individual hook contracts attached to specific pools may introduce custom exit restrictions (pause, access control, etc.), but this is a per-pool opt-in risk rather than a core protocol issue. A comprehensive assessment of all deployed hooks is beyond scope."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery"
+    ],
+    "docs_url": "https://docs.uniswap.org/contracts/v4/overview",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://www.openzeppelin.com/news/uniswap-v4-core-audit",
+        "date": "2024"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://blog.openzeppelin.com/uniswap-v4-periphery-and-universal-router-audit",
+        "date": "2024"
+      }
+    ],
+    "bug_bounty_url": "https://blog.uniswap.org/v4-bug-bounty",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "PoolManager owner (Timelock, 2-day minimum delay)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "role": "GovernorBravo proxy (admin of the Timelock)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap V4 is a decentralized exchange protocol using a singleton PoolManager architecture where all liquidity pools share a single contract. Users can swap tokens and provide concentrated liquidity. The protocol's distinctive feature is 'hooks' — modular plugin contracts that allow per-pool customization of swap logic, fees, and LP behavior. Flash accounting via transient storage reduces gas costs by netting token transfers across multi-hop operations."
+  }
+}
