@@ -1,0 +1,90 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "unknown (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "Immutable core contracts with token-governed fee/internal parameters",
+  "short_headline": "Immutable core; token governance",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "PoolManager (0x0000...8A90) is owned by the Uniswap Timelock (0x1a9C...35BC). Core logic is immutable; the owner role is primarily for protocol fee management."
+      },
+      {
+        "code": "C2",
+        "text": "Core contracts (PoolManager, PositionManager) are verified direct implementations, not proxies. Bytecode is immutable; T1 upgradeability is unreachable."
+      },
+      {
+        "code": "C3",
+        "text": "The uncontested fast path delay is ~10 days: 13,140 blocks (~2d) votingDelay + 40,320 blocks (~6d) votingPeriod + 172,800s (2d) timelock delay."
+      },
+      {
+        "code": "C5",
+        "text": "Governance uses GovernorBravo (0x408E...24C3) with token-weighted voting. Quorum is 40,000,000 UNI (4% of total supply)."
+      },
+      {
+        "code": "C7",
+        "text": "Highest reachable tier is T2/T3: governance can change protocol fee parameters (T2) and internal governance rules (T3). User-fund-holding logic is immutable (T1 unreachable)."
+      }
+    ],
+    "steelman": {
+      "red": "Governance could theoretically redirect protocol fees to an attacker, though this does not impact user principal in pools.",
+      "orange": "The 2-day timelock delay is relatively short for a protocol of this scale, though it only applies to non-fund-critical parameters.",
+      "green": "The core fund-holding contracts are immutable. Governance has no path to upgrade implementations or drain user funds, restricting its blast radius to T2/T3."
+    },
+    "verdict": "Choosing green because the fund-holding core contracts (PoolManager and PositionManager) are immutable, making T1 fund-critical actions unreachable. The governance surface is restricted to T2 (economic parameters) and T3 (internal rules), and is protected by a multi-stage on-chain voting process with a ~10-day execution delay."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=owner",
+      "shows": "PoolManager owner is the Timelock address 0x1a9C8182C09F50C8318d769245beA52c32BE35BC.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T15:30:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1a9C8182C09F50C8318d769245beA52c32BE35BC&method=delay",
+      "shows": "Timelock delay is 172,800 seconds (2 days).",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-05-05T15:45:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x408ED6354d4973f66138C91495F2f2FCbd8724C3&method=votingPeriod",
+      "shows": "GovernorBravo voting period is 40,320 blocks (~6 days).",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-05-05T15:40:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery"
+    ],
+    "docs_url": "https://docs.uniswap.org/contracts/v4/overview",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "Timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "role": "GovernorBravo",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable"
+  }
+}

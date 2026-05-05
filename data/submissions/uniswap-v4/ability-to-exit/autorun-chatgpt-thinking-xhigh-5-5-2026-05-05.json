@@ -1,0 +1,174 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "chatgpt-thinking-xhigh-5-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "LP exits are direct on-chain calls through immutable PoolManager/PositionManager flows, with no pause role or withdrawal queue found",
+  "short_headline": "Direct unpaused LP exits",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The user-facing exit surface for v4 LP positions is not a monolithic withdraw: PoolManager exposes unlock, modifyLiquidity with negative liquidityDelta, take, settle/settleFor, clear, mint, and burn; the canonical PositionManager exposes modifyLiquidities and modifyLiquiditiesWithoutUnlock, which dispatch DECREASE_LIQUIDITY, BURN_POSITION, TAKE_PAIR, TAKE, CLOSE_CURRENCY, and CLEAR_OR_TAKE actions."
+      },
+      {
+        "code": "E2",
+        "text": "PoolManager exit methods use flash-accounting guards rather than admin gates: modifyLiquidity, take, settle, settleFor, clear, mint, and burn are gated by onlyWhenUnlocked, while modifyLiquidity also has noDelegateCall; PositionManager modifyLiquidities is gated by isNotLocked and a caller-supplied deadline, modifyLiquiditiesWithoutUnlock is gated by isNotLocked, and _decrease/_burn additionally require onlyIfApproved for the ERC721 position owner or approved operator."
+      },
+      {
+        "code": "E3",
+        "text": "No pause guard or pause role was identified for the assessed exit paths: the deployed ABIs for PoolManager and PositionManager expose no paused/isPaused/Pausable-style read or write method, and source inspection of PoolManager, PositionManager, ReentrancyLock, BaseActionsRouter, and ProtocolFees found no pause/whenNotPaused/PAUSE_ROLE/onlyRole mechanism. The live PoolManager owner() is the Uniswap timelock, but the owner-visible surface found here is fee-controller related, not an exit pause."
+      },
+      {
+        "code": "E4",
+        "text": "No distinct emergency-pause or governance-pause path was found for exits: neither the core nor canonical PositionManager ABI/source contains a pause function, so there is no emergency cap, governance indefinite pause, or PAUSE_INFINITELY-equivalent exit path to record."
+      },
+      {
+        "code": "E5",
+        "text": "There is no queued redemption flow in the inspected v4 LP path: liquidity removal and token collection are encoded as PositionManager actions and resolved atomically through PoolManager flash accounting, not through request/claim queues, daily caps, or delayed withdrawal finalization."
+      },
+      {
+        "code": "E6",
+        "text": "No separate forced-exit or adversarial-admin escape hatch was identified because the ordinary exit functions are already permissionless and non-pausable at the assessed protocol level. Pool-specific hooks can affect the pool a user selected, but no protocol admin escape mode was needed or found for the core exit path."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are directly callable on-chain without the official frontend: the DeFiPunkd surfacers list the deployed PoolManager and PositionManager write methods, and Uniswap's docs/reference show modifyLiquidities and action-based liquidity management as direct contract calls."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that malicious pool-specific hooks can make selected pools hostile to removal, but that is an opt-in per-pool hook risk rather than a protocol-admin ability to pause finalized exits.",
+      "orange": "The strongest orange argument is that exits require correctly encoded flash-accounting callbacks or PositionManager actions, creating technical friction even though the on-chain functions are open.",
+      "green": "The strongest green argument is that neither PoolManager nor the canonical PositionManager has an admin pause or withdrawal queue, and LPs can decrease or burn positions and take proceeds through direct on-chain calls."
+    },
+    "verdict": "Choosing green because the deployed PoolManager and PositionManager expose direct LP exit flows, the inspected guards are ownership/approval, deadline, reentrancy, and flash-accounting checks rather than admin pause gates, and no queued redemption or finalized-claim pause surface was found."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=owner&block=25030672",
+      "shows": "Pinned on-chain read: PoolManager owner() at block 25030672 returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC, with calldata and rawReturnData in the response.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=protocolFeeController&block=25030672",
+      "shows": "Pinned on-chain read: PoolManager protocolFeeController() at block 25030672 returned 0x0000000000000000000000000000000000000000, with calldata and rawReturnData in the response.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e&method=poolManager&block=25030674",
+      "shows": "Pinned on-chain read: PositionManager poolManager() at block 25030674 returned 0x000000000004444c5dc75cB358380D2e3dE08A90, tying the canonical PositionManager to the canonical PoolManager.",
+      "chain": "Ethereum",
+      "address": "0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "DeFiPunkd surfacer loaded for Ethereum PoolManager, ABI source etherscan, reads pinned to block 25030672; owner() returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC and protocolFeeController() returned zero. The page lists write methods burn, clear, mint, settle, settleFor, take, unlock, modifyLiquidity, and fee-admin methods.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Deployed PoolManager ABI is verified with proxy=null and includes unlock, modifyLiquidity, take, settle, settleFor, clear, mint, burn, owner, and protocolFeeController; derived from the ABI, no paused/isPaused/pause/unpause function is exposed.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "shows": "DeFiPunkd surfacer loaded for Ethereum PositionManager, ABI source etherscan, reads pinned to block 25030674; poolManager() returned the canonical PoolManager, permit2() returned Permit2, and the page lists write methods modifyLiquidities, modifyLiquiditiesWithoutUnlock, transferFrom, safeTransferFrom, and approval/permit functions.",
+      "chain": "Ethereum",
+      "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "shows": "Deployed PositionManager ABI is verified with proxy=null and includes modifyLiquidities, modifyLiquiditiesWithoutUnlock, getPositionLiquidity, getPoolAndPositionInfo, transferFrom, and safeTransferFrom; derived from the ABI, no paused/isPaused/pause/unpause function is exposed.",
+      "chain": "Ethereum",
+      "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/PoolManager.sol",
+      "shows": "PoolManager source defines onlyWhenUnlocked and implements unlock, modifyLiquidity, take, settle, settleFor, clear, mint, and burn. modifyLiquidity/take/settle/clear/mint/burn use onlyWhenUnlocked, modifyLiquidity also uses noDelegateCall, and a source search found no pause/Pausable/whenNotPaused/PAUSE_ROLE/onlyRole terms.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/9dafaaecc1e2e1e824eda9d941085f96517d827b/src/PositionManager.sol",
+      "shows": "PositionManager source defines checkDeadline and onlyIfApproved, exposes modifyLiquidities and modifyLiquiditiesWithoutUnlock, dispatches DECREASE_LIQUIDITY, BURN_POSITION, TAKE_PAIR, TAKE, CLOSE_CURRENCY, and CLEAR_OR_TAKE actions, and uses onlyIfApproved on _decrease and _burn. A source search found no pause/Pausable/whenNotPaused/PAUSE_ROLE/onlyRole terms.",
+      "commit": "9dafaaecc1e2e1e824eda9d941085f96517d827b",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/9dafaaecc1e2e1e824eda9d941085f96517d827b/src/base/ReentrancyLock.sol",
+      "shows": "ReentrancyLock source defines the isNotLocked modifier as a transient locker check that reverts with ContractLocked when already locked; no pause or role guard appears in the file.",
+      "commit": "9dafaaecc1e2e1e824eda9d941085f96517d827b",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/9dafaaecc1e2e1e824eda9d941085f96517d827b/src/base/BaseActionsRouter.sol",
+      "shows": "BaseActionsRouter source shows _executeActions calls poolManager.unlock, unlockCallback decodes actions and params, and _executeActionsWithoutUnlock iterates actions and calls _handleAction; no pause or role guard appears in this execution router.",
+      "commit": "9dafaaecc1e2e1e824eda9d941085f96517d827b",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/ProtocolFees.sol",
+      "shows": "ProtocolFees source shows owner can setProtocolFeeController, the protocolFeeController can setProtocolFee and collectProtocolFees, and a search found no pause/Pausable/whenNotPaused/PAUSE terms in this privileged fee surface.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "shows": "Official Uniswap deployments page states it lists current v4 core, periphery, and Universal Router deployment addresses by network.",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/guides/managing-liquidity/overview",
+      "shows": "Uniswap liquidity-management guide documents action-based PositionManager workflows including DECREASE_LIQUIDITY, fee collection through zero-liquidity decrease, TAKE_PAIR, BURN_POSITION, and calls through modifyLiquidities.",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/guides/managing-liquidity/burn-liquidity",
+      "shows": "Uniswap burn-liquidity guide documents using BURN_POSITION and TAKE_PAIR actions with modifyLiquidities to withdraw underlying assets and burn the liquidity-position NFT.",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/guides/flash-accounting",
+      "shows": "Uniswap flash-accounting guide explains PoolManager unlock/settlement mechanics and that positive deltas are resolved through take before the transaction ends, supporting the direct atomic exit model rather than a redemption queue.",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    }
+  ],
+  "unknowns": [
+    "E6: I did not enumerate every live pool-specific hook; this assessment grades the protocol-level PoolManager and canonical PositionManager exit surface, while hook-specific adversarial behavior remains per-pool opt-in risk."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery"
+    ],
+    "docs_url": "https://developers.uniswap.org/docs/protocols/v4/overview",
+    "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "PoolManager owner returned by owner() at block 25030672; fee-controller setter, not an exit pause role in assessed source",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap v4 is a non-custodial automated market maker where users swap tokens and provide liquidity to pools. Its singleton PoolManager holds pool state and uses flash accounting so swaps, liquidity changes, settlement, and token-taking are balanced within an unlock flow. Liquidity positions are commonly managed through the v4 PositionManager ERC721 periphery, while pool creators can attach hooks that customize pool behavior."
+  }
+}

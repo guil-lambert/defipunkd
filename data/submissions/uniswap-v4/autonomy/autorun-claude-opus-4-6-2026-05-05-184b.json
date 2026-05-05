@@ -1,0 +1,150 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Uniswap V4 core contracts have zero external dependencies (no oracles, no bridges, no off-chain actors); hooks are optional per-pool plugins chosen by pool creators. Impacted TVS from core dependency failure: ~0%.",
+  "short_headline": "No external dependencies in core",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The PoolManager ABI has no oracle calls, price feed references, or external contract reads. The only two zero-arg view methods are owner() and protocolFeeController(). The swap, modifyLiquidity, donate, and initialize functions take a PoolKey that includes a hooks address, but the hook is per-pool and specified at pool creation — it is not a system-wide external dependency. The PoolManager is a constant-product AMM that prices assets purely from its own liquidity state, with no external price feed. protocolFeeController() currently returns 0x0 (null), meaning no fee controller contract is wired."
+      },
+      {
+        "code": "A1",
+        "text": "Hooks are optional, external smart contracts that can be attached per-pool at initialization. They are third-party contracts, not core protocol dependencies. Users who LP into or swap through a vanilla (no-hook) pool have zero external contract dependency. Users who interact with hooked pools opt into the hook's risk profile at the pool level — this is analogous to per-market collateral risk in lending protocols. The PoolManager itself enforces hook permission bits via the hook's address, and hooks cannot retroactively change their permission scope."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain actor committees, oracle committees, or reporter sets exist in the Uniswap V4 core. There are no guardian multisigs, validator sets, or exit-bus signers. The protocol is entirely on-chain and permissionless."
+      },
+      {
+        "code": "A3",
+        "text": "Uniswap V4 is deployed independently on each chain (Ethereum, Arbitrum, Base, Optimism, Polygon, etc.) with separate PoolManager singletons per chain. There is no cross-chain bridging or messaging dependency in the core protocol. Each deployment is self-contained."
+      },
+      {
+        "code": "A4",
+        "text": "No nested collateral or restaking chains. Uniswap V4 is a spot DEX where users deposit token pairs directly into pools. There is no receipt-of-receipt design or collateral chain."
+      },
+      {
+        "code": "A6",
+        "text": "Because there are no external dependencies in the core contracts, no fallback mechanisms are needed. The PoolManager has no pause function, no oracle circuit breaker, and no emergency shutdown. The only owner-callable functions are setProtocolFeeController and transferOwnership, both gated by the Uniswap DAO governance timelock with a 2-day minimum delay."
+      },
+      {
+        "code": "A7",
+        "text": "For L2 deployments (Arbitrum, Base, Optimism, etc.), the usual centralized sequencer liveness dependency applies — but this is the base-chain substrate for those deployments, not an additional dependency introduced by Uniswap V4. The Ethereum L1 deployment has no sequencer dependency."
+      },
+      {
+        "code": "A8",
+        "text": "Uniswap V4 core requires no keepers, liquidation bots, relayers, or off-chain actors for its normal operation. Swaps and liquidity operations are user-initiated. There are no auto-compounders or deposit relayers at the core level."
+      },
+      {
+        "code": "A9",
+        "text": "The PoolManager owner (Uniswap DAO timelock at 0x1a9C8182C09F50C8318d769245beA52c32BE35BC, with 2-day minimum delay, admin = GovernorBravo at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3 using UNI token voting with 40M UNI quorum) can call setProtocolFeeController(address) which sets an external contract that determines protocol fees. However: (a) this is gated by governance + 2-day timelock, (b) the protocolFeeController is currently null (0x0), and (c) even if set, it can only affect protocol fee rates (capped by ProtocolFeeTooLarge revert), not user principal. It cannot introduce new oracles, bridges, or staking modules. The PositionManager and Universal Router are non-upgradeable and ownerless per the OpenZeppelin audit."
+      }
+    ],
+    "steelman": {
+      "red": "Hooks attached to individual pools are external contracts that could be malicious or buggy, and the PoolManager calls them during swaps/liquidity operations — a hook failure could cause loss of funds in that pool.",
+      "orange": "Governance could set a protocolFeeController that introduces a new external dependency for fee calculation, and the 2-day timelock may be too short for users to exit all positions.",
+      "green": "The PoolManager core has zero external dependencies (no oracles, no bridges, no off-chain actors); hooks are per-pool opt-in chosen at pool creation and cannot cross-contaminate other pools; governance actions are timelocked and limited to fee parameters."
+    },
+    "verdict": "Choosing green because the Uniswap V4 PoolManager core contract makes zero external calls to oracles, bridges, or third-party contracts in its base operation. The only external interaction surface is hooks, which are optional per-pool plugins that users explicitly opt into when choosing which pool to LP in or swap through — a vanilla pool with no hook has literally zero external dependency. The hook architecture is scoped by address-encoded permission bits that are immutable after deployment. The governance-mutable surface is limited to setProtocolFeeController (currently null, gated by 2-day timelocked DAO governance with 40M UNI quorum), which can only affect fee rates, not introduce oracles or bridges. The PositionManager and Universal Router are non-upgradeable and ownerless. Module weighting: the PoolManager singleton holds ~100% of protocol TVS (all liquidity lives in it); there is no separate sub-module with independent TVS. Impacted TVS under any single external dependency failure: effectively 0% for the core; per-pool hook risk is bounded to that individual pool's liquidity and is user-opted."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "PoolManager on Ethereum has only 2 zero-arg view methods: owner() returning 0x1a9C8182C09F50C8318d769245beA52c32BE35BC and protocolFeeController() returning 0x0000000000000000000000000000000000000000. The ABI shows no oracle, price feed, or external contract read calls. Write methods limited to: setProtocolFee, setProtocolFeeController, transferOwnership, plus core pool operations (swap, modifyLiquidity, initialize, settle, take, etc).",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "shows": "Timelock contract owning the PoolManager: MINIMUM_DELAY=172800 (2 days), delay=172800, MAXIMUM_DELAY=2592000 (30 days), GRACE_PERIOD=1209600 (14 days). Admin is GovernorBravo at 0x408ED6354d4973f66138C91495F2f2FCbd8724C3. pendingAdmin is null.",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "shows": "GovernorBravoDelegator (Uniswap Governor Bravo): uses UNI token at 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 for voting, quorumVotes=40000000000000000000000000 (40M UNI), proposalThreshold=1000000000000000000000000 (1M UNI), timelock=0x1a9C8182C09F50C8318d769245beA52c32BE35BC, votingPeriod=40320, votingDelay=13140.",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v4/concepts/hooks",
+      "shows": "Hooks are optional for Uniswap v4 pools. The hook contract is specified when creating a new pool in the PoolManager.initialize function. Hook permissions are encoded in the contract address and cannot be changed after deployment. Each pool can have one hook (or none)."
+    },
+    {
+      "url": "https://blog.openzeppelin.com/uniswap-v4-periphery-and-universal-router-audit",
+      "shows": "OpenZeppelin audit confirms: 'Both the V4 Position Manager and Universal Router are non-upgradeable, permissionless, and ownerless contracts.' Audited at commits df47aa9 (v4-periphery) and 4ce107d (universal-router)."
+    },
+    {
+      "url": "https://blog.openzeppelin.com/uniswap-v4-core-audit",
+      "shows": "OpenZeppelin audited Uniswap v4-core at commit d5d4957. The PoolManager is a singleton contract managing all pools. Hooks are specified at pool initialization time and called by PoolManager before/after operations."
+    },
+    {
+      "url": "https://www.certora.com/blog/uniswap-v4-audits-what-we-learned-about-defi-security",
+      "shows": "Uniswap v4 was audited by four security firms: OpenZeppelin, Spearbit, Trail of Bits, and Certora. No external dependency vulnerabilities were found in the core."
+    }
+  ],
+  "unknowns": [
+    "A1: Cannot enumerate every deployed hook contract attached to individual pools to assess their external dependencies; hook risk is per-pool and user-opted, not a core protocol dependency",
+    "A5: DeFiLlama forkedFrom field not checked in this run; Uniswap V4 is an original protocol but fork status was not verified via DeFiLlama API",
+    "A7: L2 sequencer trust models for non-Ethereum deployments (Arbitrum, Base, Optimism, Polygon, etc.) not individually verified but are substrate-level, not protocol-introduced dependencies",
+    "A9: Cannot verify owner() of PoolManager deployments on chains not supported by the read API (Monad, Binance, Soneium, Tempo, Ink, Zora, World Chain, X Layer) — governance setup may differ on those chains"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery",
+      "https://github.com/Uniswap/universal-router"
+    ],
+    "docs_url": "https://docs.uniswap.org/contracts/v4/overview",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://blog.openzeppelin.com/uniswap-v4-core-audit",
+        "date": "2024"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://blog.openzeppelin.com/uniswap-v4-periphery-and-universal-router-audit",
+        "date": "2025-08"
+      },
+      {
+        "firm": "Certora",
+        "url": "https://www.certora.com/blog/uniswap-v4-audits-what-we-learned-about-defi-security",
+        "date": "2025-01"
+      }
+    ],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "symbol": "UNI"
+    },
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "PoolManager owner / Uniswap Governance Timelock (2-day delay)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "role": "Uniswap GovernorBravo (UNI token governance, 40M quorum)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap V4 is a decentralized exchange (DEX) using a singleton PoolManager architecture where all liquidity pools live in a single contract. Users can swap tokens and provide concentrated liquidity across permissionless pools. The key innovation is the hook system — optional smart contract plugins that can customize pool behavior (fees, oracles, order types) at specific lifecycle points. Flash accounting via transient storage enables gas-efficient multi-hop swaps and native ETH support."
+  }
+}

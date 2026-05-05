@@ -1,0 +1,131 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Uniswap V4 contracts are fully permissionless with no whitelist/KYC on user entry points; frontend applies industry-baseline sanctions screening with abundant independent access paths available.",
+  "short_headline": "Permissionless contracts, baseline frontend",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The PoolManager ABI (fetched from the defipunkd surfacer for Ethereum) exposes user-facing functions — swap(), modifyLiquidity(), initialize(), unlock(), settle(), take() — with no whitelist, allowlist, onlyRole, isAccredited, or isKYCed modifiers. The only owner-gated functions are setProtocolFeeController() and setProtocolFee(), which are admin functions unrelated to user admission. The owner is a Timelock contract (0x1a9C8182C09F50C8318d769245beA52c32BE35BC), not relevant to user access."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain operator approval is required to admit user actions. Swaps, liquidity provision, and pool initialization are entirely on-chain and permissionless. No keeper, sequencer, or relayer approval is needed for user admission."
+      },
+      {
+        "code": "A3",
+        "text": "A3-passive: The Uniswap Labs ToS requires users to represent they are not subject to OFAC sanctions or a citizen of a comprehensively sanctioned jurisdiction, and that their use will comply with applicable laws. This is standard boilerplate. A3-active: Uniswap Labs uses TRM Labs for wallet-address screening on app.uniswap.org, blocking wallets associated with sanctions, stolen funds, ransomware, terrorism financing, and CSAM. Third-party reporting confirms geo-blocking of OFAC-sanctioned jurisdictions. Both screening mechanisms match the industry baseline (OFAC geo-blocking + sanctions-oracle wallet screening)."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-ii: Multiple independent access paths exist. (1) All Uniswap V4 contracts are verified on block explorers (Etherscan, Arbiscan, Basescan, etc.) — users can interact via Write Contract tabs. (2) The Uniswap v4 SDK is publicly available (npm @uniswap/v4-sdk). (3) DEX aggregators route through Uniswap liquidity pools independently of the official frontend. (4) Alternative frontends operated by third parties exist, as confirmed by reporting. These paths are not bound by the Uniswap Labs ToS."
+      },
+      {
+        "code": "A4",
+        "text": "Uniswap Labs uses TRM Labs at the frontend level to screen wallet addresses against sanctions lists and categories of illicit activity. This screening is entirely at the app layer — no on-chain blocklist exists in the PoolManager contract."
+      },
+      {
+        "code": "A5",
+        "text": "Read access is fully permissionless — anyone can query pool state via view methods (extsload, exttload, balanceOf, etc.). Write access (swap, modifyLiquidity, initialize) is also fully permissionless at the contract level — no access control gates user-facing write functions."
+      },
+      {
+        "code": "A6",
+        "text": "The ToS states: users represent they are 'not (a) the subject of economic or trade sanctions administered or enforced by any governmental authority or otherwise designated on any list of prohibited or restricted parties' and 'not a citizen, resident, or organized in a jurisdiction or territory that is the subject of comprehensive country-wide, territory-wide, or regional economic sanctions by the United States.' This is standard DeFi ToS boilerplate."
+      }
+    ],
+    "steelman": {
+      "red": "Individual v4 hooks deployed by third parties could theoretically implement whitelist/KYC logic, but this would be per-hook, not protocol-level gating of the core PoolManager.",
+      "orange": "The official frontend actively blocks sanctioned wallets via TRM Labs and geo-blocks OFAC-sanctioned jurisdictions, which could be seen as meaningful access restriction.",
+      "green": "The core PoolManager contract has no whitelist, KYC, or admission gate; frontend screening matches the industry baseline (OFAC geo-blocking + sanctions wallet screening); and multiple independent A3b-ii paths exist including block-explorer Write Contract access and DEX aggregators."
+    },
+    "verdict": "Choosing green because the PoolManager contract's ABI shows zero admission gates on user-facing functions (A1), no off-chain operator is needed for admission (A2), and the frontend's A3-active enforcement is limited to the industry baseline — OFAC geo-blocking and TRM Labs sanctions wallet screening — while abundant A3b-ii paths exist (verified contract Write tabs on block explorers, SDK, aggregators, third-party frontends). The ToS clauses are standard A3-passive boilerplate. The steelman for orange is weaker because the screening does not exceed what Uniswap, Aave, Curve, and other major DeFi frontends all apply, and permissionless contract access via block explorers is readily available."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Full ABI and live view-method results for the Ethereum PoolManager. View methods are owner() and protocolFeeController(). User-facing functions (swap, modifyLiquidity, initialize, unlock, settle, take, donate) have no whitelist/allowlist/role-gating modifiers. Only setProtocolFeeController and transferOwnership are owner-restricted. Owner is 0x1a9C8182C09F50C8318d769245beA52c32BE35BC (Timelock).",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://support.uniswap.org/hc/en-us/articles/30935100859661-Uniswap-Labs-Terms-of-Service",
+      "shows": "Uniswap Labs ToS contains standard sanctions and eligibility representations — users represent they are not subject to OFAC sanctions or from comprehensively sanctioned jurisdictions. Standard boilerplate (A3-passive)."
+    },
+    {
+      "url": "https://support.uniswap.org/hc/en-us/articles/8671777747597-Address-Screening-Guide",
+      "shows": "Uniswap Labs confirms wallet screening via TRM Labs. Blocks wallets associated with sanctions, terrorism financing, stolen funds, ransomware, human trafficking, and CSAM. This is frontend-level only (A3-active, industry baseline)."
+    },
+    {
+      "url": "https://blog.uniswap.org/trm",
+      "shows": "Official Uniswap Labs blog post confirming TRM Labs partnership for blocking wallet addresses associated with illicit activity from interacting with the Uniswap Labs App."
+    },
+    {
+      "url": "https://www.datawallet.com/crypto/uniswap-countries",
+      "shows": "Third-party source documenting that Uniswap restricts access from OFAC-sanctioned countries via geo-blocking, and confirming the protocol itself remains open and accessible via alternative frontends and aggregators."
+    },
+    {
+      "url": "https://www.theblock.co/post/143036/uniswap-labs-now-blocks-crypto-wallets-frontend",
+      "shows": "Reports that Uniswap's screening is at the frontend level and that the protocol can still be used by all wallets via alternative hosted websites and direct smart contract interaction."
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v4/deployments",
+      "shows": "Official Uniswap documentation listing all v4 deployment addresses across chains, confirming contracts are deployed and verified on block explorers (Etherscan, Arbiscan, Basescan, etc.), providing A3b-ii alternative access via Write Contract tabs.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v4/overview",
+      "shows": "Uniswap v4 developer documentation confirming bug bounty on Cantina, SDK availability, and security framework."
+    }
+  ],
+  "unknowns": [
+    "A3: Could not directly load the app.uniswap.org SPA to observe geo-blocking or wallet screening in action (JavaScript-rendered); relied on official support documentation and third-party reporting for A3-active findings.",
+    "A1: Could not fetch GitHub source code directly (blocked); relied on the deployed ABI from the defipunkd surfacer to confirm no whitelist modifiers."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery",
+      "https://github.com/Uniswap/universal-router"
+    ],
+    "docs_url": "https://docs.uniswap.org/contracts/v4/overview",
+    "audits": [
+      {
+        "firm": "Multiple (see linked directory)",
+        "url": "https://github.com/Uniswap/v4-core/tree/main/docs/security/audits"
+      },
+      {
+        "firm": "Multiple (see linked directory)",
+        "url": "https://github.com/Uniswap/v4-periphery/tree/main/audits"
+      }
+    ],
+    "governance_forum": "https://gov.uniswap.org/",
+    "bug_bounty_url": "https://blog.uniswap.org/v4-bug-bounty",
+    "security_contact": "compliance@uniswap.org",
+    "deployed_contracts_doc": "https://docs.uniswap.org/contracts/v4/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "PoolManager owner (Timelock, 2-day minimum delay)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "role": "GovernorBravo proxy (admin of the Timelock)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap V4 is a decentralized exchange protocol using a singleton PoolManager architecture where all pool state is managed in one contract. Users can swap tokens, provide concentrated liquidity, and create new pools permissionlessly. V4 introduces a hooks system that allows developers to attach custom logic at various points in a pool's lifecycle, and supports native ETH trading and dynamic fees."
+  }
+}
