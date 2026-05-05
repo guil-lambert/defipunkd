@@ -1,0 +1,329 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "chatgpt-thinking-xhigh-5-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "The main v4 contracts are verified and covered by recognized audits, but post-review v4-core fee/sync/accounting changes prevent a green verifiability grade",
+  "short_headline": "Verified with core drift",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "The assessed Ethereum v4 deployment is publicly verified: PoolManager, PositionManager, Universal Router, Quoter, and StateView ABI reads returned verified=true and proxy=null. The PositionDescriptor address is an Etherscan-verified TransparentUpgradeableProxy with implementation 0xb5b6d1BA9D3C85d3e94331341c1C880B22E3F144, and that implementation ABI is verified."
+      },
+      {
+        "code": "V1-cross",
+        "text": "Representative non-Ethereum PoolManager deployments checked through DeFiPunkd were verified and non-proxy on Base, Arbitrum, Optimism, BSC, Unichain, and Blast; Polygon and Avalanche PoolManager pages were verified on their explorers even though the DeFiPunkd ABI endpoint returned abi-not-found."
+      },
+      {
+        "code": "V2",
+        "text": "Public source repositories exist and correspond structurally to the deployed source names: v4-core current main was 46c6834698c48bc4a463a86d8420f4eb1d7f3b75, v4-periphery current main was 9dafaaecc1e2e1e824eda9d941085f96517d827b, and universal-router current main was d3123d99493aa6524bc5de44423c3961177758cb. I did not run an independent bytecode compile-match or fetch a deployed-address artifact tying every deployed bytecode artifact to an exact repo commit."
+      },
+      {
+        "code": "V3",
+        "text": "Recognized audits cover the core and periphery: OpenZeppelin audited v4-core in July 2024 at commit d5d4957; Trail of Bits audited v4-core in September 2024 at commit 7a72031574fc4548ca8fce197114cf87d5a2c037 and performed an August 30, 2024 fix review; OpenZeppelin audited v4-periphery and Universal Router in September 2024; and OpenZeppelin later audited Universal Router 2.1 / v4-periphery changes in November 2025."
+      },
+      {
+        "code": "V4",
+        "text": "Trail of Bits and OpenZeppelin are recognized Solidity audit firms under the rubric. Certora, Spearbit, and ABDK reports were also present in the v4-core audit directory, but the fetched core Certora/Spearbit/ABDK reports were marked draft or instructed that post-fix code should be re-audited, so they were treated as corroborating context rather than the decisive green-grade coverage."
+      },
+      {
+        "code": "V5",
+        "text": "The downgrade is not based on periphery/router churn, commit count, or the PoolOperation struct relocation. The remaining material drift is in fund-critical v4-core behavior after the Trail of Bits fix-review window: the sampled diff shows initialize hookData removal, removal of initialization-time protocol-fee pulling, updated swap/protocol-fee rounding logic, and the alternative ToB-UNI4-3 sync/collectProtocolFees fix that restores sync outside unlock while blocking fee collection for a currently synced token. I did not find a later finalized recognized audit covering those October 2024 v4-core accounting/settlement changes."
+      },
+      {
+        "code": "V6",
+        "text": "Implementation/proxy handling was checked for the assessed main contracts: PoolManager, PositionManager, Universal Router, Quoter, and StateView were non-proxy verified contracts; PositionDescriptor's proxy and implementation were both verified; and the governance-adjacent GovernorBravoDelegator plus its current delegate implementation were verified."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that several deployed chains and some peripheral contracts were not exhaustively re-verified in this run, and post-review v4-core accounting changes remain unmatched to a later finalized audit.",
+      "orange": "The strongest orange argument is that the important deployed bytecode is verified and public with recognized audit coverage, but specific fund-critical v4-core fee/sync/accounting changes after the latest finalized core review block a clean green claim.",
+      "green": "The strongest green argument is that the core contracts are verified, immutable/non-proxy, public source is available, Trail of Bits/OpenZeppelin reviewed v4-core, and later OpenZeppelin differential work covers non-custodial periphery/router changes."
+    },
+    "verdict": "Choosing orange because verified bytecode, public repositories, immutable/non-proxy fund-facing core contracts, and recognized audit coverage rule out red, but the evidence still shows named post-review v4-core fee/sync/accounting changes with no fetched later finalized recognized audit covering that core delta."
+  },
+  "evidence": [
+    {
+      "url": "https://app.uniswap.org/",
+      "shows": "Capability probe: the protocol website was fetched successfully."
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Capability probe and on-chain surfacer: Ethereum PoolManager page loaded with ABI/read/write surface and pinned read context.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Ethereum PoolManager ABI response showed contractName PoolManager, abiSource sourcify, verified=true, proxy=null, and the core AMM function surface.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "shows": "Ethereum PositionManager ABI response showed contractName PositionManager, verified=true, proxy=null, and 39 functions.",
+      "chain": "Ethereum",
+      "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      "shows": "Ethereum Universal Router ABI response showed verified=true, proxy=null, and execute/router functions.",
+      "chain": "Ethereum",
+      "address": "0x66a9893cc07d91d95644aedd05d03f95e1dba8af"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
+      "shows": "Ethereum V4Quoter ABI response showed contractName V4Quoter, verified=true, and proxy=null.",
+      "chain": "Ethereum",
+      "address": "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
+      "shows": "Ethereum StateView ABI response showed contractName StateView, verified=true, proxy=null, and read-only lens methods.",
+      "chain": "Ethereum",
+      "address": "0x7ffe42c4a5deea5b0fec41c94c136cf115597227"
+    },
+    {
+      "url": "https://etherscan.io/address/0xd1428ba554f4c8450b763a0b2040a4935c63f06c#code",
+      "shows": "Etherscan code page showed Uniswap V4: Position Descriptor as Source Code (Proxy), Exact Match, TransparentUpgradeableProxy, and a verified implementation link to 0xb5b6d1BA9D3C85d3e94331341c1C880B22E3F144.",
+      "chain": "Ethereum",
+      "address": "0xd1428ba554f4c8450b763a0b2040a4935c63f06c"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xb5b6d1BA9D3C85d3e94331341c1C880B22E3F144",
+      "shows": "PositionDescriptor implementation ABI response showed contractName PositionDescriptor, verified=true, proxy=null, and view methods for tokenURI/poolManager/wrappedNative.",
+      "chain": "Ethereum",
+      "address": "0xb5b6d1BA9D3C85d3e94331341c1C880B22E3F144"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=8453&address=0x498581ff718922c3f8e6a244956af099b2652b2b",
+      "shows": "Base PoolManager ABI response showed verified=true and proxy=null.",
+      "chain": "Base",
+      "address": "0x498581ff718922c3f8e6a244956af099b2652b2b"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=42161&address=0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+      "shows": "Arbitrum PoolManager ABI response showed contractName PoolManager, verified=true, and proxy=null.",
+      "chain": "Arbitrum",
+      "address": "0x360e68faccca8ca495c1b759fd9eee466db9fb32"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=10&address=0x9a13f98cb987694c9f086b1f5eb990eea8264ec3",
+      "shows": "Optimism PoolManager ABI response showed contractName PoolManager, verified=true, and proxy=null.",
+      "chain": "Optimism",
+      "address": "0x9a13f98cb987694c9f086b1f5eb990eea8264ec3"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=56&address=0x28e2ea090877bf75740558f6bfb36a5ffee9e9df",
+      "shows": "BSC PoolManager ABI response showed contractName PoolManager, verified=true, and proxy=null.",
+      "chain": "Binance",
+      "address": "0x28e2ea090877bf75740558f6bfb36a5ffee9e9df"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=130&address=0x1f98400000000000000000000000000000000004",
+      "shows": "Unichain PoolManager ABI response showed contractName PoolManager, verified=true, and proxy=null.",
+      "chain": "Unichain",
+      "address": "0x1f98400000000000000000000000000000000004"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=81457&address=0x1631559198a9e474033433b2958dabc135ab6446",
+      "shows": "Blast PoolManager ABI response showed contractName PoolManager, verified=true, and proxy=null.",
+      "chain": "Blast",
+      "address": "0x1631559198a9e474033433b2958dabc135ab6446"
+    },
+    {
+      "url": "https://polygonscan.com/address/0x67366782805870060151383f4bbff9dab53e5cd6#code",
+      "shows": "Polygonscan page metadata showed Uniswap V4: Pool Manager and Contract: Verified for the Polygon PoolManager address.",
+      "chain": "Polygon",
+      "address": "0x67366782805870060151383f4bbff9dab53e5cd6"
+    },
+    {
+      "url": "https://snowscan.xyz/address/0x06380c0e0912312b5150364b9dc4542ba0dbbc85#code",
+      "shows": "SnowScan page metadata showed Uniswap V4: Pool Manager and Contract: Verified for the Avalanche PoolManager address.",
+      "chain": "Avalanche",
+      "address": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "shows": "GovernorBravoDelegator ABI response showed contractName GovernorBravoDelegator, verified=true, and governance proxy methods including admin and implementation.",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x408ED6354d4973f66138C91495F2f2FCbd8724C3&method=implementation&block=25030824",
+      "shows": "Pinned on-chain read: GovernorBravoDelegator implementation() at block 25030824 returned 0x53a328F4086d7C0F1Fa19e594c9b842125263026.",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x53a328F4086d7C0F1Fa19e594c9b842125263026",
+      "shows": "GovernorBravoDelegate implementation ABI response showed contractName GovernorBravoDelegate, verified=true, proxy=null, and governance view/write methods.",
+      "chain": "Ethereum",
+      "address": "0x53a328F4086d7C0F1Fa19e594c9b842125263026"
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-core/commits/main",
+      "shows": "GitHub commit API showed v4-core main at 46c6834698c48bc4a463a86d8420f4eb1d7f3b75.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75"
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-periphery/commits/main",
+      "shows": "GitHub commit API showed v4-periphery main at 9dafaaecc1e2e1e824eda9d941085f96517d827b.",
+      "commit": "9dafaaecc1e2e1e824eda9d941085f96517d827b"
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/universal-router/commits/main",
+      "shows": "GitHub commit API showed universal-router main at d3123d99493aa6524bc5de44423c3961177758cb.",
+      "commit": "d3123d99493aa6524bc5de44423c3961177758cb"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/PoolManager.sol",
+      "shows": "Current v4-core PoolManager source corresponds by contract/file name to the verified PoolManager deployment and exposes the core singleton AMM/settlement functions.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/9dafaaecc1e2e1e824eda9d941085f96517d827b/src/PositionManager.sol",
+      "shows": "Current v4-periphery PositionManager source corresponds by contract/file name to the verified PositionManager deployment.",
+      "commit": "9dafaaecc1e2e1e824eda9d941085f96517d827b"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/universal-router/d3123d99493aa6524bc5de44423c3961177758cb/contracts/UniversalRouter.sol",
+      "shows": "Current universal-router UniversalRouter source corresponds by contract/file name to the verified Universal Router deployment.",
+      "commit": "d3123d99493aa6524bc5de44423c3961177758cb"
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-core/contents/docs/security/audits?ref=main",
+      "shows": "v4-core audit directory listed OpenZeppelin_audit_core.pdf, TrailOfBits_audit_core.pdf, and DRAFT_ABDK/DRAFT_Certora/DRAFT_Spearbit core reports."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/main/docs/security/audits/OpenZeppelin_audit_core.pdf",
+      "shows": "OpenZeppelin core audit report dated July 17, 2024, reviewed v4-core from 2024-05-27 to 2024-06-21, and scoped Uniswap/v4-core at commit d5d4957 including PoolManager.sol."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/main/docs/security/audits/TrailOfBits_audit_core.pdf",
+      "shows": "Trail of Bits core security assessment dated September 5, 2024, reviewed Uniswap/v4-core at version 7a72031574fc4548ca8fce197114cf87d5a2c037 and included an August 30, 2024 fix review resolving four issues, partially resolving one, and leaving one unresolved."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/docs/security/audits/DRAFT_Spearbit_audit_core.pdf",
+      "shows": "Spearbit v4-core report was fetched from the current v4-core audit directory; it is marked DRAFT, dated September 5, 2024, scoped commit 7a7203...a2c037, and states fix review was still in progress."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/docs/security/audits/DRAFT_Certora_audit_core.pdf",
+      "shows": "Certora v4-core report was fetched from the current v4-core audit directory; it is marked draft/preliminary, dated 07/24, scoped src/* at commit d5d4957, and reports formal verification/manual review properties."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/docs/security/audits/DRAFT_ABDK_audit_core.pdf",
+      "shows": "ABDK v4-core report was fetched from the current v4-core audit directory; it is dated September 5, 2024, lists PoolManager/ProtocolFees/libraries/types in scope, and states issues were left as-is and post-fix code should be re-audited."
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-periphery/contents/audits?ref=main",
+      "shows": "v4-periphery audit directory listed OpenZeppelin_audit_periphery_universal_router.pdf plus draft ABDK and Spearbit periphery reports."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/main/audits/OpenZeppelin_audit_periphery_universal_router.pdf",
+      "shows": "OpenZeppelin periphery/router audit dated September 5, 2024, reviewed v4-periphery at commit df47aa9 including PositionManager.sol and universal-router at commit 4ce107d including UniversalRouter.sol; it also says v4 Position Manager and Universal Router are non-upgradeable."
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/universal-router/contents/audit?ref=d3123d99493aa6524bc5de44423c3961177758cb",
+      "shows": "universal-router audit directory at current commit listed OpenZeppelin_audit_periphery_universal_router.pdf and Universal Router 2.1 And V4 Periphery Audit.pdf, among other reports.",
+      "commit": "d3123d99493aa6524bc5de44423c3961177758cb"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/universal-router/d3123d99493aa6524bc5de44423c3961177758cb/audit/Universal%20Router%202.1%20And%20V4%20Periphery%20Audit.pdf",
+      "shows": "OpenZeppelin Universal Router 2.1 and V4 Periphery audit dated November 11, 2025, performed a differential audit of pull requests #457 and #497, covering Universal Router files, V4Router.sol, and IV4Router.sol; it found no significant issues and noted privileged roles were not changed.",
+      "commit": "d3123d99493aa6524bc5de44423c3961177758cb"
+    },
+    {
+      "url": "https://github.com/Uniswap/v4-core/compare/4dc48bbd89f4faf1e9493cd1563908d79aa10b0d...46c6834698c48bc4a463a86d8420f4eb1d7f3b75.diff",
+      "shows": "Content-addressed v4-core diff after the latest Trail of Bits fix-review PR sampled in this run: it shows initialize hookData removal, removal of initialization-time protocol-fee pulling, protocol-fee/swap-fee rounding changes, sync/collectProtocolFees changes, and the PoolOperation struct relocation. The downgrade uses the named fee/sync/accounting behavior changes, not the struct relocation or commit/LOC count alone.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75"
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-core/pulls/886",
+      "shows": "PR #886, merged October 28, 2024, is titled Solve ToB-UNI4-3 without restricting sync and states it restores sync usability outside unlock while modifying collectProtocolFees to handle the synced-token/native-currency case."
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-core/pulls/886/files?per_page=100",
+      "shows": "PR #886 file list shows modifications to src/PoolManager.sol, src/ProtocolFees.sol, and src/interfaces/IProtocolFees.sol, plus tests, for the alternative sync/collectProtocolFees fix."
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-core/pulls/887/files?per_page=100",
+      "shows": "PR #887 file list shows modifications to src/PoolManager.sol, src/ProtocolFees.sol, src/interfaces/IProtocolFees.sol, src/libraries/Hooks.sol, src/libraries/Pool.sol, and removal of BipsLibrary, consistent with the protocol-fee pull removal."
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-core/pulls/894",
+      "shows": "PR #894, merged October 8, 2024, is titled Remove initialize hookdata and states the change removes bytes memory hookData from beforeInitialize/afterInitialize for Cantina issues 153 and 444."
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/v4-core/pulls/905/files?per_page=100",
+      "shows": "PR #905 file list shows modifications to src/libraries/Pool.sol and src/libraries/ProtocolFeeLibrary.sol for the swap/protocol-fee rounding change."
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "shows": "Uniswap developer deployments page was fetched and lists deployed v4 contract addresses across supported chains."
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=owner&block=25030824",
+      "shows": "Pinned on-chain read: Ethereum PoolManager owner() at block 25030824 returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90"
+    }
+  ],
+  "unknowns": [
+    "V1: Monad, Soneium, World Chain, X Layer, Tempo, Ink, and Zora deployments were not verified because the read API did not support those chains and no successful block-explorer code-page fetch was completed for them in this run.",
+    "V1: I did not exhaustively verify every per-chain PositionManager, Quoter, StateView, PositionDescriptor, and Universal Router address; the run checked the Ethereum set, representative PoolManagers on supported chains, and Polygon/Avalanche PoolManager explorer pages.",
+    "V2: I did not run an independent compile/bytecode diff or fetch a deployment artifact tying every deployed bytecode artifact to an exact source commit.",
+    "V3: Code4rena contest/finding links, Kyber Hook/Compact Spearbit reports, and Uniswap wallet/browser-extension Trail of Bits reports were listed in protocol.audit_links but were not treated as current v4-core deployment coverage in this run.",
+    "V3: The fetched ABDK, Certora, and Spearbit core reports were draft or pre/post-fix caveated, so I did not count them as finalized green-grade coverage for later October 2024 v4-core changes.",
+    "V5: I sampled the v4-core post-fix diff and named the behavior changes that appear material; I did not perform a full semantic audit proving whether each change is security-neutral.",
+    "V6: DeFiPunkd did not auto-resolve the PositionDescriptor proxy implementation, so the proxy implementation verification is based on the fetched Etherscan code page and a direct DeFiPunkd ABI call to the implementation address surfaced there."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery",
+      "https://github.com/Uniswap/universal-router"
+    ],
+    "docs_url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://raw.githubusercontent.com/Uniswap/v4-core/main/docs/security/audits/OpenZeppelin_audit_core.pdf",
+        "date": "2024-07"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://raw.githubusercontent.com/Uniswap/v4-core/main/docs/security/audits/TrailOfBits_audit_core.pdf",
+        "date": "2024-09"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/main/audits/OpenZeppelin_audit_periphery_universal_router.pdf",
+        "date": "2024-09"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://raw.githubusercontent.com/Uniswap/universal-router/d3123d99493aa6524bc5de44423c3961177758cb/audit/Universal%20Router%202.1%20And%20V4%20Periphery%20Audit.pdf",
+        "date": "2025-11"
+      }
+    ],
+    "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "PoolManager owner / Uniswap governance timelock",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Uniswap v4 is a non-custodial automated market maker where users swap tokens and provide liquidity to pools. Its singleton PoolManager holds pool state and routes operations through flash accounting, while optional hooks let individual pools customize behavior. The fund-facing core contracts checked here are immutable/non-proxy, while some peripheral or governance-adjacent contracts use proxy patterns."
+  }
+}

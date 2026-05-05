@@ -1,0 +1,195 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "chatgpt-thinking-xhigh-5-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "Core v4 contracts admit users without KYC or whitelist gates; Labs screens its own UI, but SDK/direct and third-party paths exist",
+  "short_headline": "Permissionless contract access",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "No contract-level whitelist, KYC, accreditation, or onlyRole admission modifier was found on the assessed core user entry points. PoolManager exposes initialize, unlock, swap, modifyLiquidity, donate, settle/take/clear, mint, and burn with flash-accounting and pool-shape checks; PositionManager exposes modifyLiquidities and modifyLiquiditiesWithoutUnlock with reentrancy/deadline and position-owner approval checks; Universal Router exposes execute/executeSigned with deadline/signature/reentrancy checks rather than allowlists."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain operator approval is required to admit the core user actions assessed here: users can route swaps through Universal Router execute, create or mutate pools through PoolManager initialize/unlock/swap/modifyLiquidity, and manage LP positions through PositionManager modifyLiquidities. Pool-specific hooks may add custom behavior for a selected pool, but that is per-pool opt-in logic rather than a global Uniswap v4 admission committee."
+      },
+      {
+        "code": "A3-passive",
+        "text": "The official Uniswap Labs Products have passive ToS eligibility restrictions: the Terms require users to be of legal age and not be sanctions subjects, while also stating that the Interface is distinct from the Uniswap Protocol and is not the exclusive access path."
+      },
+      {
+        "code": "A3-active",
+        "text": "The official Uniswap Labs interface applies active screening and token/address blocking: the Address Screening Guide says Labs uses TRM Labs intelligence and intends to block wallets associated with illegal behavior, while the Unsupported Token Policy says blocked addresses have state-changing actions disabled in Labs interfaces."
+      },
+      {
+        "code": "A3b",
+        "text": "Independent access paths exist without Uniswap Labs interface cooperation: the Uniswap SDKs repo contains a v4 SDK package, the deployed PoolManager/PositionManager/Universal Router ABIs are directly callable, and a separately operated cp0x frontend describes itself as a permissionless Uniswap interface."
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain OFAC, sanctions, or compliance blocklist was identified in the assessed deployed ABI/source surface. The observed screening/blocking evidence is tied to Uniswap Labs interfaces, not to PoolManager, PositionManager, or Universal Router contract-level admission."
+      },
+      {
+        "code": "A5",
+        "text": "Read access is public through the deployed contracts' view functions and DeFiPunkd surfacers, and write access is open for core user actions subject to ordinary token approvals, position ownership/approval, caller-supplied deadlines, route signatures when using executeSigned, and flash-accounting settlement."
+      },
+      {
+        "code": "A6",
+        "text": "The ToS/legal path was located and extracted: the Terms contain short eligibility and sanctions clauses, and separate support pages document address-screening and unsupported-token enforcement in Labs-controlled interfaces."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that Uniswap Labs can block sanctioned or otherwise flagged wallets and unsupported tokens in its own web app, disabling state-changing actions for those interface users.",
+      "orange": "The strongest orange argument is that ordinary users may rely heavily on the official Uniswap Labs interface, so active address/token blocking on that client can practically matter even if contracts remain open.",
+      "green": "The strongest green argument is that the v4 contracts and router expose open write methods with no contract-level whitelist/KYC/operator approval, and independent SDK/direct/third-party paths exist."
+    },
+    "verdict": "Choosing green because the admission layer evidenced on-chain and in source is permissionless for core swap and liquidity actions, while the documented restrictions are publisher policies on Uniswap Labs interfaces and independent SDK/direct/third-party access paths were verified."
+  },
+  "evidence": [
+    {
+      "url": "https://app.uniswap.org/",
+      "shows": "Capability probe: curl HEAD to the protocol website returned HTTP/2 200 on 2026-05-05, confirming the official interface was reachable in this run.",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Capability probe and on-chain surfacer: Ethereum PoolManager page loaded with reads pinned to block 25030672 and listed public write methods including initialize, unlock, swap, modifyLiquidity, settle, take, clear, mint, and burn.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "PoolManager ABI was verified, non-proxy, and exposed user functions for initialize, unlock, swap, modifyLiquidity, donate, settle/settleFor, take, clear, mint, and burn; no allowlist/KYC/blocklist or pause admission function appeared in the ABI.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "shows": "PositionManager ABI was verified, non-proxy, and exposed modifyLiquidities, modifyLiquiditiesWithoutUnlock, ERC721 transfer/approval methods, permit methods, and poolManager reads; no allowlist/KYC/blocklist admission function appeared in the ABI.",
+      "chain": "Ethereum",
+      "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      "shows": "Universal Router ABI was verified, non-proxy, and exposed execute, execute with deadline, executeSigned context, V4_POSITION_MANAGER, and poolManager reads; no allowlist/KYC/blocklist admission function appeared in the ABI.",
+      "chain": "Ethereum",
+      "address": "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e&method=poolManager&block=25030674",
+      "shows": "Pinned on-chain read: PositionManager poolManager() at block 25030674 returned 0x000000000004444c5dc75cB358380D2e3dE08A90, tying the canonical PositionManager to the canonical PoolManager.",
+      "chain": "Ethereum",
+      "address": "0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      "shows": "Universal Router surfacer loaded with reads pinned to block 25030734; V4_POSITION_MANAGER returned 0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e and poolManager returned 0x000000000004444c5dc75cB358380D2e3dE08A90, and write methods include execute(bytes,bytes[]) and execute(bytes,bytes[],uint256).",
+      "chain": "Ethereum",
+      "address": "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/PoolManager.sol",
+      "shows": "PoolManager source shows public/external initialize, unlock, modifyLiquidity, swap, donate, settle/take/clear, mint, and burn; guarded functions use onlyWhenUnlocked/noDelegateCall and pool/hook validity checks, not whitelist/KYC modifiers.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/9dafaaecc1e2e1e824eda9d941085f96517d827b/src/PositionManager.sol",
+      "shows": "PositionManager source shows public modifyLiquidities and modifyLiquiditiesWithoutUnlock; position-mutating internal actions use position owner/approval checks plus reentrancy/deadline guards, not whitelist/KYC admission.",
+      "commit": "9dafaaecc1e2e1e824eda9d941085f96517d827b",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/universal-router/d3123d99493aa6524bc5de44423c3961177758cb/contracts/UniversalRouter.sol",
+      "shows": "UniversalRouter source shows execute(bytes,bytes[]) and execute(bytes,bytes[],uint256) are public/external payable with reentrancy/deadline checks; executeSigned adds signature context for signed routes, not a global admission whitelist.",
+      "commit": "d3123d99493aa6524bc5de44423c3961177758cb",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://api.github.com/repos/Uniswap/sdks/contents/sdks/v4-sdk?ref=28a0790477ee774d406b39e1e1bd2d2e94888642",
+      "shows": "GitHub API listing for Uniswap/sdks at commit 28a0790477ee774d406b39e1e1bd2d2e94888642 shows a published sdks/v4-sdk package with package.json and src directory, evidencing an SDK path for direct integration.",
+      "commit": "28a0790477ee774d406b39e1e1bd2d2e94888642",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://uni.cp0x.com/",
+      "shows": "The separately hosted cp0x frontend loaded and its HTML title is 'Permissionless Uniswap Frontend' with description 'Use Uniswap Protocol without restrictions', evidencing a third-party frontend path.",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://api.github.com/repos/cp0x-org/pi-uniswap-interface",
+      "shows": "GitHub API shows cp0x-org/pi-uniswap-interface is public, owned by cp0x-org, has homepage https://uniswap.cp0x.com, and is a fork of Uniswap/interface rather than an official Uniswap Labs repository.",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://support.uniswap.org/hc/en-us/articles/30935100859661-Uniswap-Labs-Terms-of-Service",
+      "shows": "Terms page loaded and states the Products include app.uniswap.org. Short verbatim eligibility/sanctions clauses include 'age of majority in your jurisdiction' and 'subject of economic or trade sanctions'. The same page says the Interface is not the exclusive means of accessing the Protocol.",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://support.uniswap.org/hc/en-us/articles/8671777747597-Address-Screening-Guide",
+      "shows": "Address Screening Guide loaded; it says Labs receives blockchain intelligence from TRM Labs and intends to block wallets associated with illegal behavior from the Uniswap web app or Uniswap Wallet.",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://support.uniswap.org/hc/en-us/articles/18783694078989-Unsupported-Token-Policy",
+      "shows": "Unsupported Token Policy loaded; it says Labs can block token contracts or individual addresses through Labs interfaces, and for a blocked address 'all actions that would modify chain state are disabled'. It separately describes the Protocol as permissionless smart contracts.",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "shows": "Uniswap developer deployments page was fetched and lists deployed v4 contract addresses across supported chains, backing the deployed-contracts documentation metadata.",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=owner&block=25030672",
+      "shows": "Pinned on-chain read: PoolManager owner() at block 25030672 returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC; this is a fee-admin owner surface, not an admission allowlist in the assessed source.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    }
+  ],
+  "unknowns": [
+    "A1: I did not inspect every third-party pool hook contract; a selected hook can implement its own per-pool restrictions outside the global Uniswap v4 core admission layer.",
+    "A3b: I verified SDK, direct-contract, and one third-party frontend path, but did not exhaustively enumerate every wallet, aggregator, or Safe-app route."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery",
+      "https://github.com/Uniswap/universal-router",
+      "https://github.com/Uniswap/sdks"
+    ],
+    "docs_url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "audits": null,
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "PoolManager owner returned by owner() at block 25030672; fee-controller setter, not an admission allowlist role in assessed source",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap v4 is a non-custodial automated market maker where users swap tokens and provide liquidity to pools. Its singleton PoolManager holds pool state and routes user operations through flash accounting, while the canonical PositionManager represents LP positions as ERC721 tokens. Pool creators can attach hooks that customize individual pool behavior, so hook-specific admission should be assessed per pool."
+  }
+}

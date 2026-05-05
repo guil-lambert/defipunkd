@@ -1,0 +1,66 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "unknown (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "Core protocol is a self-contained singleton with no external dependencies",
+  "short_headline": "Zero core dependencies; hook-optional",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "PoolManager.sol (0x0000...8A90) contains no hardcoded calls to external oracles, price feeds, or bridges. Core logic is reactive and self-contained within the singleton."
+      },
+      {
+        "code": "A2",
+        "text": "The protocol does not rely on off-chain committees or reporters for its core state transitions. All swap and liquidity logic is executed on-chain via caller-initiated 'unlock' callbacks."
+      },
+      {
+        "code": "A6",
+        "text": "Fallback mechanisms like oracle sanity checks are not required at the core level because the core itself does not consume an oracle. Instead, oracle logic is moved to optional, pool-specific hooks."
+      },
+      {
+        "code": "A8",
+        "text": "The protocol has no dependency on keepers or relayers for liveness. Bad debt accumulation and position staleness are not risks for the core AMM model as it does not issue loans."
+      },
+      {
+        "code": "A9",
+        "text": "Governance cannot silently introduce external dependencies to existing pools. Hooks are pinned to a pool's identity (PoolKey) at initialization and cannot be swapped by admin action."
+      }
+    ],
+    "steelman": {
+      "red": "Users opting into pools with malicious or poorly-designed hooks face dependency risk, as a hook failure could freeze that specific pool's liquidity.",
+      "orange": "The protocol's performance is tied to the substrate's gas costs and L1/L2 liveness, which is a substrate dependency rather than a protocol-specific one.",
+      "green": "The core singleton architecture is fully autonomous, with zero reliance on external contracts, oracles, or keepers for its primary functions (swap, modifyLiquidity)."
+    },
+    "verdict": "Choosing green because the Uniswap V4 core architecture is a zero-dependency singleton. By removing the built-in oracle from V3 and offloading extensibility to optional, immutable-at-initialization hooks, the protocol ensures that no single external failure can propagate to the entire system or cause principal loss at the core level. Impacted TVS from core-dependency failure is ~0%."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/Uniswap/v4-core/blob/main/src/PoolManager.sol",
+      "shows": "Core contract contains no external oracle or bridge calls; reactive 'unlock' pattern used for all operations.",
+      "commit": "5170d4948f7ee628867a57a6616682857434190c"
+    },
+    {
+      "url": "https://docs.uniswap.org/contracts/v4/concepts/hooks",
+      "shows": "Documentation confirms hooks are optional and pool-specific, not core dependencies.",
+      "fetched_at": "2026-05-05T15:15:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery"
+    ],
+    "docs_url": "https://docs.uniswap.org/contracts/v4/overview",
+    "upgradeability": "immutable",
+    "about": "Uniswap V4 is a non-custodial AMM featuring a singleton architecture and 'hooks' for custom pool logic. It uses flash accounting to optimize multi-hop swaps and liquidity management within a single contract."
+  }
+}

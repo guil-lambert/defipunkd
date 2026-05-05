@@ -1,0 +1,321 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "chatgpt-thinking-xhigh-5-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "Core v4 control is limited to bounded protocol-fee powers through UNI governance with an about 9.4 day uncontested fast path; fund-holding contracts are immutable",
+  "short_headline": "Bounded fee governance",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Ethereum PoolManager owner() returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC; that timelock admin() returned the GovernorBravo proxy 0x408ED6354d4973f66138C91495F2f2FCbd8724C3. The Governor proxy admin() is the same timelock and implementation() is 0x53a328F4086d7C0F1Fa19e594c9b842125263026."
+      },
+      {
+        "code": "C1-cross",
+        "text": "Several non-Ethereum PoolManager owner reads point to cross-chain execution contracts, not EOAs: Base owner() returned 0x31FAfd4889FA1269F7a13A66eE0fB458f27D72A9, Optimism returned 0xa1dD330d602c32622AA270Ea73d078B803Cb3518, Blast returned 0x2339C0d23b60739B3E5ABF201F05903D24A26C77, BSC returned 0x341c1511141022cf8eE20824Ae0fFA3491F1302b, and Avalanche returned 0xeb0BCF27D1Fb4b25e708fBB815c421Aeb51eA9fc."
+      },
+      {
+        "code": "C2",
+        "text": "The assessed Ethereum fund-facing v4 core/periphery/router contracts are not proxies: PoolManager, PositionManager, and Universal Router ABI reads returned proxy=null. The GovernorBravoDelegator is upgradeable by its admin, the timelock, but that upgradeable surface is governance-internal and no evidence showed it can upgrade or replace the immutable PoolManager."
+      },
+      {
+        "code": "C3",
+        "text": "The Ethereum execution path is UNI GovernorBravo vote to timelock to PoolManager owner action: Etherscan Read-as-Proxy showed votingDelay=13140 blocks, votingPeriod=40320 blocks, proposalThreshold=1000000000000000000000000 UNI units, quorumVotes=40000000000000000000000000 UNI units, timelock=0x1a9C8182C09F50C8318d769245beA52c32BE35BC, and uni=0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984. At about 12 seconds per Ethereum block, votingDelay plus votingPeriod plus the 172800 second timelock delay is about 814320 seconds, or about 9.4 days, on the uncontested fast path."
+      },
+      {
+        "code": "C3-cross",
+        "text": "Base and Blast CrossChainAccount contracts were verified on their explorers with constructor _l1Owner set to the Ethereum timelock and source requiring msg.sender to be the L2 messenger and messenger.xDomainMessageSender() to equal l1Owner before forwarding calls. The BSC owner is a Uniswap Wormhole Message Receiver with MESSAGE_TIME_OUT_SECONDS=172800 and messageSender=0x000000000000000000000000f5f4496219f31cdcba6130b5402873624585615a; that Ethereum Uniswap Wormhole Message Sender owner() is the Ethereum timelock."
+      },
+      {
+        "code": "C4",
+        "text": "No Safe/multisig was identified on the assessed Ethereum fast path: the PoolManager owner is a timelock, the timelock admin is GovernorBravo, and the Governor proxy admin is the timelock. Base/Blast owners are messenger-gated CrossChainAccount contracts, BSC uses a Wormhole message receiver/sender pair, and Avalanche uses an OmnichainGovernanceExecutor; unsupported or unread chain owner classifications are recorded in unknowns."
+      },
+      {
+        "code": "C5",
+        "text": "GovernorBravo is token-weighted UNI governance: Etherscan Read-as-Proxy showed the UNI token address, proposal threshold, quorumVotes, votingDelay, votingPeriod, and timelock address on the active GovernorBravo proxy. The numeric governance constants were read from the proxy's current implementation view via the explorer read-as-proxy page."
+      },
+      {
+        "code": "C6",
+        "text": "No emergency pause/guardian role was found in the assessed v4 core owner surface: PoolManager ABI/source exposes fee-controller administration but no pause, unpause, guardian, or emergency stop method, and PositionManager/Universal Router ABI reads are non-proxy with no pause authority identified."
+      },
+      {
+        "code": "C7",
+        "text": "The highest reachable v4 core power found is T2 economically material fee control, not T1 fund-critical upgrade or withdrawal pause control. ProtocolFees lets the PoolManager owner setProtocolFeeController; that controller can setProtocolFee and collectProtocolFees, while ProtocolFeeLibrary enforces MAX_PROTOCOL_FEE=1000 pips, documented in source as 0.1%, through isValidProtocolFee."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that some chain-local owner paths were not fully re-read or decoded in this run, so a hidden fast owner on an uninspected deployment would be serious if it controlled fee powers without governance.",
+      "orange": "The strongest orange argument is that non-Ethereum deployments add cross-chain governance executors, Wormhole, or LayerZero-style machinery whose remote configuration was not exhaustively pinned for every chain.",
+      "green": "The strongest green argument is that the Ethereum fund-holding v4 core is immutable, the identified owner power is bounded protocol-fee control, and the main execution path runs through UNI governance plus a timelock for about 9.4 days."
+    },
+    "verdict": "Choosing green because the highest evidenced power over the assessed v4 core is bounded T2 protocol-fee control through UNI governance and a 172800 second timelock after voting delay and voting period, while no T1 upgrade, pause, drain, or withdrawal-freeze path was found on the immutable PoolManager/PositionManager/Universal Router contracts."
+  },
+  "evidence": [
+    {
+      "url": "https://app.uniswap.org/",
+      "shows": "Capability probe: the protocol website was fetched successfully in this run.",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Capability probe and on-chain surfacer: Ethereum PoolManager page loaded, listed owner and protocolFeeController reads, and listed write methods including fee-admin methods and core swap/liquidity/settlement methods.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=owner&block=25030824",
+      "shows": "Pinned on-chain read: Ethereum PoolManager owner() at block 25030824 returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1a9C8182C09F50C8318d769245beA52c32BE35BC&method=admin&block=25030824",
+      "shows": "Pinned on-chain read: Uniswap timelock admin() at block 25030824 returned GovernorBravo proxy 0x408ED6354d4973f66138C91495F2f2FCbd8724C3.",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1a9C8182C09F50C8318d769245beA52c32BE35BC&method=delay&block=25030824",
+      "shows": "Pinned on-chain read: Uniswap timelock delay() at block 25030824 returned 172800 seconds.",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x408ED6354d4973f66138C91495F2f2FCbd8724C3&method=admin&block=25030825",
+      "shows": "Pinned on-chain read: GovernorBravo proxy admin() at block 25030825 returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC, the Uniswap timelock.",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x408ED6354d4973f66138C91495F2f2FCbd8724C3&method=implementation&block=25030825",
+      "shows": "Pinned on-chain read: GovernorBravo proxy implementation() at block 25030825 returned 0x53a328F4086d7C0F1Fa19e594c9b842125263026.",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://etherscan.io/readContract?m=light&a=0x408ED6354d4973f66138C91495F2f2FCbd8724C3&n=mainnet&v=0x53a328f4086d7c0f1fa19e594c9b842125263026",
+      "shows": "Etherscan Read-as-Proxy for the active GovernorBravo proxy showed admin=0x1a9C8182C09F50C8318d769245beA52c32BE35BC, proposalThreshold=1000000000000000000000000, quorumVotes=40000000000000000000000000, timelock=0x1a9C8182C09F50C8318d769245beA52c32BE35BC, uni=0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984, votingDelay=13140, and votingPeriod=40320.",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Deployed Ethereum PoolManager ABI is verified with proxy=null and includes owner, protocolFeeController, setProtocolFee, setProtocolFeeController, and collectProtocolFees; no pause, unpause, upgrade, or proxy-admin method appears in the ABI.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "shows": "Deployed Ethereum PositionManager ABI is verified with proxy=null and exposes liquidity/position management methods; derived from ABI, no proxy-admin, upgrade, pause, or guardian method is exposed.",
+      "chain": "Ethereum",
+      "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      "shows": "Deployed Ethereum Universal Router ABI is verified with proxy=null and exposes execute routing methods; derived from ABI, no proxy-admin, upgrade, pause, or guardian method is exposed.",
+      "chain": "Ethereum",
+      "address": "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "shows": "GovernorBravoDelegator ABI is verified and exposes admin, implementation, pendingAdmin, and _setImplementation, evidencing an upgradeable governance proxy controlled by its admin rather than an upgradeable PoolManager.",
+      "chain": "Ethereum",
+      "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/ProtocolFees.sol",
+      "shows": "ProtocolFees source shows setProtocolFeeController is onlyOwner, while setProtocolFee and collectProtocolFees are callable only by protocolFeeController and do not expose a core upgrade or pause function.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/libraries/ProtocolFeeLibrary.sol",
+      "shows": "ProtocolFeeLibrary source defines MAX_PROTOCOL_FEE=1000, comments that the max protocol fee is 0.1%, and isValidProtocolFee enforces both directional protocol fees below the 1001 threshold.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=8453&address=0x498581ff718922c3f8e6a244956af099b2652b2b&method=owner&block=45609749",
+      "shows": "Pinned on-chain read: Base PoolManager owner() at block 45609749 returned CrossChainAccount 0x31FAfd4889FA1269F7a13A66eE0fB458f27D72A9.",
+      "chain": "Base",
+      "address": "0x498581ff718922c3f8e6a244956af099b2652b2b",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://basescan.org/address/0x31FAfd4889FA1269F7a13A66eE0fB458f27D72A9#code",
+      "shows": "Basescan verified contract page showed Contract Name CrossChainAccount, constructor _messenger=0x4200000000000000000000000000000000000007 and _l1Owner=0x1a9C8182C09F50C8318d769245beA52c32BE35BC; source requires msg.sender to be messenger and xDomainMessageSender() to equal l1Owner before forwarding.",
+      "chain": "Base",
+      "address": "0x31FAfd4889FA1269F7a13A66eE0fB458f27D72A9",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=10&address=0x9a13f98cb987694c9f086b1f5eb990eea8264ec3&method=owner",
+      "shows": "On-chain read: Optimism PoolManager owner() at block 151205203 returned CrossChainAccount 0xa1dD330d602c32622AA270Ea73d078B803Cb3518.",
+      "chain": "Optimism",
+      "address": "0x9a13f98cb987694c9f086b1f5eb990eea8264ec3",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://optimistic.etherscan.io/address/0xa1dD330d602c32622AA270Ea73d078B803Cb3518#code",
+      "shows": "Optimistic Etherscan verified contract page showed Contract Name CrossChainAccount, constructor _l1Owner=0x1a9C8182C09F50C8318d769245beA52c32BE35BC, and source requiring the messenger and xDomainMessageSender()==l1Owner before forward(address,bytes) calls the target.",
+      "chain": "Optimism",
+      "address": "0xa1dD330d602c32622AA270Ea73d078B803Cb3518",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=81457&address=0x1631559198a9e474033433b2958dabc135ab6446&method=owner&block=34599517",
+      "shows": "Pinned on-chain read: Blast PoolManager owner() at block 34599517 returned CrossChainAccount 0x2339C0d23b60739B3E5ABF201F05903D24A26C77.",
+      "chain": "Blast",
+      "address": "0x1631559198a9e474033433b2958dabc135ab6446",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://blastscan.io/address/0x2339C0d23b60739B3E5ABF201F05903D24A26C77#code",
+      "shows": "Blastscan verified contract page showed Contract Name CrossChainAccount, constructor _messenger=0x4200000000000000000000000000000000000007 and _l1Owner=0x1a9C8182C09F50C8318d769245beA52c32BE35BC; source requires msg.sender to be messenger and xDomainMessageSender() to equal l1Owner before forwarding.",
+      "chain": "Blast",
+      "address": "0x2339C0d23b60739B3E5ABF201F05903D24A26C77",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=56&address=0x28e2ea090877bf75740558f6bfb36a5ffee9e9df&method=owner",
+      "shows": "On-chain read: BSC PoolManager owner() at block 96568191 returned 0x341c1511141022cf8eE20824Ae0fFA3491F1302b.",
+      "chain": "Binance",
+      "address": "0x28e2ea090877bf75740558f6bfb36a5ffee9e9df",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/56/0x341c1511141022cf8eE20824Ae0fFA3491F1302b",
+      "shows": "BSC owner surfacer identified the owner contract as UniswapWormholeMessageReceiver, with NAME() returning Uniswap Wormhole Message Receiver, MESSAGE_TIME_OUT_SECONDS() returning 172800, messageSender() returning 0x000000000000000000000000f5f4496219f31cdcba6130b5402873624585615a, and receiveMessage(bytes) as the only write method.",
+      "chain": "Binance",
+      "address": "0x341c1511141022cf8eE20824Ae0fFA3491F1302b",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=56&address=0x341c1511141022cf8eE20824Ae0fFA3491F1302b&method=messageSender&block=96568229",
+      "shows": "Pinned on-chain read: BSC UniswapWormholeMessageReceiver messageSender() at block 96568229 returned 0x000000000000000000000000f5f4496219f31cdcba6130b5402873624585615a.",
+      "chain": "Binance",
+      "address": "0x341c1511141022cf8eE20824Ae0fFA3491F1302b",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=56&address=0x341c1511141022cf8eE20824Ae0fFA3491F1302b&method=MESSAGE_TIME_OUT_SECONDS&block=96568229",
+      "shows": "Pinned on-chain read: BSC UniswapWormholeMessageReceiver MESSAGE_TIME_OUT_SECONDS() at block 96568229 returned 172800.",
+      "chain": "Binance",
+      "address": "0x341c1511141022cf8eE20824Ae0fFA3491F1302b",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xf5F4496219F31CDCBa6130B5402873624585615a&method=owner&block=25030890",
+      "shows": "Pinned on-chain read: Ethereum UniswapWormholeMessageSender owner() at block 25030890 returned 0x1a9C8182C09F50C8318d769245beA52c32BE35BC, the Uniswap timelock.",
+      "chain": "Ethereum",
+      "address": "0xf5F4496219F31CDCBa6130B5402873624585615a",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=43114&address=0x06380c0e0912312b5150364b9dc4542ba0dbbc85&method=owner",
+      "shows": "On-chain read: Avalanche PoolManager owner() at block 84681855 returned 0xeb0BCF27D1Fb4b25e708fBB815c421Aeb51eA9fc.",
+      "chain": "Avalanche",
+      "address": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/43114/0xeb0BCF27D1Fb4b25e708fBB815c421Aeb51eA9fc",
+      "shows": "Avalanche owner surfacer identified OmnichainGovernanceExecutor; owner() returned itself, lzEndpoint() returned 0x3c2269811836af69497E5F486A85D7316753cf62, precrime() returned zero, and write methods include lzReceive/nonblockingLzReceive, setTrustedRemote, setTrustedRemoteAddress, transferOwnership, and LayerZero configuration setters.",
+      "chain": "Avalanche",
+      "address": "0xeb0BCF27D1Fb4b25e708fBB815c421Aeb51eA9fc",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "shows": "Official Uniswap deployments page says it lists current v4 core, periphery, and Universal Router deployment addresses by network, backing the deployed-contracts metadata.",
+      "fetched_at": "2026-05-05T19:24:57Z"
+    }
+  ],
+  "unknowns": [
+    "C1: Arbitrum, Polygon, and Unichain PoolManager owner reads returned abi-not-found through DeFiPunkd in this run; Monad, Soneium, World Chain, X Layer, Tempo, Ink, and Zora were not supported by the read API from the pinned surfacer list.",
+    "C3: Avalanche OmnichainGovernanceExecutor trusted remote/source-chain configuration was not fully decoded; the owner and LayerZero endpoint were read, but the remote governance sender and timing were not pinned.",
+    "C4: No Safe threshold or signer set was fetched because no Safe/multisig was identified on the assessed Ethereum/Base/Optimism/Blast/BSC fast paths; signer classification remains unknown for any unsupported or unread chain-local admin path."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery",
+      "https://github.com/Uniswap/universal-router"
+    ],
+    "docs_url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "audits": null,
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "symbol": "UNI"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "Uniswap timelock; Ethereum PoolManager owner and GovernorBravo proxy admin",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x408ED6354d4973f66138C91495F2f2FCbd8724C3",
+        "role": "Active GovernorBravo proxy; admin of the timelock",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Base",
+        "address": "0x31FAfd4889FA1269F7a13A66eE0fB458f27D72A9",
+        "role": "Base PoolManager owner; CrossChainAccount with l1Owner set to Ethereum timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0xa1dD330d602c32622AA270Ea73d078B803Cb3518",
+        "role": "Optimism PoolManager owner; CrossChainAccount with l1Owner set to Ethereum timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Blast",
+        "address": "0x2339C0d23b60739B3E5ABF201F05903D24A26C77",
+        "role": "Blast PoolManager owner; CrossChainAccount with l1Owner set to Ethereum timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Binance",
+        "address": "0x341c1511141022cf8eE20824Ae0fFA3491F1302b",
+        "role": "BSC PoolManager owner; Uniswap Wormhole Message Receiver linked to an Ethereum sender owned by the Uniswap timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Avalanche",
+        "address": "0xeb0BCF27D1Fb4b25e708fBB815c421Aeb51eA9fc",
+        "role": "Avalanche PoolManager owner; OmnichainGovernanceExecutor using LayerZero endpoint",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Uniswap v4 is a non-custodial automated market maker where users swap tokens and provide liquidity to pools. Its singleton PoolManager holds pool state and routes operations through flash accounting, while the canonical PositionManager represents LP positions as ERC721 tokens. Governance control over the assessed core is fee-related rather than an upgrade or custody path."
+  }
+}

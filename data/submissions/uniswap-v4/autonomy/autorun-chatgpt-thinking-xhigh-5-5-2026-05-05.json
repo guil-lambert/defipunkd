@@ -1,0 +1,175 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "chatgpt-thinking-xhigh-5-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "~0% of TVS is exposed to a single global oracle, keeper, bridge, or protocol-level external dependency; hook/currency risks are isolated to pools users select",
+  "short_headline": "No global dependency",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The core PoolManager does not read an oracle, price feed, lending pool, staking contract, or bridge for swap/liquidity math. Its external calls are to user-selected pool hooks and user-selected currency contracts: PoolManager calls hook callbacks around initialize/modifyLiquidity/swap/donate, and CurrencyLibrary calls ERC20/native currency balance/transfer functions for the pool currencies."
+      },
+      {
+        "code": "A2",
+        "text": "No global off-chain reporter committee was identified in the assessed core contracts. Swap, liquidity, settlement, take, mint, and burn flows are user-initiated contract calls; the only callback-style external actor in the core path is a pool-specific hook address encoded in the PoolKey selected by that pool."
+      },
+      {
+        "code": "A3",
+        "text": "No protocol-operated bridge or cross-chain message bridge is required for the core Uniswap v4 swap/liquidity flow. Uniswap v4 is deployed on multiple chains, but those are separate deployments with chain-local PoolManager addresses; using a non-Ethereum deployment inherits that chain's own liveness/finality assumptions rather than adding a Uniswap bridge dependency."
+      },
+      {
+        "code": "A4",
+        "text": "Nested collateral risk is not a global Uniswap v4 design dependency: pools can be created over any ERC20/native currency and may include wrapped or yield-bearing assets, but a currency failure is isolated to pools containing that currency. Hook contracts are also opt-in per pool, so a bad hook can affect the selected pool but does not propagate across the singleton to unrelated pools."
+      },
+      {
+        "code": "A6",
+        "text": "The live fallback/circuit-breaker behavior for the identified external-call surface is source-enforced: hook addresses must have valid permission bits or be zero, hook calls must return the expected selector and bounded delta shape, swap hook deltas cannot flip exact-in/exact-out semantics, and flash accounting requires all currency deltas to settle before unlock completes. These are LIVE core checks in the deployed PoolManager source, not merely documented proposals."
+      },
+      {
+        "code": "A7",
+        "text": "L2 deployments add chain-level liveness/finality context, not a Uniswap-created dependency. DeFiLlama's current split shows Ethereum at about $559.1m of $746.2m TVL (~75%), with the rest on Base, Arbitrum, Polygon, BSC, Unichain, Monad, and smaller chains; Base and Arbitrum docs show their own block-building/sequencer assumptions. This can freeze use on that chain, but it is the selected deployment's substrate rather than a protocol-level oracle/bridge/keeper that can lose Uniswap principal."
+      },
+      {
+        "code": "A8",
+        "text": "No keeper or relayer liveness dependency was found for core user actions: swaps, liquidity changes, settlement, token taking, and position actions are submitted by users or their chosen routers, with no liquidation bot, oracle poster, or solver required to admit or settle the transaction."
+      },
+      {
+        "code": "A9",
+        "text": "No governance-mutable oracle, bridge endpoint, keeper set, or external vault dependency was found in the core. PoolManager governance can set a protocolFeeController through the timelock-owned owner path, but protocolFeeController is currently zero and the core does not call that controller during user swap/liquidity execution; the controller can call fee functions rather than replacing a user-flow external dependency."
+      },
+      {
+        "code": "A6-fallback",
+        "text": "When an external hook or ERC20 currency misbehaves, the core mitigation is transaction-level revert/settlement failure for that pool operation rather than cross-pool contagion. This does not make every hook or token safe, but it bounds the dependency to the user-selected PoolKey/currency pair instead of introducing a global dependency."
+      }
+    ],
+    "steelman": {
+      "red": "The strongest red argument is that a malicious hook in a pool can revert or manipulate that pool's operations and could impair users who deliberately used that hooked pool.",
+      "orange": "The strongest orange argument is that Uniswap v4's hook architecture intentionally permits per-pool external callbacks, so some material hooked pools may have dependency risk that the singleton core cannot eliminate.",
+      "green": "The strongest green argument is that no global oracle, keeper, bridge, vault, or reporter committee is used by the core, and external hooks/currencies are isolated, opt-in pool parameters rather than protocol-wide dependencies."
+    },
+    "verdict": "Choosing green because the verified PoolManager architecture has no protocol-level oracle, bridge, keeper, or mutable external dependency surface that can affect all TVS, while the identified external calls are user-selected currencies and pool-specific hooks with source-enforced settlement/revert bounds and isolated blast radius."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "Ethereum PoolManager surfacer loaded with reads pinned to block 25030672 and listed public write methods initialize, unlock, swap, modifyLiquidity, settle, settleFor, take, clear, mint, and burn.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:50:12Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "PoolManager ABI was verified, non-proxy, and exposed core AMM functions plus fee-admin functions; the ABI did not expose oracle, keeper, bridge, or external vault configuration functions.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T18:58:26Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/PoolManager.sol",
+      "shows": "PoolManager source shows pool state held in _pools; user-facing initialize/modifyLiquidity/swap/donate call hook methods around pool operations; settle/take/clear/mint/burn use flash-accounting deltas and require zero unsettled deltas after unlock.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/libraries/Hooks.sol",
+      "shows": "Hooks library source defines hook permission flags, validates hook addresses against permissions/dynamic fees, calls hook contracts with callHook/callHookWithReturnDelta, checks selectors/return lengths, and rejects swap hook deltas that flip exact-in/exact-out semantics.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/types/Currency.sol",
+      "shows": "CurrencyLibrary source shows the core currency abstraction transfers native ETH or calls ERC20 transfer/balanceOf on the user-selected currency address; those are per-pool currency dependencies rather than a global oracle/keeper.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/libraries/CurrencyDelta.sol",
+      "shows": "CurrencyDelta source shows per-account, per-currency transient deltas and applyDelta/getDelta helpers, supporting the flash-accounting isolation and settlement checks in PoolManager.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-core/46c6834698c48bc4a463a86d8420f4eb1d7f3b75/src/ProtocolFees.sol",
+      "shows": "ProtocolFees source shows owner-only setProtocolFeeController and controller-only setProtocolFee/collectProtocolFees; it does not make the core call an external controller during user swap/liquidity execution.",
+      "commit": "46c6834698c48bc4a463a86d8420f4eb1d7f3b75",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=protocolFeeController",
+      "shows": "On-chain read: PoolManager protocolFeeController() at block 25030778 returned 0x0000000000000000000000000000000000000000.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1a9C8182C09F50C8318d769245beA52c32BE35BC&method=delay",
+      "shows": "On-chain read: Uniswap timelock delay() at block 25030778 returned 172800 seconds for the PoolManager owner/timelock path.",
+      "chain": "Ethereum",
+      "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://api.llama.fi/protocol/uniswap-v4",
+      "shows": "DeFiLlama protocol API returned Uniswap V4 category Dexs, listed chains, and currentChainTvls totaling about $746.16m, including Ethereum about $559.11m (~75%), Base about $47.17m, Arbitrum about $45.31m, Polygon about $23.67m, BSC about $22.84m, Unichain about $21.88m, and Monad about $20.07m.",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/uniswap-v4",
+      "shows": "DeFiLlama page loaded and displayed Total Value Locked $746.16m with TVL by chain, including Ethereum $559.11m, Base $47.17m, Arbitrum $45.31m, Polygon $23.67m, BSC $22.84m, Unichain $21.88m, and Monad $20.07m.",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://docs.base.org/base-chain/network-information/block-building",
+      "shows": "Base block-building docs loaded and state Base Mainnet is configured with Flashblocks plus per-transaction gas max, with blocks built using op-rbuilder and priority-fee auctions every 200ms.",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://docs.arbitrum.io/how-arbitrum-works/sequencer",
+      "shows": "Arbitrum Sequencer docs loaded and explain the Sequencer orders incoming transactions, soft finality depends on sequencer integrity and availability, and sequencer downtime can delay transaction visibility.",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    },
+    {
+      "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "shows": "Uniswap developer deployments page was fetched and lists deployed v4 contract addresses across supported chains, backing the multi-chain deployment metadata.",
+      "fetched_at": "2026-05-05T18:53:15Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Uniswap/v4-periphery/9dafaaecc1e2e1e824eda9d941085f96517d827b/src/base/BaseActionsRouter.sol",
+      "shows": "BaseActionsRouter source shows PositionManager-style actions call poolManager.unlock and execute action lists in the callback; it does not add a keeper, oracle, or off-chain operator to the core user flow.",
+      "commit": "9dafaaecc1e2e1e824eda9d941085f96517d827b",
+      "fetched_at": "2026-05-05T19:04:42Z"
+    }
+  ],
+  "unknowns": [
+    "A1: I did not enumerate every live pool-specific hook contract or every ERC20/native currency used by all pools; the finding is scoped to the core architecture and the hook/currency abstraction.",
+    "A5: Silent fork-lineage check completed against the fetched DeFiLlama API body; no non-empty forkedFrom field was present, so no fork-lineage finding was emitted.",
+    "A7: I did not independently fetch current sequencer/DA documentation for every non-Ethereum deployment in the pinned chain list; Base and Arbitrum were checked as representative L2 examples.",
+    "A9: I did not crawl historical governance proposals to prove no future fee-controller activation is queued; the live protocolFeeController read was zero at the fetched block."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery"
+    ],
+    "docs_url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "deployed_contracts_doc": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "PoolManager owner / timelock path with delay() = 172800 seconds; can set protocolFeeController",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap v4 is a non-custodial automated market maker where users swap tokens and provide liquidity to pools. Its singleton PoolManager holds pool state and routes operations through flash accounting, while optional hooks let individual pools customize behavior. Hook and currency risk is selected per pool rather than imposed as a global dependency across all v4 pools."
+  }
+}

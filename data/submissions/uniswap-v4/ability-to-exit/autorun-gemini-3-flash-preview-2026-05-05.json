@@ -1,0 +1,79 @@
+{
+  "schema_version": 4,
+  "slug": "uniswap-v4",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 28,
+  "analysis_date": "2026-05-05",
+  "model": "unknown (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "Immutable singleton with no administrative pause or withdrawal gating",
+  "short_headline": "Immutable singleton; no admin pause",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "PoolManager (0x0000...8A90) and PositionManager (0xbd21...ee9e) expose exit-critical functions: swap, modifyLiquidity, decreaseLiquidity, and burn."
+      },
+      {
+        "code": "E2",
+        "text": "No pause guards (whenNotPaused) exist in the core contracts. PoolManager uses transient 'lock' modifiers for accounting safety, not administrative halting."
+      },
+      {
+        "code": "E3",
+        "text": "Calls to paused() on the PoolManager address return 400 (method missing), confirming the absence of a standard pause role."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are public/external with no whitelist modifiers, enabling direct on-chain interaction without the official frontend."
+      }
+    ],
+    "steelman": {
+      "red": "Individual pools can be malicious if deployed with hooks that trap funds, though this is a pool-specific risk rather than a protocol-level exit block.",
+      "orange": "The flash-accounting 'unlock' requirement adds a layer of technical complexity for manual exits compared to standard AMMs.",
+      "green": "The core protocol is immutable and lacks any administrative pause or withdrawal gating, ensuring perpetual permissionless exit at the contract level."
+    },
+    "verdict": "Choosing green because the Uniswap V4 core contracts are immutable and entirely devoid of administrative pause mechanisms or user-specific whitelists, satisfying the requirements for permissionless, auto-expiry-equivalent access."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "shows": "PoolManager ABI lists core interaction methods; no pause/unpause or paused() functions found.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T14:30:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x000000000004444c5dc75cB358380D2e3dE08A90&method=paused",
+      "shows": "Attempted read of paused() returned 400, corroborating the absence of the method in bytecode.",
+      "chain": "Ethereum",
+      "address": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      "fetched_at": "2026-05-05T14:35:00Z"
+    },
+    {
+      "url": "https://github.com/Uniswap/v4-core/blob/main/src/PoolManager.sol",
+      "shows": "Source code review confirms onlyWhenUnlocked is the only significant modifier, used for reentrancy control.",
+      "commit": "5170d4948f7ee628867a57a6616682857434190c"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Uniswap/v4-core",
+      "https://github.com/Uniswap/v4-periphery"
+    ],
+    "docs_url": "https://docs.uniswap.org/contracts/v4/overview",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+        "role": "Protocol Fee Controller / Timelock",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Uniswap V4 is a non-custodial AMM featuring a singleton architecture and 'hooks' for custom pool logic. It uses flash accounting to optimize multi-hop swaps and liquidity management within a single contract."
+  }
+}
