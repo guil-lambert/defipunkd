@@ -6,7 +6,7 @@ import { accessBody } from "./slices/access";
 import { verifiabilityBody } from "./slices/verifiability";
 import { discoveryBody } from "./slices/discovery";
 
-export const PROMPT_VERSION = 27;
+export const PROMPT_VERSION = 28;
 export const SCHEMA_VERSION = 4;
 
 // Chain-name → numeric chainId for the read API. Mirrors
