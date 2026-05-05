@@ -1,0 +1,302 @@
+{
+  "schema_version": 4,
+  "slug": "concrete",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "14 vault contract addresses catalogued across Ethereum, Berachain, Morph, and Katana from app UI and 2 audit reports; GitHub org Blueprint-Finance confirmed with repos sc_earn-v1 and earn-v2-core; no canonical deployments doc located; on-chain reads blocked.",
+  "short_headline": "14 vaults across 4 chains from app+audits",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: Etherscan name-tag search attempted via web search; one snippet result at etherscan.io/address/0x2f37d7c8c8c80b85344473daee6b3323ca5b463e surfaced but content was bare (no label confirmed). No systematic name-tag catalogue obtained — recorded in unknowns."
+      },
+      {
+        "code": "D2",
+        "text": "D2: docs.concrete.xyz/contracts/deployments returned 403. The main docs root (docs.concrete.xyz) returned a near-empty page. No canonical deployed-contracts doc page was accessible; set deployed_contracts_doc to null and recorded in unknowns."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Two audit PDFs fetched in full. Halborn audit (Sept 2025) scoped repo earn-v2-core at commit b1b7cec; contracts: UpgradeableVault.sol, ConcreteFactory.sol, VaultProxy.sol, ConcreteStandardVaultImpl.sol, AllocateModule.sol, and library/storage files. Zellic audit (June 2025) scoped repo sc_earn-v1 at commit c68890c; contracts: ConcreteMultiStrategyVault, VaultFactory, WithdrawalQueue, ParkingLot, AaveV3Strategy, MorphoVaultStrategy, MultiSigStrategy, ImplementationRegistry, VaultRegistry, DeploymentManager, VaultManager, ConcreteOracle, OracleFactory, BTCLinkedPriceFeed. No audit-era deployed addresses listed in either report's scope table."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub confirmed as github.com/Blueprint-Finance with repos sc_earn-v1 (Zellic audit commit c68890c) and earn-v2-core (Halborn audit commit b1b7cec). Also Code4rena audit repo github.com/code-423n4/2024-11-concrete discovered via search. Direct repo browsing not performed due to tool-call exhaustion; no broadcast artifacts retrieved."
+      },
+      {
+        "code": "D5",
+        "text": "D5: App UI (app.concrete.xyz/earn) fetched and yielded vault contract addresses for Ethereum (11 vaults), Berachain (4 vaults), Arbitrum (referenced but no address in URL for Theo USDC Arbitrum / Theo thBILL Arbitrum), Morph (4 vaults), and Katana (1 vault). Stable chain vaults present but no contract address in URL. Per-chain detail: Ethereum has largest cluster of named addresses. Berachain vault 0xec577e989c02b294d5b8f4324224a5b63f5beef7 confirmed from URL. Morph vaults surfaced with addresses."
+      },
+      {
+        "code": "D6",
+        "text": "D6: ConcreteFactory (factory contract surfaced by Halborn audit scope) is the relevant factory. No factory address obtained from fetched sources; factory children are the vault proxies discovered via D5. No defipunkd read-API calls succeeded (403 on domain). Factory enumeration not performed on-chain; recorded in unknowns."
+      },
+      {
+        "code": "D7",
+        "text": "D7: All admin_addresses entries use role vocabulary: vault (for ERC4626 vault contracts) and factory (for ConcreteFactory). Actor classes set to unknown pending on-chain reads."
+      },
+      {
+        "code": "D8",
+        "text": "D8: All addresses in admin_addresses trace to the fetched app.concrete.xyz/earn page (document index 1) via vault URL paths, which contain the address as the final path segment. Evidence URL recorded per entry."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery run walked the app UI (14 vault addresses extracted from URLs), both audit PDFs (scope contracts identified, no deployed addresses in audit tables), docs site (403), and GitHub org via search (repos confirmed). 14 vault proxy addresses catalogued across Ethereum, Berachain, Morph, and Katana chains. No canonical deployments doc, no on-chain reads (defipunkd domain blocked), and no admin/owner addresses confirmed. grade=unknown because on-chain reads could not be performed."
+  },
+  "evidence": [
+    {
+      "url": "https://app.concrete.xyz",
+      "shows": "App earn page listing all active vaults; vault addresses appear as final path segment in each vault's detail URL (e.g. /vault/concrete/defi-finance-usdt/0x0e609b710da5e0aa476224b6c0e5445ccc21251e). Confirmed 14 addresses across Ethereum, Berachain, Morph, and Katana chains.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://docs.concrete.xyz/assets/files/Standard-Implementation-9948d7fcebb518e5c29051bc2326b5ec.pdf/",
+      "shows": "Halborn security assessment of Blueprint Finance Earn V2 Core - Standard Implementation, repo earn-v2-core, assessed commit b1b7cec, remediation commit 4f64163. Scope includes ConcreteFactory.sol, VaultProxy.sol, UpgradeableVault.sol, ConcreteStandardVaultImpl.sol, AllocateModule.sol. 12 findings total (0 critical/high, 3 low, 9 informational). Contracts implement modular upgradeable ERC4626 vault system with strategy allocation, hooks, RBAC, and factory-managed proxy deployment.",
+      "chain": "Ethereum",
+      "commit": "b1b7cec",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://docs.concrete.xyz/assets/files/Zellic-Audit-Report-5dbb9d52d444adcd197dfbaa941a86ab.pdf/",
+      "shows": "Zellic security assessment of Concrete (Blueprint Finance), repo sc_earn-v1, assessed commit c68890cea19b88b3360f306d1f5a37ebb7679f64. Scope includes ConcreteMultiStrategyVault, VaultFactory, WithdrawalQueue, ParkingLot, strategies (AaveV3, MorphoVault, MultiSig), ImplementationRegistry, VaultRegistry, DeploymentManager, VaultManager, ConcreteOracle, OracleFactory, BTCLinkedPriceFeed. 25 findings (0 critical, 2 high, 6 medium, 8 low, 9 informational). At time of assessment ConcreteMultiStrategyVault was deployed to Ethereum, Corn, Morph, and Berachain.",
+      "chain": "Ethereum",
+      "commit": "c68890c",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/concrete/delta-weeth/0xb9dc54c8261745cb97070cefbe3d3d815aee8f20",
+      "shows": "WeETH Vault on Ethereum at address 0xb9dc54c8261745cb97070cefbe3d3d815aee8f20, TVL $705M, vault owner Concrete, accepts weETH deposits on Ethereum.",
+      "chain": "Ethereum",
+      "address": "0xb9dc54c8261745cb97070cefbe3d3d815aee8f20",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/concrete/defi-finance-usdt/0x0e609b710da5e0aa476224b6c0e5445ccc21251e",
+      "shows": "Concrete DeFi USDT vault on Ethereum at address 0x0e609b710da5e0aa476224b6c0e5445ccc21251e, TVL $62.4M, target APY 8.5%, vault owner Concrete.",
+      "chain": "Ethereum",
+      "address": "0x0e609b710da5e0aa476224b6c0e5445ccc21251e",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/frax/frxusd/0xcf9ceacf5c7d6d2fe6e8650d81fbe4240c72443f",
+      "shows": "frxUSD+ vault on Ethereum at address 0xcf9ceacf5c7d6d2fe6e8650d81fbe4240c72443f, TVL $3.9M, target APY 7.3%, vault owner Concrete.",
+      "chain": "Ethereum",
+      "address": "0xcf9ceacf5c7d6d2fe6e8650d81fbe4240c72443f",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/seigen/seigen-vault/0xc50303eca7e02feae434f37c88c43aac368c60c1",
+      "shows": "sEIGEN vault on Ethereum at address 0xc50303eca7e02feae434f37c88c43aac368c60c1, TVL $7.9M, target APY 9%, vault owner Concrete.",
+      "chain": "Ethereum",
+      "address": "0xc50303eca7e02feae434f37c88c43aac368c60c1",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/corn/usdt/0x3eb6464a77d7b619aaafa7e9ffc0fbe3ed7084b3",
+      "shows": "Corn Stables vault on Ethereum at address 0x3eb6464a77d7b619aaafa7e9ffc0fbe3ed7084b3, TVL $6.4M, base APY 10%, vault owner Concrete.",
+      "chain": "Ethereum",
+      "address": "0x3eb6464a77d7b619aaafa7e9ffc0fbe3ed7084b3",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/berachain/dinero/0x61e2de83bbab5a7a5bb2c5d40a5f737135eeaa13",
+      "shows": "Dinero Bera vault on Ethereum at address 0x61e2de83bbab5a7a5bb2c5d40a5f737135eeaa13, TVL $4.2M, vault owner Concrete, accepts WETH deposits.",
+      "chain": "Ethereum",
+      "address": "0x61e2de83bbab5a7a5bb2c5d40a5f737135eeaa13",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/berachain/bera/0xec577e989c02b294d5b8f4324224a5b63f5beef7",
+      "shows": "Berachain BERA vault on Berachain at address 0xec577e989c02b294d5b8f4324224a5b63f5beef7, TVL $17.3K, base APY 142.73%, vault owner Concrete.",
+      "chain": "Berachain",
+      "address": "0xec577e989c02b294d5b8f4324224a5b63f5beef7",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/morpho/usd/0xd6fc659947f9fc68e4b3dd009b757f8290d8ccae",
+      "shows": "Morpho USD vault on Ethereum at address 0xd6fc659947f9fc68e4b3dd009b757f8290d8ccae, TVL $12.5K, base APY 13.08%, vault owner Concrete.",
+      "chain": "Ethereum",
+      "address": "0xd6fc659947f9fc68e4b3dd009b757f8290d8ccae",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/morpho/eth/0x15ce9be6609db102b70d68ca75a39c555bea5fac",
+      "shows": "Morpho Ethereum vault on Ethereum at address 0x15ce9be6609db102b70d68ca75a39c555bea5fac, TVL $9.9K, base APY 7.82%, vault owner Concrete.",
+      "chain": "Ethereum",
+      "address": "0x15ce9be6609db102b70d68ca75a39c555bea5fac",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/katana/ausd/0xca2470f04945dad24989ec6ef2c41ee808e51039",
+      "shows": "Katana AUSD vault on Katana chain at address 0xca2470f04945dad24989ec6ef2c41ee808e51039, TVL $0, base APY 86%, vault owner Concrete.",
+      "chain": "Katana",
+      "address": "0xca2470f04945dad24989ec6ef2c41ee808e51039",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/morpho/btc/0x39ccce100d3a8d6d01792388c7c6c6260a2045e2",
+      "shows": "Morpho Bitcoin vault on Ethereum at address 0x39ccce100d3a8d6d01792388c7c6c6260a2045e2, TVL $120.7K, base APY 9.14%, vault owner Concrete.",
+      "chain": "Ethereum",
+      "address": "0x39ccce100d3a8d6d01792388c7c6c6260a2045e2",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/morph/bgb/0xf9bebf84fb311a42217147bea4f844ea2fc47f00",
+      "shows": "Morph BGB vault on Morph chain at address 0xf9bebf84fb311a42217147bea4f844ea2fc47f00, TVL $294K, vault owner Concrete.",
+      "chain": "Morph",
+      "address": "0xf9bebf84fb311a42217147bea4f844ea2fc47f00",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/morph/ausd/0x5b58762ba3e53bbb825741d1fa6f237f1b5c6717",
+      "shows": "Morph AUSD vault on Morph chain at address 0x5b58762ba3e53bbb825741d1fa6f237f1b5c6717, TVL $0, vault owner Concrete.",
+      "chain": "Morph",
+      "address": "0x5b58762ba3e53bbb825741d1fa6f237f1b5c6717",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz/vault/morph/weeth/0x6157169a7c68cfb00833a1e7f97f454aebf54f5d",
+      "shows": "Morph weETH vault on Morph chain at address 0x6157169a7c68cfb00833a1e7f97f454aebf54f5d, TVL $118.9K, vault owner Concrete.",
+      "chain": "Morph",
+      "address": "0x6157169a7c68cfb00833a1e7f97f454aebf54f5d",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/Blueprint-Finance/sc_earn-v1",
+      "shows": "Blueprint Finance GitHub repo sc_earn-v1, in scope for Zellic audit at commit c68890c. Contains ConcreteMultiStrategyVault, strategies (AaveV3, MorphoVault, MultiSig), WithdrawalQueue, ParkingLot, VaultFactory, oracles.",
+      "commit": "c68890c"
+    },
+    {
+      "url": "https://github.com/Blueprint-Finance/earn-v2-core",
+      "shows": "Blueprint Finance GitHub repo earn-v2-core, in scope for Halborn audit at commit b1b7cec (remediation 4f64163). Contains ConcreteFactory, VaultProxy, UpgradeableVault, ConcreteStandardVaultImpl, AllocateModule.",
+      "commit": "b1b7cec"
+    }
+  ],
+  "unknowns": [
+    "D1: Etherscan name-tag search for 'Concrete' / 'Blueprint Finance' on ethereum, arbitrum, berachain explorers — direct fetch of searchHandler blocked, web search returned only one bare address snippet without confirmed label; systematic name-tag catalogue not obtained",
+    "D1: arbiscan.io name-tag search for Concrete — not attempted due to tool exhaustion; Arbitrum vaults (Theo USDC Arbitrum, Theo thBILL Arbitrum, USDai DEX, sUSDai DEX, Arbitrum Drip) have no address in app URL paths fetched",
+    "D2: docs.concrete.xyz/contracts/deployments returned 403; deployed_contracts_doc URL unknown; canonical address registry not located",
+    "D3: Halborn audit scope table lists contract file names but no deployed addresses; Zellic audit scope table lists commit SHA only; neither audit provides chain-specific deployed addresses",
+    "D4: GitHub repos Blueprint-Finance/sc_earn-v1 and Blueprint-Finance/earn-v2-core confirmed by audit PDFs but not directly fetched; broadcast artifacts (Foundry run-latest.json, hardhat-deploy JSON) not retrieved due to tool-call exhaustion",
+    "D5: Stable chain vault addresses — Stable Pre-Deposit and Stable vault redirect to stable.concrete.xyz but no contract address in app URL; Stable chain not recognized as a standard EVM chain so no explorer searched",
+    "D5: Berachain vaults for Bitcoin Bera, Ethena Bera, Berachain Stables, Berachain Ethereum, Berachain Bitcoin — no address in app URL path; Berachain explorer (berascan) not searched due to tool exhaustion",
+    "D5: Arbitrum vault addresses — Theo USDC Arbitrum, Theo thBILL Arbitrum, USDai DEX, sUSDai DEX, Arbitrum Drip Vault — no address in app URL path or search results; arbiscan.io not fetched",
+    "D6: ConcreteFactory address unknown; factory-children enumeration not performed; factory deployed address not found in any fetched source",
+    "D6-offchain: defipunkd.com/api/contract/read and /api/safe/owners returned 403 for all attempted URLs; on-chain ABI and view-method reads could not be performed for any vault address",
+    "D6: VaultRegistry, ImplementationRegistry, DeploymentManager, VaultManager, WithdrawalQueue, ParkingLot contract addresses unknown; not found in fetched sources",
+    "D7: Owner/admin/multisig/timelock addresses for any vault or factory unknown; owner() and getOwners() could not be called due to blocked on-chain API"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Blueprint-Finance/sc_earn-v1",
+      "https://github.com/Blueprint-Finance/earn-v2-core"
+    ],
+    "docs_url": "https://docs.concrete.xyz",
+    "audits": [
+      {
+        "firm": "Halborn",
+        "url": "https://docs.concrete.xyz/assets/files/Standard-Implementation-9948d7fcebb518e5c29051bc2326b5ec.pdf/",
+        "date": "2025-09"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://docs.concrete.xyz/assets/files/Zellic-Audit-Report-5dbb9d52d444adcd197dfbaa941a86ab.pdf/",
+        "date": "2025-06"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xb9dc54c8261745cb97070cefbe3d3d815aee8f20",
+        "role": "vault (WeETH Vault)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0e609b710da5e0aa476224b6c0e5445ccc21251e",
+        "role": "vault (Concrete DeFi USDT)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xcf9ceacf5c7d6d2fe6e8650d81fbe4240c72443f",
+        "role": "vault (frxUSD+)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc50303eca7e02feae434f37c88c43aac368c60c1",
+        "role": "vault (sEIGEN)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3eb6464a77d7b619aaafa7e9ffc0fbe3ed7084b3",
+        "role": "vault (Corn Stables)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x61e2de83bbab5a7a5bb2c5d40a5f737135eeaa13",
+        "role": "vault (Dinero Bera)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xd6fc659947f9fc68e4b3dd009b757f8290d8ccae",
+        "role": "vault (Morpho USD)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x15ce9be6609db102b70d68ca75a39c555bea5fac",
+        "role": "vault (Morpho Ethereum)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x39ccce100d3a8d6d01792388c7c6c6260a2045e2",
+        "role": "vault (Morpho Bitcoin)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Berachain",
+        "address": "0xec577e989c02b294d5b8f4324224a5b63f5beef7",
+        "role": "vault (Berachain BERA)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Katana",
+        "address": "0xca2470f04945dad24989ec6ef2c41ee808e51039",
+        "role": "vault (Katana AUSD)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Morph",
+        "address": "0xf9bebf84fb311a42217147bea4f844ea2fc47f00",
+        "role": "vault (Morph BGB)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Morph",
+        "address": "0x5b58762ba3e53bbb825741d1fa6f237f1b5c6717",
+        "role": "vault (Morph AUSD)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Morph",
+        "address": "0x6157169a7c68cfb00833a1e7f97f454aebf54f5d",
+        "role": "vault (Morph weETH)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Concrete (developed by Blueprint Finance) is a DeFi yield infrastructure protocol enabling institutional and retail users to deposit crypto assets into ERC-4626 vaults that automatically allocate across yield-generating strategies (Aave, Morpho, multi-sig custodial arrangements). Users deposit assets such as weETH, USDT, WBTC, or EIGEN and receive vault shares; the protocol handles allocation, rebalancing, and compounding across on-chain opportunities. The current V1 architecture uses ConcreteMultiStrategyVault with a withdrawal queue and parking lot; V2 uses a modular upgradeable vault with a factory (ConcreteFactory), role-based access control, and delegatecall-based AllocateModule. Concrete also provides liquidation-protection products for DeFi borrowers via its appchain layer."
+  }
+}
