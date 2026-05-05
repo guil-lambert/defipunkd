@@ -1,0 +1,134 @@
+{
+  "schema_version": 4,
+  "slug": "morpho-blue",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Immutable core (no upgrade/pause) owned by 5/9 multisig with no timelock; highest reachable tier is T2 (bounded fee switch ≤25%)",
+  "short_headline": "5/9 multisig, no timelock, T2 max",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Morpho Blue core singleton (0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb) owner() returns 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa, which is the 5/9 DAO governance multisig. The owner can call setOwner, setFee, setFeeRecipient, enableIrm, enableLltv. There is no pendingOwner, no admin, no governor, no proxy admin."
+      },
+      {
+        "code": "C2",
+        "text": "Morpho Blue is an immutable (non-proxy) singleton contract. The surfacer page shows ABI source 'etherscan' with no proxy resolution. There is no upgradeToAndCall, no implementation slot, no proxy admin. The contract cannot be upgraded."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path: Snapshot off-chain vote → 5/9 multisig (0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa) → direct call to Morpho Blue. No timelock contract interposes. Uncontested fast-path delay = 0 seconds. The DAO Executor (0xcBa28b381748926701ed11F1702b210C04965C44) has no verified ABI and is NOT the current owner of the core contract; it appears to be a legacy/auxiliary contract."
+      },
+      {
+        "code": "C4",
+        "text": "The 5/9 multisig has 9 signers: 0xe0aeb6811d33Df42A09066857CDaFca16b506086, 0x84D3E4EE550DD5F99e76a548aC59a6BE1C8dCf79, 0xC100c251bdD297A66795112f04356E6BA5f89D80, 0x264c86DBbD2E4165FbBf0C35b0ddf0e00AEc6b31, 0x30E7c016fC702cDe9A50720a469d418490b7b652, 0x8f02b4a44Eacd9b8eE7739aa0BA58833DD45d002, 0xCF263cEe139763114fAaFC5F52865135412F50Ec, 0x69FcEFDe2B48503d675181448B3D4272128bca9c, 0x13cA8756E9470b71B8e998352c8741706217f963. Threshold is 5 (56%). Gnosis Safe version 1.3.0. Signer identities (insider vs non-insider) could not be verified from fetched evidence."
+      },
+      {
+        "code": "C5",
+        "text": "No on-chain governance contract (Governor/GovernorBravo/Aragon). Morpho uses Snapshot (off-chain) voting with 500k MORPHO proposal threshold. Per docs, voting period is 72 hours. Actions approved by Snapshot vote are then executed by the 5/9 multisig, which is the sole on-chain enforcement point."
+      },
+      {
+        "code": "C6",
+        "text": "No emergency pause mechanism exists on the Morpho Blue core. The contract ABI contains no pause/unpause/paused function. Governance cannot halt market operations or freeze user withdrawals."
+      },
+      {
+        "code": "C7",
+        "text": "Highest reachable tier: T2. The owner can call setFee (bounded by MAX_FEE ≤ 25% of borrower interest, enforced on-chain via require(newFee <= MAX_FEE)), setFeeRecipient (redirect protocol fees), enableIrm/enableLltv (whitelist new parameters for future market creation but cannot modify existing markets). The owner CANNOT: upgrade the contract, pause withdrawals, drain funds, change existing market oracles/LLTVs/IRMs. T1 is unreachable because the core is immutable and has no fund-critical admin functions."
+      }
+    ],
+    "steelman": {
+      "red": "The 5/9 multisig can instantly set fees to 25% on all markets and redirect all fee revenue with zero timelock, constituting immediate economic extraction capability.",
+      "orange": "Despite the immutable core limiting blast radius to T2, the 5/9 multisig sits on the T2 path with zero on-chain timelock, fails full Security Council criteria (signer identities unverified), and Snapshot voting provides no on-chain enforcement.",
+      "green": "The core is fully immutable with no upgrade, pause, or fund-draining capability; the maximum economic impact is bounded on-chain at 25% of interest; and the 5/9 threshold is reasonably high for the limited scope of governance."
+    },
+    "verdict": "Choosing orange because the 5/9 multisig directly controls T2 functions (fee switch, fee recipient, IRM/LLTV whitelisting) with zero on-chain timelock delay. While the immutable core means T1 is genuinely unreachable (no upgrade, no pause, no fund access), the multisig fails the Security Council standard (signer identities not publicly verified in fetched evidence) and sits on a T2 path with 0-second delay. Per the rubric, 'a multisig failing one or more Security Council criteria sits on a T1/T2 path' maps to orange. The green case is strong — the on-chain fee cap at 25% and absence of any fund-critical function make the blast radius genuinely limited — but the zero timelock and unverified signer independence prevent green."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+      "shows": "Morpho Blue core singleton: owner() = 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa (the 5/9 multisig). Contract is labeled 'Morpho' with ABI source 'etherscan' (no proxy). Write methods include setOwner, setFee, setFeeRecipient, enableIrm, enableLltv. No pause or upgrade functions. feeRecipient() = 0x0000000000000000000000000000000000000000.",
+      "chain": "Ethereum",
+      "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+      "shows": "5-of-9 Gnosis Safe multisig, version 1.3.0, threshold=5. Nine owners enumerated. Proxy to GnosisSafe implementation at 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552. Nonce=279.",
+      "chain": "Ethereum",
+      "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xcBa28b381748926701ed11F1702b210C04965C44",
+      "shows": "DAO Executor address has no verified ABI (etherscan + sourcify both failed). Cannot determine if it is a timelock or what role it currently plays. It is NOT the owner of the Morpho Blue core contract.",
+      "chain": "Ethereum",
+      "address": "0xcBa28b381748926701ed11F1702b210C04965C44",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://docs.morpho.org/learn/governance/organization/",
+      "shows": "Morpho governance docs confirm: core smart contract code is immutable; governance powers limited to fee switch (capped at 25%), whitelisting LLTVs/IRMs, MORPHO token, ENS. Snapshot voting at snapshot.org/morpho.eth. 500k MORPHO proposal threshold. Actions implemented by 5/9 governance multisig. Multisig address 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa confirmed.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/morpho-org/morpho-blue/blob/main/src/Morpho.sol",
+      "shows": "Source code confirms setFee has require(newFee <= MAX_FEE, ErrorsLib.MAX_FEE_EXCEEDED) — fee bound is enforced on-chain. setOwner, enableIrm, enableLltv are all gated by onlyOwner modifier (require(msg.sender == owner))."
+    },
+    {
+      "url": "https://github.com/morpho-org/morpho-blue",
+      "shows": "GitHub repo confirms Morpho Blue is 'designed to be a simple, immutable, and governance-minimized base layer'. Morpho.sol contains the core contract source code."
+    }
+  ],
+  "unknowns": [
+    "C4: Signer identities for the 9 multisig members could not be classified as insider vs non-insider from fetched evidence. Public announcement of signers not verified.",
+    "C3: DAO Executor (0xcBa28b381748926701ed11F1702b210C04965C44) has no verified ABI; its role in the current governance execution path is unclear — it is not the current owner of the core contract.",
+    "C5: Snapshot voting quorum threshold could not be verified from fetched evidence (only proposal threshold of 500k MORPHO confirmed).",
+    "C3: Legacy docs mention a 24h timelock proposal, but no timelock contract was found between the multisig and the Morpho Blue core on the current execution path."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/morpho-org/morpho-blue"
+    ],
+    "docs_url": "https://docs.morpho.org",
+    "audits": [
+      {
+        "firm": "Multiple (see audit page)",
+        "url": "https://docs.morpho.org/morpho-blue/concepts/security/audits/",
+        "date": "2024-01"
+      }
+    ],
+    "governance_forum": "https://forum.morpho.org",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x58D97B57BB95320F9a05dC918Aef65434969c2B2",
+      "symbol": "MORPHO"
+    },
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+        "role": "DAO governance multisig, owner of Morpho Blue core",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xF057afeEc22E220f47AD4220871364e9E828b2e9",
+        "role": "MORPHO Rewards multisig (3/5)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xcBa28b381748926701ed11F1702b210C04965C44",
+        "role": "Morpho DAO Executor (unverified ABI, not current owner)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Morpho Blue is a permissionless, immutable lending protocol deployed as a singleton smart contract on Ethereum and other EVM chains. Users can supply and borrow assets in isolated markets defined by five immutable parameters (loan token, collateral token, oracle, IRM, LLTV). The core contract externalizes risk management to upper layers (MetaMorpho/Vault curators) while providing minimal governance-controlled fee and parameter whitelisting functions."
+  }
+}

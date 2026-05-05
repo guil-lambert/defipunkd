@@ -1,0 +1,140 @@
+{
+  "schema_version": 4,
+  "slug": "curve-llamalend",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "orange",
+  "headline": "T1 actions (arbitrary execute, implementation changes) reachable via veCRV-weighted Aragon vote with 12-hour minimum time — below 7-day bar",
+  "short_headline": "DAO vote, 12h min delay",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "OneWayLendingFactory (0xeA6876) admin is 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79 (a Vyper proxy-admin contract). That contract's dao() returns the Curve DAO Ownership Agent (0x40907540), and emergency() returns the Emergency DAO multisig (0x467947EE). The Ownership Agent is an Aragon Agent controlled by the Aragon Voting app (0xE478de485)."
+      },
+      {
+        "code": "C2",
+        "text": "The OneWayLendingFactory (0xeA6876) is NOT a proxy — it is a plain Vyper contract. The DAO Voting app (0xE478de) and the Ownership Agent (0x409075) are both Aragon AppProxyUpgradeable proxies managed by the Aragon kernel at 0xad06868167BC5Ac5cFcbEf2CAFa82bc76961D72d. Individual lending markets (controllers, AMMs, vaults) are created as Blueprint clones, not upgradeable proxies. However, the factory admin can set_implementations which changes templates for future markets."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path: veCRV holders create vote on Aragon Voting (0xE478de) → voting period up to 604800s (7 days), but early execution possible if support >51% and quorum >30% and minTime (43200s = 12 hours) has elapsed → Ownership Agent (0x409075) executes EVM script → calls factory admin (0xb7400) → calls factory or controllers. No separate timelock contract exists. Uncontested fast path: 12 hours (minTime = 43200 seconds), because a vote can be auto-executed once >51% support is achieved and 12 hours have passed, via the executesIfDecided mechanism."
+      },
+      {
+        "code": "C4",
+        "text": "Emergency DAO (0x467947EE) is a 5-of-9 Gnosis Safe v1.3.0. Nine owner addresses confirmed on-chain. No modules enabled. The emergency role is registered in the factory admin contract (0xb7400) but only the dao() can call the most powerful functions like execute(). The Emergency DAO's specific callable functions on the proxy admin are not determinable from the ABI alone without source code inspection — the Vyper contract may restrict emergency to a subset of operations."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance uses Aragon Voting with veCRV (0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2) as the voting token. Parameters read on-chain at block 25022811: voteTime = 604800 (7 days), minTime = 43200 (12 hours), supportRequiredPct = 510000000000000000 / 1e18 = 51%, minAcceptQuorumPct = 300000000000000000 / 1e18 = 30%, minBalance = 2500e18 veCRV to create a vote. 1402 votes have been executed to date."
+      },
+      {
+        "code": "C6",
+        "text": "The factory admin contract (0xb7400) has a separate emergency() role pointing to the Emergency DAO (5-of-9 multisig). Functions set_emergency() and remove_emergency() allow the DAO to manage this role. The exact scope of emergency powers could not be fully determined from ABI alone — the contract likely restricts the emergency role to specific parameter-change functions rather than the full execute() power."
+      },
+      {
+        "code": "C7",
+        "text": "T1 — FUND-CRITICAL: The factory admin (0xb7400) exposes execute(address,bytes) callable by the DAO (Ownership Agent). This function can call any target with arbitrary calldata, including controllers and AMMs that hold user funds. Additionally, set_monetary_policy, set_amm_fee, set_borrowing_discounts, set_admin_fee, and set_callback all operate on existing deployed controllers/markets, not just future ones, allowing the DAO to change economic parameters of active markets. set_implementations affects only future market deployments. The worst-case T1 function is execute() which can make arbitrary calls. T2 functions (set_amm_fee, set_monetary_policy, etc.) are also reachable on the same path."
+      }
+    ],
+    "steelman": {
+      "red": "The DAO's execute() function enables arbitrary calls to any contract including fund-holding controllers, and the 12-hour minimum time is too short for users to react, especially given veCRV concentration risk.",
+      "orange": "T1 actions are reachable via veCRV governance with only a 12-hour minimum delay — less than the 7-day bar — and while veCRV distribution is broad, the executesIfDecided mechanism allows fast passage with sufficient voting power.",
+      "green": "Control runs through on-chain token-weighted governance with 1,400+ historical votes, 30% quorum, 51% support threshold, and a 7-day voting window; veCRV is broadly distributed across Convex, Yearn, and many independent holders making hostile proposals impractical."
+    },
+    "verdict": "Choosing orange because the highest reachable tier is T1 (execute(address,bytes) on 0xb7400 can make arbitrary calls to fund-holding contracts) and the uncontested fast path is 12 hours (minTime = 43200 seconds), which is >0 but <7 days. While veCRV governance is active and broadly distributed (1,402 votes executed, 30% quorum, 51% support), the technical floor for execution is only 12 hours from vote creation — well below the 7-day exit window standard. The 7-day voteTime is the maximum voting period, not a mandatory delay, because the executesIfDecided flag enables early execution once thresholds are met and minTime has elapsed."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "shows": "DAO Voting (Aragon AppProxyUpgradeable): voteTime=604800 (7 days), minTime=43200 (12 hours), supportRequiredPct=51%, minAcceptQuorumPct=30%, token=0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2 (veCRV), votesLength=1402. Write methods include vote(uint256,bool,bool) with executesIfDecided parameter enabling early execution.",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent (Aragon Agent AppProxyUpgradeable): has execute(address,uint256,bytes), forward(bytes), and safeExecute roles. Shares kernel at 0xad06868167BC5Ac5cFcbEf2CAFa82bc76961D72d with the Voting app.",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "shows": "OneWayLendingFactory: admin()=0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79, market_count=47, not a proxy. Write methods: set_implementations, set_default_rates, set_admin. Stores implementation addresses for amm, controller, vault, price oracle, monetary policy, gauge.",
+      "chain": "Ethereum",
+      "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
+      "shows": "Factory admin (Vyper_contract): dao()=0x40907540 (Ownership Agent), emergency()=0x467947EE (Emergency DAO). Write methods: execute(address,bytes) [payable, arbitrary calls], set_callback, set_amm_fee, set_monetary_policy, set_borrowing_discounts, set_admin_fee, reduce_debt_ceiling, transfer_ownership, set_emergency, remove_emergency.",
+      "chain": "Ethereum",
+      "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO: 5-of-9 Gnosis Safe v1.3.0, no modules enabled, 9 owner addresses confirmed on-chain. Nonce=13 (13 transactions executed).",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C4: Emergency DAO signer identities (insider vs non-insider) could not be determined — all 9 signers are bare EOA addresses without on-chain identity verification",
+    "C6: Exact scope of emergency() role on factory admin (0xb7400) could not be determined from ABI alone — Vyper source code needed to confirm which functions check for emergency vs dao caller",
+    "C7: Whether execute(address,bytes) on 0xb7400 has any target or calldata restrictions beyond the dao-only access check could not be determined without Vyper source inspection"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin"
+    ],
+    "audits": [],
+    "governance_forum": "https://gov.curve.finance",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2",
+      "symbol": "veCRV"
+    },
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "DAO Voting (Aragon Ownership Voting)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent (Aragon Agent)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
+        "role": "LlamaLend Factory Admin (proxy admin with execute)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO (5-of-9 Gnosis Safe)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+        "role": "OneWayLendingFactory",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Curve LlamaLend is a permissionless lending platform built on Curve Finance, where users can borrow crvUSD against crypto collateral or lend crvUSD to earn interest. It uses the LLAMMA (Lending-Liquidating AMM Algorithm) mechanism for soft liquidations that gradually convert collateral as prices decline rather than sudden full liquidations. Markets are created permissionlessly via a factory contract with configurable parameters for fees, discounts, and interest rate models."
+  }
+}

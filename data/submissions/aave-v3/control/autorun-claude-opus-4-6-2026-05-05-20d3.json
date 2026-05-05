@@ -1,0 +1,165 @@
+{
+  "schema_version": 4,
+  "slug": "aave-v3",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Aave V3 is governed by AAVE token-weighted on-chain governance with a 1-day timelock on the Short Executor path that can perform T1 fund-critical actions (upgrade Pool implementations, change oracles, pause markets). The 5-of-9 guardian multisig has veto-only power.",
+  "short_headline": "T1 via 1-day timelock",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "Governance V3 core (0x9AEE…BC7) is a TransparentUpgradeableProxy whose owner() is the Short Executor at 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. The guardian() is the 5-of-9 multisig at 0xCe52ab41C40575B072A18C9700091Ccbe4A06710. The PayloadsController (0xdAbad81a…) also has owner() = 0x5300…5192A and guardian() = 0xCe52ab41…. The Executor (0x5300…) has owner() = PayloadsController (0xdAbad81a…), forming the chain: Governance V3 → PayloadsController → Executor → protocol contracts."
+      },
+      {
+        "code": "C2",
+        "text": "Both Governance V3 (0x9AEE…BC7) and PayloadsController (0xdAbad81a…) are TransparentUpgradeableProxy contracts. The Governance proxy implementation is at 0x58BcB647…; PayloadsController implementation at 0x7222182c…. The Executor (0x5300…) is NOT a proxy — it is immutable. Upgradeability of proxies is controlled by the Executor, which is itself controlled by PayloadsController (i.e., governance proposals). The Pool (0x87870bca…) is also a proxy managed via the PoolAddressesProvider, whose owner is the Executor. Overall: upgradeable."
+      },
+      {
+        "code": "C3",
+        "text": "EXECUTION PATH (Short Executor / Level 1 — most protocol updates): (1) Proposal created on Governance V3 at 0x9AEE…BC7; (2) coolDownBeforeVotingStart (docs state 1 day for short path); (3) voting period of 3 days (MIN_VOTING_DURATION = 259200s on-chain); (4) vote results relayed via CrossChainController → PayloadsController queues payload; (5) MIN_EXECUTION_DELAY = 86400s (1 day) on PayloadsController at 0xdAbad81a…; (6) Executor 0x5300… executes via executeTransaction. The uncontested fast-path TIMELOCK DELAY is 1 day (86400s). The Long Executor path (Level 2) for governance-internal changes has a 7-day timelock and 10-day voting period per docs."
+      },
+      {
+        "code": "C4",
+        "text": "Guardian multisig at 0xCe52ab41C40575B072A18C9700091Ccbe4A06710 is a 5-of-9 Gnosis Safe v1.3.0. Nine owners: 0xDA5A…BE7D, 0x1e38…8885, 0x4f96…1DC9, 0xebED…FE29, 0xbd4D…d4B7, 0xA310…7396, 0x936C…9EF3, 0x0D23…0E9, 0x4C30…099f. Per Aave docs, composed of 'highly active entities within the Aave DAO, such as service providers and delegates.' The guardian can cancel governance proposals and payloads (veto power) but cannot execute or upgrade. GranularGuardian (0x4457cA11…) has SOLVE_EMERGENCY_ROLE and RETRY_ROLE for cross-chain emergency management on CrossChainController only. Signer identities are not fully publicly enumerable from on-chain data alone — per docs they are service providers and delegates, making insider/non-insider classification uncertain."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance uses AAVE, stkAAVE, and aAAVE token-weighted voting via Governance V3 at 0x9AEE…BC7. MIN_VOTING_DURATION = 259200s (3 days) read on-chain. ACHIEVABLE_VOTING_PARTICIPATION = 5,000,000e18 (5M AAVE). Docs: Short Executor proposals require 3-day voting period and 1-day timelock; Long Executor proposals require 10-day voting period and 7-day timelock. Voting configs per access level are set via getVotingConfig(uint8) but the API endpoint was blocked during this run. Docs confirm quorum and vote differential requirements exist."
+      },
+      {
+        "code": "C6",
+        "text": "The Protocol Guardian (5-of-9 multisig at 0xCe52ab41…) holds EMERGENCY_ADMIN role and can pause markets and cancel proposals/payloads. This is a separate emergency power from the main upgrade/governance path. Per Aave docs, this guardian is 'responsible for acting swiftly in emergency situations to protect the protocol.' The guardian can pause but pausing is time-bounded by the need for governance to unpause or the guardian to lift the pause. The guardian CANNOT upgrade contracts or change implementations — only cancel/pause."
+      },
+      {
+        "code": "C7",
+        "text": "POWER TIER — T1 (FUND-CRITICAL) is reachable on the Short Executor (Level 1) path. The Executor at 0x5300… is the ACL Admin for Aave V3 and can call PoolAddressesProvider.setPoolImpl() to replace the Pool implementation (holding user funds), set oracle sources via AaveOracle, and configure reserve parameters via PoolConfigurator. These are T1 functions (replace implementation of fund-holding contracts, change oracle sources). The Long Executor (Level 2) handles T3 governance-internal changes with a 7-day timelock. The guardian's pause power is also T1-scoped (can freeze withdrawals) but is veto/pause only, not an upgrade path."
+      }
+    ],
+    "steelman": {
+      "red": "The 5-of-9 guardian multisig can pause all markets instantly (T1 power) with no timelock, and signer identities were not fully verified on-chain this run.",
+      "orange": "T1 fund-critical actions (implementation upgrades, oracle changes) are reachable via the Short Executor with only a 1-day timelock, which is below the 7-day exit-window standard; the guardian multisig's pause power adds further instant T1 capability scoped to emergencies.",
+      "green": "Aave is governed by broad on-chain AAVE token-weighted governance with 481+ proposals executed, a formal multi-stage process, the Long Executor has a 7-day timelock for governance changes, and the guardian's powers are scoped to cancel/pause (not upgrade)."
+    },
+    "verdict": "Choosing orange because T1 fund-critical actions (Pool implementation upgrades via PoolAddressesProvider.setPoolImpl, oracle source changes) are reachable through the Short Executor path with only a 1-day (86400s) timelock delay, which is >0 but <7 days. While governance is broad and token-weighted with AAVE/stkAAVE/aAAVE, the 1-day timelock on the Short Executor is insufficient for the 7-day exit-window standard required for green on a T1 path. The guardian (5-of-9 multisig) has instant T1-scoped emergency pause power, but this is limited to pause/cancel and does not compound the timelock concern since it cannot execute upgrades. The Long Executor's 7-day timelock only covers T3 governance-internal changes, not the primary T1 upgrade path."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+      "shows": "Governance V3 is a TransparentUpgradeableProxy; owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (Executor); guardian() = 0xCe52ab41C40575B072A18C9700091Ccbe4A06710; MIN_VOTING_DURATION = 259200 (3 days); COOLDOWN_PERIOD = 0; ACHIEVABLE_VOTING_PARTICIPATION = 5000000000000000000000000; getProposalsCount = 481; proxy implementation at 0x58BcB647C4beFf253B4B6996c62F737B783f2cDd",
+      "chain": "Ethereum",
+      "address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+      "shows": "PayloadsController is a TransparentUpgradeableProxy; owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (Executor); guardian() = 0xCe52ab41C40575B072A18C9700091Ccbe4A06710; MIN_EXECUTION_DELAY = 86400 (1 day); MAX_EXECUTION_DELAY = 864000 (10 days); GRACE_PERIOD = 604800 (7 days); proxy implementation at 0x7222182cB9c5320587b5148BF03eeE107AD64578; MESSAGE_ORIGINATOR = Governance V3 at 0x9AEE…",
+      "chain": "Ethereum",
+      "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+      "shows": "Executor contract (not a proxy, immutable); owner() = 0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5 (PayloadsController); has executeTransaction(address,uint256,string,bytes,bool) function; only 1 view method (owner); no upgradeability surface",
+      "chain": "Ethereum",
+      "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xCe52ab41C40575B072A18C9700091Ccbe4A06710",
+      "shows": "Governance Guardian is a 5-of-9 Gnosis Safe v1.3.0; 9 owners: 0xDA5Ae43e…, 0x1e380435…, 0x4f967430…, 0xebED04E9…, 0xbd4DCfA9…, 0xA3103D0E…, 0x936CD965…, 0x0D2394C0…, 0x4C30E337…; threshold = 5; nonce = 5",
+      "chain": "Ethereum",
+      "address": "0xCe52ab41C40575B072A18C9700091Ccbe4A06710"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4457cA11E90f416Cc1D3a8E1cA41C0cdEcC251d4",
+      "shows": "GranularGuardianAccessControl contract; has RETRY_ROLE and SOLVE_EMERGENCY_ROLE; connected to CrossChainController at 0xEd42a7D8…; not a proxy; manages emergency operations on cross-chain infrastructure only",
+      "chain": "Ethereum",
+      "address": "0x4457cA11E90f416Cc1D3a8E1cA41C0cdEcC251d4"
+    },
+    {
+      "url": "https://aave.com",
+      "shows": "Protocol website confirms governance forum at governance.aave.com, GitHub at github.com/aave, docs at aave.com/docs, security at aave.com/security, bug bounty at audits.sherlock.xyz/bug-bounties/300; AAVE token used for governance voting"
+    },
+    {
+      "url": "https://docs.aave.com/governance/master/governance-process",
+      "shows": "Derived: Short executor has 1-day timelock delay; Long executor has 7-day timelock delay. Quorum and vote differential requirements confirmed."
+    },
+    {
+      "url": "https://aave.com/help/governance/aave-community",
+      "shows": "Derived: Protocol Emergency Guardian is 5-of-9 multisig; holds EMERGENCY_ADMIN role; can pause markets; composed of DAO service providers and delegates. Governance Guardian can cancel proposals."
+    },
+    {
+      "url": "https://aave.com/help/governance/voting",
+      "shows": "Derived: Short executor proposals have 3-day voting period and 1-day timelock; Long executor proposals have 10-day voting period and 7-day timelock."
+    }
+  ],
+  "unknowns": [
+    "C4: Signer identities for the 5-of-9 guardian multisig (0xCe52ab41…) could not be individually classified as insider vs non-insider from on-chain data; docs describe them as 'service providers and delegates' but individual identities were not enumerated in this run",
+    "C5: getVotingConfig(1) and getVotingConfig(2) API calls were blocked; exact on-chain values for coolDownBeforeVotingStart, yesThreshold, yesNoDifferential, and minPropositionPower for each access level were not read on-chain this run — docs values used as corroboration only",
+    "C5-offchain: Voting config numeric constants (cooldown, thresholds, proposition power) cited from docs only, not re-read on-chain",
+    "C6: Exact scope of EMERGENCY_ADMIN role functions (which specific functions it can call on Pool/PoolConfigurator) not verified by on-chain ABI read of ACLManager in this run",
+    "C3: Long Executor address and its on-chain delay were not directly read this run; the 7-day delay is cited from documentation only"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/aave"
+    ],
+    "docs_url": "https://aave.com/docs",
+    "audits": [
+      {
+        "firm": "Multiple (see security page)",
+        "url": "https://aave.com/security"
+      }
+    ],
+    "governance_forum": "https://governance.aave.com/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+      "symbol": "AAVE"
+    },
+    "bug_bounty_url": "https://audits.sherlock.xyz/bug-bounties/300",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "role": "Short Executor (Level 1) / ACL Admin V3",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+        "role": "PayloadsController (Ethereum)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+        "role": "Governance V3 Core",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCe52ab41C40575B072A18C9700091Ccbe4A06710",
+        "role": "Governance Guardian / Protocol Emergency Guardian (5-of-9)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4457cA11E90f416Cc1D3a8E1cA41C0cdEcC251d4",
+        "role": "GranularGuardian (cross-chain emergency)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xEd42a7D8559a463722Ca4beD50E0Cc05a386b0e1",
+        "role": "CrossChainController",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Aave V3 is a decentralized non-custodial lending protocol where users supply assets to earn interest and borrow assets by providing overcollateralized deposits. It operates across 20+ chains with isolated markets and risk parameters managed through on-chain AAVE token governance. The protocol uses a cross-chain governance system (Governance V3) with voting via storage proofs on multiple networks while token balances remain on Ethereum mainnet."
+  }
+}

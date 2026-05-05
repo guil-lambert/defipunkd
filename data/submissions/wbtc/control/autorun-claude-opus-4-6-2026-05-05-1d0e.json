@@ -1,0 +1,137 @@
+{
+  "schema_version": 4,
+  "slug": "wbtc",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "orange",
+  "headline": "WBTC Controller owned by 6-of-10 multisig with no timelock; T1 powers (mint, pause, ownership transfer) are immediately executable; 6 of 10 signers are unidentified, failing Security Council criteria.",
+  "short_headline": "6-of-10 multisig, no timelock, T1",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "WBTC token (0x2260) owner = Controller (0xCA06). Controller owner = 0x972Eed35781f09987a5c40F761f6A24623C570DE, a 6-of-10 MultiSigWalletWithDailyLimit. pendingOwner on both token and Controller is 0x0000. The GitHub README still lists the old Big DAO multisig (0xB33f) as the wallet but on-chain state shows ownership has migrated to 0x972E."
+      },
+      {
+        "code": "C2",
+        "text": "All core contracts (WBTC token, Controller, Factory, Members) are non-upgradeable (no proxy pattern detected). The ABI has no implementation() slot. upgradeability = immutable."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path: 6-of-10 multisig (0x972E) → Controller (0xCA06) → WBTC token (0x2260). No timelock anywhere in the path. The multisig is a classic Gnosis-style MultiSigWalletWithDailyLimit; upon reaching 6 confirmations a transaction executes immediately. Total uncontested-fast-path delay = 0 seconds."
+      },
+      {
+        "code": "C4",
+        "text": "Controller owner multisig 0x972E: 6-of-10, 10 signers. Matched signers from GitHub DAO Members list: 0x512f (Balancer), 0x157b (BitGo), 0xcBf1 (Tom Bean), 0x65CE (Chainlink). The remaining 6 signers (0xa9e7, 0xD00e, 0x0940, 0xD3A1, 0xA2F5, 0x7E25) are not publicly identified in the GitHub README. The custodian multisig at 0xb0F4 (BitGo) has confirmMint authority but its internal structure could not be read via Safe API (fetch failed). The Small DAO / Light Multisig at 0x4dbb owns the Members contract (T2 power over merchant/custodian list) but was not read this run."
+      },
+      {
+        "code": "C5",
+        "text": "No on-chain governance. WBTC has no Governor contract, no voting token, no proposal/quorum mechanism. All governance is via multisig."
+      },
+      {
+        "code": "C6",
+        "text": "No separate emergency-pause role detected. The Controller's pause() and unpause() functions are owner-gated, meaning the same 6-of-10 multisig controls both normal operations and emergency pause. No guardian or separate emergency multisig was found."
+      },
+      {
+        "code": "C7",
+        "text": "T1 — FUND-CRITICAL: The Controller owner (6-of-10 multisig) can: (1) pause() — halts all WBTC transfers, blocking user exits; (2) mint(address,uint256) — mint unbacked WBTC via setFactory() to a malicious factory; (3) callTransferOwnership(ownedContract, newOwner) — transfer ownership of the WBTC token itself to any address; (4) setMembers(address) — replace the members registry, changing custodian. All of these are T1 fund-critical powers. The uncontested-fast-path delay is 0 seconds. The multisig fails Security Council criteria because 6 of 10 signers are not publicly announced."
+      }
+    ],
+    "steelman": {
+      "red": "T1 powers are immediately executable with zero delay by a multisig where 60% of signers are unidentified, resembling the risk profile of an opaque insider-controlled entity.",
+      "orange": "The 6-of-10 threshold is meaningful (not trivially bypassed like a 2-of-3), and at least 4 identified signers include independent entities (Chainlink, Balancer), but the multisig fails Security Council criteria due to unidentified signers and lacks any timelock.",
+      "green": "Contracts are immutable (no proxy upgrades possible), the multisig requires a supermajority, and identified signers include reputable independent entities."
+    },
+    "verdict": "Choosing orange because T1 fund-critical powers (pause, mint via factory swap, ownership transfer) are reachable with zero timelock through a 6-of-10 multisig that fails Security Council criteria — specifically, 6 of 10 signers are not publicly announced. The multisig is NOT a single EOA or 2-of-3 (which would make it red), but the absence of any timelock and the incomplete signer disclosure place it squarely in the orange tier per the rubric: 'a multisig failing one or more Security Council criteria sits on a T1/T2 path.' The green steel-man is weaker because, despite immutable contract bytecode, the Controller's owner-gated functions constitute a live T1 surface (pause, mint, transferOwnership) that is immediately executable."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "shows": "Controller contract ABI and state: owner() = 0x972Eed35781f09987a5c40F761f6A24623C570DE, pendingOwner() = 0x0000, token() = 0x2260, factory() = 0xe5A5, members() = 0x3e86. Exposes mint(), burn(), pause(), unpause(), setFactory(), setMembers(), callTransferOwnership(), callClaimOwnership() functions.",
+      "chain": "Ethereum",
+      "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x972Eed35781f09987a5c40F761f6A24623C570DE",
+      "shows": "MultiSigWalletWithDailyLimit: 6-of-10 threshold (required()=6). 10 signers via getOwners(): 0x512f, 0x157b, 0xcBf1, 0x65CE, 0xa9e7, 0xD00e, 0x0940, 0xD3A1, 0xA2F5, 0x7E25. dailyLimit()=0. transactionCount()=4. Block 25025783.",
+      "chain": "Ethereum",
+      "address": "0x972Eed35781f09987a5c40F761f6A24623C570DE",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "WBTC ERC-20 token: owner() = Controller 0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7, pendingOwner() = 0x0000, paused() = false, mintingFinished = false. Has mint(), burn(), pause(), unpause() functions gated by owner. No proxy pattern.",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/DAO",
+      "shows": "DAO README lists 13 DAO members for the Big DAO multisig at 0xB33f (the previous multisig), with named entities including Kyber, Chainlink, Compound, Balancer, BitGo, Tom Bean, etc. Does NOT document the current controller owner 0x972E. Confirms WBTC important addresses: token 0x2260, controller 0xCA06, factory 0xe5a5, members 0x3e86, custodian BitGo at 0xb0F4.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/DAO/pull/12/files",
+      "shows": "2022 migration PR documenting move from old multisig (0xd409, 11-of-18) to new Big DAO multisig (0xB33f, 8-of-13). Lists named signers and their addresses. Confirms Controller ownership was transferred as part of migration.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://unchainedcrypto.com/wbtc-completes-shift-to-multi-jurisdiction-custody-model/",
+      "shows": "In October 2024, WBTC completed shift to multi-jurisdiction custody with BitGo and BiT Global, splitting BTC key control across US, Singapore, and Hong Kong. This was a custody-layer change, not necessarily an on-chain Controller ownership change.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C4: 6 of 10 signers on the current Controller owner multisig (0x972E) are unidentified — addresses 0xa9e7, 0xD00e, 0x0940, 0xD3A1, 0xA2F5, 0x7E25 do not appear in the DAO GitHub README",
+    "C4: Small DAO / Light Multisig (0x4dbb) owns Members contract; threshold and signers not read this run",
+    "C4: Custodian multisig (0xb0F4) Safe API fetch failed; internal structure (threshold, signers) not confirmed on-chain this run",
+    "C4: When and why Controller ownership moved from 0xB33f (8-of-13) to 0x972E (6-of-10) is not documented in the GitHub README and the governance rationale is unknown",
+    "C6: No separate emergency/guardian role found, but this could not be exhaustively confirmed without source code review"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/DAO"
+    ],
+    "audits": [
+      {
+        "firm": "unknown",
+        "url": "https://wbtc.network/dashboard/audit"
+      }
+    ],
+    "deployed_contracts_doc": "https://github.com/WrappedBTC/DAO",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x972Eed35781f09987a5c40F761f6A24623C570DE",
+        "role": "Controller owner — 6-of-10 multisig with T1 power (mint, pause, ownership transfer)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+        "role": "Controller — owns WBTC token, mediates mint/burn/pause",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb0F42D187145911C2aD1755831aDeD125619bd27",
+        "role": "BitGo custodian multisig — confirmMint authority",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4dbbbfb0e68be9d8f5a377a4654604a62e851e80",
+        "role": "Small DAO / Light Multisig — owns Members contract (merchant/custodian registry)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "WBTC (Wrapped Bitcoin) is a custodial bridge that tokenizes Bitcoin as an ERC-20 token on Ethereum. Users deposit BTC with the BitGo custodian, and authorized merchants request minting of corresponding WBTC through a Controller contract. The system relies on a centralized custodian (BitGo/BiT Global joint venture) holding BTC in a 2-of-3 multisig cold wallet, with on-chain governance performed by a DAO multisig that controls minting, pausing, and ownership of the WBTC token contract."
+  }
+}

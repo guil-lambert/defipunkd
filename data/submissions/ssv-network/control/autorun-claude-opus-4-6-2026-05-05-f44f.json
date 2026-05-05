@@ -1,0 +1,115 @@
+{
+  "schema_version": 4,
+  "slug": "ssv-network",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "SSVNetwork UUPS proxy is upgradeable by a 5-of-9 multisig with no timelock — T1 power with zero delay",
+  "short_headline": "5-of-9 multisig, no timelock",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "SSVNetwork proxy (0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1) owner() returns 0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6, a Gnosis Safe 5-of-9 multisig. pendingOwner() is 0x0. The address 0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E (claimed as owner in address_book) has no verified ABI and is not the actual on-chain owner."
+      },
+      {
+        "code": "C2",
+        "text": "SSVNetwork uses UUPS proxy pattern (ERC1967Proxy) with implementation at 0xa72a8F31163d74D708664493d09167dfa13008E9. The owner can call upgradeTo(address) and upgradeToAndCall(address,bytes) to replace the implementation. The contract also supports updateModule(uint8,address) to replace internal delegatecall module targets (SSVClusters, SSVOperators, SSVDAO, SSVViews)."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path: 5-of-9 Gnosis Safe → SSVNetwork proxy (direct call). No timelock, no on-chain governance contract, no queue-and-execute delay. Total uncontested fast-path delay: 0 seconds. Governance is off-chain via Snapshot voting, but execution is solely at the multisig's discretion with no on-chain enforcement."
+      },
+      {
+        "code": "C4",
+        "text": "The multisig at 0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6 is a Gnosis Safe v1.3.0 with 5-of-9 threshold. Nine signers: 0xf052...1358, 0x97f6...1AA, 0x872D...B3d, 0x9E5e...29d, 0xF2b2...A70, 0xf71E...A55, 0xb9D7...D77, 0x09B5...33f, 0x9743...f4. No modules enabled. Signer identities not verifiable from on-chain data; forum posts reference a multi-sig committee but individual signer identity/independence cannot be confirmed on-chain this run."
+      },
+      {
+        "code": "C5",
+        "text": "No on-chain Governor/GovernorBravo/OZ Governor contract exists. Governance uses off-chain Snapshot voting with SSV token (0x9d65ff81a3c488d585bbfb0bfe3c7707c7917f54). Proposals are non-binding — the multisig committee executes approved proposals at their discretion."
+      },
+      {
+        "code": "C6",
+        "text": "No separate emergency-pause or guardian role identified. The owner multisig holds all privileged powers including upgrade, parameter changes, module replacement, and token rescue. No distinct emergency vs normal governance path."
+      },
+      {
+        "code": "C7",
+        "text": "T1 (FUND-CRITICAL) is reachable via the 5-of-9 multisig with 0 delay. Specific T1 functions: upgradeToAndCall (replace entire implementation of contract holding user SSV deposits and ETH), updateModule (replace delegatecall targets that execute core cluster/operator logic), rescueERC20 (drain any ERC20 token from the contract including user SSV balances), withdrawNetworkSSVEarnings (withdraw accumulated network fees). T2 functions also present: updateNetworkFee, updateNetworkFeeSSV (change network fees with no on-chain bound check visible in the ABI), updateOperatorFeeIncreaseLimit, updateMaximumOperatorFee, updateLiquidationThresholdPeriod, replaceOracle."
+      }
+    ],
+    "steelman": {
+      "red": "T1 functions (full implementation upgrade, module replacement, ERC20 rescue) are callable with zero timelock delay, giving users no exit window before a malicious upgrade could drain funds.",
+      "orange": "While the 5-of-9 multisig provides meaningful collusion resistance (requires compromising 5 independent keys), it fails the Security Council standard (signer identities not publicly verified, independence unconfirmed) and provides zero timelock delay for T1 actions.",
+      "green": "The 5-of-9 threshold is relatively high, governance operates through a structured DAO process with Snapshot voting and forum discussion, and the protocol has been operating without incident with $15B+ TVL."
+    },
+    "verdict": "Choosing orange because the 5-of-9 multisig sits on a T1 path (upgradeToAndCall, updateModule, rescueERC20) with zero timelock delay. While the multisig is better than a 2-of-3 (which would be red), it fails Security Council criteria: signer identities are not publicly verifiable on-chain, independence between signers cannot be confirmed, and there is no timelock giving users an exit window. The off-chain Snapshot governance provides no on-chain enforcement of multisig behavior. The orange steel-man is stronger than green because zero delay on T1 is a concrete, verified risk regardless of operational history."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "shows": "SSVNetwork proxy is ERC1967Proxy with implementation at 0xa72a8F31163d74D708664493d09167dfa13008E9; owner() returns 0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6; pendingOwner() is 0x0; version v2.0.0; ABI shows upgradeTo, upgradeToAndCall, updateModule, rescueERC20, updateNetworkFee, withdrawNetworkSSVEarnings, replaceOracle and other owner-only functions",
+      "chain": "Ethereum",
+      "address": "0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6",
+      "shows": "Gnosis Safe v1.3.0 with 5-of-9 threshold (getThreshold=5, getOwners returns 9 addresses). No modules enabled (getModules=[]). Nonce 616. Proxy implementation at 0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F.",
+      "chain": "Ethereum",
+      "address": "0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E",
+      "shows": "No verified ABI found for this address on etherscan or sourcify. Address has no identifiable contract interface — likely an EOA. Contradicts address_book claim of being 'Owner / upgrade authority'.",
+      "chain": "Ethereum",
+      "address": "0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://ssv.network/",
+      "shows": "Protocol website confirms SSV Network provides Distributed Validator Technology for Ethereum staking with $15B+ TVL. Links to GitHub at github.com/ssvlabs/ssv, docs at docs.ssv.network, governance at ssv.network/governance, and Snapshot at snapshot.org/#/mainnet.ssvnetwork.eth/.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C4: Signer identities for the 5-of-9 multisig could not be verified on-chain; forum references a multisig committee but individual signer public identity and independence (insider vs non-insider) could not be confirmed this run",
+    "C5: Snapshot voting parameters (quorum, voting period, proposal threshold) are off-chain and could not be read from an on-chain contract; governance forum mentions 7-day voting period but this is not enforceable on-chain",
+    "C3: No timelock contract was found in the execution path; could not confirm whether a timelock exists at any intermediate layer not surfaced by the address_book",
+    "C2: SSVNetworkViews proxy (0xafE830B6Ee262ba11cce5F32fDCd760FFE6a66e4) ownership and upgradeability were not separately verified this run"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ssvlabs/ssv-network",
+      "https://github.com/ssvlabs/ssv"
+    ],
+    "docs_url": "https://docs.ssv.network/",
+    "audits": [
+      {
+        "firm": "Hacken",
+        "url": "https://hacken.io/audits/ssv-labs/l1-ssv-network-ssv-spec-jul2024/",
+        "date": "2024-07"
+      }
+    ],
+    "governance_forum": "https://forum.ssv.network/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x9d65ff81a3c488d585bbfb0bfe3c7707c7917f54",
+      "symbol": "SSV"
+    },
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6",
+        "role": "Owner of SSVNetwork proxy — controls upgrades, module replacement, fee parameters, token rescue, oracle replacement",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "SSV Network is a decentralized infrastructure layer for Ethereum Proof-of-Stake validators using Distributed Validator Technology (DVT). Users distribute their validator key operations across multiple independent operators via the SSVNetwork smart contract, paying network fees in SSV tokens (and now ETH). The protocol enables fault-tolerant, non-custodial staking by splitting validator duties across operator clusters using a QBFT consensus mechanism."
+  }
+}

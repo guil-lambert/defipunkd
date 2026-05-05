@@ -1,0 +1,127 @@
+{
+  "schema_version": 4,
+  "slug": "binance-staked-eth",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "red",
+  "headline": "wBETH is an upgradeable proxy whose admin and owner are both Binance-controlled EOAs with no timelock, multisig, or governance — a single key can replace the contract implementation or pause/blacklist users instantly.",
+  "short_headline": "EOA admin, no timelock",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The wBETH proxy (0xa2E3…) owner() returns 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7, which also holds the pauser, blacklister, and masterMinter roles. The proxy admin() returns 0xA3eE6926edcce93BacF05F4222c243c4d9F6d853. Both addresses have no verified contract ABI on Etherscan or Sourcify, and the LlamaRisk report confirms they are Binance-controlled EOAs."
+      },
+      {
+        "code": "C2",
+        "text": "The wBETH contract uses a ZeppelinOS AdminUpgradeabilityProxy pattern. The proxy admin (0xA3eE…) can call upgradeTo(address) and upgradeToAndCall(address,bytes) to replace the implementation contract at any time with no delay. Current implementation is 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB (WrapTokenV3ETH)."
+      },
+      {
+        "code": "C3",
+        "text": "There is no execution path with any delay. The proxy admin EOA can directly call upgradeTo on the proxy contract. The owner EOA can directly call pause(), updateExchangeRate(), updateOracle(), updateOperator(), updateEthReceiver(), blacklist(), configureMinter(), transferOwnership() — all with zero delay. No timelock, no governor, no voting contract exists in the execution path."
+      },
+      {
+        "code": "C4",
+        "text": "No multisig is present anywhere in the control hierarchy. Both the proxy admin (0xA3eE…) and the owner/pauser/blacklister/masterMinter (0x099d…) are unverified addresses with no ABI — confirmed as EOAs by the LlamaRisk assessment. The operator (0x2B59…) and oracle (0x8172…) are separate addresses but also not verified as contracts with governance features."
+      },
+      {
+        "code": "C5",
+        "text": "No on-chain governance exists. There is no Governor, GovernorBravo, OZ Governor, Aragon Voting, or any token-weighted voting mechanism. Binance staked ETH is a centralized exchange product with no governance token."
+      },
+      {
+        "code": "C6",
+        "text": "The pauser role (0x099d…) can call pause() to halt all transfers, minting, and burning. This is held by the same EOA as the owner — there is no separate emergency guardian with scoped or time-limited powers."
+      },
+      {
+        "code": "C7",
+        "text": "T1 — FUND-CRITICAL: The proxy admin EOA (0xA3eE…) can call upgradeTo() to replace the implementation of the contract that holds user-deposited ETH and minted wBETH tokens. This enables arbitrary code changes including fund drainage. The owner EOA (0x099d…) can pause withdrawals via pause(), blacklist addresses via blacklist(), and change the exchange rate oracle via updateOracle() to an attacker-controlled source. All T1 functions are executable instantly by a single EOA with zero delay."
+      }
+    ],
+    "steelman": {
+      "red": "A single Binance-controlled EOA can instantly upgrade the wBETH implementation contract (which holds user ETH) or pause/blacklist users — T1 powers with zero timelock and no multisig.",
+      "orange": "Binance is a large, regulated exchange with institutional reputation at stake, so the EOA control may be mitigated by operational security practices not visible on-chain.",
+      "green": "Binance could have operational safeguards like HSMs and internal approval processes that make unilateral key compromise unlikely."
+    },
+    "verdict": "Choosing red because the proxy admin is a single EOA (0xA3eE…) that can replace the implementation of the fund-holding wBETH contract with zero timelock, no multisig, and no on-chain governance. This is T1 blast radius reachable with no delay by a single key. The owner EOA (0x099d…) compounds this with pause, blacklist, and oracle-change powers. While Binance's reputation provides off-chain comfort, on-chain the contract grants maximal unilateral authority to individual private keys — the rubric strictly requires red for T1 reachable with no timelock by a single EOA."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "shows": "wBETH proxy view methods at block 25025843: owner()=0x099d699C, admin()=0xA3eE6926, pauser()=0x099d699C, blacklister()=0x099d699C, masterMinter()=0x099d699C, implementation()=0x9E021c96, paused()=false. Write methods include upgradeTo, upgradeToAndCall, pause, blacklist, updateExchangeRate, updateOracle, configureMinter — all with no timelock. Proxy type is FiatTokenProxy (AdminUpgradeabilityProxy).",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xA3eE6926edcce93BacF05F4222c243c4d9F6d853",
+      "shows": "Proxy admin address has 'No verified ABI found' on etherscan+sourcify, indicating it is an EOA or unverified contract. No Safe/multisig/governance methods detected.",
+      "chain": "Ethereum",
+      "address": "0xA3eE6926edcce93BacF05F4222c243c4d9F6d853",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7",
+      "shows": "Owner/pauser/blacklister/masterMinter address has 'No verified ABI found' on etherscan+sourcify, indicating it is an EOA or unverified contract. No Safe/multisig/governance methods detected.",
+      "chain": "Ethereum",
+      "address": "0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://research.llamarisk.com/research/risk-collateral-risk-assessment-binance-wrapped-beacon-eth-wbeth",
+      "shows": "LlamaRisk confirms 'The contacts for WBETH and BETH are upgradable proxies owned by a Binance controlled EOA' and that all of owner/blacklister/pauser/masterMinter are 'the same EOA that has no transa[ctions from other accounts]'. Corroborates that admin (0xA3eE…) is an EOA that can upgrade the implementation.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://www.binance.com/en/wbeth",
+      "shows": "Protocol website confirms wBETH is Binance's liquid staking product with contract on Ethereum and BNB Smart Chain. Describes centralized staking with daily exchange rate updates controlled by Binance.",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C4: Could not directly fetch Etherscan pages for 0xA3eE… and 0x099d… to definitively confirm EOA vs unverified contract status — relied on DeFiPunkd 'No verified ABI' + LlamaRisk research confirming EOA",
+    "C4: Operator (0x2B59…) and oracle (0x81720…) actor class not definitively confirmed as EOA vs contract in this run",
+    "C6: Could not determine if any off-chain operational controls (HSM, internal approval workflow) exist at Binance for these keys"
+  ],
+  "protocol_metadata": {
+    "docs_url": "https://www.binance.com/en/wbeth",
+    "audits": [
+      {
+        "firm": "PeckShield",
+        "url": "https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-wBETH-v1.0.pdf",
+        "date": "2023-04"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xA3eE6926edcce93BacF05F4222c243c4d9F6d853",
+        "role": "proxy admin (can upgrade implementation)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7",
+        "role": "owner / pauser / blacklister / masterMinter",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2B59215778e99035CF38663454eF1240a7AE70F5",
+        "role": "operator (deposits/withdraws ETH)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x81720695e43A39C52557Ce6386feB3FAAC215f06",
+        "role": "oracle (updates exchange rate)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Binance staked ETH (wBETH) is a liquid staking token issued by the Binance exchange. Users stake ETH through Binance and receive wBETH, which represents their staked ETH plus accumulated staking rewards. The exchange rate between wBETH and ETH increases daily as staking rewards accrue. wBETH is deployed on both Ethereum and BNB Smart Chain and can be used in DeFi protocols while continuing to earn staking yield."
+  }
+}

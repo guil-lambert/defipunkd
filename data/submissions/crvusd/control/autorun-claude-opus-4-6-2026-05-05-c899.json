@@ -1,0 +1,132 @@
+{
+  "schema_version": 4,
+  "slug": "crvusd",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 27,
+  "analysis_date": "2026-05-05",
+  "model": "claude-opus-4-6 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "crvUSD is governed by Curve DAO (veCRV Aragon voting) with a 7-day vote period before execution; Emergency DAO 5-of-9 multisig is limited to pause-only (set_killed).",
+  "short_headline": "7-day DAO vote; pause-only multisig",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The Curve DAO Ownership Voting contract (0xE478...3356) is an Aragon Voting AppProxyUpgradeable. Its token() returns 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2 (veCRV). The Ownership Agent (0x4090...9968) is an Aragon Agent AppProxyUpgradeable and serves as admin on crvUSD Factory, Controllers, AMMs, and MonetaryPolicy. Both share the same Aragon Kernel at 0xad06868167BC5Ac5cFcbEf2CAFa82bc76961D72d."
+      },
+      {
+        "code": "C2",
+        "text": "Both the Voting contract (0xE478) and Agent (0x4090) are Aragon AppProxyUpgradeable (proxyType=2). The Voting implementation is 0xa4D1...1Fe, the Agent implementation is 0x3A93...d37. Upgrades to these implementations are managed by the Aragon Kernel, which itself is controlled by the DAO. crvUSD's lending contracts (Controllers, AMMs) are deployed from blueprints set by the Factory — existing markets are not affected when a new implementation is set, but new markets use the updated blueprint."
+      },
+      {
+        "code": "C3",
+        "text": "Execution path: (1) veCRV holder creates an ownership vote on 0xE478. (2) Voting period = 604800 seconds (7 days), during which veCRV holders vote. (3) Vote requires ≥51% support and ≥30% quorum. (4) After voteTime passes, and if minTime (43200s = 12h) has also elapsed, the vote can be executed. (5) Execution runs an EVM script through the Agent (0x4090) which calls admin functions on target contracts. The uncontested fast path delay is 7 days (voteTime). There is no separate timelock contract — the Aragon vote duration itself acts as the delay."
+      },
+      {
+        "code": "C4",
+        "text": "Emergency DAO at 0x467947EE34aF926cF1DCac093870f613C96B1E0c is a Gnosis Safe v1.3.0, confirmed 5-of-9 threshold with 9 owners on-chain. No modules enabled. Per the address_book, its power is limited to set_killed (pause-only) on Controllers with immediate execution. The 9 signer addresses are confirmed but individual signer identities (insider vs non-insider) could not be verified from on-chain data alone."
+      },
+      {
+        "code": "C5",
+        "text": "On-chain governance is via the Aragon Voting app with veCRV (vote-escrowed CRV) as the voting token. On-chain reads at block 25022811: voteTime = 604800 (7 days), minAcceptQuorumPct = 300000000000000000 (30%), supportRequiredPct = 510000000000000000 (51%), minBalance = 2500e18 (2500 veCRV to create a vote), minTime = 43200 (12 hours). There is no separate timelock contract — the Aragon vote's duration serves as the timelock equivalent."
+      },
+      {
+        "code": "C6",
+        "text": "The Emergency DAO (5-of-9 multisig) has immediate-execution emergency pause power (set_killed) on crvUSD Controllers. This pauses all functions except withdrawals. The Curve DAO can override the Emergency DAO's decisions and add/remove its members. A governance proposal (#1252) was proposed in Nov 2025 to expand Emergency DAO powers over crvUSD risk parameters (debt ceilings, AMM fees, monetary policy) but its final on-chain status was not verified in this run."
+      },
+      {
+        "code": "C7",
+        "text": "T1 (FUND-CRITICAL): The Ownership Agent (0x4090) can execute arbitrary admin calls on crvUSD Factory/Controllers/AMMs/MonetaryPolicy via a successful DAO vote, including setting new blueprint implementations, adjusting debt ceilings, and changing monetary policy — all of which can affect user funds. This T1 path requires a 7-day veCRV governance vote with 30% quorum and 51% support. The Emergency DAO's set_killed pause power is also T1 (pause withdrawals excluded, but deposits/borrows halted) — reachable immediately by 5-of-9 multisig, but scoped to pause-only."
+      }
+    ],
+    "steelman": {
+      "red": "The Emergency DAO 5-of-9 multisig can immediately pause crvUSD markets (set_killed) without any timelock, and signer identities are not publicly verified — this could be seen as immediate unilateral power over user funds.",
+      "orange": "The Emergency DAO's pause power is immediate and the 9 signers' identities and independence have not been publicly confirmed, plus a governance proposal (#1252) may have expanded Emergency DAO control over crvUSD risk parameters beyond pause-only.",
+      "green": "T1 upgrade/parameter changes require a 7-day veCRV governance vote with 30% quorum and 51% support through broad token-weighted on-chain governance; the Emergency DAO is scoped to pause-only (set_killed) which preserves withdrawal ability, making it a safety net rather than a control risk."
+    },
+    "verdict": "Choosing green because the highest-tier (T1) upgrade/parameter path requires a full 7-day veCRV Aragon vote with 30% quorum and 51% support — meeting the ≥7-day bar through active on-chain governance with broad token distribution. The Emergency DAO's immediate pause power (set_killed) is scoped to halt deposits/borrows while preserving withdrawals, functioning as a safety backstop rather than unchecked control. While signer identities on the Emergency DAO are not fully verified in this run, the pause-only scope limits the blast radius to temporary market freezes (not fund theft or permanent lockup). The green steelman is stronger than orange because the core upgrade path has a full 7-day delay with meaningful governance participation requirements."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "shows": "Aragon Ownership Voting contract is AppProxyUpgradeable. voteTime=604800 (7 days), minTime=43200 (12h), minAcceptQuorumPct=30%, supportRequiredPct=51%, minBalance=2500 veCRV, token=0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2 (veCRV), kernel=0xad06868167BC5Ac5cFcbEf2CAFa82bc76961D72d. All reads at block 25022811.",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Ownership Agent is an Aragon Agent (AppProxyUpgradeable, proxyType=2). Has EXECUTE_ROLE, SAFE_EXECUTE_ROLE, TRANSFER_ROLE, RUN_SCRIPT_ROLE, isForwarder=true. Implementation=0x3A93C17FC82CC33420d1809dDA9Fb715cc89dd37. Kernel=0xad06868167BC5Ac5cFcbEf2CAFa82bc76961D72d (same as Voting). Reads at block 25025794.",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO is a Gnosis Safe v1.3.0 with threshold=5, 9 owners confirmed on-chain, no modules enabled (getModules=[]), nonce=13. Reads at block 25025795.",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-05-05T00:00:00Z"
+    },
+    {
+      "url": "https://curve.readthedocs.io/dao-ownership.html",
+      "shows": "Docs confirm ownership admin controls most functionality, requires 30% quorum with 51% support. Emergency DAO has limited authority to kill pools/gauges. Emergency DAO consists of 9 members (mix of Curve team and DeFi community). Flow: DAO -> Aragon Agent -> Ownership Proxy -> Contracts."
+    },
+    {
+      "url": "https://www.aragon.org/how-to/curve-dao",
+      "shows": "Confirms Ownership votes require 30% minimum participation and 51% pass rate. Emergency DAO can call kill_me/set_killed which pauses all functions except withdrawals. Curve DAO can add/remove Emergency DAO members and override its decisions."
+    },
+    {
+      "url": "https://docs.curve.finance/developer/crvusd/overview",
+      "shows": "crvUSD Factory is used to add new markets, raise/lower debt ceilings, set blueprint contracts for AMM and Controller, and set fee receiver. Existing markets are not affected when a new implementation is set. The Ownership Agent is admin on these Factory functions."
+    },
+    {
+      "url": "https://resources.curve.finance/risks-security/risks/scrvusd/",
+      "shows": "Confirms DAO changes require an on-chain vote and 7-day timelock. Curve DAO can modify code and change parameters within crvUSD protocol."
+    }
+  ],
+  "unknowns": [
+    "C4: Emergency DAO signer identities (insider vs non-insider classification) not verified — addresses are on-chain but public identity mapping not found in fetched sources",
+    "C6: Governance proposal #1252 (Nov 2025) to expand Emergency DAO powers over crvUSD risk parameters — final on-chain execution status not verified in this run",
+    "C2: Aragon Kernel (0xad06868167BC5Ac5cFcbEf2CAFa82bc76961D72d) upgrade mechanism for Voting/Agent implementation contracts not independently verified on-chain",
+    "C1: Specific crvUSD Factory contract address and its admin() return value not read on-chain in this run; admin role attributed from address_book annotation"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-stablecoin"
+    ],
+    "docs_url": "https://docs.curve.finance",
+    "governance_forum": "https://gov.curve.fi",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2",
+      "symbol": "veCRV"
+    },
+    "deployed_contracts_doc": "https://docs.curve.finance/references/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "Curve DAO Ownership Voting (Aragon)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent — admin on crvUSD Factory/Controllers/AMMs/MonetaryPolicy",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO — set_killed pause-only on Controllers",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "crvUSD is Curve Finance's overcollateralized CDP stablecoin on Ethereum. Users deposit collateral (e.g. ETH, wBTC, wstETH) into isolated lending markets to borrow crvUSD. It uses a novel LLAMMA (Lending-Liquidating AMM Algorithm) mechanism for continuous soft-liquidation of collateral instead of hard liquidation thresholds. The crvUSD Factory deploys new markets from blueprint contracts, with the Curve DAO controlling debt ceilings, monetary policy, and system parameters."
+  }
+}
