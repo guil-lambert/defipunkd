@@ -16,7 +16,7 @@ const INPUTS: PromptInputs = {
 
 describe("buildPrompt", () => {
   it("is exported at a stable version", () => {
-    expect(PROMPT_VERSION).toBe(28);
+    expect(PROMPT_VERSION).toBe(29);
   });
 
   it("includes the format-rules block that forbids markdown URLs and branch refs in commits", () => {
