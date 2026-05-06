@@ -1,0 +1,54 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-29",
+  "model": "gemini-3-flash",
+  "chat_url": "https://gemini.google.com/share/3c72e948aac7",
+  "grade": "green",
+  "headline": "Permissionless exits with no global pause or lock-up mechanisms",
+  "short_headline": "No pause functions; permissionless exits",
+  "rationale": {
+    "findings": [
+      { "code": "E1", "text": "Borrowers exit via Controller.repay (sel 0x371fd8e6), Controller.remove_collateral (sel 0x2e4af52a), or self-liquidation Controller.liquidate (sel 0x0710285c), while scrvUSD vault holders use standard ERC4626 redeem and withdraw functions." },
+      { "code": "E2", "text": "All borrower and vault exit functions are permissionless, and verified source code confirms the absence of pause() guards in both the Controller and the AMM." },
+      { "code": "E3", "text": "No pause functionality exists in the core contracts; administrative control is limited to setting borrowing and liquidation discounts via the Sub-DAO (0xb7400d), which does not affect the technical ability to call exit functions." },
+      { "code": "E4", "text": "There is no distinction between emergency and governance pauses as no pause mechanism is implemented in the verified on-chain code." },
+      { "code": "E5", "text": "The protocol does not utilize redemption queues or daily withdrawal caps; borrowers and vault participants face no lock-up periods." },
+      { "code": "E6", "text": "Self-liquidation via liquidate(self, 0, 10**18) serves as a permissionless escape hatch, allowing users to close loans and reclaim residual collateral at any time." },
+      { "code": "E7", "text": "Exit functions are directly callable on-chain via documented function selectors, ensuring users are not dependent on the Curve frontend for fund recovery." }
+    ],
+    "steelman": {
+      "red": "The Sub-DAO can adjust borrowing discounts, which could theoretically be manipulated to make collateral removal economically prohibitive.",
+      "orange": "Direct peg redemptions are not provided to end-users; instead, the protocol relies on PegKeeper-managed StableSwap pools for external liquidity.",
+      "green": "The protocol lacks any technical pause mechanism in its core Controller and AMM contracts, guaranteeing that users can always interact with exit functions on-chain."
+    },
+    "verdict": "Choosing green because the verified on-chain context confirms the total absence of a pause mechanism in the Controller and AMM contracts, ensuring that borrower repayments and collateral removals remain permissionless and unblockable by any administrative actor."
+  },
+  "evidence": [
+    { "url": "https://etherscan.io/address/0x0655977FEb2f289A4aB78af67BAB0d17aAb84367", "shows": "scrvUSD vault using standard ERC4626 with no lock-up or fees.", "chain": "Ethereum", "address": "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367", "fetched_at": "2026-04-29T20:30:00Z" },
+    { "url": "https://github.com/curvefi/curve-stablecoin/tree/80b7c9fefc452a6d5d6a5440b91bfcca12f6a0af", "shows": "Verified source code for the Controller and LLAMMA AMM lacking pause functionality.", "commit": "80b7c9fefc452a6d5d6a5440b91bfcca12f6a0af", "fetched_at": "2026-04-29T20:30:00Z" },
+    { "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968", "shows": "Curve DAO Ownership Agent address and role in the system.", "chain": "Ethereum", "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968", "fetched_at": "2026-04-29T20:30:00Z" }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [ "https://github.com/curvefi/curve-stablecoin" ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      { "firm": "ChainSecurity", "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf", "date": "2023-05" }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": { "chain": "Ethereum", "address": "0x5f3B5DfEb7B28CDbD7FAba78963EE202a494e2A2", "symbol": "veCRV" },
+    "bug_bounty_url": "https://immunefi.com/bounty/curvefinance/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/crvusd/deployments/",
+    "admin_addresses": [
+      { "chain": "Ethereum", "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968", "role": "Curve DAO Ownership Agent", "actor_class": "governance" },
+      { "chain": "Ethereum", "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c", "role": "Emergency DAO Multisig", "actor_class": "multisig" }
+    ],
+    "upgradeability": "mixed",
+    "about": "crvUSD is a decentralized CDP-based stablecoin protocol using a Lending-Liquidating AMM Algorithm (LLAMMA) to continuously rebalance collateral. Instead of binary liquidations, it progressively converts collateral into crvUSD within price bands as values fluctuate, allowing users to borrow against volatile assets with reduced liquidation risk."
+  }
+}
