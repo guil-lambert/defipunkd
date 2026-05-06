@@ -11,6 +11,48 @@ import { PIZZA_SLICES, type PizzaSliceId } from "../lib/pizza";
 import { TIER_LABEL, type Tier } from "../lib/tier";
 import { formatTvl } from "../lib/format";
 import { buildStats, type CoverageState, type ModelFamily, type ModelQuality } from "../lib/stats";
+import GrowthChart from "../components/GrowthChart.astro";
+import folderCounts from "../../../../data/metrics/folder-counts.json";
+import jsonFileCounts from "../../../../data/metrics/json-file-counts.json";
+import jsonRecordCounts from "../../../../data/metrics/json-record-counts.json";
+
+type GrowthRow = {
+  timestamp: string;
+  sha: string;
+  subject: string;
+  enrichment: number;
+  submissions: number;
+  assessments: number;
+};
+
+const GROWTH_METRICS: { key: string; title: string; caption: string; rows: GrowthRow[] }[] = [
+  {
+    key: "folders",
+    title: "Protocols tracked (folders)",
+    caption: "One folder per protocol per area. Enrichment = facts crawled; submissions = LLM runs underway; assessments = quorum-merged verdicts.",
+    rows: folderCounts as GrowthRow[],
+  },
+  {
+    key: "json-files",
+    title: "Evidence + assessment files (.json)",
+    caption: "Total .json files committed under each area, recursively.",
+    rows: jsonFileCounts as GrowthRow[],
+  },
+  {
+    key: "json-records",
+    title: "Records inside .json files",
+    caption: "Sum of records across all .json files (arrays expanded). Captures batched model outputs in submissions/.",
+    rows: jsonRecordCounts as GrowthRow[],
+  },
+];
+
+const GROWTH_PATHS: { key: "enrichment" | "submissions" | "assessments"; label: string; stroke: string }[] = [
+  { key: "enrichment", label: "enrichment", stroke: "#A17CF3" },
+  { key: "submissions", label: "submissions", stroke: "#0EA982" },
+  { key: "assessments", label: "assessments", stroke: "#E8846A" },
+];
+
+const growthCommits = (folderCounts as GrowthRow[]).length;
 
 const protocols = listProtocols();
 const assessments = getAssessments();
@@ -128,6 +170,40 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       {stats.reviewedProtocols.toLocaleString()} reviewed ·
       {stats.totalSubmissions.toLocaleString()} model submissions.
     </p>
+
+    <section class="card" id="growth-over-time">
+      <h2>Growth over time</h2>
+      <p class="caption">
+        {growthCommits.toLocaleString()} commits on <code>main</code>, oldest → newest.
+        Each row is a small-multiples view: rows are what's being counted, columns are which area of <code>data/</code>.
+        Y-axes auto-scale per panel — compare shapes, not absolute heights across columns.
+      </p>
+      <div class="growth-grid">
+        <div class="growth-grid-row growth-grid-head" aria-hidden="true">
+          <span></span>
+          {GROWTH_PATHS.map((p) => (
+            <span class="growth-col-head" style={`color: ${p.stroke};`}>
+              data/{p.label}/
+            </span>
+          ))}
+        </div>
+        {GROWTH_METRICS.map((metric) => (
+          <div class="growth-grid-row">
+            <div class="growth-row-head">
+              <strong>{metric.title}</strong>
+              <span class="caption">{metric.caption}</span>
+            </div>
+            {GROWTH_PATHS.map((p) => (
+              <GrowthChart
+                points={metric.rows.map((r) => ({ timestamp: r.timestamp, value: r[p.key] }))}
+                label={p.label}
+                stroke={p.stroke}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
 
     <section class="card" id="tier-distribution">
       <h2>Tier distribution</h2>
@@ -411,6 +487,44 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     line-height: 1.45;
   }
   .empty { color: oklch(0.55 0.015 235); font-size: 0.9rem; margin: 0.4rem 0; }
+
+  .growth-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .growth-grid-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+  .growth-grid-head {
+    border-bottom: 1px solid oklch(0.25 0.01 235);
+    padding-bottom: 0.4rem;
+  }
+  .growth-col-head {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+    text-transform: lowercase;
+  }
+  .growth-row-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+  }
+  .growth-row-head .caption {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  @media (max-width: 720px) {
+    .growth-grid-row {
+      grid-template-columns: 1fr;
+    }
+    .growth-grid-head { display: none; }
+  }
 
   .stacked-bar {
     display: flex;

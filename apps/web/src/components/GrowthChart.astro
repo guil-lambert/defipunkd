@@ -1,0 +1,107 @@
+---
+// SVG line chart of {timestamp, value} points. Pure SSR — no client JS.
+// Auto-scales y to its own data so small series stay legible.
+
+interface Point {
+  timestamp: string;
+  value: number;
+}
+
+interface Props {
+  points: Point[];
+  label: string;
+  stroke: string;
+  height?: number;
+}
+
+const { points, label, stroke, height = 64 } = Astro.props;
+
+const width = 240;
+const padX = 4;
+const padY = 6;
+
+const xs = points.map((p) => new Date(p.timestamp).getTime());
+const ys = points.map((p) => p.value);
+const minX = Math.min(...xs);
+const maxX = Math.max(...xs);
+const minY = 0;
+const maxY = Math.max(1, ...ys);
+
+const innerW = width - padX * 2;
+const innerH = height - padY * 2;
+
+const scaleX = (t: number) =>
+  padX + (maxX === minX ? innerW / 2 : ((t - minX) / (maxX - minX)) * innerW);
+const scaleY = (v: number) =>
+  padY + innerH - (maxY === minY ? 0 : ((v - minY) / (maxY - minY)) * innerH);
+
+const linePath = points
+  .map((p, i) => `${i === 0 ? "M" : "L"} ${scaleX(new Date(p.timestamp).getTime()).toFixed(2)} ${scaleY(p.value).toFixed(2)}`)
+  .join(" ");
+
+const areaPath = `${linePath} L ${scaleX(maxX).toFixed(2)} ${(padY + innerH).toFixed(2)} L ${scaleX(minX).toFixed(2)} ${(padY + innerH).toFixed(2)} Z`;
+
+const last = points[points.length - 1];
+const first = points[0];
+const fmt = (n: number) => n.toLocaleString();
+---
+
+<div class="growth-chart">
+  <div class="growth-chart-header">
+    <span class="growth-chart-label">{label}</span>
+    <span class="growth-chart-value">{fmt(last?.value ?? 0)}</span>
+  </div>
+  <svg
+    viewBox={`0 0 ${width} ${height}`}
+    preserveAspectRatio="none"
+    role="img"
+    aria-label={`${label}: ${fmt(first?.value ?? 0)} → ${fmt(last?.value ?? 0)} over ${points.length} commits`}
+  >
+    <path d={areaPath} fill={stroke} fill-opacity="0.12" />
+    <path d={linePath} fill="none" stroke={stroke} stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
+  </svg>
+  <div class="growth-chart-footer">
+    <span>{first ? new Date(first.timestamp).toISOString().slice(0, 10) : ""}</span>
+    <span>{last ? new Date(last.timestamp).toISOString().slice(0, 10) : ""}</span>
+  </div>
+</div>
+
+<style>
+  .growth-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .growth-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.78rem;
+  }
+
+  .growth-chart-label {
+    color: var(--muted, #888);
+    text-transform: capitalize;
+  }
+
+  .growth-chart-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .growth-chart svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .growth-chart-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--muted, #888);
+    font-variant-numeric: tabular-nums;
+  }
+</style>
