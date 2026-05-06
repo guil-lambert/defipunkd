@@ -3,6 +3,7 @@ export const prerender = true;
 import { listProtocols, getAssessments, getSubmissions } from "@defipunkd/registry";
 import Base from "../layouts/Base.astro";
 import SideNav from "../components/SideNav.astro";
+import BackHome from "../components/BackHome.astro";
 import TierMedal from "../components/TierMedal.svelte";
 import TierGradients from "../components/TierGradients.svelte";
 import ProtocolLogo from "../components/ProtocolLogo.astro";
@@ -11,6 +12,54 @@ import { PIZZA_SLICES, type PizzaSliceId } from "../lib/pizza";
 import { TIER_LABEL, type Tier } from "../lib/tier";
 import { formatTvl } from "../lib/format";
 import { buildStats, type CoverageState, type ModelFamily, type ModelQuality } from "../lib/stats";
+import GrowthChart from "../components/GrowthChart.astro";
+import folderCounts from "../../../../data/metrics/folder-counts.json";
+import jsonRecordCounts from "../../../../data/metrics/json-record-counts.json";
+
+type GrowthRow = {
+  timestamp: string;
+  sha: string;
+  subject: string;
+  enrichment: number;
+  submissions: number;
+  assessments: number;
+};
+
+const GROWTH_PATHS: {
+  key: "enrichment" | "submissions" | "assessments";
+  label: string;
+  stroke: string;
+  description: string;
+}[] = [
+  {
+    key: "enrichment",
+    label: "EVIDENCE",
+    stroke: "#A17CF3",
+    description:
+      "Per-protocol factual evidence crawled from public sources — audits, source code, adapter, control structure. The universe of protocols we have evidence for.",
+  },
+  {
+    key: "submissions",
+    label: "REPORTS",
+    stroke: "#0EA982",
+    description:
+      "Raw individual LLM runs from DEFI@home contributors, one file per (protocol, slice, run). Multiple runs accumulate per slice until ≥3 agree.",
+  },
+  {
+    key: "assessments",
+    label: "VERDICTS",
+    stroke: "#E8846A",
+    description:
+      "Quorum-merged verdicts produced once ≥3 independent runs agree on grade and overlapping evidence — one file per (protocol, slice).",
+  },
+];
+
+const GROWTH_METRICS: { key: "folders" | "json-records"; title: string; rows: GrowthRow[] }[] = [
+  { key: "folders", title: "protocols tracked", rows: folderCounts as GrowthRow[] },
+  { key: "json-records", title: ".json files", rows: jsonRecordCounts as GrowthRow[] },
+];
+
+const growthCommits = (folderCounts as GrowthRow[]).length;
 
 const protocols = listProtocols();
 const assessments = getAssessments();
@@ -33,6 +82,14 @@ const TIER_NAME: Record<Tier, string> = {
   bronze: "Bronze",
   wood: "Wood",
   none: "Ungraded",
+};
+
+const TIER_DEF: Record<Tier, string> = {
+  gold: "Strong AI consensus on all five dimensions",
+  silver: "Weak AI consensus on all five dimensions",
+  bronze: "AI consensus on at least one dimension",
+  wood: "At least one model submission, no quorum yet",
+  none: "No model submissions yet",
 };
 
 const FAMILY_FILL: Record<ModelFamily, string> = {
@@ -68,6 +125,40 @@ const GRADE_LABEL = {
   green: "green",
   unknown: "unknown",
 } as const;
+
+type GradeKey = "red" | "orange" | "green" | "unknown";
+const GRADE_TOOLTIP_BY_SLICE: Record<PizzaSliceId, Record<GradeKey, string>> = {
+  control: {
+    green: "Contracts can't be changed, or any change goes through a long delay (≥7 days) plus credible governance.",
+    orange: "Upgrades go through a short delay or a small group with weak governance.",
+    red: "A single key holder or small multisig can change the contracts immediately, with no delay.",
+    unknown: "Couldn't tell who controls upgrades.",
+  },
+  "ability-to-exit": {
+    green: "Anyone can withdraw at any time; pauses are limited and can't trap funds for long.",
+    orange: "Withdrawals can be paused broadly or delayed beyond 7 days under certain governance actions.",
+    red: "An admin can block withdrawals indefinitely, or there's no on-chain way to exit at all.",
+    unknown: "Couldn't tell whether users can always exit.",
+  },
+  autonomy: {
+    green: "Works on its own — even if outside services (oracles, bridges, keepers) fail, user principal stays safe.",
+    orange: "An outside dependency could pause withdrawals or hurt yields, but can't steal user principal.",
+    red: "Failure of a single oracle, bridge, or operator could let someone take user funds.",
+    unknown: "Couldn't audit the external dependencies.",
+  },
+  "open-access": {
+    green: "No KYC, no allowlist, and reachable through more than just the official UI (SDKs, third-party apps, aggregators).",
+    orange: "Permissionless on-chain, but in practice only the official UI can talk to it.",
+    red: "KYC, allowlist, blocklist, or admin approval is required to use the protocol.",
+    unknown: "Couldn't tell what restrictions apply.",
+  },
+  verifiability: {
+    green: "Source code is public, matches what's deployed, and was recently audited by a recognized firm.",
+    orange: "Source or audit exists but is partly stale, partial, or only from minor firms.",
+    red: "No source code, no audit, or the deployed code isn't verifiable on the explorer.",
+    unknown: "Couldn't reach the explorer or repo to check.",
+  },
+};
 
 const COVERAGE_GLYPH: Record<CoverageState, string> = {
   strong: "●",
@@ -123,75 +214,88 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     { href: "#coverage-matrix", label: "Coverage matrix" },
   ]} />
   <main class="page">
+    <BackHome />
     <p class="subtitle">
       Snapshot of {stats.totalProtocols.toLocaleString()} live protocols ·
       {stats.reviewedProtocols.toLocaleString()} reviewed ·
       {stats.totalSubmissions.toLocaleString()} model submissions.
     </p>
 
-    <section class="card" id="tier-distribution">
-      <h2>Tier distribution</h2>
-      <p class="caption">
-        Protocols by medal tier across the registry. The Ungraded segment is
-        capped — the {stats.tierCounts.none.toLocaleString()} ungraded protocols would otherwise hide the graded tiers.
-      </p>
-      <div class="stacked-bar" role="img" aria-label="Tier distribution by protocol count">
-        {tierBarSegments.map((s, i) => (
-          <>
-            {s.tier === "none" && stats.needsAxisBreak.count && i > 0 ? (
-            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
-            ) : null}
-            <span
-              class="seg"
-              style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
-              title={`${TIER_NAME[s.tier]} — ${s.value.toLocaleString()} protocol${s.value === 1 ? "" : "s"}`}
-            >
-              <span class="seg-label">{TIER_NAME[s.tier]}: {s.value.toLocaleString()}</span>
-            </span>
-          </>
+    <section class="card" id="growth-over-time">
+      <h2>Growth over time</h2>
+      <p class="caption">{growthCommits.toLocaleString()} commits on <code>main</code></p>
+      <div class="growth-grid">
+        {GROWTH_PATHS.map((p) => (
+          <div class="growth-grid-row">
+            <div class="growth-row-head">
+              <strong style={`color: ${p.stroke};`}>{p.label}</strong>
+              <span class="caption">{p.description}</span>
+            </div>
+            {GROWTH_METRICS.map((m) => (
+              <GrowthChart
+                points={m.rows.map((r) => ({
+                  timestamp: r.timestamp,
+                  value: r[p.key],
+                  tooltipLines: [`${r[p.key].toLocaleString()} ${m.title}`],
+                }))}
+                label={m.title}
+                stroke={p.stroke}
+              />
+            ))}
+          </div>
         ))}
       </div>
-      <ul class="tier-legend">
-        {TIER_ORDER.map((t) => (
-          <li>
-            <span class="swatch" style={`background: ${TIER_FILL[t]};`}></span>
-            <span class="legend-name">{TIER_NAME[t]}</span>
-            <span class="legend-count">{stats.tierCounts[t].toLocaleString()}</span>
-          </li>
-        ))}
-      </ul>
     </section>
 
-    <section class="card" id="tvl-by-tier">
-      <h2>TVL by tier</h2>
+    <section class="card" id="grade-distribution">
+      <h2>Grade distribution per slice</h2>
       <p class="caption">
-        Total TVL across live protocols: <strong>{formatTvl(stats.totalTvl)}</strong>.
-        Segment widths are proportional to dollars; the Ungraded segment is capped to keep the graded tiers visible.
+        Across all live protocols. Verifiability and Autonomy are rule-based so they cover ~every protocol;
+        Control / Ability to exit / Open Access only get a color once an AI consensus lands, so most are still unknown.
+        When unknown dwarfs the colored portion, the unknown segment is capped with a ⫽ axis break.
       </p>
-      <div class="stacked-bar" role="img" aria-label="TVL distribution by tier">
-        {tvlBarSegments.map((s, i) => (
-          <>
-            {s.tier === "none" && stats.needsAxisBreak.tvl && i > 0 ? (
-            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
-            ) : null}
-            <span
-              class="seg"
-              style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
-              title={`${TIER_NAME[s.tier]} — ${formatTvl(s.value)}`}
-            >
-              <span class="seg-label">{TIER_NAME[s.tier]}: {formatTvl(s.value)}</span>
-            </span>
-          </>
-        ))}
-      </div>
-      <ul class="tier-legend">
-        {TIER_ORDER.map((t) => (
-          <li>
-            <span class="swatch" style={`background: ${TIER_FILL[t]};`}></span>
-            <span class="legend-name">{TIER_NAME[t]}</span>
-            <span class="legend-count">{formatTvl(stats.tvlByTier[t])}</span>
-          </li>
-        ))}
+      <ul class="slice-grades">
+        {PIZZA_SLICES.map(({ id, label }) => {
+          const b = stats.gradeBySlice[id as PizzaSliceId];
+          const total = b.red + b.orange + b.green + b.unknown;
+          const colored = b.red + b.orange + b.green;
+          const broken = stats.needsAxisBreak.gradeBySlice[id as PizzaSliceId];
+          const flexFor = (k: "green" | "orange" | "red" | "unknown") =>
+            k === "unknown" && broken ? Math.max(colored, 1) : b[k];
+          return (
+            <li>
+              <span class="slice-name">{label}</span>
+              {total === 0 ? (
+                <span class="slice-empty">no data yet</span>
+              ) : (
+                <span class="slice-bar" role="img" aria-label={`${label}: ${b.green} green, ${b.orange} orange, ${b.red} red, ${b.unknown} unknown`}>
+                  {(["green", "orange", "red", "unknown"] as const).map((k, i) => {
+                    if (b[k] === 0) return null;
+                    const showBreak = k === "unknown" && broken && i > 0;
+                    return (
+                      <>
+                        {showBreak ? (
+                        <span class="axis-break" aria-hidden="true" title="axis break">//</span>
+                        ) : null}
+                        <span
+                          class="slice-seg"
+                          style={`flex-grow: ${flexFor(k)}; background: ${GRADE_FILL[k]};`}
+                          tabindex="0"
+                        >
+                          <span class="slice-seg-label">{b[k].toLocaleString()}</span>
+                          <span class="tt tt-wide" role="tooltip">
+                            <span class="tt-line">{GRADE_LABEL[k]}: {b[k].toLocaleString()} of {total.toLocaleString()}</span>
+                            <span class="tt-line">{GRADE_TOOLTIP_BY_SLICE[id as PizzaSliceId][k]}</span>
+                          </span>
+                        </span>
+                      </>
+                    );
+                  })}
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
 
@@ -267,49 +371,77 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       )}
     </section>
 
-    <section class="card" id="grade-distribution">
-      <h2>Grade distribution per slice</h2>
+    <section class="card" id="tier-distribution">
+      <h2>Tier distribution</h2>
       <p class="caption">
-        Across all live protocols. Verifiability and Autonomy are rule-based so they cover ~every protocol;
-        Control / Ability to exit / Open Access only get a color once an AI consensus lands, so most are still unknown.
-        When unknown dwarfs the colored portion, the unknown segment is capped with a ⫽ axis break.
+        Protocols by medal tier across the registry. The Ungraded segment is
+        capped — the {stats.tierCounts.none.toLocaleString()} ungraded protocols would otherwise hide the graded tiers.
       </p>
-      <ul class="slice-grades">
-        {PIZZA_SLICES.map(({ id, label }) => {
-          const b = stats.gradeBySlice[id as PizzaSliceId];
-          const total = b.red + b.orange + b.green + b.unknown;
-          const colored = b.red + b.orange + b.green;
-          const broken = stats.needsAxisBreak.gradeBySlice[id as PizzaSliceId];
-          const flexFor = (k: "green" | "orange" | "red" | "unknown") =>
-            k === "unknown" && broken ? Math.max(colored, 1) : b[k];
-          return (
-            <li>
-              <span class="slice-name">{label}</span>
-              {total === 0 ? (
-                <span class="slice-empty">no data yet</span>
-              ) : (
-                <span class="slice-bar" role="img" aria-label={`${label}: ${b.green} green, ${b.orange} orange, ${b.red} red, ${b.unknown} unknown`}>
-                  {(["green", "orange", "red", "unknown"] as const).map((k, i) => {
-                    if (b[k] === 0) return null;
-                    const showBreak = k === "unknown" && broken && i > 0;
-                    return (
-                      <>
-                        {showBreak ? (
-                        <span class="axis-break" aria-hidden="true" title="axis break">//</span>
-                        ) : null}
-                        <span
-                          class="slice-seg"
-                          style={`flex-grow: ${flexFor(k)}; background: ${GRADE_FILL[k]};`}
-                          title={`${GRADE_LABEL[k]}: ${b[k].toLocaleString()} of ${total.toLocaleString()}`}
-                        >{b[k].toLocaleString()}</span>
-                      </>
-                    );
-                  })}
-                </span>
-              )}
-            </li>
-          );
-        })}
+      <div class="stacked-bar" role="img" aria-label="Tier distribution by protocol count">
+        {tierBarSegments.map((s, i) => (
+          <>
+            {s.tier === "none" && stats.needsAxisBreak.count && i > 0 ? (
+            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
+            ) : null}
+            <span
+              class="seg"
+              style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
+              tabindex="0"
+            >
+              <span class="seg-label">{TIER_NAME[s.tier]}: {s.value.toLocaleString()}</span>
+              <span class="tt tt-wide" role="tooltip">
+                <span class="tt-line">{TIER_NAME[s.tier]} — {s.value.toLocaleString()} protocol{s.value === 1 ? "" : "s"}</span>
+                <span class="tt-line">{TIER_DEF[s.tier]}</span>
+              </span>
+            </span>
+          </>
+        ))}
+      </div>
+      <ul class="tier-legend">
+        {TIER_ORDER.map((t) => (
+          <li>
+            <span class="swatch" style={`background: ${TIER_FILL[t]};`}></span>
+            <span class="legend-name">{TIER_NAME[t]}</span>
+            <span class="legend-count">{stats.tierCounts[t].toLocaleString()}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="card" id="tvl-by-tier">
+      <h2>TVL by tier</h2>
+      <p class="caption">
+        Total TVL across live protocols: <strong>{formatTvl(stats.totalTvl)}</strong>.
+        Segment widths are proportional to dollars; the Ungraded segment is capped to keep the graded tiers visible.
+      </p>
+      <div class="stacked-bar" role="img" aria-label="TVL distribution by tier">
+        {tvlBarSegments.map((s, i) => (
+          <>
+            {s.tier === "none" && stats.needsAxisBreak.tvl && i > 0 ? (
+            <span class="axis-break" aria-hidden="true" title="axis break">//</span>
+            ) : null}
+            <span
+              class="seg"
+              style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
+              tabindex="0"
+            >
+              <span class="seg-label">{TIER_NAME[s.tier]}: {formatTvl(s.value)}</span>
+              <span class="tt tt-wide" role="tooltip">
+                <span class="tt-line">{TIER_NAME[s.tier]} — {formatTvl(s.value)}</span>
+                <span class="tt-line">{TIER_DEF[s.tier]}</span>
+              </span>
+            </span>
+          </>
+        ))}
+      </div>
+      <ul class="tier-legend">
+        {TIER_ORDER.map((t) => (
+          <li>
+            <span class="swatch" style={`background: ${TIER_FILL[t]};`}></span>
+            <span class="legend-name">{TIER_NAME[t]}</span>
+            <span class="legend-count">{formatTvl(stats.tvlByTier[t])}</span>
+          </li>
+        ))}
       </ul>
     </section>
 
@@ -319,6 +451,14 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         For each protocol with at least one submission: which of the five slices have reached AI consensus.
         Click a cell to jump to that slice on the protocol's risk-analysis page.
       </p>
+      <ul class="coverage-legend">
+        {(["strong", "weak", "insufficient", "disagreement", "none"] as const).map((s) => (
+          <li>
+            <span class={`legend-glyph glyph-${s}`}>{COVERAGE_GLYPH[s]}</span>
+            {COVERAGE_LABEL[s]}
+          </li>
+        ))}
+      </ul>
       {stats.coverage.length === 0 ? (
         <p class="empty">No coverage yet.</p>
       ) : (
@@ -380,20 +520,15 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
           })}
         </div>
       )}
-      <ul class="coverage-legend">
-        {(["strong", "weak", "insufficient", "disagreement", "none"] as const).map((s) => (
-          <li>
-            <span class={`legend-glyph glyph-${s}`}>{COVERAGE_GLYPH[s]}</span>
-            {COVERAGE_LABEL[s]}
-          </li>
-        ))}
-      </ul>
     </section>
+  </main>
   </main>
 </Base>
 
 <style>
   .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+  /* SideNav exposes a home link from this width up; hide the in-page back link there. */
+  @media (min-width: 1501px) { :global(.back-home) { display: none; } }
   .subtitle { color: oklch(0.65 0.015 235); margin: 0 0 1.5rem; }
 
   .card {
@@ -403,7 +538,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.25rem;
   }
-  .card h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+  .card h2 { margin: 0 0 0.5rem; color: var(--text); font-size: 2.25rem; font-weight: 700; line-height: 1.15; scroll-margin-top: 1rem; }
   .caption {
     color: oklch(0.65 0.015 235);
     margin: 0 0 0.9rem;
@@ -412,26 +547,82 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
   }
   .empty { color: oklch(0.55 0.015 235); font-size: 0.9rem; margin: 0.4rem 0; }
 
+  .growth-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .growth-grid-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.6fr) repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+  .growth-grid-head {
+    border-bottom: 1px solid oklch(0.25 0.01 235);
+    padding-bottom: 0.4rem;
+  }
+  .growth-col-head {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+    text-transform: lowercase;
+  }
+  .growth-row-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+  }
+  .growth-row-head strong {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .growth-row-head .caption {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  @media (max-width: 720px) {
+    .growth-grid-row {
+      grid-template-columns: 1fr;
+    }
+    .growth-grid-head { display: none; }
+  }
+
   .stacked-bar {
     display: flex;
     width: 100%;
     height: 38px;
     border-radius: 4px;
-    overflow: hidden;
     border: 1px solid oklch(0.25 0.01 235);
   }
   .seg {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #111;
     font-size: 0.78rem;
     font-weight: 500;
-    overflow: hidden;
     white-space: nowrap;
     min-width: 0;
+    cursor: default;
+    transition: box-shadow 80ms ease-out;
   }
-  .seg-label { padding: 0 0.5rem; }
+  .seg:first-child { border-radius: 3px 0 0 3px; }
+  .seg:last-child { border-radius: 0 3px 3px 0; }
+  .seg:hover, .seg:focus-within {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+    z-index: 2;
+  }
+  .seg-label {
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
   .axis-break {
     flex: 0 0 32px;
     display: flex;
@@ -440,8 +631,8 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     color: oklch(0.78 0.015 235);
     background: repeating-linear-gradient(
       135deg,
-      oklch(0.22 0.005 235),
-      oklch(0.22 0.005 235) 4px,
+      oklch(0.28 0.008 235),
+      oklch(0.28 0.008 235) 4px,
       oklch(0.30 0.005 235) 4px,
       oklch(0.30 0.005 235) 8px
     );
@@ -604,18 +795,31 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     display: flex;
     height: 22px;
     border-radius: 3px;
-    overflow: hidden;
     border: 1px solid oklch(0.25 0.01 235);
   }
   .slice-seg {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #111;
     font-size: 0.72rem;
     font-weight: 500;
-    overflow: hidden;
     min-width: 0;
+    cursor: default;
+    transition: box-shadow 80ms ease-out;
+  }
+  .slice-seg:first-child { border-radius: 2px 0 0 2px; }
+  .slice-seg:last-child { border-radius: 0 2px 2px 0; }
+  .slice-seg:hover, .slice-seg:focus-within {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+    z-index: 2;
+  }
+  .slice-seg-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    padding: 0 0.25rem;
   }
   .grade-legend {
     list-style: none;
@@ -681,47 +885,44 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     align-items: center;
     justify-content: center;
   }
-  .tt-wrap .tt {
+  :where(.tt-wrap, .seg, .slice-seg) > .tt {
     position: absolute;
     bottom: calc(100% + 6px);
     left: 50%;
     transform: translateX(-50%) translateY(-2px);
-    background: oklch(0.22 0.005 235);
+    background: oklch(0.28 0.008 235);
     color: oklch(0.92 0.01 235);
     padding: 0.3rem 0.55rem;
     border-radius: 4px;
-    border: 1px solid oklch(0.28 0.01 235);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    border: 1px solid oklch(0.42 0.012 235);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
     font-size: 0.72rem;
     font-weight: 500;
     line-height: 1.3;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 80ms ease-out, transform 80ms ease-out;
+    transition: opacity 60ms ease-out, transform 60ms ease-out;
     z-index: 100;
   }
-  .tt-wrap .tt::after {
+  :where(.tt-wrap, .seg, .slice-seg) > .tt::after {
     content: "";
     position: absolute;
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
     border: 4px solid transparent;
-    border-top-color: oklch(0.22 0.005 235);
+    border-top-color: oklch(0.28 0.008 235);
   }
-  .tt-wrap:hover .tt,
-  .tt-wrap:focus-within .tt {
+  :where(.tt-wrap, .seg, .slice-seg):hover > .tt,
+  :where(.tt-wrap, .seg, .slice-seg):focus-within > .tt {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
-  /* Wider, wrapping variant for tooltips that don't fit on one line
-     (pip quality blurb, multi-line coverage messages). Selector is
-     scoped under .tt-wrap to outrank the base .tt-wrap .tt rule's
-     `white-space: nowrap`, which otherwise wins on equal specificity. */
-  .tt-wrap .tt.tt-wide {
+  /* Wider, wrapping variant for tooltips that don't fit on one line. */
+  :where(.tt-wrap, .seg, .slice-seg) > .tt.tt-wide {
     white-space: normal;
-    width: 18rem;
+    width: 20rem;
     max-width: 90vw;
     text-align: center;
   }
