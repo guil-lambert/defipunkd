@@ -220,17 +220,17 @@ const ownerCount = rows.filter((r) => r.owner).length;
     </header>
 
     <div class="table-wrap">
-      <table class="addrs">
+      <table class="addrs sortable">
         <thead>
           <tr>
-            <th class="th-chain">Chain</th>
-            <th class="th-name">Contract</th>
-            <th class="th-addr">Address</th>
-            <th class="th-source">Source</th>
-            <th class="th-verified">Verified</th>
-            <th class="th-proxy">Proxy</th>
-            <th class="th-owner">Owner</th>
-            <th class="th-multi">Multisig</th>
+            <th class="th-chain"    data-sort="0"><button type="button" class="sort-btn">Chain</button></th>
+            <th class="th-name"     data-sort="1"><button type="button" class="sort-btn">Contract</button></th>
+            <th class="th-addr"     data-sort="2"><button type="button" class="sort-btn">Address</button></th>
+            <th class="th-source"   data-sort="3"><button type="button" class="sort-btn">Source</button></th>
+            <th class="th-verified" data-sort="4"><button type="button" class="sort-btn">Verified</button></th>
+            <th class="th-proxy"    data-sort="5"><button type="button" class="sort-btn">Proxy</button></th>
+            <th class="th-owner"    data-sort="6"><button type="button" class="sort-btn">Owner</button></th>
+            <th class="th-multi"    data-sort="7"><button type="button" class="sort-btn">Multisig</button></th>
           </tr>
         </thead>
         <tbody>
@@ -304,6 +304,48 @@ const ownerCount = rows.filter((r) => r.owner).length;
   </section>
 )}
 
+<script>
+  for (const table of document.querySelectorAll<HTMLTableElement>("table.addrs.sortable")) {
+    const tbody = table.tBodies[0];
+    if (!tbody) continue;
+    const ths = table.querySelectorAll<HTMLTableCellElement>("thead th[data-sort]");
+    let activeIdx = -1;
+    let dir: 1 | -1 = 1;
+    const cellKey = (tr: HTMLTableRowElement, idx: number): string => {
+      const td = tr.cells[idx];
+      if (!td) return "";
+      const t = (td.textContent ?? "").trim();
+      return t === "—" ? "" : t.toLowerCase();
+    };
+    for (const th of ths) {
+      th.addEventListener("click", () => {
+        const idx = parseInt(th.dataset.sort ?? "0", 10);
+        if (idx === activeIdx) {
+          dir = (dir === 1 ? -1 : 1);
+        } else {
+          activeIdx = idx;
+          dir = 1;
+        }
+        for (const t of ths) {
+          t.removeAttribute("data-sort-dir");
+        }
+        th.setAttribute("data-sort-dir", dir === 1 ? "asc" : "desc");
+        const rows = Array.from(tbody.rows);
+        rows.sort((a, b) => {
+          const ka = cellKey(a, idx);
+          const kb = cellKey(b, idx);
+          // Empty / "—" cells sort to the bottom regardless of direction.
+          if (ka === "" && kb === "") return 0;
+          if (ka === "") return 1;
+          if (kb === "") return -1;
+          return ka < kb ? -dir : ka > kb ? dir : 0;
+        });
+        for (const r of rows) tbody.appendChild(r);
+      });
+    }
+  }
+</script>
+
 <style>
   .tvl-surface {
     margin-top: 2.5rem;
@@ -358,7 +400,7 @@ const ownerCount = rows.filter((r) => r.owner).length;
   }
   table.addrs th {
     text-align: left;
-    padding: 0.4rem 0.5rem;
+    padding: 0;
     font-weight: 500;
     color: var(--muted, #6b7785);
     font-size: 0.7rem;
@@ -368,6 +410,22 @@ const ownerCount = rows.filter((r) => r.owner).length;
     font-family: "IBM Plex Sans", system-ui, sans-serif;
     white-space: nowrap;
   }
+  table.addrs.sortable th .sort-btn {
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+  }
+  table.addrs.sortable th .sort-btn:hover { color: var(--text, #d8e4ec); }
+  table.addrs.sortable th[data-sort-dir] .sort-btn { color: var(--text, #d8e4ec); }
+  table.addrs.sortable th[data-sort-dir="asc"] .sort-btn::after { content: " ▴"; }
+  table.addrs.sortable th[data-sort-dir="desc"] .sort-btn::after { content: " ▾"; }
   table.addrs td {
     padding: 0.35rem 0.5rem;
     border-bottom: 1px solid var(--surface-2, #10131a);

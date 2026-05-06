@@ -175,16 +175,14 @@ const discoverySubmitUrl = showDiscovery ? submitUrl("discovery") : "";
 const discoveryNeedsBootstrap = showDiscovery && discoveredAddressCount === 0;
 
 const TAXONOMY_LABEL: Record<string, string> = {
-  red: "Steel-man argument",
-  orange: "Steel-man argument",
-  green: "Steel-man argument",
+  red: "Steelman argument",
+  orange: "Steelman argument",
+  green: "Steelman argument",
 };
 
 function chipLabel(grade: string): string {
   return grade === "gray" ? "unknown" : grade;
 }
-
-const TOP_EVIDENCE = 2;
 
 function partialPillText(modelCount: number): string {
   return `${modelCount}/${QUORUM_MIN} model${modelCount === 1 ? "" : "s"} submitted`;
@@ -348,19 +346,19 @@ function partialFillGrade(s: SliceAssessment): string {
           </summary>
           {s.structured ? (
             <div class="structured">
+              {!s.partial && s.structured.verdict && s.structured.verdict.trim().length > 0 && (
+                <details class="drawer" open>
+                  <summary>Verdict</summary>
+                  <p class="verdict">{s.structured.verdict}</p>
+                </details>
+              )}
               {!s.partial && s.structured.steelman && s.structured.steelman[s.grade as "red" | "orange" | "green"] && (
                 <details class="drawer">
-                  <summary>Steel-man argument</summary>
+                  <summary>Steelman argument</summary>
                   <div class:list={["steelman-chosen", `grade-${s.grade}`]}>
                     <span class="steelman-label">{TAXONOMY_LABEL[s.grade] ?? "Argument"}</span>
                     <span class="steelman-text">{s.structured.steelman[s.grade as "red" | "orange" | "green"]}</span>
                   </div>
-                </details>
-              )}
-              {!s.partial && s.structured.verdict && s.structured.verdict.trim().length > 0 && (
-                <details class="drawer">
-                  <summary>Verdict</summary>
-                  <p class="verdict">{s.structured.verdict}</p>
                 </details>
               )}
               {s.partial && s.partialModelGrades && s.partialModelGrades.length > 0 && (
@@ -374,36 +372,23 @@ function partialFillGrade(s: SliceAssessment): string {
                       </li>
                     ))}
                   </ul>
-                  <p class="partial-grades-note">No quorum yet — verdict and steel-man hidden until ≥{QUORUM_MIN} models agree.</p>
+                  <p class="partial-grades-note">No quorum yet — verdict and steelman hidden until ≥{QUORUM_MIN} models agree.</p>
                 </div>
               )}
               {s.structured.findings.length > 0 && (
-                <div class="evidence">
-                  <div class="evidence-head">
-                    Evidence ({s.structured.findings.length})
+                <details class="drawer evidence-drawer">
+                  <summary>Evidence ({s.structured.findings.length})</summary>
+                  <div class="evidence">
+                    <dl class="findings">
+                      {s.structured.findings.map((f: Finding) => (
+                        <div class="finding">
+                          <dt>{f.code}</dt>
+                          <dd>{f.text}</dd>
+                        </div>
+                      ))}
+                    </dl>
                   </div>
-                  <dl class="findings">
-                    {s.structured.findings.slice(0, TOP_EVIDENCE).map((f: Finding) => (
-                      <div class="finding">
-                        <dt>{f.code}</dt>
-                        <dd>{f.text}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {s.structured.findings.length > TOP_EVIDENCE && (
-                    <details class="more-evidence">
-                      <summary>Show all {s.structured.findings.length} ▸</summary>
-                      <dl class="findings">
-                        {s.structured.findings.slice(TOP_EVIDENCE).map((f: Finding) => (
-                          <div class="finding">
-                            <dt>{f.code}</dt>
-                            <dd>{f.text}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </details>
-                  )}
-                </div>
+                </details>
               )}
             </div>
           ) : (
@@ -542,6 +527,10 @@ function partialFillGrade(s: SliceAssessment): string {
     if (!h) return;
     const el = document.getElementById(h);
     if (!el) return;
+    // Only act when the hash points to a card inside this section. Deployment
+    // tabs also push slug hashes (e.g. #morpho-blue) and we don't want their
+    // navigation to scroll-jump the page or re-open a card.
+    if (!el.closest(".risk-analysis")) return;
     if (el instanceof HTMLDetailsElement) {
       el.open = true;
     } else {
@@ -928,6 +917,7 @@ function partialFillGrade(s: SliceAssessment): string {
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
+    margin-top: 0.6rem;
   }
   .partial-cta-label {
     color: var(--text-muted);
@@ -941,6 +931,7 @@ function partialFillGrade(s: SliceAssessment): string {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    margin-top: 0.6rem;
     padding: 0.5rem 0.7rem;
     border: 1px dashed color-mix(in oklab, var(--grade-orange) 40%, var(--surface-raised));
     border-radius: 4px;
