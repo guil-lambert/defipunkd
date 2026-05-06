@@ -38,7 +38,9 @@
       const ids = [
         "deployments",
         activeSlug,
+        `${activeSlug}-risk-analysis`,
         ...SLICES.map((s) => `${activeSlug}-${s.id}`),
+        `${activeSlug}-stage`,
         `${activeSlug}-tvl-surface`,
         ...sharedSections.map((s) => s.id),
       ];
@@ -98,10 +100,12 @@
     <a href="#deployments" class:active={activeAnchor === "deployments"}>Deployments</a>
     {#if activeSlug && activeName}
       <a href={`#${activeSlug}`} class="indent-1" class:active={activeAnchor === activeSlug}>{activeName}</a>
+      <a href={`#${activeSlug}-risk-analysis`} class="indent-2" class:active={activeAnchor === `${activeSlug}-risk-analysis`}>Risk analysis</a>
       {#each SLICES as s}
-        <a href={`#${activeSlug}-${s.id}`} class="indent-2" class:active={activeAnchor === `${activeSlug}-${s.id}`}>{s.label}</a>
+        <a href={`#${activeSlug}-${s.id}`} class="indent-3" class:active={activeAnchor === `${activeSlug}-${s.id}`}>{s.label}</a>
       {/each}
-      <a href={`#${activeSlug}-tvl-surface`} class="indent-2" class:active={activeAnchor === `${activeSlug}-tvl-surface`}>TVL surface</a>
+      <a href={`#${activeSlug}-stage`} class="indent-2" class:active={activeAnchor === `${activeSlug}-stage`}>Stage</a>
+      <a href={`#${activeSlug}-tvl-surface`} class="indent-2" class:active={activeAnchor === `${activeSlug}-tvl-surface`}>Contract surface</a>
     {/if}
     {#each sharedSections as s}
       <a href={`#${s.id}`} class:active={activeAnchor === s.id}>{s.label}</a>
@@ -124,7 +128,7 @@
     border-radius: 4px;
     z-index: 10;
   }
-  @media (max-width: 1700px) {
+  @media (max-width: 1400px) {
     .side-nav { display: none !important; }
   }
 
@@ -173,6 +177,10 @@
   .nav-links a.indent-2 {
     padding-left: 1.7rem;
     font-size: 0.78rem;
+  }
+  .nav-links a.indent-3 {
+    padding-left: 2.3rem;
+    font-size: 0.76rem;
   }
   .nav-links a:hover { color: var(--text); }
   .nav-links a.active {
