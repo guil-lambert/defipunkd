@@ -23,6 +23,9 @@ export type {
   EnrichmentControlAddress,
   EnrichmentSourceCode,
   EnrichmentSourceCodeAddress,
+  EnrichmentDefiScan,
+  EnrichmentDefiScanDeployment,
+  DefiScanStage,
   ProtocolEnrichment,
 } from "./enrichment";
 export { OverlaySchema, type Overlay } from "./overlay-schema";

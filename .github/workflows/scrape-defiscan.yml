@@ -1,0 +1,51 @@
+name: Scrape DefiScan listings
+
+on:
+  schedule:
+    - cron: "0 7 * * MON"
+  workflow_dispatch:
+
+concurrency:
+  group: scrape-defiscan
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Mirror defiscan + defiscan-v2 protocol listings
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @defipunkd/enrichment run scrape-defiscan
+
+      - name: Open PR with defiscan diff
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(data): refresh defiscan listings"
+          title: "chore(data): refresh defiscan listings — ${{ github.run_number }}"
+          body: |
+            Weekly mirror of `deficollective/defiscan{,-v2}` protocol listings.
+
+            - `data/enrichment/<slug>/defiscan.json` rewritten for protocols on defiscan.info
+            - Stale entries removed when a protocol is no longer listed upstream
+            - Unresolved entries (no slug match in `data/defillama-snapshot.json`) listed in `data/enrichment/_defiscan-unresolved.log`
+          branch: data/defiscan-${{ github.run_number }}
+          add-paths: |
+            data/enrichment/**/defiscan.json
+            data/enrichment/_defiscan-unresolved.log
+          delete-branch: true

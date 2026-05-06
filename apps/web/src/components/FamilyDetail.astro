@@ -72,6 +72,17 @@ const sharedSections = [
   ...(hasHallmarks ? [{ id: "hallmarks", label: "Hallmarks" }] : []),
 ];
 
+// DefiScan badge: prefer the parent's listing, fall back to any child's.
+const defiscanBadge = (() => {
+  const parentEnr = getEnrichment(protocol.slug);
+  if (parentEnr.defiscan) return parentEnr.defiscan;
+  for (const c of sortedChildren) {
+    const e = getEnrichment(c.slug);
+    if (e.defiscan) return e.defiscan;
+  }
+  return null;
+})();
+
 const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
   if (typeof c.tvl !== "number") return acc;
   return (acc ?? 0) + c.tvl;
@@ -95,7 +106,19 @@ const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
     <div class="title">
       <ProtocolLogo src={protocol.logo} name={protocol.name} size={40} />
       <div>
-        <h1>{protocol.name}</h1>
+        <h1>
+          {protocol.name}
+          {defiscanBadge && (
+            <a class="defiscan-badge" href={defiscanBadge.url} rel="noopener noreferrer" target="_blank"
+               title={`Listed on defiscan.info (${defiscanBadge.headline_stage ? `Stage ${defiscanBadge.headline_stage === "R" ? "Review" : defiscanBadge.headline_stage}` : "unstaged"})`}>
+              DefiScan
+              {defiscanBadge.headline_stage && (
+                <span class="defiscan-stage">{defiscanBadge.headline_stage === "R" ? "Review" : `Stage ${defiscanBadge.headline_stage}`}</span>
+              )}
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
+        </h1>
         <p class="subtitle">
           {sortedChildren.length} deployment{sortedChildren.length === 1 ? "" : "s"}
           {aggregateTvl !== null && (<>{" · "}{formatTvl(aggregateTvl)} aggregate TVL</>)}
@@ -209,7 +232,25 @@ const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
   }
   .head { display: flex; gap: 1.5rem; align-items: flex-start; }
   .title { display: flex; gap: 0.75rem; align-items: center; }
-  h1 { margin: 0; color: var(--text); font-size: 1.75rem; }
+  h1 { margin: 0; color: var(--text); font-size: 1.75rem; display: inline-flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .defiscan-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: oklch(0.65 0.110 245);
+    border: 1px solid oklch(0.45 0.080 245);
+    background: oklch(0.20 0.060 245 / 0.3);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .defiscan-badge:hover { color: oklch(0.78 0.130 245); }
+  .defiscan-stage { color: var(--text); font-variant-numeric: tabular-nums; }
   .subtitle { color: var(--text-muted); margin: 0.25rem 0 0 0; }
 
   .deployments { margin-top: 2rem; }

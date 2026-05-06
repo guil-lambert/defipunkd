@@ -122,6 +122,15 @@ const metadata = {
   upgradeability: firstNonEmpty(poolMeta.map(({ m }) => m?.upgradeability)),
 };
 
+// DefiScan: prefer parent, else first family member with a defiscan listing.
+const defiscanPick = poolMeta.find(({ e }) => e.defiscan)?.e.defiscan ?? null;
+const defiscanStageLabel: Record<string, string> = {
+  "0": "Stage 0",
+  "1": "Stage 1",
+  "2": "Stage 2",
+  "R": "Review",
+};
+
 const upgradeabilityLabel: Record<string, string> = {
   immutable: "Immutable",
   upgradeable: "Upgradeable",
@@ -215,6 +224,19 @@ const provenanceSources = Array.from(new Set([
         <div class="field">
           <dt>Governance forum</dt>
           <dd><a href={metadata.governance_forum} class="link" rel="noreferrer" target="_blank">{metadata.governance_forum}</a></dd>
+        </div>
+      )}
+      {defiscanPick && (
+        <div class="field">
+          <dt>DefiScan</dt>
+          <dd>
+            <a href={defiscanPick.url} class="link" rel="noreferrer" target="_blank">
+              {defiscanPick.url}
+            </a>
+            {defiscanPick.headline_stage && (
+              <span class="muted"> {EM_DASH} {defiscanStageLabel[defiscanPick.headline_stage] ?? defiscanPick.headline_stage}</span>
+            )}
+          </dd>
         </div>
       )}
     </dl>
