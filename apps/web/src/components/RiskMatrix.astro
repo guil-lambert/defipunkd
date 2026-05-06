@@ -1,14 +1,27 @@
 ---
+import type { EnrichmentDefiScan } from "@defipunkd/registry";
 import { isUncertain, type SliceAssessment } from "../lib/rationale";
 import { TIER_RIM_COLOR, TIER_STOPS, type Tier } from "../lib/tier";
+import { defiscanBadgeUrl, defiscanStageLabel } from "../lib/defiscan";
 
 interface Props {
   slices: SliceAssessment[];
   variant?: "hero" | "full";
   tier?: Tier;
   idPrefix?: string;
+  defiscan?: EnrichmentDefiScan | null;
 }
-const { slices, variant = "full", tier = "none", idPrefix = "" } = Astro.props;
+const { slices, variant = "full", tier = "none", idPrefix = "", defiscan = null } = Astro.props;
+const defiscanUrl = defiscan ? defiscanBadgeUrl(defiscan) : null;
+const defiscanLabel = defiscan ? defiscanStageLabel(defiscan.headline_stage) : null;
+const defiscanRated = defiscan?.deployments.filter((d) => d.stage != null) ?? [];
+const defiscanHeadline = defiscan
+  ? defiscanRated.length === 0
+    ? "Listed on defiscan.info"
+    : defiscanRated.length === 1
+      ? `Rated on ${defiscanRated[0]!.chain}`
+      : `Rated across ${defiscanRated.length} deployments`
+  : null;
 const idp = idPrefix ? `${idPrefix}-` : "";
 
 const TIER_ROW_LABEL: Record<Exclude<Tier, "none">, string> = {
@@ -68,6 +81,17 @@ function partialFillGrade(s: SliceAssessment): string {
       </li>
     );
   })()}
+  {defiscan && (
+    <li class:list={["row", "defiscan-row", `defiscan-stage-${defiscan.headline_stage ?? "none"}`]} data-defiscan-row>
+      <a href={defiscanUrl ?? "#"} class="row-link" rel="noopener noreferrer" target="_blank"
+         title={`defiscan.info — ${defiscanLabel ?? "listed"}`}>
+        <span class="swatch defiscan-swatch" aria-hidden="true"></span>
+        <span class="dim">DefiScan</span>
+        <span class="chip defiscan-chip">{defiscanLabel ?? "Listed"}</span>
+        <span class="headline">{defiscanHeadline} ↗</span>
+      </a>
+    </li>
+  )}
   {sorted.map((s) => {
     const fillGrade = partialFillGrade(s);
     return (
@@ -193,6 +217,22 @@ function partialFillGrade(s: SliceAssessment): string {
   }
 
   .tier-chip { color: #1a1208; }
+
+  /* DefiScan verdict row — mirrors the tier row's structure but uses
+     defiscan.info's solid red/yellow/green palette so the badge color in the
+     matrix matches what users see on defiscan.info itself. */
+  .defiscan-row .defiscan-swatch { background: #6b7280; }
+  .defiscan-row.defiscan-stage-0 .defiscan-swatch { background: #ef4444; }
+  .defiscan-row.defiscan-stage-1 .defiscan-swatch { background: #eab308; }
+  .defiscan-row.defiscan-stage-2 .defiscan-swatch { background: #22c55e; }
+  .defiscan-chip {
+    background: #6b7280;
+    color: #fff;
+    border-radius: 4px;
+  }
+  .defiscan-row.defiscan-stage-0 .defiscan-chip { background: #ef4444; }
+  .defiscan-row.defiscan-stage-1 .defiscan-chip { background: #eab308; }
+  .defiscan-row.defiscan-stage-2 .defiscan-chip { background: #22c55e; }
 
   .headline {
     color: var(--text-muted);
