@@ -13,7 +13,6 @@ import { formatTvl } from "../lib/format";
 import { buildStats, type CoverageState, type ModelFamily, type ModelQuality } from "../lib/stats";
 import GrowthChart from "../components/GrowthChart.astro";
 import folderCounts from "../../../../data/metrics/folder-counts.json";
-import jsonFileCounts from "../../../../data/metrics/json-file-counts.json";
 import jsonRecordCounts from "../../../../data/metrics/json-record-counts.json";
 
 type GrowthRow = {
@@ -25,31 +24,38 @@ type GrowthRow = {
   assessments: number;
 };
 
-const GROWTH_METRICS: { key: string; title: string; caption: string; rows: GrowthRow[] }[] = [
+const GROWTH_PATHS: {
+  key: "enrichment" | "submissions" | "assessments";
+  label: string;
+  stroke: string;
+  description: string;
+}[] = [
   {
-    key: "folders",
-    title: "Protocols tracked (folders)",
-    caption: "One folder per protocol per area. Enrichment = facts crawled; submissions = LLM runs underway; assessments = quorum-merged verdicts.",
-    rows: folderCounts as GrowthRow[],
+    key: "enrichment",
+    label: "data/enrichment/",
+    stroke: "#A17CF3",
+    description:
+      "Per-protocol factual evidence crawled from public sources — audits, source code, adapter, control structure. The universe of protocols we have evidence for.",
   },
   {
-    key: "json-files",
-    title: "Evidence + assessment files (.json)",
-    caption: "Total .json files committed under each area, recursively.",
-    rows: jsonFileCounts as GrowthRow[],
+    key: "submissions",
+    label: "data/submissions/",
+    stroke: "#0EA982",
+    description:
+      "Raw individual LLM runs from DEFI@home contributors, one file per (protocol, slice, run). Multiple runs accumulate per slice until ≥3 agree.",
   },
   {
-    key: "json-records",
-    title: "Records inside .json files",
-    caption: "Sum of records across all .json files (arrays expanded). Captures batched model outputs in submissions/.",
-    rows: jsonRecordCounts as GrowthRow[],
+    key: "assessments",
+    label: "data/assessments/",
+    stroke: "#E8846A",
+    description:
+      "Quorum-merged verdicts produced once ≥3 independent runs agree on grade and overlapping evidence — one file per (protocol, slice).",
   },
 ];
 
-const GROWTH_PATHS: { key: "enrichment" | "submissions" | "assessments"; label: string; stroke: string }[] = [
-  { key: "enrichment", label: "enrichment", stroke: "#A17CF3" },
-  { key: "submissions", label: "submissions", stroke: "#0EA982" },
-  { key: "assessments", label: "assessments", stroke: "#E8846A" },
+const GROWTH_METRICS: { key: "folders" | "json-records"; title: string; rows: GrowthRow[] }[] = [
+  { key: "folders", title: "Protocols tracked", rows: folderCounts as GrowthRow[] },
+  { key: "json-records", title: "Number of .json", rows: jsonRecordCounts as GrowthRow[] },
 ];
 
 const growthCommits = (folderCounts as GrowthRow[]).length;
@@ -175,28 +181,26 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
       <h2>Growth over time</h2>
       <p class="caption">
         {growthCommits.toLocaleString()} commits on <code>main</code>, oldest → newest.
-        Each row is a small-multiples view: rows are what's being counted, columns are which area of <code>data/</code>.
-        Y-axes auto-scale per panel — compare shapes, not absolute heights across columns.
+        Rows are areas of <code>data/</code>; columns are how each area is measured.
+        Y-axes auto-scale per panel — compare shapes, not absolute heights across rows.
       </p>
       <div class="growth-grid">
         <div class="growth-grid-row growth-grid-head" aria-hidden="true">
           <span></span>
-          {GROWTH_PATHS.map((p) => (
-            <span class="growth-col-head" style={`color: ${p.stroke};`}>
-              data/{p.label}/
-            </span>
+          {GROWTH_METRICS.map((m) => (
+            <span class="growth-col-head">{m.title}</span>
           ))}
         </div>
-        {GROWTH_METRICS.map((metric) => (
+        {GROWTH_PATHS.map((p) => (
           <div class="growth-grid-row">
             <div class="growth-row-head">
-              <strong>{metric.title}</strong>
-              <span class="caption">{metric.caption}</span>
+              <strong style={`color: ${p.stroke};`}>{p.label}</strong>
+              <span class="caption">{p.description}</span>
             </div>
-            {GROWTH_PATHS.map((p) => (
+            {GROWTH_METRICS.map((m) => (
               <GrowthChart
-                points={metric.rows.map((r) => ({ timestamp: r.timestamp, value: r[p.key] }))}
-                label={p.label}
+                points={m.rows.map((r) => ({ timestamp: r.timestamp, value: r[p.key] }))}
+                label={m.title}
                 stroke={p.stroke}
               />
             ))}
@@ -496,7 +500,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
   }
   .growth-grid-row {
     display: grid;
-    grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(220px, 1.6fr) repeat(2, minmax(0, 1fr));
     gap: 1rem;
     align-items: start;
   }
