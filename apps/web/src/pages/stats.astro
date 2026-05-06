@@ -274,8 +274,14 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
                         <span
                           class="slice-seg"
                           style={`flex-grow: ${flexFor(k)}; background: ${GRADE_FILL[k]};`}
-                          title={`${GRADE_LABEL[k]}: ${b[k].toLocaleString()} of ${total.toLocaleString()}\n${GRADE_TOOLTIP_BY_SLICE[id as PizzaSliceId][k]}`}
-                        >{b[k].toLocaleString()}</span>
+                          tabindex="0"
+                        >
+                          <span class="slice-seg-label">{b[k].toLocaleString()}</span>
+                          <span class="tt tt-wide" role="tooltip">
+                            <span class="tt-line">{GRADE_LABEL[k]}: {b[k].toLocaleString()} of {total.toLocaleString()}</span>
+                            <span class="tt-line">{GRADE_TOOLTIP_BY_SLICE[id as PizzaSliceId][k]}</span>
+                          </span>
+                        </span>
                       </>
                     );
                   })}
@@ -374,9 +380,13 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
             <span
               class="seg"
               style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
-              title={`${TIER_NAME[s.tier]} — ${s.value.toLocaleString()} protocol${s.value === 1 ? "" : "s"}\n${TIER_DEF[s.tier]}`}
+              tabindex="0"
             >
               <span class="seg-label">{TIER_NAME[s.tier]}: {s.value.toLocaleString()}</span>
+              <span class="tt tt-wide" role="tooltip">
+                <span class="tt-line">{TIER_NAME[s.tier]} — {s.value.toLocaleString()} protocol{s.value === 1 ? "" : "s"}</span>
+                <span class="tt-line">{TIER_DEF[s.tier]}</span>
+              </span>
             </span>
           </>
         ))}
@@ -407,9 +417,13 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
             <span
               class="seg"
               style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
-              title={`${TIER_NAME[s.tier]} — ${formatTvl(s.value)}\n${TIER_DEF[s.tier]}`}
+              tabindex="0"
             >
               <span class="seg-label">{TIER_NAME[s.tier]}: {formatTvl(s.value)}</span>
+              <span class="tt tt-wide" role="tooltip">
+                <span class="tt-line">{TIER_NAME[s.tier]} — {formatTvl(s.value)}</span>
+                <span class="tt-line">{TIER_DEF[s.tier]}</span>
+              </span>
             </span>
           </>
         ))}
@@ -516,7 +530,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.25rem;
   }
-  .card h2 { margin: 0 0 0.5rem; font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
+  .card h2 { margin: 0 0 0.5rem; color: var(--text); font-size: 2.25rem; font-weight: 700; line-height: 1.15; scroll-margin-top: 1rem; }
   .caption {
     color: oklch(0.65 0.015 235);
     margin: 0 0 0.9rem;
@@ -574,21 +588,33 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     width: 100%;
     height: 38px;
     border-radius: 4px;
-    overflow: hidden;
     border: 1px solid oklch(0.25 0.01 235);
   }
   .seg {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #111;
     font-size: 0.78rem;
     font-weight: 500;
-    overflow: hidden;
     white-space: nowrap;
     min-width: 0;
+    cursor: default;
+    transition: box-shadow 80ms ease-out;
   }
-  .seg-label { padding: 0 0.5rem; }
+  .seg:first-child { border-radius: 3px 0 0 3px; }
+  .seg:last-child { border-radius: 0 3px 3px 0; }
+  .seg:hover, .seg:focus-within {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+    z-index: 2;
+  }
+  .seg-label {
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
   .axis-break {
     flex: 0 0 32px;
     display: flex;
@@ -761,18 +787,31 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     display: flex;
     height: 22px;
     border-radius: 3px;
-    overflow: hidden;
     border: 1px solid oklch(0.25 0.01 235);
   }
   .slice-seg {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #111;
     font-size: 0.72rem;
     font-weight: 500;
-    overflow: hidden;
     min-width: 0;
+    cursor: default;
+    transition: box-shadow 80ms ease-out;
+  }
+  .slice-seg:first-child { border-radius: 2px 0 0 2px; }
+  .slice-seg:last-child { border-radius: 0 2px 2px 0; }
+  .slice-seg:hover, .slice-seg:focus-within {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+    z-index: 2;
+  }
+  .slice-seg-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    padding: 0 0.25rem;
   }
   .grade-legend {
     list-style: none;
@@ -838,7 +877,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     align-items: center;
     justify-content: center;
   }
-  .tt-wrap .tt {
+  :where(.tt-wrap, .seg, .slice-seg) > .tt {
     position: absolute;
     bottom: calc(100% + 6px);
     left: 50%;
@@ -855,10 +894,10 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 80ms ease-out, transform 80ms ease-out;
+    transition: opacity 60ms ease-out, transform 60ms ease-out;
     z-index: 100;
   }
-  .tt-wrap .tt::after {
+  :where(.tt-wrap, .seg, .slice-seg) > .tt::after {
     content: "";
     position: absolute;
     top: 100%;
@@ -867,18 +906,15 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     border: 4px solid transparent;
     border-top-color: oklch(0.22 0.005 235);
   }
-  .tt-wrap:hover .tt,
-  .tt-wrap:focus-within .tt {
+  :where(.tt-wrap, .seg, .slice-seg):hover > .tt,
+  :where(.tt-wrap, .seg, .slice-seg):focus-within > .tt {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
-  /* Wider, wrapping variant for tooltips that don't fit on one line
-     (pip quality blurb, multi-line coverage messages). Selector is
-     scoped under .tt-wrap to outrank the base .tt-wrap .tt rule's
-     `white-space: nowrap`, which otherwise wins on equal specificity. */
-  .tt-wrap .tt.tt-wide {
+  /* Wider, wrapping variant for tooltips that don't fit on one line. */
+  :where(.tt-wrap, .seg, .slice-seg) > .tt.tt-wide {
     white-space: normal;
-    width: 18rem;
+    width: 20rem;
     max-width: 90vw;
     text-align: center;
   }
