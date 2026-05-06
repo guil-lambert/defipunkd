@@ -55,6 +55,10 @@ interface Row {
   source: RowSource;
   discovery_url?: string;
   discovery_shows?: string;
+  /** actor_class declared by the discovery prompt's admin_addresses entry,
+   * surfaced as a label in the Multisig column when on-chain Safe data is
+   * unavailable (e.g. discovery-only rows). */
+  discovery_actor_class?: "eoa" | "multisig" | "timelock" | "governance" | "unknown";
 }
 
 function buildRows(): Row[] {
@@ -150,6 +154,7 @@ function buildRows(): Row[] {
       const row = addrMap.get(`${a.chain.toLowerCase()}|${a.address.toLowerCase()}`);
       if (!row) continue;
       if (!row.discovery_shows && a.role) row.discovery_shows = a.role;
+      if (!row.discovery_actor_class && a.actor_class) row.discovery_actor_class = a.actor_class;
     }
   }
   return [...addrMap.values()].sort((x, y) => {
@@ -302,6 +307,8 @@ const ownerCount = rows.filter((r) => r.owner).length;
                     <span class="pill safe" title="Owner is a Safe multisig">{r.owner_safe_threshold}/{r.owner_safe_owners_count} Safe</span>
                   ) : r.self_is_safe && r.self_safe_threshold !== null ? (
                     <span class="pill safe" title="Address itself is a Safe multisig">self {r.self_safe_threshold}/{r.self_safe_owners_count}</span>
+                  ) : r.discovery_actor_class && r.discovery_actor_class !== "eoa" && r.discovery_actor_class !== "unknown" ? (
+                    <span class="pill actor" title={`Reported by discovery as ${r.discovery_actor_class} (not verified on-chain)`}>{r.discovery_actor_class}</span>
                   ) : (
                     <span class="muted">—</span>
                   )}
@@ -463,6 +470,7 @@ const ownerCount = rows.filter((r) => r.owner).length;
   .pill.unverified { color: oklch(0.52 0.170 22); border-color: oklch(0.40 0.100 22); }
   .pill.proxy { color: oklch(0.65 0.120 75); border-color: oklch(0.45 0.080 75); }
   .pill.safe { color: oklch(0.60 0.130 150); border-color: oklch(0.45 0.080 150); background: oklch(0.20 0.060 150 / 0.3); }
+  .pill.actor { color: var(--text-muted); border-color: var(--surface-raised); font-style: italic; }
   .pill.src-tvl  { color: var(--text-muted); border-color: var(--surface-raised); }
   .pill.src-disc { color: oklch(0.65 0.110 245); border-color: oklch(0.45 0.080 245); background: oklch(0.20 0.060 245 / 0.3); }
   .pill.src-both { color: oklch(0.65 0.110 245); border-color: oklch(0.45 0.080 245); }
