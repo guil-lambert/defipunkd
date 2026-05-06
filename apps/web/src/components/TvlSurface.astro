@@ -250,6 +250,11 @@ const verifiedCount = rows.filter((r) => r.verified_etherscan).length;
 const proxyCount = rows.filter((r) => r.is_proxy).length;
 const ownerSafeCount = rows.filter((r) => r.owner_is_safe).length;
 const ownerCount = rows.filter((r) => r.owner).length;
+
+// Mainnet-only filter: when the protocol is on Ethereum, default to showing
+// only mainnet addresses (cross-chain duplicates are noise for most reviewers).
+// If the protocol has no mainnet deployment, show every chain unfiltered.
+const hasMainnet = rows.some((r) => r.chain.toLowerCase() === "ethereum");
 ---
 {rows.length > 0 && (
   <section id={sectionId} class="tvl-surface">
@@ -269,7 +274,7 @@ const ownerCount = rows.filter((r) => r.owner).length;
         <li><span class="stat-num">{verifiedCount}</span> <span>verified source</span></li>
         <li><span class="stat-num">{proxyCount}</span> <span>proxies</span></li>
         {ownerCount > 0 && (
-          <li><span class="stat-num">{ownerSafeCount}</span> <span>of {ownerCount} owners are Safes</span></li>
+          <li><span class="stat-num">{ownerSafeCount}</span> <span>of <span class="stat-owner-total">{ownerCount}</span> owners are Safes</span></li>
         )}
       </ul>
       <p class="meta">
@@ -284,8 +289,17 @@ const ownerCount = rows.filter((r) => r.owner).length;
       </p>
     </header>
 
+    {hasMainnet && (
+      <div class="filter-row">
+        <label class="mainnet-toggle">
+          <input type="checkbox" data-mainnet-filter checked />
+          <span>Mainnet only</span>
+        </label>
+      </div>
+    )}
+
     <div class="table-wrap">
-      <table class="addrs sortable">
+      <table class="addrs sortable" data-has-mainnet={hasMainnet ? "1" : "0"}>
         <thead>
           <tr>
             <th class="th-chain"    data-sort="0"><button type="button" class="sort-btn">Chain</button></th>
@@ -303,7 +317,7 @@ const ownerCount = rows.filter((r) => r.owner).length;
             const url = explorerUrl(r.chain, r.address);
             const ownerUrl = r.owner ? explorerUrl(r.chain, r.owner) : null;
             return (
-              <tr>
+              <tr data-chain={r.chain.toLowerCase()}>
                 <td class="td-chain">{r.chain}</td>
                 <td class="td-name">
                   <span class="name">{r.contract_name ?? <span class="muted">{r.context ?? "—"}</span>}</span>
@@ -375,6 +389,43 @@ const ownerCount = rows.filter((r) => r.owner).length;
 )}
 
 <script>
+  // Mainnet-only filter. Hides non-ethereum rows and updates the visible stat
+  // counts so the summary above the table reflects the filtered view. The
+  // checkbox is rendered server-side (and defaulted to checked) only when the
+  // protocol has a mainnet deployment; otherwise this block is a no-op.
+  for (const cb of document.querySelectorAll<HTMLInputElement>("input[data-mainnet-filter]")) {
+    const section = cb.closest("section.tvl-surface");
+    if (!section) continue;
+    const tbody = section.querySelector<HTMLTableSectionElement>("table.addrs tbody");
+    if (!tbody) continue;
+    const statNums = section.querySelectorAll<HTMLElement>(".stat-row .stat-num");
+    const ownerStat = section.querySelector<HTMLElement>(".stat-owner-total");
+    const apply = () => {
+      const only = cb.checked;
+      const rows = Array.from(tbody.rows);
+      let total = 0, verified = 0, proxy = 0, ownerSafe = 0, ownerAny = 0;
+      for (const r of rows) {
+        const chain = r.dataset.chain ?? "";
+        const show = !only || chain === "ethereum";
+        r.hidden = !show;
+        if (!show) continue;
+        total++;
+        if (r.querySelector(".td-verified .pill.verified")) verified++;
+        if (r.querySelector(".td-proxy .pill.proxy")) proxy++;
+        if (r.querySelector(".td-owner a, .td-owner code")) ownerAny++;
+        if (r.querySelector(".td-multi .pill.safe")) ownerSafe++;
+      }
+      // Stat order: addresses, verified, proxies, [ownerSafe of ownerAny].
+      if (statNums[0]) statNums[0].textContent = String(total);
+      if (statNums[1]) statNums[1].textContent = String(verified);
+      if (statNums[2]) statNums[2].textContent = String(proxy);
+      if (statNums[3]) statNums[3].textContent = String(ownerSafe);
+      if (ownerStat) ownerStat.textContent = String(ownerAny);
+    };
+    cb.addEventListener("change", apply);
+    apply();
+  }
+
   for (const table of document.querySelectorAll<HTMLTableElement>("table.addrs.sortable")) {
     const tbody = table.tBodies[0];
     if (!tbody) continue;
@@ -459,6 +510,23 @@ const ownerCount = rows.filter((r) => r.owner).length;
     margin: 0 0 1rem;
   }
   .meta code { color: var(--accent, #7bb4cc); }
+
+  .filter-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 0 0.5rem;
+  }
+  .mainnet-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--muted, #6b7785);
+    cursor: pointer;
+    user-select: none;
+  }
+  .mainnet-toggle input { cursor: pointer; }
+  .mainnet-toggle:hover { color: var(--text, #d8e4ec); }
 
   .table-wrap {
     overflow: auto;
