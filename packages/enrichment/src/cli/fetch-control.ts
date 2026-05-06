@@ -144,16 +144,81 @@ const fetchFn: FetchFn = async (url: string) => {
   };
 };
 
-function listAdapterFiles(repoRoot: string): string[] {
-  const root = join(repoRoot, "data", "enrichment");
-  if (!existsSync(root)) return [];
-  const out: string[] = [];
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const adapterPath = join(root, entry.name, "adapter.json");
-    if (existsSync(adapterPath)) out.push(adapterPath);
+interface DiscoveryAddress {
+  chain: string;
+  address: string;
+  context: string | null;
+}
+
+function loadDiscoveryAddresses(repoRoot: string, slug: string): DiscoveryAddress[] {
+  const dir = join(repoRoot, "data", "submissions", slug, "discovery");
+  if (!existsSync(dir)) return [];
+  const out: DiscoveryAddress[] = [];
+  const seen = new Set<string>();
+  const push = (chain: unknown, address: unknown, context: unknown) => {
+    if (typeof chain !== "string" || typeof address !== "string") return;
+    if (!chain || !address) return;
+    const k = `${chain.toLowerCase()}|${address.toLowerCase()}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push({
+      chain,
+      address,
+      context: typeof context === "string" && context ? context : null,
+    });
+  };
+  for (const file of readdirSync(dir)) {
+    if (!file.endsWith(".json")) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(readFileSync(join(dir, file), "utf8"));
+    } catch {
+      continue;
+    }
+    const items = Array.isArray(parsed) ? parsed : [parsed];
+    for (const it of items) {
+      if (!it || typeof it !== "object") continue;
+      const meta = (it as { protocol_metadata?: unknown }).protocol_metadata;
+      if (meta && typeof meta === "object") {
+        const admins = (meta as { admin_addresses?: unknown }).admin_addresses;
+        if (Array.isArray(admins)) {
+          for (const a of admins) {
+            if (!a || typeof a !== "object") continue;
+            const r = a as { chain?: unknown; address?: unknown; role?: unknown };
+            push(r.chain, r.address, r.role);
+          }
+        }
+      }
+      const evidence = (it as { evidence?: unknown }).evidence;
+      if (Array.isArray(evidence)) {
+        for (const e of evidence) {
+          if (!e || typeof e !== "object") continue;
+          const r = e as { chain?: unknown; address?: unknown; shows?: unknown };
+          push(r.chain, r.address, r.shows);
+        }
+      }
+    }
   }
-  return out.sort();
+  return out;
+}
+
+function listSlugs(repoRoot: string): string[] {
+  const slugs = new Set<string>();
+  const enrichRoot = join(repoRoot, "data", "enrichment");
+  if (existsSync(enrichRoot)) {
+    for (const entry of readdirSync(enrichRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (existsSync(join(enrichRoot, entry.name, "adapter.json"))) slugs.add(entry.name);
+    }
+  }
+  const subsRoot = join(repoRoot, "data", "submissions");
+  if (existsSync(subsRoot)) {
+    for (const entry of readdirSync(subsRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (existsSync(join(subsRoot, entry.name, "discovery"))) slugs.add(entry.name);
+    }
+  }
+  return [...slugs].sort();
 }
 
 function key(chain: string, address: string): string {
@@ -321,17 +386,15 @@ async function main(): Promise<void> {
     console.error("[control] ETHERSCAN_API_KEY not set — owner() reads disabled, only Safe checks will run");
   }
 
-  const adapterPaths = listAdapterFiles(opts.repoRoot);
-  const filtered = opts.slug
-    ? adapterPaths.filter((p) => p.includes(`/${opts.slug}/`))
-    : adapterPaths;
+  const allSlugs = listSlugs(opts.repoRoot);
+  const filtered = opts.slug ? allSlugs.filter((s) => s === opts.slug) : allSlugs;
 
   if (filtered.length === 0) {
-    console.error(`[control] no adapter.json files matched (slug=${opts.slug ?? "(all)"})`);
+    console.error(`[control] no adapter.json or discovery submissions matched (slug=${opts.slug ?? "(all)"})`);
     process.exit(1);
   }
 
-  console.error(`[control] processing ${filtered.length} adapter files`);
+  console.error(`[control] processing ${filtered.length} slugs`);
 
   const fetchedCache = opts.forceRefetch
     ? new Map<string, ControlAddress>()
@@ -350,38 +413,37 @@ async function main(): Promise<void> {
   let writes = 0;
   let unchanged = 0;
 
-  for (const adapterPath of filtered) {
-    const adapter = loadAdapter(adapterPath);
-    if (!adapter) continue;
-    // Read commit hash from adapter.json (already loaded above as raw text once
-    // through loadAdapter, but we need the field).
+  for (const slug of filtered) {
+    const adapterPath = join(opts.repoRoot, "data", "enrichment", slug, "adapter.json");
+    const adapter = existsSync(adapterPath) ? loadAdapter(adapterPath) : null;
     let adapterCommit: string | null = null;
-    try {
-      const raw = JSON.parse(readFileSync(adapterPath, "utf8")) as { adapter_commit?: string };
-      adapterCommit = raw.adapter_commit ?? null;
-    } catch {
-      adapterCommit = null;
+    if (adapter) {
+      try {
+        const raw = JSON.parse(readFileSync(adapterPath, "utf8")) as { adapter_commit?: string };
+        adapterCommit = raw.adapter_commit ?? null;
+      } catch {
+        adapterCommit = null;
+      }
     }
 
     const seen = new Set<string>();
     const entries: ControlAddress[] = [];
 
-    for (const a of adapter.static_addresses) {
-      if (!a.chain) continue;
-      const k = key(a.chain, a.address);
-      if (seen.has(k)) continue;
+    const processAddress = async (chain: string, address: string, context: string | null) => {
+      const k = key(chain, address);
+      if (seen.has(k)) return;
       seen.add(k);
 
       let cached = fetchedCache.get(k);
       let entry: ControlAddress;
       if (cached) {
         cacheHits++;
-        entry = { ...cached, context: a.context };
-      } else if (!isSupportedChain(a.chain)) {
+        entry = { ...cached, context };
+      } else if (!isSupportedChain(chain)) {
         entry = {
-          chain: a.chain,
-          address: a.address,
-          context: a.context,
+          chain,
+          address,
+          context,
           self_is_safe: false,
           self_safe: null,
           self_not_safe_reason: "skipped",
@@ -390,14 +452,14 @@ async function main(): Promise<void> {
           owner_safe: null,
           owner_not_safe_reason: null,
           fetched: { owner: false, self: false, owner_safe: false },
-          warnings: [`skipped: chain "${a.chain}" not supported`],
+          warnings: [`skipped: chain "${chain}" not supported`],
         };
       } else if (opts.limit !== null && calls >= opts.limit) {
         limitedSkips++;
         entry = {
-          chain: a.chain,
-          address: a.address,
-          context: a.context,
+          chain,
+          address,
+          context,
           self_is_safe: false,
           self_safe: null,
           self_not_safe_reason: null,
@@ -409,12 +471,12 @@ async function main(): Promise<void> {
           warnings: ["skipped: FETCH_LIMIT reached"],
         };
       } else {
-        const fetched = await fetchOneAddress(a.chain, a.address, opts.apiKey, opts.rateLimitMs);
+        const fetched = await fetchOneAddress(chain, address, opts.apiKey, opts.rateLimitMs);
         calls++;
         entry = {
-          chain: a.chain,
-          address: a.address,
-          context: a.context,
+          chain,
+          address,
+          context,
           self_is_safe: fetched.self_is_safe,
           self_safe: fetched.self_safe,
           self_not_safe_reason: fetched.self_not_safe_reason,
@@ -428,7 +490,6 @@ async function main(): Promise<void> {
         fetchedCache.set(k, entry);
       }
 
-      // If we have an owner address that we haven't checked yet, check it.
       if (entry.owner && !entry.fetched.owner_safe) {
         const ownerKey = key(entry.chain, entry.owner);
         let osf = ownerSafeCache.get(ownerKey) ?? null;
@@ -452,6 +513,16 @@ async function main(): Promise<void> {
       }
 
       entries.push(entry);
+    };
+
+    if (adapter) {
+      for (const a of adapter.static_addresses) {
+        if (!a.chain) continue;
+        await processAddress(a.chain, a.address, a.context);
+      }
+    }
+    for (const d of loadDiscoveryAddresses(opts.repoRoot, slug)) {
+      await processAddress(d.chain, d.address, d.context);
     }
 
     entries.sort((x, y) => {
@@ -460,13 +531,13 @@ async function main(): Promise<void> {
     });
 
     const out: ControlFile = {
-      slug: adapter.slug,
+      slug,
       adapter_commit: adapterCommit,
       fetched_at: new Date().toISOString(),
       addresses: entries,
       summary: summarize(entries),
     };
-    if (writeControl(opts.repoRoot, adapter.slug, out)) writes++;
+    if (writeControl(opts.repoRoot, slug, out)) writes++;
     else unchanged++;
   }
 

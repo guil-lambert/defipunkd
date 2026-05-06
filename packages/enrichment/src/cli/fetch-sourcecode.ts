@@ -154,18 +154,6 @@ const fetchFn: FetchFn = async (url: string) => {
   };
 };
 
-function listAdapterFiles(repoRoot: string): string[] {
-  const root = join(repoRoot, "data", "enrichment");
-  if (!existsSync(root)) return [];
-  const out: string[] = [];
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const adapterPath = join(root, entry.name, "adapter.json");
-    if (existsSync(adapterPath)) out.push(adapterPath);
-  }
-  return out.sort();
-}
-
 /**
  * Decide whether a previously-fetched record is "good enough" to reuse.
  * - If apiKey is set: require both etherscan AND sourcify to have been
@@ -245,6 +233,93 @@ function loadAdapter(path: string): AdapterFile | null {
   } catch {
     return null;
   }
+}
+
+interface DiscoveryAddress {
+  chain: string;
+  address: string;
+  context: string | null;
+}
+
+/**
+ * Walk every data/submissions/<slug>/discovery/*.json and return the union
+ * of (chain, address) tuples discovered there: protocol_metadata
+ * .admin_addresses (the structured catalogue, typically the bulk) plus any
+ * evidence[] rows that carry both chain and address. Without this pass, the
+ * sourcecode pipeline only verifies DefiLlama TVL adapter contracts and
+ * leaves discovery-only addresses with empty Verified/Proxy columns.
+ */
+function loadDiscoveryAddresses(repoRoot: string, slug: string): DiscoveryAddress[] {
+  const dir = join(repoRoot, "data", "submissions", slug, "discovery");
+  if (!existsSync(dir)) return [];
+  const out: DiscoveryAddress[] = [];
+  const seen = new Set<string>();
+  const push = (chain: unknown, address: unknown, context: unknown) => {
+    if (typeof chain !== "string" || typeof address !== "string") return;
+    if (!chain || !address) return;
+    const k = `${chain.toLowerCase()}|${address.toLowerCase()}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push({
+      chain,
+      address,
+      context: typeof context === "string" && context ? context : null,
+    });
+  };
+  for (const file of readdirSync(dir)) {
+    if (!file.endsWith(".json")) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(readFileSync(join(dir, file), "utf8"));
+    } catch {
+      continue;
+    }
+    const items = Array.isArray(parsed) ? parsed : [parsed];
+    for (const it of items) {
+      if (!it || typeof it !== "object") continue;
+      const meta = (it as { protocol_metadata?: unknown }).protocol_metadata;
+      if (meta && typeof meta === "object") {
+        const admins = (meta as { admin_addresses?: unknown }).admin_addresses;
+        if (Array.isArray(admins)) {
+          for (const a of admins) {
+            if (!a || typeof a !== "object") continue;
+            const r = a as { chain?: unknown; address?: unknown; role?: unknown };
+            push(r.chain, r.address, r.role);
+          }
+        }
+      }
+      const evidence = (it as { evidence?: unknown }).evidence;
+      if (Array.isArray(evidence)) {
+        for (const e of evidence) {
+          if (!e || typeof e !== "object") continue;
+          const r = e as { chain?: unknown; address?: unknown; shows?: unknown };
+          push(r.chain, r.address, r.shows);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function listSlugs(repoRoot: string): string[] {
+  // Union of slugs that have an adapter.json (TVL pipeline) or a
+  // data/submissions/<slug>/discovery directory (LLM-curated addresses).
+  const slugs = new Set<string>();
+  const enrichRoot = join(repoRoot, "data", "enrichment");
+  if (existsSync(enrichRoot)) {
+    for (const entry of readdirSync(enrichRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (existsSync(join(enrichRoot, entry.name, "adapter.json"))) slugs.add(entry.name);
+    }
+  }
+  const subsRoot = join(repoRoot, "data", "submissions");
+  if (existsSync(subsRoot)) {
+    for (const entry of readdirSync(subsRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (existsSync(join(subsRoot, entry.name, "discovery"))) slugs.add(entry.name);
+    }
+  }
+  return [...slugs].sort();
 }
 
 function key(chain: string, address: string): string {
@@ -378,17 +453,15 @@ async function main(): Promise<void> {
     );
   }
 
-  const adapterPaths = listAdapterFiles(opts.repoRoot);
-  const filtered = opts.slug
-    ? adapterPaths.filter((p) => p.includes(`/${opts.slug}/`))
-    : adapterPaths;
+  const allSlugs = listSlugs(opts.repoRoot);
+  const filtered = opts.slug ? allSlugs.filter((s) => s === opts.slug) : allSlugs;
 
   if (filtered.length === 0) {
-    console.error(`[sourcecode] no adapter.json files matched (slug=${opts.slug ?? "(all)"})`);
+    console.error(`[sourcecode] no adapter.json or discovery submissions matched (slug=${opts.slug ?? "(all)"})`);
     process.exit(1);
   }
 
-  console.error(`[sourcecode] processing ${filtered.length} adapter files`);
+  console.error(`[sourcecode] processing ${filtered.length} slugs`);
 
   // Cross-protocol + cross-run dedup: load any existing sourcecode.json
   // records into the in-memory cache so a capped/interrupted run resumes.
@@ -404,34 +477,47 @@ async function main(): Promise<void> {
   let cacheHits = 0;
   let limitedSkips = 0;
 
-  for (const adapterPath of filtered) {
-    const adapter = loadAdapter(adapterPath);
-    if (!adapter) continue;
+  for (const slug of filtered) {
+    const adapterPath = join(opts.repoRoot, "data", "enrichment", slug, "adapter.json");
+    const adapter = existsSync(adapterPath) ? loadAdapter(adapterPath) : null;
 
     const seen = new Set<string>();
     const entries: SourceCodeAddress[] = [];
 
-    for (const a of adapter.static_addresses) {
-      if (!a.chain) continue; // chain attribution is required for any explorer call
-      const k = key(a.chain, a.address);
-      if (seen.has(k)) continue;
+    const processAddress = async (chain: string, address: string, context: string | null) => {
+      const k = key(chain, address);
+      if (seen.has(k)) return;
       seen.add(k);
 
       let fetched = fetchedCache.get(k) ?? null;
       if (fetched) {
         cacheHits++;
-      } else if (isSupportedChain(a.chain)) {
+      } else if (isSupportedChain(chain)) {
         if (opts.limit !== null && calls >= opts.limit) {
-          // Limit hit — emit unfetched record so the next run picks it up.
           limitedSkips++;
-          entries.push(buildAddressEntry(a.chain, a.address, a.context, null, opts.apiKey));
-          continue;
+          entries.push(buildAddressEntry(chain, address, context, null, opts.apiKey));
+          return;
         }
-        fetched = await fetchOneAddress(a.chain, a.address, opts.apiKey, opts.rateLimitMs);
+        fetched = await fetchOneAddress(chain, address, opts.apiKey, opts.rateLimitMs);
         fetchedCache.set(k, fetched);
         calls++;
       }
-      entries.push(buildAddressEntry(a.chain, a.address, a.context, fetched, opts.apiKey));
+      entries.push(buildAddressEntry(chain, address, context, fetched, opts.apiKey));
+    };
+
+    if (adapter) {
+      for (const a of adapter.static_addresses) {
+        if (!a.chain) continue; // chain attribution is required for any explorer call
+        await processAddress(a.chain, a.address, a.context);
+      }
+    }
+
+    // Discovery addresses (admin_addresses + evidence). Same fetch path; new
+    // entries get tagged with role/shows as their context. Adapter rows that
+    // also appear in discovery are deduped by `seen`.
+    const discoveryAddrs = loadDiscoveryAddresses(opts.repoRoot, slug);
+    for (const d of discoveryAddrs) {
+      await processAddress(d.chain, d.address, d.context);
     }
 
     entries.sort((x, y) => {
@@ -440,14 +526,14 @@ async function main(): Promise<void> {
     });
 
     const out: SourceCodeFile = {
-      slug: adapter.slug,
-      adapter_commit: adapter.adapter_commit ?? null,
+      slug,
+      adapter_commit: adapter?.adapter_commit ?? null,
       fetched_at: new Date().toISOString(),
       etherscan_v: opts.apiKey ? "v2" : null,
       addresses: entries,
       summary: summarize(entries),
     };
-    writeSourceCode(opts.repoRoot, adapter.slug, out);
+    writeSourceCode(opts.repoRoot, slug, out);
   }
 
   console.error(

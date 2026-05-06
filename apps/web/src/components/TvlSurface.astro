@@ -62,9 +62,16 @@ interface Row {
 }
 
 function buildRows(): Row[] {
-  // Address-keyed merge across the three files.
+  // Address-keyed merge across the three enrichment files + discovery
+  // submissions. We track adapter / discovery membership as separate sets and
+  // derive the `source` pill at the end, since sourcecode.json may now carry
+  // verification data for discovery-only addresses (the fetch pipeline now
+  // walks discovery in addition to adapter), and tagging those as "tvl" by
+  // origin would be wrong.
   const addrMap = new Map<string, Row>();
-  function put(chain: string | null, address: string, context: string | null, source: RowSource = "tvl") {
+  const inAdapter = new Set<string>();
+  const inDiscovery = new Set<string>();
+  function put(chain: string | null, address: string, context: string | null) {
     if (!chain) return;
     const key = `${chain.toLowerCase()}|${address.toLowerCase()}`;
     const existing = addrMap.get(key);
@@ -85,15 +92,17 @@ function buildRows(): Row[] {
         self_is_safe: null,
         self_safe_threshold: null,
         self_safe_owners_count: null,
-        source,
+        source: "tvl",
       });
-    } else if (source !== existing.source) {
-      existing.source = "both";
-      if (!existing.context && context) existing.context = context;
+    } else if (!existing.context && context) {
+      existing.context = context;
     }
   }
   if (adapter) {
-    for (const a of adapter.static_addresses ?? []) put(a.chain, a.address, a.context);
+    for (const a of adapter.static_addresses ?? []) {
+      put(a.chain, a.address, a.context);
+      if (a.chain) inAdapter.add(`${a.chain.toLowerCase()}|${a.address.toLowerCase()}`);
+    }
   }
   if (sourcecode) {
     for (const a of sourcecode.addresses ?? []) {
@@ -131,31 +140,40 @@ function buildRows(): Row[] {
       }
     }
   }
-  // Layer in discovery evidence rows (chain + address) on top of the
-  // mechanical adapter set. New rows tag source="discovery"; matches on an
-  // existing row promote it to source="both" and fill in context if empty.
+  // Layer in discovery rows (chain + address) on top of the mechanical
+  // adapter set. Tracks discovery membership in `inDiscovery`; the final
+  // source pill is derived from set membership after all passes.
   const discoverySubs = submissions?.get("discovery") ?? [];
   for (const sub of discoverySubs) {
     for (const ev of sub.evidence ?? []) {
       if (!ev.chain || !ev.address) continue;
-      put(ev.chain, ev.address, ev.shows ?? null, "discovery");
-      const row = addrMap.get(`${ev.chain.toLowerCase()}|${ev.address.toLowerCase()}`);
+      put(ev.chain, ev.address, ev.shows ?? null);
+      const k = `${ev.chain.toLowerCase()}|${ev.address.toLowerCase()}`;
+      inDiscovery.add(k);
+      const row = addrMap.get(k);
       if (!row) continue;
       if (!row.discovery_url) row.discovery_url = ev.url;
       if (!row.discovery_shows) row.discovery_shows = ev.shows;
     }
     // Also seed rows from protocol_metadata.admin_addresses — the discovery
     // prompt's structured catalogue. Each entry has chain/address/role and is
-    // typically much larger than evidence[] (e.g. Lido has ~119). Without
-    // this pass, the surface table hides the bulk of discovery work.
+    // typically much larger than evidence[] (e.g. Lido has ~119).
     for (const a of sub.protocol_metadata?.admin_addresses ?? []) {
       if (!a.chain || !a.address) continue;
-      put(a.chain, a.address, a.role ?? null, "discovery");
-      const row = addrMap.get(`${a.chain.toLowerCase()}|${a.address.toLowerCase()}`);
+      put(a.chain, a.address, a.role ?? null);
+      const k = `${a.chain.toLowerCase()}|${a.address.toLowerCase()}`;
+      inDiscovery.add(k);
+      const row = addrMap.get(k);
       if (!row) continue;
       if (!row.discovery_shows && a.role) row.discovery_shows = a.role;
       if (!row.discovery_actor_class && a.actor_class) row.discovery_actor_class = a.actor_class;
     }
+  }
+  // Resolve the source pill from set membership rather than insertion order.
+  for (const [k, row] of addrMap) {
+    const inAdp = inAdapter.has(k);
+    const inDsc = inDiscovery.has(k);
+    row.source = inAdp && inDsc ? "both" : inDsc ? "discovery" : "tvl";
   }
   return [...addrMap.values()].sort((x, y) => {
     if (x.chain !== y.chain) return x.chain.localeCompare(y.chain);
