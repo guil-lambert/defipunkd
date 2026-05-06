@@ -32,21 +32,21 @@ const GROWTH_PATHS: {
 }[] = [
   {
     key: "enrichment",
-    label: "data/enrichment/",
+    label: "EVIDENCE",
     stroke: "#A17CF3",
     description:
       "Per-protocol factual evidence crawled from public sources — audits, source code, adapter, control structure. The universe of protocols we have evidence for.",
   },
   {
     key: "submissions",
-    label: "data/submissions/",
+    label: "REPORTS",
     stroke: "#0EA982",
     description:
       "Raw individual LLM runs from DEFI@home contributors, one file per (protocol, slice, run). Multiple runs accumulate per slice until ≥3 agree.",
   },
   {
     key: "assessments",
-    label: "data/assessments/",
+    label: "VERDICTS",
     stroke: "#E8846A",
     description:
       "Quorum-merged verdicts produced once ≥3 independent runs agree on grade and overlapping evidence — one file per (protocol, slice).",
@@ -83,6 +83,14 @@ const TIER_NAME: Record<Tier, string> = {
   none: "Ungraded",
 };
 
+const TIER_DEF: Record<Tier, string> = {
+  gold: "Strong AI consensus on all five dimensions",
+  silver: "Weak AI consensus on all five dimensions",
+  bronze: "AI consensus on at least one dimension",
+  wood: "At least one model submission, no quorum yet",
+  none: "No model submissions yet",
+};
+
 const FAMILY_FILL: Record<ModelFamily, string> = {
   claude: "#E8846A",
   gpt: "#0EA982",
@@ -116,6 +124,40 @@ const GRADE_LABEL = {
   green: "green",
   unknown: "unknown",
 } as const;
+
+type GradeKey = "red" | "orange" | "green" | "unknown";
+const GRADE_TOOLTIP_BY_SLICE: Record<PizzaSliceId, Record<GradeKey, string>> = {
+  control: {
+    green: "Highest reachable tier is T3+, OR T2 reachable only through ≥7-day timelock, OR T1 only via immutable contracts.",
+    orange: "T1/T2 reachable through fast-path delay <7 days, weak multisig, or short-timelock governance.",
+    red: "T1 reachable with no timelock by a single EOA or 2-of-3 multisig.",
+    unknown: "Could not determine upgrade authority or highest reachable tier.",
+  },
+  "ability-to-exit": {
+    green: "Permissionless exit; pauses absent or capped ≤7 days; finalized claims always exitable.",
+    orange: "Pausable with broad scope, governance-only indefinite pause, or queued redemption >7 days.",
+    red: "Admin signature required to exit, indefinite pause on finalized claims, or purely custodial.",
+    unknown: "Checklist incomplete after checking the sources.",
+  },
+  autonomy: {
+    green: "Stage 2: no critical external dependencies, or all have documented fallbacks that keep users whole.",
+    orange: "Stage 1: dependency failure can degrade yield/performance but cannot cause loss of principal.",
+    red: "Stage 0: dependency failure can cause theft or loss of principal.",
+    unknown: "Core architecture itself is unverifiable.",
+  },
+  "open-access": {
+    green: "No on-chain whitelist/KYC, and at least one independent path (SDK, third-party UI, aggregator) exists.",
+    orange: "Contracts are permissionless but only the official UI reaches them — operationally captured.",
+    red: "On-chain whitelist/KYC, single-operator approval required, or admin-updatable blocklist.",
+    unknown: "Could not determine admission gating from the available sources.",
+  },
+  verifiability: {
+    green: "Bytecode verified, public repo matches deployment, recent audit from a recognized firm.",
+    orange: "Visible drift between repo and deployment, stale or minor audits, or partial proxy verification.",
+    red: "Unverified bytecode, no audit, or no public repo.",
+    unknown: "Explorer and repo both inaccessible for this protocol.",
+  },
+};
 
 const COVERAGE_GLYPH: Record<CoverageState, string> = {
   strong: "●",
@@ -179,18 +221,8 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
 
     <section class="card" id="growth-over-time">
       <h2>Growth over time</h2>
-      <p class="caption">
-        {growthCommits.toLocaleString()} commits on <code>main</code>, oldest → newest.
-        Rows are areas of <code>data/</code>; columns are how each area is measured.
-        Y-axes auto-scale per panel — compare shapes, not absolute heights across rows.
-      </p>
+      <p class="caption">{growthCommits.toLocaleString()} commits on <code>main</code></p>
       <div class="growth-grid">
-        <div class="growth-grid-row growth-grid-head" aria-hidden="true">
-          <span></span>
-          {GROWTH_METRICS.map((m) => (
-            <span class="growth-col-head">{m.title}</span>
-          ))}
-        </div>
         {GROWTH_PATHS.map((p) => (
           <div class="growth-grid-row">
             <div class="growth-row-head">
@@ -242,7 +274,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
                         <span
                           class="slice-seg"
                           style={`flex-grow: ${flexFor(k)}; background: ${GRADE_FILL[k]};`}
-                          title={`${GRADE_LABEL[k]}: ${b[k].toLocaleString()} of ${total.toLocaleString()}`}
+                          title={`${GRADE_LABEL[k]}: ${b[k].toLocaleString()} of ${total.toLocaleString()}\n${GRADE_TOOLTIP_BY_SLICE[id as PizzaSliceId][k]}`}
                         >{b[k].toLocaleString()}</span>
                       </>
                     );
@@ -342,7 +374,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
             <span
               class="seg"
               style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
-              title={`${TIER_NAME[s.tier]} — ${s.value.toLocaleString()} protocol${s.value === 1 ? "" : "s"}`}
+              title={`${TIER_NAME[s.tier]} — ${s.value.toLocaleString()} protocol${s.value === 1 ? "" : "s"}\n${TIER_DEF[s.tier]}`}
             >
               <span class="seg-label">{TIER_NAME[s.tier]}: {s.value.toLocaleString()}</span>
             </span>
@@ -375,7 +407,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
             <span
               class="seg"
               style={`flex-grow: ${s.flex}; background: ${TIER_FILL[s.tier]};`}
-              title={`${TIER_NAME[s.tier]} — ${formatTvl(s.value)}`}
+              title={`${TIER_NAME[s.tier]} — ${formatTvl(s.value)}\n${TIER_DEF[s.tier]}`}
             >
               <span class="seg-label">{TIER_NAME[s.tier]}: {formatTvl(s.value)}</span>
             </span>
@@ -399,6 +431,14 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
         For each protocol with at least one submission: which of the five slices have reached AI consensus.
         Click a cell to jump to that slice on the protocol's risk-analysis page.
       </p>
+      <ul class="coverage-legend">
+        {(["strong", "weak", "insufficient", "disagreement", "none"] as const).map((s) => (
+          <li>
+            <span class={`legend-glyph glyph-${s}`}>{COVERAGE_GLYPH[s]}</span>
+            {COVERAGE_LABEL[s]}
+          </li>
+        ))}
+      </ul>
       {stats.coverage.length === 0 ? (
         <p class="empty">No coverage yet.</p>
       ) : (
@@ -460,14 +500,6 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
           })}
         </div>
       )}
-      <ul class="coverage-legend">
-        {(["strong", "weak", "insufficient", "disagreement", "none"] as const).map((s) => (
-          <li>
-            <span class={`legend-glyph glyph-${s}`}>{COVERAGE_GLYPH[s]}</span>
-            {COVERAGE_LABEL[s]}
-          </li>
-        ))}
-      </ul>
     </section>
   </main>
   </main>
@@ -484,7 +516,7 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.25rem;
   }
-  .card h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+  .card h2 { margin: 0 0 0.5rem; font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
   .caption {
     color: oklch(0.65 0.015 235);
     margin: 0 0 0.9rem;
@@ -516,8 +548,14 @@ const maxModelCount = Math.max(1, ...stats.modelBreakdown.map((m) => m.count));
   .growth-row-head {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.4rem;
     font-size: 0.85rem;
+  }
+  .growth-row-head strong {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
   }
   .growth-row-head .caption {
     margin: 0;
