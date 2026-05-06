@@ -267,12 +267,37 @@ export function aggregateProtocolMetadata(
   if (security_contact !== null) out.security_contact = security_contact;
   const deployed_contracts_doc = firstNonNull((m) => m.deployed_contracts_doc);
   if (deployed_contracts_doc !== null) out.deployed_contracts_doc = deployed_contracts_doc;
-  const upgradeability = firstNonNull((m) => m.upgradeability);
+  const upgradeability = majorityVote(entries.map((e) => e.protocol_metadata!.upgradeability));
   if (upgradeability !== null) out.upgradeability = upgradeability;
   const about = firstNonNull((m) => m.about);
   if (about !== null) out.about = about;
 
   return Object.keys(out).length > 0 ? out : undefined;
+}
+
+// Pick the most-frequent non-null value. On a tie, prefer the value that
+// appears earliest in the input (callers pass entries sorted recency-desc, so
+// the freshest source wins ties). Returns null if there are no non-null votes.
+function majorityVote<T>(values: Array<T | null | undefined>): T | null {
+  const counts = new Map<T, { count: number; firstIdx: number }>();
+  values.forEach((v, i) => {
+    if (v === null || v === undefined) return;
+    const existing = counts.get(v);
+    if (existing) existing.count++;
+    else counts.set(v, { count: 1, firstIdx: i });
+  });
+  if (counts.size === 0) return null;
+  let winner: T | null = null;
+  let bestCount = -1;
+  let bestIdx = Infinity;
+  for (const [val, { count, firstIdx }] of counts) {
+    if (count > bestCount || (count === bestCount && firstIdx < bestIdx)) {
+      winner = val;
+      bestCount = count;
+      bestIdx = firstIdx;
+    }
+  }
+  return winner;
 }
 
 function unionBy<T>(
@@ -348,7 +373,7 @@ export function aggregateProtocolMetadataFromSubmissions(
   if (security_contact !== null) out.security_contact = security_contact;
   const deployed_contracts_doc = firstNonNull((m) => m.deployed_contracts_doc);
   if (deployed_contracts_doc !== null) out.deployed_contracts_doc = deployed_contracts_doc;
-  const upgradeability = firstNonNull((m) => m.upgradeability);
+  const upgradeability = majorityVote(entries.map((m) => m.upgradeability));
   if (upgradeability !== null) out.upgradeability = upgradeability;
   const about = firstNonNull((m) => m.about);
   if (about !== null) out.about = about;
