@@ -140,6 +140,17 @@ function buildRows(): Row[] {
       if (!row.discovery_url) row.discovery_url = ev.url;
       if (!row.discovery_shows) row.discovery_shows = ev.shows;
     }
+    // Also seed rows from protocol_metadata.admin_addresses — the discovery
+    // prompt's structured catalogue. Each entry has chain/address/role and is
+    // typically much larger than evidence[] (e.g. Lido has ~119). Without
+    // this pass, the surface table hides the bulk of discovery work.
+    for (const a of sub.protocol_metadata?.admin_addresses ?? []) {
+      if (!a.chain || !a.address) continue;
+      put(a.chain, a.address, a.role ?? null, "discovery");
+      const row = addrMap.get(`${a.chain.toLowerCase()}|${a.address.toLowerCase()}`);
+      if (!row) continue;
+      if (!row.discovery_shows && a.role) row.discovery_shows = a.role;
+    }
   }
   return [...addrMap.values()].sort((x, y) => {
     if (x.chain !== y.chain) return x.chain.localeCompare(y.chain);

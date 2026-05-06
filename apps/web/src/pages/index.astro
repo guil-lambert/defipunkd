@@ -9,7 +9,7 @@ import { primaryChain } from "../lib/format";
 import { buildNodes, chainTvlFromNodes, tabCountsFromNodes, type LandingRow } from "../lib/landing";
 import { verifiabilityGrade } from "../lib/verifiability";
 import { autonomyGrade } from "../lib/autonomy";
-import { deriveTier, type TierInput } from "../lib/tier";
+import { deriveTier, TIER_RANK, type TierInput } from "../lib/tier";
 import { type PizzaSliceId } from "../lib/pizza";
 import { assessProtocol, cexAssessment } from "../lib/rationale";
 
@@ -116,11 +116,18 @@ const rows: LandingRow[] = protocols.map((p) => {
   }
   for (const r of rows) {
     if (!r.is_parent) continue;
-    // Always inherit slice_summary from the largest-TVL child for parents,
-    // since the parent itself does not carry per-slice assessments.
+    // Inherit slice_summary from the highest-tier child (TVL tie-break) so
+    // the parent's pizza chart matches the parent's tier medal — both come
+    // from the same child rather than splitting between TVL leader and tier
+    // leader (e.g. Uniswap parent should reflect v4 — silver tier — rather
+    // than v3 which leads on TVL but has a lower tier).
     const kids = childrenByParent.get(r.slug);
     if (!kids || kids.length === 0) continue;
-    const best = [...kids].sort((a, b) => (b.tvl ?? -1) - (a.tvl ?? -1))[0];
+    const best = [...kids].sort((a, b) => {
+      const tierDiff = TIER_RANK[b.tier ?? "none"] - TIER_RANK[a.tier ?? "none"];
+      if (tierDiff !== 0) return tierDiff;
+      return (b.tvl ?? -1) - (a.tvl ?? -1);
+    })[0];
     if (best) {
       r.slice_summary = best.slice_summary;
       r.slice_summary_source_name = best.name;
