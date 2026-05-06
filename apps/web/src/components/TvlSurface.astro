@@ -165,6 +165,37 @@ function buildRows(): Row[] {
 
 const rows: Row[] = (adapter || (submissions?.get("discovery")?.length ?? 0) > 0) ? buildRows() : [];
 
+// Heuristic type label for the Type column. Pulls from contract name, role,
+// and context strings — discovery rarely fills actor_class beyond the closed
+// set (eoa/multisig/timelock/governance), so we infer common roles from text.
+// Order matters: more specific matches win.
+const TYPE_PATTERNS: Array<[RegExp, string]> = [
+  [/\b(timelock)\b/i, "timelock"],
+  [/\b(multisig|gnosis safe|\bsafe\b)\b/i, "multisig"],
+  [/\b(governor|governance|\bdao\b|aragon agent)\b/i, "governance"],
+  [/\b(guardian|emergency|pauser|sentinel)\b/i, "guardian"],
+  [/\b(oracle|price feed|aggregator|chainlink|pyth)\b/i, "oracle"],
+  [/\b(factory|deployer|registry)\b/i, "factory"],
+  [/\b(router|periphery)\b/i, "router"],
+  [/\b(bridge|gateway|messenger|relayer)\b/i, "bridge"],
+  [/\b(token|erc20|stablecoin|wrapped|reward token)\b/i, "token"],
+  [/\b(vault|strategy|rebalancer)\b/i, "vault"],
+  [/\b(treasury|fee collector|stonks)\b/i, "treasury"],
+];
+function deriveType(r: Row): string | null {
+  // 1. On-chain Safe data wins — handled inline in the template (Safe N/M).
+  // 2. Closed-set actor_class from discovery.
+  const ac = r.discovery_actor_class;
+  if (ac && ac !== "eoa" && ac !== "unknown") return ac;
+  // 3. Text inference from role / context / contract_name.
+  const haystack = [r.discovery_shows, r.context, r.contract_name].filter(Boolean).join(" ");
+  if (!haystack) return null;
+  for (const [re, label] of TYPE_PATTERNS) {
+    if (re.test(haystack)) return label;
+  }
+  return null;
+}
+
 const explorerBase: Record<string, string> = {
   ethereum: "https://etherscan.io/address/",
   arbitrum: "https://arbiscan.io/address/",
@@ -246,7 +277,7 @@ const ownerCount = rows.filter((r) => r.owner).length;
             <th class="th-verified" data-sort="4"><button type="button" class="sort-btn">Verified</button></th>
             <th class="th-proxy"    data-sort="5"><button type="button" class="sort-btn">Proxy</button></th>
             <th class="th-owner"    data-sort="6"><button type="button" class="sort-btn">Owner</button></th>
-            <th class="th-multi"    data-sort="7"><button type="button" class="sort-btn">Multisig</button></th>
+            <th class="th-multi"    data-sort="7"><button type="button" class="sort-btn">Type</button></th>
           </tr>
         </thead>
         <tbody>
@@ -307,11 +338,14 @@ const ownerCount = rows.filter((r) => r.owner).length;
                     <span class="pill safe" title="Owner is a Safe multisig">{r.owner_safe_threshold}/{r.owner_safe_owners_count} Safe</span>
                   ) : r.self_is_safe && r.self_safe_threshold !== null ? (
                     <span class="pill safe" title="Address itself is a Safe multisig">self {r.self_safe_threshold}/{r.self_safe_owners_count}</span>
-                  ) : r.discovery_actor_class && r.discovery_actor_class !== "eoa" && r.discovery_actor_class !== "unknown" ? (
-                    <span class="pill actor" title={`Reported by discovery as ${r.discovery_actor_class} (not verified on-chain)`}>{r.discovery_actor_class}</span>
-                  ) : (
-                    <span class="muted">—</span>
-                  )}
+                  ) : (() => {
+                    const t = deriveType(r);
+                    return t ? (
+                      <span class="pill actor" title={`Inferred type from role/context (not verified on-chain)`}>{t}</span>
+                    ) : (
+                      <span class="muted">—</span>
+                    );
+                  })()}
                 </td>
               </tr>
             );
