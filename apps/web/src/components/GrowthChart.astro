@@ -1,6 +1,8 @@
 ---
 // SVG line chart of {timestamp, value} points. Pure SSR — no client JS.
-// Auto-scales y to its own data so small series stay legible.
+// Auto-scales y to its own data so small series stay legible. Renders an
+// invisible hover rail above the SVG: each commit gets a flex-tile that
+// shows a date+value tooltip on hover/focus.
 
 interface Point {
   timestamp: string;
@@ -44,6 +46,12 @@ const areaPath = `${linePath} L ${scaleX(maxX).toFixed(2)} ${(padY + innerH).toF
 const last = points[points.length - 1];
 const first = points[0];
 const fmt = (n: number) => n.toLocaleString();
+const fmtDate = (iso: string) => {
+  const d = new Date(iso);
+  // e.g. "2026-05-06 09:58 UTC-04"
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 ---
 
 <div class="growth-chart">
@@ -51,15 +59,27 @@ const fmt = (n: number) => n.toLocaleString();
     <span class="growth-chart-label">{label}</span>
     <span class="growth-chart-value">{fmt(last?.value ?? 0)}</span>
   </div>
-  <svg
-    viewBox={`0 0 ${width} ${height}`}
-    preserveAspectRatio="none"
-    role="img"
-    aria-label={`${label}: ${fmt(first?.value ?? 0)} → ${fmt(last?.value ?? 0)} over ${points.length} commits`}
-  >
-    <path d={areaPath} fill={stroke} fill-opacity="0.12" />
-    <path d={linePath} fill="none" stroke={stroke} stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
-  </svg>
+  <div class="growth-chart-plot">
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={`${label}: ${fmt(first?.value ?? 0)} → ${fmt(last?.value ?? 0)} over ${points.length} commits`}
+    >
+      <path d={areaPath} fill={stroke} fill-opacity="0.12" />
+      <path d={linePath} fill="none" stroke={stroke} stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
+    </svg>
+    <div class="growth-chart-rail" aria-hidden="true">
+      {points.map((p) => (
+        <div class="gc-tick" tabindex="0">
+          <span class="tt" role="tooltip">
+            <span class="tt-line">{fmtDate(p.timestamp)}</span>
+            <span class="tt-line">{fmt(p.value)}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
   <div class="growth-chart-footer">
     <span>{first ? new Date(first.timestamp).toISOString().slice(0, 10) : ""}</span>
     <span>{last ? new Date(last.timestamp).toISOString().slice(0, 10) : ""}</span>
@@ -91,10 +111,73 @@ const fmt = (n: number) => n.toLocaleString();
     font-weight: 600;
   }
 
+  .growth-chart-plot {
+    position: relative;
+    width: 100%;
+  }
+
   .growth-chart svg {
     width: 100%;
     height: auto;
     display: block;
+  }
+
+  .growth-chart-rail {
+    position: absolute;
+    inset: 0;
+    display: flex;
+  }
+
+  .gc-tick {
+    position: relative;
+    flex: 1 1 0;
+    height: 100%;
+    cursor: crosshair;
+  }
+  .gc-tick:hover,
+  .gc-tick:focus-within {
+    background: rgba(255, 255, 255, 0.08);
+    outline: none;
+  }
+  .gc-tick > .tt {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    background: oklch(0.34 0.008 235);
+    color: oklch(0.95 0.01 235);
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    border: 1px solid oklch(0.50 0.015 235);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 60ms ease-out, transform 60ms ease-out;
+    z-index: 100;
+  }
+  .gc-tick > .tt::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: oklch(0.34 0.008 235);
+  }
+  .gc-tick:hover > .tt,
+  .gc-tick:focus-within > .tt {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .gc-tick > .tt .tt-line { display: block; }
+  .gc-tick > .tt .tt-line + .tt-line {
+    margin-top: 0.15rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
   }
 
   .growth-chart-footer {
