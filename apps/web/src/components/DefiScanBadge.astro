@@ -1,0 +1,58 @@
+---
+import type { EnrichmentDefiScan } from "@defipunkd/registry";
+import { defiscanBadgeUrl, defiscanStageLabel } from "../lib/defiscan";
+
+interface Props {
+  defiscan: EnrichmentDefiScan;
+  /** Title prefix; allows callers to disambiguate the source on family
+   * pages where multiple badges sit close together. */
+  titlePrefix?: string;
+}
+const { defiscan, titlePrefix = "DefiScan" } = Astro.props;
+const url = defiscanBadgeUrl(defiscan);
+const stage = defiscan.headline_stage;
+const label = defiscanStageLabel(stage) ?? "DefiScan";
+const stageClass = stage ? `stage-${stage}` : "stage-none";
+const title = `${titlePrefix}: ${label}`;
+---
+<a class={`defiscan-badge ${stageClass}`} href={url} rel="noopener noreferrer" target="_blank" title={title}>
+  <span class="dfs-prefix">DefiScan</span>
+  <span class="dfs-sep">·</span>
+  <span class="dfs-label">{label}</span>
+</a>
+
+<style>
+  .defiscan-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 4px;
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #ffffff;
+    text-decoration: none;
+    white-space: nowrap;
+    border: 0;
+    line-height: 1.4;
+    transition: background-color 0.12s ease;
+  }
+  /* Match defiscan.info's tailwind palette: bg-red-500 / bg-yellow-500 /
+     bg-green-500 with their darker `*-primary` (= ~600) on hover. */
+  .defiscan-badge.stage-0 { background: #ef4444; }
+  .defiscan-badge.stage-0:hover { background: #dc2626; }
+  .defiscan-badge.stage-1 { background: #eab308; }
+  .defiscan-badge.stage-1:hover { background: #ca8a04; }
+  .defiscan-badge.stage-2 { background: #22c55e; }
+  .defiscan-badge.stage-2:hover { background: #16a34a; }
+  .defiscan-badge.stage-R { background: #6b7280; }
+  .defiscan-badge.stage-R:hover { background: #4b5563; }
+  .defiscan-badge.stage-none { background: #6b7280; }
+  .defiscan-badge.stage-none:hover { background: #4b5563; }
+
+  .dfs-prefix { opacity: 0.85; font-weight: 500; }
+  .dfs-sep { opacity: 0.6; }
+  .dfs-label { font-weight: 700; }
+</style>

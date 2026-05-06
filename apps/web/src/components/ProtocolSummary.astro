@@ -1,9 +1,10 @@
 ---
 import type { Protocol, LoadedAssessment, AssessmentSliceId, LoadedSubmission } from "@defipunkd/registry";
-import { getProtocolMetadata } from "@defipunkd/registry";
+import { getProtocolMetadata, getEnrichment } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
 import { assessProtocol, cexAssessment, isUncertain, type SliceAssessment } from "../lib/rationale";
 import RiskMatrix from "./RiskMatrix.astro";
+import DefiScanBadge from "./DefiScanBadge.astro";
 import { deriveTier, type TierInput } from "../lib/tier";
 import type { PizzaSliceId } from "../lib/pizza";
 
@@ -17,6 +18,8 @@ const { protocol, assessments, submissions, idPrefix = "" } = Astro.props;
 const idp = idPrefix ? `${idPrefix}-` : "";
 
 const headerMetadata = getProtocolMetadata(protocol.slug);
+const headerEnrichment = getEnrichment(protocol.slug);
+const defiscan = headerEnrichment.defiscan;
 const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions, headerMetadata);
 
 let tierInput: TierInput | undefined;
@@ -170,6 +173,12 @@ const aboutUnknown = !curatedAbout;
       <a class="defillama-link" href={`https://defillama.com/protocol/${protocol.slug}`} rel="noreferrer" target="_blank">
         View on DeFiLlama ↗
       </a>
+      {defiscan && (
+        <>
+          <span class="sep" aria-hidden="true">·</span>
+          <DefiScanBadge defiscan={defiscan} />
+        </>
+      )}
     </div>
 
     <div class="risk-row">
