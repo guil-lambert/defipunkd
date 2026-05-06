@@ -1,6 +1,6 @@
 ---
 import type { Protocol, LoadedAssessment, AssessmentSliceId, LoadedSubmission } from "@defipunkd/registry";
-import { getProtocolMetadata } from "@defipunkd/registry";
+import { getProtocolMetadata, getEnrichment } from "@defipunkd/registry";
 import { EM_DASH, formatTvl, primaryChain } from "../lib/format";
 import { assessProtocol, cexAssessment, isUncertain, type SliceAssessment } from "../lib/rationale";
 import RiskMatrix from "./RiskMatrix.astro";
@@ -17,6 +17,8 @@ const { protocol, assessments, submissions, idPrefix = "" } = Astro.props;
 const idp = idPrefix ? `${idPrefix}-` : "";
 
 const headerMetadata = getProtocolMetadata(protocol.slug);
+const headerEnrichment = getEnrichment(protocol.slug);
+const defiscan = headerEnrichment.defiscan;
 const headerSlices: SliceAssessment[] = protocol.category === "CEX" ? cexAssessment() : assessProtocol(protocol, assessments, submissions, headerMetadata);
 
 let tierInput: TierInput | undefined;
@@ -211,7 +213,7 @@ const aboutUnknown = !curatedAbout;
           </span>
         ))}
       </div>
-      <RiskMatrix slices={headerSlices} variant="full" tier={protocolTier} idPrefix={idPrefix} />
+      <RiskMatrix slices={headerSlices} variant="full" tier={protocolTier} idPrefix={idPrefix} defiscan={defiscan} />
     </div>
 
     <div class="about-row">

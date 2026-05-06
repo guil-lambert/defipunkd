@@ -3,6 +3,7 @@ import type { Protocol, ProvenanceTag } from "@defipunkd/registry";
 import { getEnrichment, getProtocolMetadata } from "@defipunkd/registry";
 import { auditorDomain, EM_DASH, formatUtc } from "../lib/format";
 import ProvTag from "./ProvTag.astro";
+import DefiScanBadge from "./DefiScanBadge.astro";
 
 interface Props {
   protocol: Protocol;
@@ -122,6 +123,9 @@ const metadata = {
   upgradeability: firstNonEmpty(poolMeta.map(({ m }) => m?.upgradeability)),
 };
 
+// DefiScan: prefer parent, else first family member with a defiscan listing.
+const defiscanPick = poolMeta.find(({ e }) => e.defiscan)?.e.defiscan ?? null;
+
 const upgradeabilityLabel: Record<string, string> = {
   immutable: "Immutable",
   upgradeable: "Upgradeable",
@@ -215,6 +219,14 @@ const provenanceSources = Array.from(new Set([
         <div class="field">
           <dt>Governance forum</dt>
           <dd><a href={metadata.governance_forum} class="link" rel="noreferrer" target="_blank">{metadata.governance_forum}</a></dd>
+        </div>
+      )}
+      {defiscanPick && (
+        <div class="field">
+          <dt>DefiScan</dt>
+          <dd>
+            <DefiScanBadge defiscan={defiscanPick} />
+          </dd>
         </div>
       )}
     </dl>

@@ -141,11 +141,38 @@ export interface EnrichmentAudits {
   audits: EnrichmentAuditEntry[];
 }
 
+/** Mirror of a protocol's listing on defiscan.info, sourced by the
+ * scrape-defiscan workflow from the deficollective/defiscan{,-v2} repos.
+ * Stage values: "0" / "1" / "2" / "R" (Review). */
+export type DefiScanStage = "0" | "1" | "2" | "R";
+export interface EnrichmentDefiScanDeployment {
+  chain: string;
+  stage: DefiScanStage | null;
+  /** Deep link to the per-chain page on defiscan.info. */
+  url: string;
+}
+export interface EnrichmentDefiScan {
+  slug: string;
+  fetched_at: string;
+  /** URL to the protocol's root page on defiscan.info (no chain segment). */
+  url: string;
+  /** Stage shown by the header badge: prefers the ethereum deployment, else
+   * the best stage across all deployments. Cross-chain protocols are usually
+   * rated lower on L2s due to bridge trust assumptions, so this won't always
+   * match a particular deployment's stage. */
+  headline_stage: DefiScanStage | null;
+  /** Per-chain entries. Empty when the upstream entry has no chain files
+   * (rare; e.g. v2 single-page entries). */
+  deployments: EnrichmentDefiScanDeployment[];
+  source: "defiscan" | "defiscan-v2";
+}
+
 export interface ProtocolEnrichment {
   adapter: EnrichmentAdapter | null;
   sourcecode: EnrichmentSourceCode | null;
   control: EnrichmentControl | null;
   audits: EnrichmentAudits | null;
+  defiscan: EnrichmentDefiScan | null;
 }
 
 /**
@@ -183,7 +210,7 @@ function readJsonIfExists<T>(path: string): T | null {
 const cache = new Map<string, ProtocolEnrichment>();
 
 export function getEnrichment(slug: string): ProtocolEnrichment {
-  if (!ROOT) return { adapter: null, sourcecode: null, control: null, audits: null };
+  if (!ROOT) return { adapter: null, sourcecode: null, control: null, audits: null, defiscan: null };
   const cached = cache.get(slug);
   if (cached) return cached;
   const dir = join(ROOT, slug);
@@ -192,6 +219,7 @@ export function getEnrichment(slug: string): ProtocolEnrichment {
     sourcecode: readJsonIfExists<EnrichmentSourceCode>(join(dir, "sourcecode.json")),
     control: readJsonIfExists<EnrichmentControl>(join(dir, "control.json")),
     audits: readJsonIfExists<EnrichmentAudits>(join(dir, "audits.json")),
+    defiscan: readJsonIfExists<EnrichmentDefiScan>(join(dir, "defiscan.json")),
   };
   cache.set(slug, value);
   return value;
