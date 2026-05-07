@@ -1,0 +1,132 @@
+{
+  "schema_version": 4,
+  "slug": "anemoy-capital",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Two Ethereum tokens verified via Etherscan with recognized audits, but Base SPXA verification unconfirmed and most recent audit (July 2024) predates SPXA launch (Sep 2025) by >6 months",
+  "short_headline": "Verified Ethereum; Base SPXA audit gap",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "JTRSY (0x8c213ee79581ff4984583c6a801e5263418c4b86, Ethereum) and JAAA (0xaaa0008c8cf3a7dca931adaf04336a5d808c82cc, Ethereum) both return abiSource='etherscan' from DeFiPunkd, confirming bytecode verified on Etherscan. Neither contract shows a proxy.implementation field, indicating they are not proxied. SPXA (0x09b61343097c1f9b159a3ae7151298efd10f0db2, Base) could not be fetched this run due to permission restrictions on the /api/contract/abi endpoint; verification status is unknown."
+      },
+      {
+        "code": "V2",
+        "text": "JTRSY returns contract name 'Tranche' and JAAA returns 'ShareToken', both consistent with the Centrifuge liquidity-pools / protocol repository (identical method signatures: hook(), wards(), authTransferFrom(), setHookData(), rely(), deny(), file()). JAAA has additional custom errors (ExceedsMaxSupply, FileUnrecognizedParam, NotAuthorized) absent in JTRSY, suggesting it is deployed from a newer codebase version. No commit SHA was pinned this run; source-to-repo correspondence is structurally consistent but not bytecode-verified."
+      },
+      {
+        "code": "V3",
+        "text": "The centrifuge/liquidity-pools GitHub repo README lists the following audits covering the liquidity-pools codebase: Code4rena competitive audit (Sep 2023), SRLabs security review (Sep 2023), Cantina/Spearbit security review (Oct 2023), and Spearbit security review (July 2024). The centrifuge/security repo further lists these same audits. The SPXA fund was announced September 25, 2025, which is more than 6 months after the most recent listed audit (July 2024 Spearbit). Whether the new Centrifuge Protocol v3 codebase (centrifuge/protocol repo) used for newer deployments has separate audit coverage could not be confirmed this run."
+      },
+      {
+        "code": "V4",
+        "text": "Auditing firms include Spearbit (recognized), Cantina (Spearbit-managed, recognized), SRLabs (recognized), and Code4rena (recognized competitive audit platform). All four are established in the Solidity security community. No unknown-firm-only audit situation."
+      },
+      {
+        "code": "V5",
+        "text": "JAAA's 'ShareToken' contract ABI includes custom error types not present in JTRSY's 'Tranche' ABI, indicating different codebase versions. The centrifuge/protocol repo appears to represent a v3 rewrite distinct from the centrifuge/liquidity-pools repo that was the audit target through July 2024. Whether audits from the liquidity-pools audit cycle cover the ShareToken and SPXA code specifically could not be confirmed without pinning a commit SHA and comparing against audit scope documents."
+      },
+      {
+        "code": "V6",
+        "text": "Neither JTRSY nor JAAA exhibits proxy patterns — no proxy.implementation field was returned, and ABI source is directly from Etherscan. These are not proxied contracts, consistent with Centrifuge's stated design philosophy of using contract migrations rather than upgradeable proxies. SPXA proxy status on Base is unconfirmed."
+      }
+    ],
+    "steelman": {
+      "red": "The SPXA token (Base chain) verification status is unconfirmed this run, and if it is unverified, that represents a fund-custody token with no public source code — a red condition.",
+      "orange": "Two of three token contracts are verified on Etherscan via recognized ABI sources with multiple recognized-firm audits (Spearbit, Cantina, SRLabs, Code4rena), but the most recent audit is from July 2024 while the SPXA fund launched September 2025 (>6 months gap), and the Base SPXA token could not be verified this run — making full green not supportable.",
+      "green": "All three tokens are factory-deployed instances of the same Centrifuge Tranche/ShareToken contract pattern, which is heavily audited by multiple recognized firms through July 2024, and the EVM contracts are not proxied (immutable once deployed), minimizing ongoing drift concerns."
+    },
+    "verdict": "Choosing orange because: (1) two Ethereum tokens are verified with recognized-firm audits confirming a strong baseline, but (2) the SPXA Base token's verification status could not be confirmed this run due to fetch failures, (3) the newest fund (SPXA, Sep 2025) postdates the most recent confirmed audit (July 2024 Spearbit) by more than 6 months, and (4) JAAA uses a 'ShareToken' contract variant with different ABI from the 'Tranche' contract in JTRSY, suggesting codebase divergence whose audit coverage could not be confirmed. The green steelman is weakened by the Base SPXA unknown and the temporal audit gap; the red steelman requires SPXA to be unverified, which is merely unknown rather than confirmed. Orange accurately reflects verified-but-incomplete audit coverage with temporal gaps."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "shows": "JTRSY token on Ethereum: contract name 'Tranche', abiSource='etherscan' (verified), not a proxy (no proxy.implementation), hook() returns 0x21Cdcc686fECd9Fb0d3ee300E555C06497B55EcC, pinned to block 25046074",
+      "chain": "ethereum",
+      "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xaaa0008c8cf3a7dca931adaf04336a5d808c82cc",
+      "shows": "JAAA token on Ethereum: contract name 'ShareToken', abiSource='etherscan' (verified), not a proxy (no proxy.implementation), hook() returns 0x9AAb592CAE455Afb6fC78c922f9212bC2A4f1147, custom errors present (ExceedsMaxSupply, FileUnrecognizedParam, NotAuthorized), pinned to block 25046076",
+      "chain": "ethereum",
+      "address": "0xaaa0008c8cf3a7dca931adaf04336a5d808c82cc",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/centrifuge/liquidity-pools",
+      "shows": "Centrifuge liquidity-pools repo listing audits: Code4rena (Sep 2023), SRLabs (Sep 2023), Cantina/Spearbit (Oct 2023), Spearbit (July 2024); contracts described as immutable with ward-pattern access control and Tranche Token architecture matching deployed contracts"
+    },
+    {
+      "url": "https://github.com/centrifuge/protocol",
+      "shows": "Centrifuge Protocol v3 repo described as built on immutable smart contracts with 19 security reviews to date; hub-and-spoke model with ShareToken architecture consistent with JAAA's deployed ShareToken contract"
+    },
+    {
+      "url": "https://cantina.xyz/portfolio/8c15e83a-08fc-48b9-8cc1-4f9ca76bb064",
+      "shows": "Spearbit/Cantina audit of Centrifuge liquidity-pools codebase (July 2024), covering operator controls, tranche token safety, gateway messaging, and asset recovery mechanics"
+    },
+    {
+      "url": "https://www.anemoy.io",
+      "shows": "Anemoy website confirms three funds: JTRSY (U.S. Treasury Fund), JAAA (AAA CLO Fund), SPXA (S&P 500 Index Fund launched September 25, 2025 on Base); built on Centrifuge protocol",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V1: SPXA Base token (0x09b61343097c1f9b159a3ae7151298efd10f0db2) bytecode verification status on Basescan could not be confirmed — fetch of /api/contract/abi?chainId=8453 and Etherscan/Basescan returned permission errors this run",
+    "V2: No commit SHA was pinned for JTRSY (Tranche) or JAAA (ShareToken) against the centrifuge/liquidity-pools or centrifuge/protocol repos — structural correspondence is consistent but no bytecode diff was performed",
+    "V3: Audit scope for the centrifuge/protocol v3 codebase (used for newer deployments including SPXA and potentially JAAA's ShareToken variant) could not be confirmed — the listed audits through July 2024 reference centrifuge/liquidity-pools; whether a separate protocol-v3 audit exists was not confirmed this run",
+    "V5: Whether JAAA's 'ShareToken' contract specifically falls within the July 2024 Spearbit audit scope (vs. being a newer codebase version post-audit) could not be determined without fetching the audit PDF scope section"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/centrifuge/liquidity-pools",
+      "https://github.com/centrifuge/protocol"
+    ],
+    "docs_url": "https://docs.centrifuge.io",
+    "audits": [
+      {
+        "firm": "Spearbit (Cantina Managed)",
+        "url": "https://github.com/centrifuge/liquidity-pools/blob/main/audits/2023-10-Spearbit-Cantina-Managed.pdf",
+        "date": "2023-10"
+      },
+      {
+        "firm": "SRLabs",
+        "url": "https://github.com/centrifuge/security/tree/main/audits",
+        "date": "2023-09"
+      },
+      {
+        "firm": "Code4rena",
+        "url": "https://github.com/code-423n4/2023-09-centrifuge",
+        "date": "2023-09"
+      },
+      {
+        "firm": "Spearbit",
+        "url": "https://github.com/centrifuge/protocol/blob/main/docs/audits/2024-08-Spearbit.pdf",
+        "date": "2024-07"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x21Cdcc686fECd9Fb0d3ee300E555C06497B55EcC",
+        "role": "Hook contract for JTRSY (transfer restriction manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9AAb592CAE455Afb6fC78c922f9212bC2A4f1147",
+        "role": "Hook contract for JAAA (transfer restriction manager)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Anemoy Capital is a web3-native asset manager built on the Centrifuge protocol that offers tokenized real-world asset funds, including a U.S. Treasury Fund (JTRSY), an AAA CLO Fund (JAAA), and an S&P 500 Index Fund (SPXA). Investors acquire ERC-20 share tokens (tranche tokens) representing ownership in the underlying fund, with deposits and redemptions processed asynchronously via ERC-7540 vaults. The funds are permissioned — transfer restrictions are enforced via hook contracts — and operate under Centrifuge's hub-and-spoke multi-chain architecture where NAV pricing is managed on a hub chain and tokens are distributed across EVM spoke chains."
+  }
+}

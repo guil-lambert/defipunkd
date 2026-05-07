@@ -1,0 +1,176 @@
+{
+  "schema_version": 4,
+  "slug": "portal",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Core EVM contracts verified on-chain; multiple recognized-firm audits exist, but the most recent EVM core/TokenBridge audit is from May 2023 (>2 years stale); newer audits cover NTT, CCTP, and governance but not the canonical token bridge",
+  "short_headline": "Verified; EVM core audit >2 yrs stale",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Ethereum core contract (0x98f3c9e6) is a proxy verified on Etherscan (abiSource=etherscan) pointing to implementation 0x3c3d457f, which is also verified (abiSource=etherscan). Ethereum TokenBridge (0x3ee18b22) is similarly a verified proxy (abiSource=etherscan) pointing to implementation 0x0fD04a68 (address surfaced from live read; implementation contract not independently fetched this run). Other chains (Arbitrum, Avalanche, Base, Polygon, Optimism) in the address_book were not opened this run."
+      },
+      {
+        "code": "V2",
+        "text": "Canonical public source repo is github.com/wormhole-foundation/wormhole (confirmed fetched via SECURITY.md search result and wormhole-audits repo). No specific commit SHA was pinned matching the deployed bytecode this run; source-to-bytecode equivalence is not confirmed."
+      },
+      {
+        "code": "V3",
+        "text": "The wormhole-audits repository (fetched this run) lists: Neodyme 2022-01, Kudelski 2022-07 and 2022-08, Trail of Bits 2022-09 and 2023-04, CertiK EVM 2023-03, Runtime Verification EVM 2023-05. These are the most recent audits covering EVM core/TokenBridge. Subsequent audits in 2024-2025 target NTT EVM/Solana (Cyfrin 2024-04, Cantina 2024-04, Neodyme 2024-04), CCTP (Cyfrin 2024-04), composable intents (OtterSec/sec3 2024-06), EVM multi-gov (Cyfrin 2024-10, 2025-02), and Solana shims/governance (OtterSec/Zellic/sec3 2025-02 to 2025-05). No post-2023-05 audit of the canonical EVM TokenBridge or Core contracts was found this run."
+      },
+      {
+        "code": "V4",
+        "text": "Auditors covering EVM core/bridge include Trail of Bits (broadly recognized), Neodyme (broadly recognized), Kudelski (broadly recognized), CertiK (broadly recognized), and Runtime Verification (broadly recognized). All qualify as recognized firms under the rubric."
+      },
+      {
+        "code": "V5",
+        "text": "The most recent audit covering EVM core/TokenBridge contracts is Runtime Verification EVM (2023-05), now more than 2 years before analysis date. The audit scope staleness applies to the fund-custody TokenBridge contract (0x3ee18b22 on Ethereum) which handles token locking and minting. No diff audit of these specific contracts was found in the wormhole-audits repo since 2023-05. The core contracts appear stable (no major function additions visible from ABI), but material drift cannot be confirmed without a GitHub compare view of the deployed source vs audited commit, which was not fetched this run."
+      },
+      {
+        "code": "V6",
+        "text": "For the Ethereum core proxy (0x98f3c9e6): implementation is 0x3c3d457f, which is separately verified on Etherscan (abiSource=etherscan confirmed). For the Ethereum TokenBridge proxy (0x3ee18b22): implementation() returns 0x0fD04a68 per live read API; that address was surfaced but not individually fetched to confirm its verification status. The SECURITY.md link in protocol.audit_links (certusone/wormhole dev.v2 branch) was inaccessible (HTTP error) — the canonical document is now at github.com/wormhole-foundation/wormhole/blob/main/SECURITY.md."
+      }
+    ],
+    "steelman": {
+      "red": "The pinned audit link (certusone/wormhole SECURITY.md) is a dead URL, and the most recent EVM core bridge audit is from 2023, over 2 years ago, with no confirmed follow-up audit of the TokenBridge or Core contracts — during which time upgrades could have introduced unreviewed changes.",
+      "orange": "Contracts are verified on Etherscan with matching public source, multiple recognized-firm audits exist (Trail of Bits, CertiK, Runtime Verification), but the EVM TokenBridge/Core audit scope is over 6 months stale (last EVM audit 2023-05) with no confirmed differential review of those specific contracts since, and source-to-deployed-bytecode equivalence was not pinned this run.",
+      "green": "The core Wormhole EVM contracts have been audited by 5 recognized firms, are verified on Etherscan with a public canonical repo, and the contracts appear stable in their ABI surface — subsequent audits of adjacent components (NTT, CCTP, governance) suggest ongoing security engagement even if not targeting the legacy token bridge specifically."
+    },
+    "verdict": "Choosing orange because the EVM TokenBridge and Core contracts — which are fund-custody contracts — have not had a confirmed audit from a recognized firm since Runtime Verification in May 2023, now over 2 years before the analysis date. While Etherscan verification is confirmed for Ethereum proxy and implementation contracts, and the public repo is genuine, the audit staleness condition (>6 months without re-audit for fund-custody contracts) is met without a confirmed follow-up differential audit. The CCTP and NTT audits in 2024 cover different contracts. The green steelman's argument about ongoing security engagement is partially valid but does not cover the deployed TokenBridge specifically."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B",
+      "shows": "Ethereum Wormhole Core contract is verified on Etherscan (abiSource=etherscan), is a proxy pointing to implementation 0x3c3d457f1522D3540AB3325Aa5f1864E34cBA9D0; view methods including getCurrentGuardianSetIndex (returns 6) are readable",
+      "chain": "ethereum",
+      "address": "0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x3c3d457f1522D3540AB3325Aa5f1864E34cBA9D0",
+      "shows": "Ethereum Wormhole Core implementation contract is separately verified on Etherscan (abiSource=etherscan), confirming V1 and V6 for the proxy+implementation pair",
+      "chain": "ethereum",
+      "address": "0x3c3d457f1522D3540AB3325Aa5f1864E34cBA9D0",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x3ee18b2214aff97000d974cf647e7c347e8fa585",
+      "shows": "Ethereum Wormhole TokenBridge contract is verified on Etherscan (abiSource=etherscan), is a proxy; implementation() and tokenImplementation() both return 0x0fD04a68d3c3A692d6Fa30384D1A87Ef93554eE6; wormhole() returns the Core contract address",
+      "chain": "ethereum",
+      "address": "0x3ee18b2214aff97000d974cf647e7c347e8fa585",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/wormhole-foundation/wormhole-audits",
+      "shows": "Canonical audit listing for Wormhole: includes Trail of Bits EVM (2022-09, 2023-04), Neodyme (2022-01), Kudelski (2022-07, 2022-08), CertiK EVM (2023-03), Runtime Verification EVM (2023-05), Cyfrin CCTP (2024-04), Cyfrin NTT (2024-04, 2024-07), OtterSec NTT (2024-03, 2024-08, 2025-04, 2025-05), Zellic multi-gov (2025-02), sec3 (2025-02), Sherlock (2025-03), Cyfrin multi-gov (2024-10, 2025-02). No post-2023-05 audit of EVM core/TokenBridge found.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/wormhole-foundation/wormhole/security",
+      "shows": "Wormhole project engages third-party firms for independent security audits; audits are made public in audits/ directory and the wormhole-audits repository; bug bounty program operates via Immunefi",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://portalbridge.com",
+      "shows": "Portal Bridge is the frontend for the Wormhole bridge protocol; meta-author is listed as Wormhole Labs; bridges USDC, ETH, SOL and 100+ tokens across 30+ chains",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V2: No commit SHA was pinned matching the deployed bytecode on Etherscan to the wormhole-foundation/wormhole GitHub repo; source-to-bytecode equivalence not confirmed this run",
+    "V1: Implementation contract 0x0fD04a68d3c3A692d6Fa30384D1A87Ef93554eE6 (TokenBridge impl on Ethereum) was surfaced but not individually fetched to confirm Etherscan verification status",
+    "V1: Verification status of contracts on Arbitrum, Avalanche, Base, Polygon, Optimism chains not confirmed this run (only Ethereum core proxy+impl opened)",
+    "V3: The pinned audit_links URL (https://github.com/certusone/wormhole/blob/dev.v2/SECURITY.md) returned an HTTP error and is effectively a dead link; content not accessible",
+    "V5: Material drift between audited commits (2023-03 to 2023-05) and currently deployed EVM TokenBridge/Core source was not assessed this run; no GitHub compare view was fetched; commit-count and LOC delta unknown"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/wormhole-foundation/wormhole"
+    ],
+    "docs_url": "https://wormhole.com/docs/protocol/security/",
+    "audits": [
+      {
+        "firm": "Neodyme",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/2022-01-10_neodyme.pdf",
+        "date": "2022-01"
+      },
+      {
+        "firm": "Kudelski",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/2022-07-01_kudelski.pdf",
+        "date": "2022-07"
+      },
+      {
+        "firm": "Kudelski",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/2022-08-16_kudelski.pdf",
+        "date": "2022-08"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/Wormhole_Audit_Report_TrailOfBits_2022-09.pdf",
+        "date": "2022-09"
+      },
+      {
+        "firm": "CertiK",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/2023-03-08_CertiK_Wormhole_EVM.pdf",
+        "date": "2023-03"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/Wormhole_Audit_Report_TrailOfBits_2023-04.pdf",
+        "date": "2023-04"
+      },
+      {
+        "firm": "Runtime Verification",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/2023-05_Runtime_Verification_Wormhole_EVM.pdf",
+        "date": "2023-05"
+      },
+      {
+        "firm": "Cyfrin",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/2024-04-09-cyfrin-wormhole-evm-cctp-v2-1.pdf",
+        "date": "2024-04"
+      },
+      {
+        "firm": "Cyfrin",
+        "url": "https://github.com/wormhole-foundation/wormhole-audits/blob/main/2025-02-cyfrin-evm-multi-gov-v2.pdf",
+        "date": "2025-02"
+      }
+    ],
+    "bug_bounty_url": "https://immunefi.com/bounty/wormhole",
+    "security_contact": "https://github.com/wormhole-foundation/wormhole/blob/main/SECURITY.md",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B",
+        "role": "Wormhole Core (proxy)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3c3d457f1522D3540AB3325Aa5f1864E34cBA9D0",
+        "role": "Wormhole Core (implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3ee18b2214aff97000d974cf647e7c347e8fa585",
+        "role": "TokenBridge (proxy)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0fD04a68d3c3A692d6Fa30384D1A87Ef93554eE6",
+        "role": "TokenBridge (implementation)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Portal is the frontend bridge application for the Wormhole interoperability protocol, allowing users to transfer tokens such as USDC, ETH, and SOL across 30+ blockchains including Ethereum, Solana, Base, Arbitrum, and Avalanche. Users deposit tokens on a source chain, which are locked or burned; a quorum of 19 Guardian nodes (proof-of-authority validators) observes and signs a Verified Action Approval (VAA), which is then submitted on the destination chain to mint or release wrapped tokens. The underlying Wormhole contracts use an upgradeable proxy pattern governed by VAAs approved by the Guardian set."
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "schema_version": 4,
+  "slug": "blackrock-buidl",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Ethereum proxy verified on Etherscan; implementation verification not independently confirmed; no public audit scoping the deployed BUIDL contracts specifically, only reference-implementation audits by Halborn/Cyfrin on the dstoken repo",
+  "short_headline": "Verified proxy, no BUIDL-specific audit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Ethereum proxy contract 0x7712c34205737192402172409a8f7ccef8aa2aec is verified on Etherscan (ABI source: 'etherscan', confirmed by DeFiPunkd surfacer). The surfacer auto-resolved proxy→implementation to 0x603Bb6909Be14f83282E03632280D91bE7fB83b2, indicating Etherscan resolved the implementation, but independent verification of the implementation contract itself was not confirmed in this run (fetches of Etherscan and defipunkd /api/contract/abi were blocked). The proxy source is SPDX-License-Identifier: UNLICENSED and was submitted 2024-03-04. Non-Ethereum chain tokens (Arbitrum, Avalanche, Optimism, Polygon) were not fetched this run; their verification status is unknown."
+      },
+      {
+        "code": "V2",
+        "text": "Securitize maintains public GitHub repositories including securitize-io/dstoken (the DS Protocol reference implementation) and securitize-io/DSTokenInterfaces. No commit SHA was pinned to the deployed BUIDL contracts, and no deployed-addresses JSON was located in this run. Source-to-repo correspondence is plausible given the ABI matches DS Protocol patterns, but cannot be confirmed without a pinned commit."
+      },
+      {
+        "code": "V3",
+        "text": "No audit links are recorded in protocol.audit_links (field is empty). Multiple independent analyses explicitly state 'there is no public audit report on the core contract of BUIDL.' The securitize-io/dstoken GitHub README states that 'independent audits of the current implementation were performed by Cyfrin and Halborn, and can be found in the /audits folder' — but this refers to the DSToken reference implementation repository, not the specific deployed BUIDL contracts. No audit PDF scoping 0x7712c34... or the implementation 0x603Bb6... was found."
+      },
+      {
+        "code": "V4",
+        "text": "Halborn is a recognized Solidity audit firm (listed in rubric). Cyfrin is a well-known Solidity firm, though not on the rubric's explicit list. Both performed audits of the DSToken reference implementation per the securitize-io/dstoken README, but these audits' scope against the specific deployed BUIDL contracts is unconfirmed. No audit from a recognized firm was located that explicitly scopes the deployed BUIDL token addresses."
+      },
+      {
+        "code": "V5",
+        "text": "Post-audit drift assessment is not possible: no commit SHA was pinned to the deployed contracts, no audit PDF scoping the deployed contracts was found, and the Etherscan page and defipunkd /api/contract/abi endpoint were inaccessible in this run. Drift relative to the dstoken reference repo cannot be assessed."
+      },
+      {
+        "code": "V6",
+        "text": "The Ethereum token is a proxy (confirmed by DeFiPunkd surfacer: 'proxy → 0x603Bb6909Be14f83282E03632280D91bE7fB83b2'). The surfacer merged the ABI from Etherscan for both proxy and implementation, suggesting Etherscan resolved both — but independent verification of the implementation bytecode was not confirmed in this run due to blocked fetches. Implementation verification status for non-Ethereum chains is entirely unknown."
+      }
+    ],
+    "steelman": {
+      "red": "No public audit report scopes the deployed BUIDL contracts, protocol.audit_links is empty, and independent confirmation of the implementation contract's verification was blocked in this run — an outsider cannot independently verify what the deployed code does without trusting Etherscan's auto-resolution.",
+      "orange": "The Ethereum proxy is verified on Etherscan (ABI source confirmed via DeFiPunkd surfacer), a public DS Protocol source repo exists (securitize-io/dstoken), and Halborn/Cyfrin audited the reference implementation — but the gap between reference-implementation audits and deployed-contract audits is real, non-Ethereum chains are unverified, and no audit PDF scopes the specific BUIDL addresses.",
+      "green": "The proxy and implementation appear verified on Etherscan (the DeFiPunkd surfacer auto-resolved the proxy and merged the ABI from Etherscan), a public reference repo exists, and Halborn (a recognized firm) audited the underlying DS Protocol implementation — institutional issuers at BlackRock/Securitize scale routinely receive regulatory scrutiny that substitutes for some public audit gaps."
+    },
+    "verdict": "Choosing orange because: the Ethereum proxy is source-verified (V1 confirmed via surfacer), a public repo exists (V2 plausible), but no audit in protocol.audit_links targets the deployed BUIDL contracts (V3 gap), and multiple independent analyses explicitly call out the absence of a public audit scoping the BUIDL core contracts. The Halborn/Cyfrin audits confirmed in the dstoken README cover the DS Protocol reference implementation, not the specific deployed addresses. Non-Ethereum chain verification status is entirely unknown. These gaps make green unjustifiable — the audit scope mismatch and chain coverage gap are the primary downgrade signals."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec",
+      "shows": "Ethereum BUIDL token is a Proxy contract; ABI source is 'etherscan' (verified); implementation resolved to 0x603Bb6909Be14f83282E03632280D91bE7fB83b2; name()='BlackRock USD Institutional Digital Liquidity Fund', symbol()='BUIDL', decimals()=6, owner()=0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+      "chain": "ethereum",
+      "address": "0x7712c34205737192402172409a8f7ccef8aa2aec",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x7712c34205737192402172409a8f7ccef8aa2aec",
+      "shows": "Etherscan search snippet shows proxy source submitted for verification 2024-03-04; 'No Contract Security Audit Submitted' displayed on Etherscan; source is SPDX-License-Identifier: UNLICENSED proxy contract",
+      "chain": "ethereum",
+      "address": "0x7712c34205737192402172409a8f7ccef8aa2aec"
+    },
+    {
+      "url": "https://github.com/securitize-io/dstoken",
+      "shows": "Securitize public repository for DS Protocol reference implementation; README states 'independent audits of the current implementation were performed by Cyfrin and Halborn, and can be found in the /audits folder' — covers reference implementation, not confirmed to scope deployed BUIDL addresses"
+    },
+    {
+      "url": "https://github.com/securitize-io",
+      "shows": "Securitize GitHub organization with 10 public repositories including dstoken, DSTokenInterfaces, bc-on-off-ramp-sc, bc-vault-registrar, bc-dstoken-class-swap-sc"
+    },
+    {
+      "url": "https://www.panewslab.com/en/articles/wo9yygf0",
+      "shows": "Independent analysis explicitly states: 'there is no public audit report on the core contract of BUIDL in the public research materials, which is a significant information gap'; investors rely on brand trust rather than independently verifiable code audits"
+    },
+    {
+      "url": "https://www.gate.com/learn/articles/in-depth-analysis-of-black-rock-s-buidl-fund-how-it-reshapes-the-rwa-landscape/10202",
+      "shows": "Independent analysis confirms: 'publicly available research materials do not provide a public audit report for the BUIDL core contract, this is a significant information gap'"
+    }
+  ],
+  "unknowns": [
+    "V1: Verification status of implementation 0x603Bb6909Be14f83282E03632280D91bE7fB83b2 on Ethereum not independently confirmed — Etherscan and defipunkd /api/contract/abi fetch blocked in this run",
+    "V1: Verification status of token contracts on Arbitrum (0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872), Avalanche (0x53FC82f14F009009b440a706e31c9021E1196A2F), Optimism (0xa1CDAb15bBA75a80dF4089CaFbA013e376957cF5), Polygon (0x2893Ef551B6dD69F661Ac00F11D93E5Dc5Dc0e99) — surfacer fetches not attempted this run due to remaining fetch budget constraints",
+    "V2: No commit SHA pinned to deployed BUIDL contracts — source-to-repo correspondence plausible but unconfirmed; deployed-addresses JSON not located",
+    "V3: No audit PDF found scoping deployed BUIDL contract addresses specifically; dstoken repo audits (Cyfrin, Halborn) may or may not cover the deployed BUIDL token — audit PDFs in /audits folder not fetched this run",
+    "V5: Post-audit drift cannot be assessed without pinned commit SHA for deployed contracts",
+    "V1-offchain: Etherscan direct fetch blocked (permission denied); defipunkd /api/contract/abi fetch blocked (permission denied)"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/securitize-io/dstoken",
+      "https://github.com/securitize-io/DSTokenInterfaces"
+    ],
+    "audits": [
+      {
+        "firm": "Halborn",
+        "url": "https://github.com/securitize-io/dstoken"
+      },
+      {
+        "firm": "Cyfrin",
+        "url": "https://github.com/securitize-io/dstoken"
+      }
+    ],
+    "security_contact": "protocol@securitize.io",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+        "role": "contractOwner / owner of BUIDL token proxy",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "BlackRock BUIDL (BlackRock USD Institutional Digital Liquidity Fund) is a tokenized money market fund that allows qualified purchasers to hold shares in a fund investing in U.S. Treasury bills, cash, and repurchase agreements as an ERC-20 compliant token. Investors subscribe through the Securitize platform after KYC/AML verification, receiving BUIDL tokens that accrue daily dividends paid as new tokens monthly. Redemptions occur via T+1/T+2 traditional settlement or near-instantly through Circle's on-chain USDC smart contract. The token uses Securitize's DS Protocol, a permissioned security token framework with whitelisted wallets, compliance enforcement, freeze/burn/seize capabilities, and proxy-upgradeable contracts deployed across Ethereum, Arbitrum, Avalanche, Optimism, Polygon, Solana, Aptos, and BNB Chain."
+  }
+}

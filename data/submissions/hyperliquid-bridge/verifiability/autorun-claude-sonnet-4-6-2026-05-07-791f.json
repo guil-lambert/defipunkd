@@ -1,0 +1,117 @@
+{
+  "schema_version": 4,
+  "slug": "hyperliquid-bridge",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Bridge2.sol verified on Arbiscan with two Zellic audits, but audits are >17 months old and post-audit commit match is unconfirmed",
+  "short_headline": "Verified, audited, stale coverage",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Bridge contract 0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7 is verified on Arbiscan (abiSource=etherscan per DeFiPunkd surfacer; Arbiscan shows 'Submitted for verification at Arbiscan.io on 2023-12-05'). It is a direct (non-proxy) deployment of Bridge2.sol + Signature.sol; no proxy.implementation field is present in the surfacer output, so V6 is N/A."
+      },
+      {
+        "code": "V2",
+        "text": "A public GitHub repo exists at https://github.com/hyperliquid-dex/contracts containing Bridge2.sol and Signature.sol (25 commits, no tagged releases). The December 2023 Zellic patch review pinned commits 204f017e, 2ad53ac9, and 9189a7dd as the audited versions. The contract was submitted to Arbiscan on 2023-12-05, ~11 days after the audit ended. Exact deployed-commit SHA was not pinnable this run (GitHub fetch blocked); recorded in unknowns[]."
+      },
+      {
+        "code": "V3",
+        "text": "Two Zellic audits were retrieved and read: (1) August 2023 primary assessment (conducted July 10-12 2023, report dated August 14 2023): scope was Bridge2.sol + Signature.sol at commit 43b5267c. Found 6 issues (1 High, 1 Medium, 4 Informational); all acknowledged and fixed. Code was not deployed to Arbitrum Mainnet at audit time. (2) December 2023 patch review (conducted November 23-24 2023, report dated November 27 2023): scope was changes in commits 204f017e, 2ad53ac9, and 9189a7dd covering Bridge2.sol and Signature.sol on Arbitrum. Zero security vulnerabilities found. Contract deployed to Arbitrum December 5 2023. Both audits explicitly noted the code was not yet deployed at review time; the November 2023 patch review is the closest-to-deployment audit. As of analysis date (May 2026), the most recent audit is approximately 17 months old."
+      },
+      {
+        "code": "V4",
+        "text": "Both audits were conducted by Zellic, a broadly recognized Solidity security firm listed in the rubric's recognized-firms set."
+      },
+      {
+        "code": "V5",
+        "text": "The deployed contract is immutable (no proxy, no upgradeability mechanism visible in ABI). Post-deployment bytecode cannot drift. However, the repository has 25 commits and no tagged releases, and GitHub was inaccessible this run. I cannot confirm that no new commits were pushed post-deployment that would represent a distinct deployed version. No audit covers code changes after November 2023. The 17-month gap since the last audit with no confirmed follow-up constitutes stale audit coverage even though the immutable bytecode itself cannot change post-deployment."
+      },
+      {
+        "code": "V6",
+        "text": "Not a proxy contract. The DeFiPunkd surfacer lists no proxy.implementation field and the ABI source is etherscan. V6 is not applicable."
+      }
+    ],
+    "steelman": {
+      "red": "If the deployed bytecode does not match the audited commits — which cannot be confirmed this run due to GitHub being inaccessible — then the effective audit coverage is unknown, and the verification posture would be red.",
+      "orange": "The most recent Zellic audit is from November 2023 (17 months before analysis), predating any potential post-deployment changes to the repo, and no follow-up audit or differential review has been confirmed; this makes the audit coverage stale by the green criteria's 6-month limit, even though the contract itself is immutable on-chain.",
+      "green": "The contract is source-verified on Arbiscan, belongs to a public GitHub repo with matching file names, and was audited by recognized firm Zellic within days of deployment; since the contract is immutable, the audited code is exactly what runs on-chain with no upgrade risk."
+    },
+    "verdict": "Choosing orange because: the green steel-man is strong — immutable contracts cannot drift post-deployment, so the Nov 2023 audit effectively covers the permanently-deployed bytecode — but two gaps prevent a green grade: (1) the exact deployed commit SHA could not be verified against the audited commits this run (GitHub blocked; V2 commit unconfirmed), and (2) no follow-up audit from a recognized firm covers the post-Nov-2023 repository state, which means if any on-chain redeployment or contract upgrade occurred it would be unaudited. The combination of an unconfirmed commit match and a 17-month-old last audit, per the rubric's ≤6-month freshness requirement for green, places this firmly at orange."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/42161/0x2df1c51e09aecf9cacb7bc98cb1742757f163df7",
+      "shows": "Bridge contract 0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7 on Arbitrum identified as 'Bridge2', abiSource=etherscan (verified), no proxy.implementation field (direct deployment). Live view-method results confirm paused=false, nValidators=4, usdcToken=0xaf88d065e77c8cC2239327C5EDb3A432268e5831 at block 460454452.",
+      "chain": "arbitrum",
+      "address": "0x2df1c51e09aecf9cacb7bc98cb1742757f163df7",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/audits",
+      "shows": "Hyperliquid official docs list two Zellic audit PDFs for the bridge contract: a December 2023 patch review and an August 2023 primary assessment.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://2356094849-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyUdp569E6w18GdfqlGvJ%2Fuploads%2FRhEpax5uWlJelxdFNb9c%2F2312%20Hyperliquid%20-%20Zellic%20Audit%20Report.pdf?alt=media&token=1e76a9b0-3a04-4d44-a8c9-a468e60cf7f1",
+      "shows": "Zellic Smart Contract Patch Review dated November 27, 2023, for Hyperliquid. Scope: Bridge2.sol and Signature.sol at commits 204f017e52954d9c6814f1427bb66aa78bc6c07c, 2ad53ac96bd6103b4194ace23041fc20fedd96a9, 9189a7ddeb410e835548c1190414949f04311bfa, on Arbitrum platform. Result: zero vulnerabilities found across all impact levels. Conducted November 23-24 2023.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://2356094849-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyUdp569E6w18GdfqlGvJ%2Fuploads%2FuiAL7ufANHbcsrAvZgLQ%2F2308%20Hyperliquid%20-%20Zellic%20Audit%20Report.pdf?alt=media&token=7450a0f9-c2c8-4c3e-907a-5619b431e86c",
+      "shows": "Zellic Smart Contract Security Assessment dated August 14, 2023. Scope: Bridge2 and Signature at commit 43b5267c58778e5e24640c9abac06cb608d63c40, Arbitrum platform. Found 6 findings (1 High, 1 Medium, 4 Informational); all acknowledged and fixed by Hyperliquid contributors. Code was not yet deployed to Arbitrum Mainnet at audit time.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://arbiscan.io/address/0x2df1c51e09aecf9cacb7bc98cb1742757f163df7",
+      "shows": "Arbiscan search result confirms contract labeled 'Hyperliquid: Deposit Bridge 2' with source code submitted for verification at Arbiscan.io on 2023-12-05, including visible Solidity source for Signature.sol and Bridge2.sol. Derived: verification status confirmed from search result snippet showing submitted source.",
+      "chain": "arbitrum",
+      "address": "0x2df1c51e09aecf9cacb7bc98cb1742757f163df7"
+    },
+    {
+      "url": "https://github.com/hyperliquid-dex/contracts",
+      "shows": "Public GitHub repository hyperliquid-dex/contracts exists with Bridge2.sol and Signature.sol files, 25 commits, no releases published. Derived from search result confirming repo structure.",
+      "commit": "204f017e52954d9c6814f1427bb66aa78bc6c07c"
+    }
+  ],
+  "unknowns": [
+    "V2: GitHub fetch was blocked this run; exact deployed commit SHA of Bridge2.sol on Arbitrum could not be matched against audited commits (204f017e / 2ad53ac9 / 9189a7dd) via bytecode diff or deployed-addresses file",
+    "V5: GitHub fetch blocked; cannot confirm whether any commits in the 25-commit history were pushed after 2023-12-05 deployment and before analysis date, which would be unaudited changes (though the on-chain bytecode itself is immutable and cannot change post-deployment)"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/hyperliquid-dex/contracts"
+    ],
+    "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs",
+    "audits": [
+      {
+        "firm": "Zellic",
+        "url": "https://2356094849-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyUdp569E6w18GdfqlGvJ%2Fuploads%2FRhEpax5uWlJelxdFNb9c%2F2312%20Hyperliquid%20-%20Zellic%20Audit%20Report.pdf?alt=media&token=1e76a9b0-3a04-4d44-a8c9-a468e60cf7f1",
+        "date": "2023-11"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://2356094849-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyUdp569E6w18GdfqlGvJ%2Fuploads%2FuiAL7ufANHbcsrAvZgLQ%2F2308%20Hyperliquid%20-%20Zellic%20Audit%20Report.pdf?alt=media&token=7450a0f9-c2c8-4c3e-907a-5619b431e68c",
+        "date": "2023-08"
+      }
+    ],
+    "bug_bounty_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/bug-bounty-program",
+    "deployed_contracts_doc": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/bridge2",
+    "admin_addresses": [
+      {
+        "chain": "Arbitrum",
+        "address": "0x2df1c51e09aecf9cacb7bc98cb1742757f163df7",
+        "role": "Bridge2 (USDC bridge, validator-set governed)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Hyperliquid Bridge (Bridge2) is an Arbitrum-deployed Solidity contract that allows users to deposit USDC into the Hyperliquid L1 exchange and withdraw it back to Arbitrum. Deposits are permissionless; withdrawals require a two-thirds supermajority signature from the Hyperliquid validator set's hot wallets, followed by a dispute period during which authorized lockers can pause the bridge. A cold-wallet quorum of validators is required to unpause, providing a two-tier security model."
+  }
+}

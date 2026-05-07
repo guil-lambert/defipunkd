@@ -1,0 +1,152 @@
+{
+  "schema_version": 4,
+  "slug": "arbitrum-bridge",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Core contracts verified on Etherscan/Sourcify with public OffchainLabs repos; multiple Trail of Bits audits of Arbitrum Nitro exist but no audit URLs are pinned and Delayed Inbox implementation was not surfaced",
+  "short_headline": "Verified but audit links absent",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Bridge proxy (0x8315177ab297ba92a06054ce80a67ed4dbd7ed3a): verified on Etherscan (abiSource='etherscan'), proxy resolves to implementation 0x93e8f92327bFa8096F5F6ee5f2a49183D3B3b898 which is also independently verified on Etherscan (abiSource='etherscan'). L1GatewayRouter (0x72ce9c846789fdb6fc1f34ac4ad25dd9ef7031ef): verified on Etherscan (abiSource='etherscan'), proxy resolves to implementation 0x52595021fA01B3E14EC6C88953AFc8E35dFf423c (surfaced but impl verification not confirmed this run). Delayed Inbox (0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f): verified via Sourcify (abiSource='sourcify'), but NO implementation address was surfaced — this is a V6 gap. Remaining address_book entries (legacy bridge, L1ERC20Gateway, L1DaiGateway, Bridge Utils, Bridge 2 variant) were not individually fetched this run."
+      },
+      {
+        "code": "V2",
+        "text": "Two public OffchainLabs GitHub repositories are confirmed: github.com/OffchainLabs/nitro-contracts (core bridge/inbox contracts) and github.com/OffchainLabs/token-bridge-contracts (gateway/router contracts). No specific commit SHA was pinned to the deployed bytecode in this run — no bytecode diff or deployed-addresses JSON was retrieved."
+      },
+      {
+        "code": "V3",
+        "text": "protocol.audit_links is empty ('none recorded'). The Arbitrum docs page docs.arbitrum.io/audit-reports was unreachable this run (fetch failed). Search results confirm multiple Trail of Bits audit reports of Arbitrum components exist (USDC gateway Aug 2024, Stylus Jun 2024, ArbOS31 Jul 2024, ArbOS32 emergency fixes Oct 2024, BoLD optimized history commitments Oct 2024), all published at docs.arbitrum.io/assets/files/. However, none of these audits was opened to confirm the specific Bridge/Inbox/Router contract addresses are in scope."
+      },
+      {
+        "code": "V4",
+        "text": "Trail of Bits is a broadly recognized Solidity/blockchain security firm. All discovered Arbitrum audit reports are attributed to Trail of Bits. This is a green-tier auditor. However, because no audit was confirmed in scope for the specific deployed bridge contracts assessed here, V4 cannot fully discharge."
+      },
+      {
+        "code": "V5",
+        "text": "Post-audit drift cannot be assessed: no specific audit commit was confirmed as in scope for the deployed bridge/inbox/router contracts, so a diff against current source is not meaningful. Recorded as unknown."
+      },
+      {
+        "code": "V6",
+        "text": "Bridge proxy (0x8315...): proxy verified AND implementation (0x93e8f9...) independently verified — V6 satisfied. L1GatewayRouter (0x72ce...): proxy verified, implementation (0x52595021...) surfaced but not individually fetched to confirm verification. Delayed Inbox (0x4dbd...): proxy verified via Sourcify, but no implementation address was returned by the surfacer — effective verification is incomplete for this custody-critical contract."
+      }
+    ],
+    "steelman": {
+      "red": "protocol.audit_links is empty, the Delayed Inbox implementation was never surfaced (V6 gap on a fund-custody contract), and several address_book contracts were not individually verified this run.",
+      "orange": "Proxy contracts are verified on Etherscan/Sourcify, the Bridge implementation is confirmed verified, public OffchainLabs repos exist, and Trail of Bits has conducted multiple recognized audits of Arbitrum Nitro components — but no audit URL is pinned, the Delayed Inbox implementation is unconfirmed, and no commit SHA was linked to deployment.",
+      "green": "All core bridge and router contracts are verified on block explorers, both proxy and implementation for the primary bridge contract are confirmed verified, two public OffchainLabs repositories cover the deployed code, and Trail of Bits has performed extensive ongoing audits of Arbitrum Nitro components including bridge-adjacent code."
+    },
+    "verdict": "Choosing orange because: the primary bridge proxy and implementation are both verified on Etherscan and public repos exist, satisfying V1/V2 for the main contract; however, the Delayed Inbox (a fund-custody contract holding all ETH deposits) shows only a Sourcify-verified proxy with no implementation address surfaced (V6 gap), protocol.audit_links is empty and the audit report page was unreachable so no audit can be confirmed as in-scope for these specific deployed contracts (V3 gap), no commit SHA was pinned, and three address_book contracts were not individually checked. The green steel-man fails because V6 is incomplete for the Inbox and V3 cannot be discharged without accessing the audit scope documents."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x8315177ab297ba92a06054ce80a67ed4dbd7ed3a",
+      "shows": "Bridge proxy (0x8315...) is verified on Etherscan (abiSource='etherscan'), is a TransparentUpgradeableProxy, and resolves to implementation 0x93e8f92327bFa8096F5F6ee5f2a49183D3B3b898. View methods active (delayedMessageCount=2433168, rollup=0x4DCeB440..., sequencerInbox=0x1c479675...).",
+      "chain": "ethereum",
+      "address": "0x8315177ab297ba92a06054ce80a67ed4dbd7ed3a",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x93e8f92327bFa8096F5F6ee5f2a49183D3B3b898",
+      "shows": "Bridge implementation (0x93e8f9...) is independently verified on Etherscan (abiSource='etherscan'), contract name 'Bridge', all 6 view methods execute successfully. V6 satisfied for primary bridge.",
+      "chain": "ethereum",
+      "address": "0x93e8f92327bFa8096F5F6ee5f2a49183D3B3b898",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
+      "shows": "Delayed Inbox (0x4dbd...) proxy is verified via Sourcify (abiSource='sourcify'), identified as TransparentUpgradeableProxy. No implementation address surfaced in crawl manifest — V6 gap for this fund-custody contract.",
+      "chain": "ethereum",
+      "address": "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x72ce9c846789fdb6fc1f34ac4ad25dd9ef7031ef",
+      "shows": "L1GatewayRouter (0x72ce...) is verified on Etherscan (abiSource='etherscan'), is a TransparentUpgradeableProxy resolving to impl 0x52595021fA01B3E14EC6C88953AFc8E35dFf423c. Owner=0x3ffFbAdAF827559da092217e474760E2b2c3CeDd, defaultGateway=0xa3A7B6F88..., inbox=0x4Dbd4fc535...",
+      "chain": "ethereum",
+      "address": "0x72ce9c846789fdb6fc1f34ac4ad25dd9ef7031ef",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/OffchainLabs/nitro-contracts",
+      "shows": "Public OffchainLabs repository for core Arbitrum Nitro contracts (bridge, inbox, rollup) deployed to parent chain. V2 source repo confirmed.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/OffchainLabs/token-bridge-contracts",
+      "shows": "Public OffchainLabs repository for Arbitrum token bridge and gateway contracts (L1GatewayRouter, L1ERC20Gateway, etc.). Mentions security audit reports are available. V2 source repo confirmed.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://docs.arbitrum.io/assets/files/2024_08_29_trail_of_bits_security_audit_usdc_custom_gateway_and_arbos_upgrade_at_timestamp_action-f490e6aa741551bfbf4b2349fcc82579.pdf",
+      "shows": "Trail of Bits audit of Arbitrum USDC custom gateway and ArbOS upgrade (August 2024). Confirms Trail of Bits as recognized auditor engaged by Offchain Labs for Arbitrum bridge-adjacent components. V4 auditor recognition confirmed.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V3: docs.arbitrum.io/audit-reports was unreachable this run; could not confirm which specific Bridge/Inbox/Router contract addresses are in scope for any Trail of Bits audit",
+    "V5: post-audit drift cannot be assessed without confirmed audit scope and in-scope commit SHA for the deployed bridge, inbox, and router contracts",
+    "V6: Delayed Inbox (0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f) implementation address was not surfaced by DeFiPunkd surfacer; impl verification status unknown for this fund-custody contract",
+    "V1: L1ERC20Gateway (0xa3a7b6f88361f48403514059f1f16c8e78d60eec), L1DaiGateway (0xD3B5b60020504bc3489D6949d545893982BA3011), Bridge Utils (0x84eFa170dC6d521495D7942e372b8e4B2Fb918Ec), legacy bridge (0x011b6e24ffb0b5f5fcc564cf4183c5bbbc96d515), and Bridge 2 variant (0x2f06e43D850Ac75926FA2866e40139475b58Cb16) were not individually fetched; verification status unconfirmed",
+    "V2: no commit SHA pinned to any deployed contract address; source-to-deploy correspondence not bytecode-confirmed"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/OffchainLabs/nitro-contracts",
+      "https://github.com/OffchainLabs/token-bridge-contracts"
+    ],
+    "docs_url": "https://docs.arbitrum.io",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://docs.arbitrum.io/assets/files/2024_08_29_trail_of_bits_security_audit_usdc_custom_gateway_and_arbos_upgrade_at_timestamp_action-f490e6aa741551bfbf4b2349fcc82579.pdf",
+        "date": "2024-08"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://docs.arbitrum.io/assets/files/2024_06_10_trail_of_bits_security_audit_stylus-f2f68cbe59f5ac1c085292f6811c8ac9.pdf",
+        "date": "2024-06"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://docs.arbitrum.io/assets/files/2024_10_07_trail_of_bits_security_audit_bold_optimized_history_commitments-025bd74c8af33bb436e606b55a3ef550.pdf",
+        "date": "2024-10"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://docs.arbitrum.io/assets/files/2024_10_23_trail_of_bits_security_audit_arbos32_emergency_fixes-d3e018abb506e80f9625508dbaab2358.pdf",
+        "date": "2024-10"
+      }
+    ],
+    "deployed_contracts_doc": "https://docs.arbitrum.io/for-devs/dev-tools-and-resources/chain-info#core-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3ffFbAdAF827559da092217e474760E2b2c3CeDd",
+        "role": "owner of L1GatewayRouter",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4DCeB440657f21083db8aDd07665f8ddBe1DCfc0",
+        "role": "rollup contract referenced by Bridge",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6",
+        "role": "sequencerInbox referenced by Bridge",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Arbitrum Bridge is the canonical cross-chain messaging and asset transfer system for Arbitrum One (an optimistic rollup on Ethereum). Users deposit ETH or ERC-20 tokens into L1 contracts (Bridge, Inbox, GatewayRouter, and specific Gateways) which lock assets on Ethereum while corresponding representations are minted on Arbitrum. Withdrawals require submitting an L2 transaction and waiting out the ~7-day fraud-proof challenge window before funds can be released on L1. The system is implemented as a set of upgradeable TransparentUpgradeableProxy contracts deployed on Ethereum."
+  }
+}

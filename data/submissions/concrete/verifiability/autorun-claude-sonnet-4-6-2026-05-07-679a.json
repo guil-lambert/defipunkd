@@ -1,0 +1,119 @@
+{
+  "schema_version": 4,
+  "slug": "concrete",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Proxy verified via Etherscan; two recognized-firm audits exist but cover V1 and Standard-V2 implementations while deployed contracts are Async-V2; no public source repo confirmed",
+  "short_headline": "Audits mismatched to deployed V2 async vaults",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "The WeETH Vault proxy (0xb9dc54c8261745cb97070cefbe3d3d815aee8f20) is verified on Etherscan with abiSource='etherscan' per the defipunkd surfacer, labeled ConcreteInitMintableAsyncVaultImpl pointing to implementation 0xFB65336D4323BA79d07F7024c81B8B69E1781527. The implementation's independent verification status could not be confirmed in this run due to fetch failures."
+      },
+      {
+        "code": "V2",
+        "text": "No public GitHub repository for earn-v2-core (Blueprint-Finance/earn-v2-core) was confirmed accessible in this run. The Halborn audit references that repo at commit b1b7cec (remediation 4f64163), but no public URL was successfully fetched. A code-423n4 mirror exists for the older sc_earn-v1 codebase. Source-to-repo correspondence is not established for the V2 deployment."
+      },
+      {
+        "code": "V3",
+        "text": "Two audits were fetched: (1) Halborn 'Earn V2 Core - Standard Implementation' (Sept 3-16 2025, repo earn-v2-core commit b1b7cec, 0 critical/0 high/3 low/9 informational, 100% addressed). This covers ConcreteStandardVaultImpl and factory/proxy/allocate modules. (2) Zellic 'Concrete Smart Contract Security Assessment' (May 16-June 6 2025, repo sc_earn-v1 commit c68890cea19b88b3360f306d1f5a37ebb7679f64, 0 critical/2 high/6 medium/8 low/9 informational, remediated). Zellic audited the V1 codebase (ConcreteMultiStrategyVault) while deployed contracts are V2 (ConcreteInitMintableAsyncVaultImpl). The Halborn audit covers the Standard V2 implementation, not the Async V2 variant that is actually deployed. A separate Halborn Async Implementation audit is referenced in search results but its URL is not in the pinned audit_links and was not fetched."
+      },
+      {
+        "code": "V4",
+        "text": "Both auditing firms are broadly recognized: Halborn and Zellic are both on the recognized-firm list. No unknown-firm audits."
+      },
+      {
+        "code": "V5",
+        "text": "Material drift concern: The Zellic audit (June 2025) covered sc_earn-v1 (ConcreteMultiStrategyVault, V1 architecture), while deployed vaults are V2 async architecture (ConcreteInitMintableAsyncVaultImpl). The Halborn Standard Implementation audit (Sept 2025) covers V2 but the Standard variant, not the Async variant deployed as the main vaults (e.g., 0xb9dc54c8261745cb97070cefbe3d3d815aee8f20 is labeled ConcreteInitMintableAsyncVaultImpl). The async variant has different withdrawal mechanics (epoch-based queuing visible in the ABI: closeEpoch, processEpoch, latestEpochID, etc.) not covered by the Standard Implementation audit scope."
+      },
+      {
+        "code": "V6",
+        "text": "The proxy contract (0xb9dc54c8261745cb97070cefbe3d3d815aee8f20) is verified (abiSource=etherscan per defipunkd). It points to implementation 0xFB65336D4323BA79d07F7024c81B8B69E1781527. The implementation's independent verification was not confirmed in this run (Etherscan fetch blocked, defipunkd API endpoint blocked). Demoted to unknown."
+      }
+    ],
+    "steelman": {
+      "red": "No public source repository was confirmed for the V2 contracts in this run, and the implementation contract's verification status could not be independently confirmed; if unverified, the deployed code is effectively opaque.",
+      "orange": "Two recognized-firm audits exist (Halborn and Zellic), but the Zellic audit covers V1 contracts while the Halborn audit covers the Standard V2 implementation - neither covers the Async V2 variant (ConcreteInitMintableAsyncVaultImpl) that is actually deployed as the primary vault; the proxy is verified but the implementation's independent verification was not confirmed; no public source repo established for V2.",
+      "green": "Halborn (Sept 2025) audited the earn-v2-core Standard Implementation which shares the factory, proxy, and core storage architecture with the async variant; the proxy is verified; both auditors are recognized firms; all issues were remediated."
+    },
+    "verdict": "Choosing orange because: (1) the proxy is verified but implementation verification is unconfirmed; (2) neither pinned audit directly covers the ConcreteInitMintableAsyncVaultImpl variant deployed as the primary vault (Zellic covered V1; Halborn covered Standard V2); (3) no public source repo for earn-v2-core was confirmed fetchable in this run. The steelman for orange is stronger than for red (recognized audits and a verified proxy are present) and stronger than for green (scope gap between audited code and deployed async variant, plus unconfirmed implementation verification and no public repo)."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xb9dc54c8261745cb97070cefbe3d3d815aee8f20",
+      "shows": "Proxy 0xb9dc54c8261745cb97070cefbe3d3d815aee8f20 (WeETH Vault) is labeled ConcreteInitMintableAsyncVaultImpl, abiSource=etherscan (verified), points to implementation 0xFB65336D4323BA79d07F7024c81B8B69E1781527; owner()=0x70EBF87bA7a1517c204979e51979cfbf693364F9; factory()=0x0265d73a8E61F698d8EB0dfeb91Ddce55516844C; version()=5",
+      "chain": "Ethereum",
+      "address": "0xb9dc54c8261745cb97070cefbe3d3d815aee8f20",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://docs.concrete.xyz/assets/files/Standard-Implementation-9948d7fcebb518e5c29051bc2326b5ec.pdf/",
+      "shows": "Halborn audit of Blueprint Finance earn-v2-core Standard Implementation, Sept 3-16 2025, assessed commit b1b7cec, remediation commit 4f64163; scope: ConcreteStandardVaultImpl, ConcreteFactory, VaultProxy, AllocateModule and related libs; 12 findings (0 critical, 0 high, 3 low, 9 informational), 100% addressed",
+      "commit": "b1b7cec",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://docs.concrete.xyz/assets/files/Zellic-Audit-Report-5dbb9d52d444adcd197dfbaa941a86ab.pdf/",
+      "shows": "Zellic audit of Concrete sc_earn-v1 contracts (ConcreteMultiStrategyVault V1 architecture), May 16-June 6 2025, commit c68890cea19b88b3360f306d1f5a37ebb7679f64; 25 findings (0 critical, 2 high, 6 medium, 8 low, 9 informational); deployed at assessment time on Ethereum, Corn, Morph, Berachain; all findings remediated",
+      "commit": "c68890cea19b88b3360f306d1f5a37ebb7679f64",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://app.concrete.xyz",
+      "shows": "Concrete earn platform is live; vaults listed include WeETH Vault (0xb9dc54c8261745cb97070cefbe3d3d815aee8f20), Concrete DeFi USDT (0x0e609b710da5e0aa476224b6c0e5445ccc21251e), and others; confirms protocol is in production across multiple chains",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V1: Implementation contract 0xFB65336D4323BA79d07F7024c81B8B69E1781527 (proxy target of WeETH Vault) - Etherscan fetch and defipunkd API call both blocked in this run; could not confirm independent verification of implementation bytecode",
+    "V2: No public GitHub URL for Blueprint-Finance/earn-v2-core confirmed accessible in this run; source-to-repo correspondence for V2 contracts not established; only a code-423n4 mirror for the older sc_earn-v1 codebase was found via search",
+    "V3: A separate Halborn 'Earn V2 Core - Async Implementation' audit is referenced in search results but its URL was not in the pinned audit_links and was not fetched; it may cover the ConcreteInitMintableAsyncVaultImpl variant that is actually deployed",
+    "V5: Diff between audited Standard Implementation (Halborn commit b1b7cec) and deployed Async Implementation not sampled; epoch-based withdrawal logic (closeEpoch, processEpoch, latestEpochID, isQueueActive) visible in deployed ABI appears absent from the Standard Implementation audit scope - material drift characterization requires async audit to resolve",
+    "V1-offchain: Etherscan page for implementation 0xFB65336D4323BA79d07F7024c81B8B69E1781527 fetch attempt blocked by domain restriction; defipunkd /api/contract/abi endpoint also returned permission error"
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://docs.concrete.xyz",
+    "audits": [
+      {
+        "firm": "Halborn",
+        "url": "https://docs.concrete.xyz/assets/files/Standard-Implementation-9948d7fcebb518e5c29051bc2326b5ec.pdf/",
+        "date": "2025-09"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://docs.concrete.xyz/assets/files/Zellic-Audit-Report-5dbb9d52d444adcd197dfbaa941a86ab.pdf/",
+        "date": "2025-06"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x70EBF87bA7a1517c204979e51979cfbf693364F9",
+        "role": "owner of WeETH Vault (0xb9dc54c8261745cb97070cefbe3d3d815aee8f20)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0265d73a8E61F698d8EB0dfeb91Ddce55516844C",
+        "role": "factory() of WeETH Vault",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xFB65336D4323BA79d07F7024c81B8B69E1781527",
+        "role": "implementation contract (proxy target of WeETH Vault)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Concrete (developed by Blueprint Finance) is an on-chain capital allocator platform enabling users to deposit assets into ERC-4626 vaults that automatically allocate to yield-generating strategies. Users deposit tokens (weETH, USDT, USDC, BTC-variants, etc.) and receive vault shares; the vault distributes capital across multiple DeFi strategies (Morpho, Aave, multi-sig) via an upgradeable ERC1967 proxy architecture with epoch-based asynchronous withdrawal queuing. The protocol is designed for both institutional and retail depositors across Ethereum, Berachain, Arbitrum, and other chains."
+  }
+}
