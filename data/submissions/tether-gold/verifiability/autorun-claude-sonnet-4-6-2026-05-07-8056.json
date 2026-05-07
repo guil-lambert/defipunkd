@@ -1,0 +1,118 @@
+{
+  "schema_version": 4,
+  "slug": "tether-gold",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Contracts verified on Etherscan and Arbiscan (proxy + implementation), but no public GitHub repo and no recognized smart-contract audit firm on record",
+  "short_headline": "Verified bytecode, no formal audit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Ethereum proxy (0x68749665) is a TransparentUpgradeableProxy with ABI source 'etherscan' — verified on-chain. The implementation it points to (0x4C0d2c74) is also independently verified on Etherscan with ABI source 'etherscan'. Both proxy and implementation pass V1."
+      },
+      {
+        "code": "V1",
+        "text": "Arbitrum proxy (0x40461291) is also a TransparentUpgradeableProxy with ABI source 'etherscan' — verified on Arbiscan. It resolves to implementation 0x9001dbe4. The Polygon proxy (0xf1815bd5) and its implementation (0x6d205337) were not fetched this run; their verification status is recorded as unknown."
+      },
+      {
+        "code": "V2",
+        "text": "No GitHub repository is recorded in protocol.github and none was discovered via search or fetch during this run. Source-to-repo correspondence cannot be established. The verified Etherscan source code is the only public code artifact available."
+      },
+      {
+        "code": "V3",
+        "text": "No audit URLs are listed in protocol.audit_links. Web search found only BDO Italia performing reserve/vault attestations (not smart contract audits) and a Cyberscope page (an unknown firm). No formal smart-contract security audit from any recognized Solidity firm was discovered."
+      },
+      {
+        "code": "V4",
+        "text": "BDO is a reserve/vault attestation auditor, not a Solidity smart-contract security firm. Cyberscope is not on the recognized-firm list. No audit from Trail of Bits, Zellic, Spearbit, OpenZeppelin, ConsenSys Diligence, Certora, Quantstamp, Halborn, Peckshield, Sigma Prime, ChainSecurity, Ackee, MixBytes, or Statemind was found."
+      },
+      {
+        "code": "V5",
+        "text": "BlockSec disclosed a public transferFrom vulnerability (May 2023) in the Tether Gold contract allowing unauthorized token transfers to a trusted address; Tether reportedly identified and fixed the issue. No follow-up formal audit covering the fix was found. Post-audit drift cannot be assessed because no recognized-firm audit baseline exists."
+      },
+      {
+        "code": "V6",
+        "text": "On Ethereum, both the TransparentUpgradeableProxy (0x68749665) and its implementation (0x4C0d2c74) are independently verified on Etherscan. The Arbitrum proxy (0x40461291) is verified; its implementation (0x9001dbe4) is surfaced by the defipunkd crawler. No unverified-implementation gap is evident for the two chains checked."
+      }
+    ],
+    "steelman": {
+      "red": "No public GitHub repo exists for independent verification and no recognized smart-contract audit has ever been published — a serious gap for a custodial RWA token holding hundreds of millions in value; a known vulnerability (BlockSec 2023) was only fixed after external disclosure.",
+      "orange": "Bytecode for both proxy and implementation is verified on Etherscan and Arbiscan (etherscan ABI source confirmed), giving outsiders direct access to the deployed source; however, the complete absence of any recognized Solidity audit firm and no public GitHub repo prevents a green rating.",
+      "green": "Both proxy and current implementation are verified on-chain across at least two chains, enabling full independent inspection of the deployed code without needing a separate repo; the Tether Gold contract is a straightforward ERC-20 with well-understood patterns."
+    },
+    "verdict": "Choosing orange because while the proxy and implementation bytecode are both verified on Etherscan (etherscan ABI source confirmed for both 0x68749665 and 0x4C0d2c74), the protocol has no public GitHub repository for source-to-repo correspondence (V2 fails) and no audit from any recognized Solidity security firm (V3/V4 fail). A publicly disclosed transferFrom vulnerability (BlockSec, May 2023) was reportedly patched without a formal follow-up audit. The bytecode verification alone is insufficient for green given the complete absence of an audit baseline and public repo."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "shows": "Ethereum XAUt proxy (0x68749665) identified as TransparentUpgradeableProxy with ABI source 'etherscan' (verified), implementation resolved to 0x4C0d2c74A8D26f1E4F5653021c521F5471F9e566; owner() returns 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+      "chain": "ethereum",
+      "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4C0d2c74A8D26f1E4F5653021c521F5471F9e566",
+      "shows": "Ethereum XAUt implementation (0x4C0d2c74) has ABI source 'etherscan' (independently verified), name()='TetherGold', symbol()='XAUt', decimals()=6; confirms V1 and V6 pass for Ethereum",
+      "chain": "ethereum",
+      "address": "0x4C0d2c74A8D26f1E4F5653021c521F5471F9e566",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/42161/0x40461291347e1ecbb09499f3371d3f17f10d7159",
+      "shows": "Arbitrum XAUt proxy (0x40461291) is TransparentUpgradeableProxy with ABI source 'etherscan' (verified on Arbiscan), implementation resolved to 0x9001dbe4D68d36ab87923A2a9Dfb0c745fd25001; also surfaces additional cross-chain (OFT) functionality",
+      "chain": "arbitrum",
+      "address": "0x40461291347e1ecbb09499f3371d3f17f10d7159",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://blocksecteam.medium.com/public-transfer-vulnerability-of-the-tether-gold-smart-contract-662694607d35",
+      "shows": "BlockSec disclosed in May 2023 a transferFrom vulnerability in Tether Gold contract allowing unauthorized token transfers; Tether reportedly fixed the issue; no formal audit covering the fix is mentioned",
+      "chain": "ethereum",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://gold.tether.to/",
+      "shows": "Official Tether Gold website confirmed reachable; JavaScript-gated SPA with no inline contract or audit links visible in page source",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V2: No public GitHub repository found for Tether Gold smart contracts; source-to-repo correspondence and commit pinning cannot be performed",
+    "V3: No smart-contract audit links in protocol.audit_links; search found only reserve attestations by BDO Italia (not a smart-contract security firm) and a Cyberscope page — no recognized Solidity audit firm audit found",
+    "V1: Polygon proxy (0xf1815bd50389c46847f0bda824ec8da914045d14) and implementation (0x6d205337f45d6850c3c3006e28d5b52c8a432c35) verification status not confirmed this run due to fetch budget exhaustion",
+    "V1: Arbitrum implementation (0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001) verification status surfaced via crawl manifest but not independently fetched"
+  ],
+  "protocol_metadata": {
+    "docs_url": "https://gold.tether.to/",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "role": "owner() of Ethereum XAUt proxy (0x68749665); described by BlockSec as multisig wallet",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7224BEef47a6A7B414a0d0AdADf3f691C2691005",
+        "role": "owner() of Ethereum XAUt implementation (0x4C0d2c74); actor class not confirmed this run",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8",
+        "role": "owner() of Arbitrum XAUt proxy (0x40461291); actor class not confirmed this run",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Tether Gold (XAUt) is an ERC-20 token issued by TG Commodities Limited (a Tether subsidiary) where each token represents ownership of one fine troy ounce of physical gold held in Swiss vaults meeting London Good Delivery standards. Users can mint tokens by purchasing gold through Tether and redeem tokens for physical gold delivery, subject to minimum thresholds and fees. The contract is a TransparentUpgradeableProxy with administrative functions including blocklisting, fund destruction, and minting, all controlled by an owner address. XAUt is deployed on multiple chains including Ethereum, Arbitrum, and Polygon, with cross-chain bridging capabilities via an OFT (Omnichain Fungible Token) integration on non-Ethereum chains."
+  }
+}

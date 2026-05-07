@@ -1,0 +1,151 @@
+{
+  "schema_version": 4,
+  "slug": "spark-savings",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Proxy and implementation both verified; ChainSecurity audit exists but is 15+ months stale without confirmed re-audit or drift check",
+  "short_headline": "Verified; audit stale (Jan 2025)",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Proxy 0xBc65ad17c5C0a2A4D159fa5a503f4992c7B545FE is verified on Etherscan (abiSource='etherscan'). Implementation 0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA is verified via Sourcify (abiSource='sourcify'). SPK token 0xc20059e0317DE91738d13af027DfC4a50781b066 is verified on Etherscan (non-proxy, no implementation required). All three assessed addresses have verified source code."
+      },
+      {
+        "code": "V2",
+        "text": "Public GitHub repo sparkdotfi/spark-vaults exists and describes the UsdcVault (UUPS proxy, ERC-4626, PSM+sUSDS integration) consistent with the ABI shape observed on-chain (UPGRADE_INTERFACE_VERSION=5.0.0, upgradeToAndCall, chi/rho/ssr/psm/susds getters). No deploy-commit SHA was pinned this run — recorded in unknowns[]."
+      },
+      {
+        "code": "V3",
+        "text": "ChainSecurity audit 'Code Assessment of the Spark Vaults Smart Contracts' dated January 24, 2025, covers src/UsdcVault.sol, src/UsdcVaultL2.sol, and deploy scripts. Final audit commit: 34ff49e1f81e4d5bb75a9905a914dcc69642885e (January 23, 2025). Zero critical/high/medium/low findings at publication. Analysis date is May 7, 2026 — approximately 15 months after audit completion. No subsequent follow-up audit was found this run."
+      },
+      {
+        "code": "V4",
+        "text": "ChainSecurity (Decentralized Security AG, Zürich) is a broadly recognized Solidity audit firm explicitly listed in the rubric. The audit was produced for SparkDAO/Phoenix Labs."
+      },
+      {
+        "code": "V5",
+        "text": "The ChainSecurity audit was finalized January 2025. The analysis date is May 2026, a gap of ~15 months. The sUSDC vault is described in Spark docs as a 'legacy V1 vault', suggesting it has been superseded by V2 vaults without necessarily being modified. However, no diff of the deployed sourcify-verified source vs. the final audit commit (34ff49e...) was performed this run, so material drift cannot be ruled out. Recorded in unknowns[] as V5."
+      },
+      {
+        "code": "V6",
+        "text": "The proxy 0xBc65ad17... points to implementation 0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA (confirmed via getImplementation() on-chain read at block 25045890). The implementation is independently verified via Sourcify (abiSource='sourcify', contract name 'UsdcVault'). Proxy+implementation verification chain is complete."
+      }
+    ],
+    "steelman": {
+      "red": "No recognized-firm audit link was pinned in protocol.audit_links, and Etherscan shows 'No Contract Security Audit Submitted' for the proxy — an outsider without deep search could conclude there is no audit.",
+      "orange": "The ChainSecurity audit is 15 months old relative to the analysis date, no confirmed re-audit or post-audit differential review was found this run, and no deploy-commit SHA was pinned to confirm the sourcify-verified source matches the audited commit — leaving open the possibility of unreviewed changes in a fund-custody contract.",
+      "green": "Both the proxy and its implementation are verified (via Etherscan and Sourcify respectively), the public GitHub repo sparkdotfi/spark-vaults contains UsdcVault source matching the on-chain ABI exactly, and ChainSecurity — a top-tier firm — delivered a clean audit with zero findings of any severity covering the precise contract in scope."
+    },
+    "verdict": "Choosing orange because the ChainSecurity audit is approximately 15 months stale (January 2025 vs. May 2026 analysis date) and no confirmed follow-up audit or differential review was found this run; additionally, no deploy-commit SHA was pinned to verify the sourcify-verified source matches the audited commit `34ff49e1f81e4d5bb75a9905a914dcc69642885e`. While the green steel-man is strong (verified, recognized firm, clean audit, public repo), the staleness gap combined with the unconfirmed drift check tips the grade to orange per the rubric's requirement of ≤6 months of drift or a re-audited delta."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xBc65ad17c5C0a2A4D159fa5a503f4992c7B545FE",
+      "shows": "Proxy 0xBc65ad17... verified on Etherscan (abiSource='etherscan'), identified as 'UsdcVault', points to implementation 0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA. On-chain reads at block 25045890 confirm UPGRADE_INTERFACE_VERSION=5.0.0, asset=USDC, psm, susds, chi, rho, ssr methods all returning live values.",
+      "chain": "Ethereum",
+      "address": "0xBc65ad17c5C0a2A4D159fa5a503f4992c7B545FE",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA",
+      "shows": "Implementation 0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA verified via Sourcify (abiSource='sourcify'), identified as 'UsdcVault'. getImplementation() returns zero address confirming this is the implementation (not a further proxy). proxiableUUID() returns the EIP-1967 slot hash confirming UUPS pattern.",
+      "chain": "Ethereum",
+      "address": "0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xc20059e0317DE91738d13af027DfC4a50781b066",
+      "shows": "SPK token 0xc20059e0... verified on Etherscan (abiSource='etherscan'), non-proxy, symbol='SPK', name='Spark', deploymentChainId=1, totalSupply=10,000,000,000 SPK. No proxy implementation needed.",
+      "chain": "Ethereum",
+      "address": "0xc20059e0317DE91738d13af027DfC4a50781b066",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://www.chainsecurity.com/reports/Spark/ChainSecurity_Spark_SparkVaults_Audit.pdf",
+      "shows": "ChainSecurity audit dated January 24, 2025, for SparkDAO Spark Vaults. Scope: src/UsdcVault.sol, src/UsdcVaultL2.sol, deploy scripts. Final commit: 34ff49e1f81e4d5bb75a9905a914dcc69642885e (Jan 23, 2025). Zero critical/high/medium/low findings; 2 informational items corrected. Covers UUPS upgradeability, functional correctness, vault asset security.",
+      "commit": "34ff49e1f81e4d5bb75a9905a914dcc69642885e",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/sparkdotfi/spark-vaults",
+      "shows": "Public GitHub repository for Spark Vaults (V1). Describes UsdcVault using ERC-1822 UUPS pattern and ERC-1967 proxy storage, wrapping PSM+sUSDS interactions. Contract structure and functionality matches on-chain ABI (deposit, redeem, chi/rho/ssr/psm/susds getters, exit hatch). L2 version (UsdcVaultL2) also present.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://www.chainsecurity.com/security-audit/spark-vaults",
+      "shows": "ChainSecurity landing page for Spark Vaults audit. Confirms auditor is ChainSecurity (Decentralized Security AG, Zürich), scope is SparkDAO ERC-4626 USDC Vault. Provides download link to PDF report. ChainSecurity is a broadly recognized Solidity auditor.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://docs.spark.fi/user-guides/earning-savings",
+      "shows": "Spark docs describe sUSDC (0xBc65ad17...) as a 'legacy V1 vault' that deposits USDC into the Sky Savings Rate. Users are encouraged to migrate to V2 vaults. This context is relevant to V5 drift assessment — the vault is not being actively developed.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V2: Deploy-commit SHA not pinned this run — did not fetch the spark-vaults repo's deployed-addresses JSON or tag to confirm exact commit of deployed bytecode; source-to-repo correspondence is structural/functional match only.",
+    "V5: Diff between audited commit 34ff49e1... (Jan 23, 2025) and current sourcify-verified source not performed this run; cannot rule out material post-audit drift in the 15-month window (Jan 2025 to May 2026) for the fund-custody UsdcVault contract.",
+    "V3-offchain: No follow-up or differential audit for Spark Vaults V1 (sUSDC) found after the January 2025 ChainSecurity engagement; Etherscan shows 'No Contract Security Audit Submitted' via its own submission system (not the same as absence of external audits)."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/sparkdotfi/spark-vaults",
+      "https://github.com/sparkdotfi/spark-vaults-v2"
+    ],
+    "docs_url": "https://docs.spark.fi",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://www.chainsecurity.com/reports/Spark/ChainSecurity_Spark_SparkVaults_Audit.pdf",
+        "date": "2025-01-24"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://www.chainsecurity.com/security-audit/spark-vaults-v2",
+        "date": "2025-01"
+      }
+    ],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xc20059e0317DE91738d13af027DfC4a50781b066",
+      "symbol": "SPK"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/spark/",
+    "deployed_contracts_doc": "https://docs.spark.fi/dev/savings/susdc-token",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xBc65ad17c5C0a2A4D159fa5a503f4992c7B545FE",
+        "role": "Spark USDC Savings Vault proxy (sUSDC) — UUPS ERC1967 proxy",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA",
+        "role": "sUSDC vault UUPS implementation (UsdcVault)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA188EEC8F81263234dA3622A406892F3D630f98c",
+        "role": "PSM (UsdsPsmWrapper) — referenced by vault psm() getter",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "role": "sUSDS contract — referenced by vault susds() getter",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Spark Savings allows users to deposit USDC into the Spark USDC Vault (sUSDC), an ERC-4626 compliant contract that wraps interactions with the Sky PSM and Savings USDS (sUSDS) to earn the Sky Savings Rate. Users receive non-rebasing sUSDC shares that increase in value as yield accrues; shares can be redeemed for USDC at any time via the PSM. The vault uses a UUPS upgradeable proxy pattern, with upgrade authority restricted to addresses holding the 'ward' role (expected to be the Spark Governance PauseProxy). The sUSDC vault is designated a legacy V1 product alongside newer V2 vaults (spUSDC, spUSDT, spETH) that route through the Spark Liquidity Layer."
+  }
+}

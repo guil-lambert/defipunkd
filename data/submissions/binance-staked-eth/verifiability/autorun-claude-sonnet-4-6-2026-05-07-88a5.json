@@ -1,0 +1,121 @@
+{
+  "schema_version": 4,
+  "slug": "binance-staked-eth",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Proxy and implementation both verified on Etherscan; PeckShield audited earlier versions but no confirmed audit covers the current WrapTokenV3ETH implementation deployed Nov 2024; no public GitHub repo.",
+  "short_headline": "Verified on-chain, audit scope stale",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Proxy contract 0xa2E3356610840701BDf5611a53974510Ae27E2e1 (FiatTokenProxy) is verified on Etherscan with ABI source 'etherscan', as confirmed by the DeFiPunkd surfacer page and Etherscan search results showing 'Contract: Verified'. The surfacer also confirms implementation auto-resolves to 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB."
+      },
+      {
+        "code": "V1",
+        "text": "Implementation contract 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB (WrapTokenV3ETH) is also verified on Etherscan: multiple Etherscan search-result snippets identify it as 'ABI for the implementation contract at 0x9e021c9607bd3adb7424d3b25a2d35763ff180bb (WrapTokenV3ETH), using OpenZeppelin's Unstructured Storage proxy pattern', with 'Contract: Verified' status recorded."
+      },
+      {
+        "code": "V2",
+        "text": "No public GitHub repository for the wBETH/WBETH contracts is recorded (protocol.github is empty) and none was discovered during this run. Source code is available on Etherscan but cannot be matched to a pinned commit in an official repository. This is a scope gap, not a downgrade on its own, but combined with other issues it contributes to the orange rating."
+      },
+      {
+        "code": "V3",
+        "text": "The sole audit link in protocol.audit_links is PeckShield-Audit-Report-wBETH-v1.0.pdf (hosted at github.com/peckshield/publications). The GitHub page was fetched and confirms the file exists (350 KB). The audit title 'v1.0' and the Etherscan submission date of 2023-04-19 for the original proxy indicate this covers the original WrapToken (V1/BSC-era) deployment, not WrapTokenV3ETH. A second audit 'PeckShield Audit Report WBETHV2 v1.0' was found on Scribd, suggesting V2 was also audited, but this URL is not in protocol.audit_links and was not fetched. Neither the v1 nor v2 audit covers WrapTokenV3ETH, which became the active Ethereum implementation on 2024-11-22."
+      },
+      {
+        "code": "V4",
+        "text": "PeckShield is a broadly recognized Solidity auditing firm (explicitly listed in the rubric's recognized firms). The auditor identity is therefore not a downgrade factor."
+      },
+      {
+        "code": "V5",
+        "text": "WrapTokenV3ETH (0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB) has been the active Ethereum implementation since 2024-11-22, per the address_book. This is more than 18 months after the v1 PeckShield audit (~April 2023). WrapTokenV3ETH is the fund-custody and accounting-critical contract (handles deposit, exchangeRate, moveToStakingAddress, requestWithdrawEth). No audit covering this V3 implementation was found in protocol.audit_links or during this run. This constitutes material audit-scope drift under criterion V5."
+      },
+      {
+        "code": "V6",
+        "text": "Both proxy (FiatTokenProxy) and the current implementation (WrapTokenV3ETH) are independently verified on Etherscan. There is no gap where a verified proxy points to an unverified implementation."
+      }
+    ],
+    "steelman": {
+      "red": "No public GitHub repo exists for the protocol, and the only pinned audit covers an implementation version that has been superseded; a user cannot independently verify what the deployed WrapTokenV3ETH actually does against any audited baseline.",
+      "orange": "Both proxy and implementation are verified on Etherscan by a recognized firm (PeckShield), and earlier versions were audited; however the currently active WrapTokenV3ETH implementation deployed Nov 2024 has no confirmed audit in the provided links, placing audit coverage more than 18 months stale relative to the current deployment.",
+      "green": "Proxy and implementation are both fully verified on Etherscan with source visible to anyone; PeckShield (recognized firm) has audited prior versions; the V3 contract may be an incremental upgrade sharing most logic with audited V1/V2 code."
+    },
+    "verdict": "Choosing orange because, while both proxy and implementation are verified on Etherscan (satisfying V1 and V6), the only audit in protocol.audit_links is PeckShield's wBETH v1.0 report dated ~April 2023 which covers an earlier WrapToken version. The currently deployed WrapTokenV3ETH (active since 2024-11-22) is the fund-custody and settlement-critical contract on Ethereum, and no audit covering it appears in the provided links — a classic 'audit scope stale relative to deployment' situation. The absence of a public GitHub repo (V2 gap) further prevents source-to-commit matching. The green steel-man is weaker because the V3 upgrade postdates all known audits by over a year and introduces different function signatures (moveToUnwrapAddress, moveToStakingAddress patterns differ from V1); the red steel-man is weaker because on-chain bytecode IS verified, meaning the source is at least publicly readable."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "shows": "Proxy 0xa2E3... is a FiatTokenProxy with ABI source 'etherscan' (verified), pointing to implementation 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB (WrapTokenV3ETH); admin() returns 0xA3eE6926edcce93BacF05F4222c243c4d9F6d853; reads pinned to block 25025843",
+      "chain": "ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa2e3356610840701bdf5611a53974510ae27e2e1",
+      "shows": "Etherscan confirms proxy contract is verified ('Contract: Verified') and ABI resolves to implementation at 0x9e021c9607bd3adb7424d3b25a2d35763ff180bb (WrapTokenV3ETH) using OpenZeppelin Unstructured Storage proxy pattern; previously on 0xfe928a7d8be9c8cece7e97f0ed5704f4fa2cb42a",
+      "chain": "ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1"
+    },
+    {
+      "url": "https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-wBETH-v1.0.pdf",
+      "shows": "PeckShield-Audit-Report-wBETH-v1.0.pdf exists in the peckshield/publications repo (350 KB); this is the sole audit in protocol.audit_links; file name and proxy submission date of 2023-04-19 on Etherscan indicate this audit covers the original WrapToken V1 deployment, not WrapTokenV3ETH (active since 2024-11-22)",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://www.scribd.com/document/709679206/PeckShield-Audit-Report-WBETHV2-v1-0",
+      "shows": "A second PeckShield audit 'PeckShield Audit Report WBETHV2 v1.0' exists covering WrapTokenV2, but this URL is not in protocol.audit_links and was not directly fetched; cited as derived evidence of a V2 audit existing"
+    }
+  ],
+  "unknowns": [
+    "V2: No public GitHub repository for wBETH/WBETH contracts was found; source-to-commit pinning was not possible; Etherscan source is visible but no commit SHA can be recorded",
+    "V3: The exact scope, date, and in-scope commit of PeckShield-Audit-Report-wBETH-v1.0.pdf could not be confirmed because the raw PDF was inaccessible (raw.githubusercontent.com blocked); audit date inferred as ~April 2023 from Etherscan proxy submission date, not from the PDF body",
+    "V3: A second audit 'PeckShield Audit Report WBETHV2 v1.0' was found on Scribd but not fetched; its scope and whether it covers any logic present in WrapTokenV3ETH is unknown",
+    "V5: No audit covering WrapTokenV3ETH (active since 2024-11-22) was found; whether Binance commissioned a private audit for the V3 upgrade that was not published is unknown",
+    "V1-offchain: Etherscan direct fetch was blocked (permission denied); verification status for 0x9E021c9607bD3ADB7424D3b25a2D35763ff180BB was confirmed only via Etherscan search-result snippets, not a direct page fetch"
+  ],
+  "protocol_metadata": {
+    "docs_url": "https://www.binance.com/en/wbeth",
+    "audits": [
+      {
+        "firm": "PeckShield",
+        "url": "https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-wBETH-v1.0.pdf",
+        "date": "2023-04"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xA3eE6926edcce93BacF05F4222c243c4d9F6d853",
+        "role": "proxy admin (can upgrade wBETH implementation via upgradeTo/upgradeToAndCall)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7",
+        "role": "owner / pauser / blacklister / masterMinter of wBETH token",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2B59215778e99035CF38663454eF1240a7AE70F5",
+        "role": "operator (deposits/withdraws ETH)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x81720695e43A39C52557Ce6386feB3FAAC215f06",
+        "role": "oracle (updates exchange rate)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Binance staked ETH (wBETH) is a liquid staking token issued by Binance, where users stake ETH and receive Wrapped Beacon ETH (WBETH) in return. WBETH is a rebase-free, exchange-rate-accumulating token: its value in ETH grows daily as staking rewards accrue, reflected by an on-chain exchange rate updated by a Binance-controlled oracle. Users can deposit ETH directly into the wBETH contract or wrap existing BETH, and can redeem WBETH for ETH subject to Ethereum network withdrawal queue limits. The wBETH contract is deployed as an upgradeable proxy (FiatTokenProxy pattern, currently pointing to WrapTokenV3ETH) controlled entirely by Binance-operated addresses with no on-chain governance or timelock."
+  }
+}

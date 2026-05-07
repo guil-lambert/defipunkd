@@ -1,0 +1,112 @@
+{
+  "schema_version": 4,
+  "slug": "coinbase-bridge",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "cbBTC proxy verified via Etherscan; OpenZeppelin 2022 audit covers wrapper infrastructure but explicitly excludes the deployed FiatTokenV2_1 core token implementation; no GitHub repo pinned; other wrapped tokens (cbDOGE, cbXRP, cbADA, cbLTC) not independently checked",
+  "short_headline": "Audit scope misses core token contract",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "cbBTC proxy at 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf on Base is confirmed verified on Etherscan (abiSource: 'etherscan', verified: true) per DeFiPunkd ABI API. The contract is named FiatTokenProxy with implementation resolved at 0x7458bfDC30034EB860B265E6068121D18Fa5Aa72 via etherscan-sourcecode. Direct verification of the implementation page could not be independently confirmed in this run due to access restrictions."
+      },
+      {
+        "code": "V2",
+        "text": "CoinMarketCap references a public GitHub repository for Coinbase wrapped tokens, and the OpenZeppelin audit references github.com/coinbase/wrapped-tokens. However, protocol.github is empty and no commit SHA was pinned in this run. Source-to-repo correspondence was not directly verified."
+      },
+      {
+        "code": "V3",
+        "text": "OpenZeppelin audited Coinbase's 'Wrapped tokens' project on August 24, 2022. The in-scope files were: MintForwarder.sol, MintUtil.sol, RateLimit.sol, ExchangeRateUpdater.sol, ExchangeRateUtil.sol, StakedTokenV1.sol. The audit explicitly stated that the core FiatTokenV2_1 token contract (which IS what cbBTC uses as its non-staked implementation) was treated as an external dependency 'assumed to work as documented' and was out of scope. A FiatTokenProxy was added during fix review (PR #6) but only the proxy addition was reviewed, not the FiatTokenV2_1 itself. cbBTC launched September 2024, ~25 months after the audit. No audit specifically covering the deployed FiatTokenV2_1 implementation was found."
+      },
+      {
+        "code": "V4",
+        "text": "OpenZeppelin is a broadly recognized Solidity audit firm. The August 2022 audit of the Coinbase wrapped tokens project was conducted by OpenZeppelin Security. No critical or high severity findings were reported. The firm's coverage of the wrapper infrastructure (MintForwarder, RateLimit) is credible, but the non-coverage of FiatTokenV2_1 leaves a scope gap for the fund-custody-critical token contract."
+      },
+      {
+        "code": "V5",
+        "text": "The OpenZeppelin 2022 audit explicitly excluded FiatTokenV2_1 (the core cbBTC implementation). CoinMarketCap notes 'No material contract code has been modified in deploying cbBTC' from the shared cbETH codebase. FiatTokenV2_1 is Centre's (Circle's) USDC token contract which has its own audit history, but no such independent audit PDF was found in protocol.audit_links (empty) or discovered in this run's searches. Post-audit drift cannot be assessed without pinned commits."
+      },
+      {
+        "code": "V6",
+        "text": "The DeFiPunkd ABI endpoint auto-resolved the proxy to implementation 0x7458bfDC30034EB860B265E6068121D18Fa5Aa72 via etherscan-sourcecode, strongly indicating the implementation is verified on Etherscan. However, a direct fetch of the implementation's own ABI or explorer page failed due to access restrictions, so independent confirmation of implementation verification is not present in this run's evidence."
+      }
+    ],
+    "steelman": {
+      "red": "The core fund-custody token contract (FiatTokenV2_1) was explicitly excluded from the only available audit's scope, and no independent audit of that contract in the context of cbBTC was discovered; this is a substantive verification gap for the most critical component.",
+      "orange": "The proxy is verified on Etherscan, OpenZeppelin (recognized firm) audited the surrounding wrapper infrastructure, the FiatTokenV2_1 base is Centre's widely-used USDC contract with its own public audit history, and no GitHub repo or complete implementation verification was independently confirmed — placing this solidly in the 'stale/partial audit scope' orange band.",
+      "green": "FiatTokenV2_1 is the same code that underpins USDC (one of the most audited ERC-20 contracts in existence), the proxy is verified, OpenZeppelin audited the Coinbase-specific wrapper layer, and CoinMarketCap states no material contract code was modified for cbBTC."
+    },
+    "verdict": "Choosing orange because: the proxy is verified and an OpenZeppelin audit exists (ruling out red), but the audit explicitly excluded the FiatTokenV2_1 core token implementation from scope, no audit covering this critical component was found in the protocol's listed audit_links or discovered via search, no GitHub repo is pinned for this protocol, implementation verification was not independently confirmed in this run, and 5 of the 7 address-book contracts (cbDOGE, cbXRP, cbADA, cbLTC on Base, plus the Ethereum cbBTC implementation) were not checked — the evidence does not meet the green threshold of 'audit covering currently-deployed contracts'."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=8453&address=0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "shows": "cbBTC proxy on Base (0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf) is verified on Etherscan (verified: true, abiSource: 'etherscan'), named FiatTokenProxy, with implementation resolved at 0x7458bfDC30034EB860B265E6068121D18Fa5Aa72 via etherscan-sourcecode",
+      "chain": "base",
+      "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/8453/0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "shows": "cbBTC proxy on Base identified as FiatTokenProxy with proxy pointing to implementation 0x7458bfDC30034EB860B265E6068121D18Fa5Aa72; blacklister surfaced at 0x158cFA498B1f72f458aCf8DF993c709efCA11e31; ABI source is etherscan; contract exposes upgradeTo, upgradeToAndCall, changeAdmin write methods confirming upgradeability",
+      "chain": "base",
+      "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://blog.openzeppelin.com/coinbase-liquid-staking-token-audit/",
+      "shows": "OpenZeppelin audited Coinbase Wrapped Tokens on August 24, 2022. In-scope files: MintForwarder.sol, MintUtil.sol, RateLimit.sol, ExchangeRateUpdater.sol, ExchangeRateUtil.sol, StakedTokenV1.sol. FiatTokenV2_1 (the core token contract used for non-staked wrapped assets like cbBTC) was explicitly out of scope, treated as external dependency assumed to work as intended. No critical or high severity findings. FiatTokenProxy was added during fix review (PR #6) and reviewed at that stage only.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://coinmarketcap.com/currencies/coinbase-wrapped-btc/",
+      "shows": "Coinbase engaged OpenZeppelin to audit the cbETH smart contract also used for cbBTC. States 'No material contract code has been modified in deploying cbBTC.' The open source repository for Coinbase's wrapped tokens including cbBTC and cbETH can be found on GitHub. cbBTC is built using Centre's FiatTokenV2_1 for non-staked wrapped tokens.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V1: Implementation contract 0x7458bfDC30034EB860B265E6068121D18Fa5Aa72 (Base cbBTC) verification status not independently confirmed via direct explorer fetch — ABI merge from etherscan-sourcecode strongly implies verified but direct page was inaccessible (403)",
+    "V1: Ethereum cbBTC proxy/implementation (0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf chainId=1) verification not confirmed — direct ABI fetch returned 403",
+    "V1: cbDOGE (0xcbd06e5a2b0c65597161de254aa074e489deb510), cbXRP (0xcb585250f852C6c6bf90434AB21A00f02833a4af), cbADA (0xcbADA732173e39521CDBE8bf59a6Dc85A9fc7b8c), cbLTC (0xcb17C9Db87B595717C857a08468793f5bAb6445F) on Base — bytecode verification not checked in this run due to fetch-call budget exhaustion",
+    "V2: GitHub repo github.com/coinbase/wrapped-tokens identified from audit references and CoinMarketCap but not directly fetched; no commit SHA pinned; source-to-deployed-bytecode correspondence not verified",
+    "V3: No audit specifically covering the deployed FiatTokenV2_1 implementation found in protocol.audit_links (empty) or search; Centre/Circle USDC audit history may cover this codebase but was not discovered or fetched in this run",
+    "V5: Post-audit drift between August 2022 audit commit and current deployed implementation cannot be assessed — GitHub repo not fetched, no commit SHA for deployed contracts available",
+    "V6: Arbitrum cbBTC (0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf chainId=42161) proxy and implementation verification not checked — fetch budget exhausted"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/coinbase/wrapped-tokens"
+    ],
+    "docs_url": "https://www.coinbase.com/cbbtc",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://blog.openzeppelin.com/coinbase-liquid-staking-token-audit/",
+        "date": "2022-08-24"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Base",
+        "address": "0x7458bfDC30034EB860B265E6068121D18Fa5Aa72",
+        "role": "FiatTokenV2_1 implementation for cbBTC proxy",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0x158cFA498B1f72f458aCf8DF993c709efCA11e31",
+        "role": "cbBTC blacklister",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Coinbase Bridge issues wrapped ERC-20 tokens (cbBTC, cbDOGE, cbXRP, cbADA, cbLTC) backed 1:1 by the corresponding native assets held in custody by Coinbase. Users deposit native assets (e.g., BTC) to a Coinbase address and receive the wrapped token on Base, Ethereum, or Arbitrum; redemption occurs by depositing the wrapped token back to a Coinbase account. Each token uses Centre's FiatTokenV2_1 behind a FiatTokenProxy, giving Coinbase-controlled roles (owner, masterMinter, pauser, blacklister) centralized authority over minting, pausing, and blacklisting."
+  }
+}

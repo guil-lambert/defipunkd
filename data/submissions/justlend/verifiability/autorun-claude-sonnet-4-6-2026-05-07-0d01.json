@@ -1,0 +1,91 @@
+{
+  "schema_version": 4,
+  "slug": "justlend",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Public GitHub repo exists but on-chain bytecode verification unconfirmable (Tronscan blocked); sole audit is CertiK circa 2022, >3 years stale with no evidence of re-audit",
+  "short_headline": "Stale audit; Tronscan verification unconfirmed",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "TRON contracts live on Tronscan (not Etherscan). The DeFiPunkd read API explicitly does not support TRON. All direct Tronscan fetches (tronscan.org, tronscan.io, api.tronscan.org) returned permission-denied errors this run. Bytecode verification status for all 25+ address_book contracts (Unitroller TGjYzgCyPobsNS9n6WcbdLVR9dH7mWqFx7, Comptroller impl TB23wYojvAsSx6gR8ebHiBqwSeABiBMPAr, GovernorBravoDelegator TEqiF5JbhDPD77yjEfnEMncGRZNDt2uogD, jToken proxies, etc.) could not be confirmed this run."
+      },
+      {
+        "code": "V2",
+        "text": "A public GitHub repo exists at https://github.com/justlend/justlend-protocol with Solidity sources for Unitroller, Comptroller, CErc20Delegator, GovernorBravoDelegator, Timelock, PriceOracleProxy, and related contracts, matching all address_book roles. The repo has only 12 commits on the main branch. No commit SHA could be pinned this run because the commits page returned permission-denied. Source-to-deployment correspondence cannot be formally confirmed without Tronscan verification data."
+      },
+      {
+        "code": "V3",
+        "text": "The pinned audit link https://www.justlend.link/docs/justlend_audit_en.pdf returned an access error and could not be fetched. A Medium article from July 2022 (medium.com/@justfoundation) states the protocol 'passed the security audit by the leading blockchain security firm CertiK.' No later audit, fix-audit, or differential audit from any recognized firm was found. With the analysis date of 2026-05-07, the audit is at minimum 3.5 years old — well beyond the 6-month threshold — with no evidence of a follow-up review."
+      },
+      {
+        "code": "V4",
+        "text": "The auditor identified in secondary sources is CertiK, which is a broadly recognized Solidity security firm. However, the primary audit document (PDF) was inaccessible, so specific contracts-in-scope and audit date cannot be confirmed from a primary source this run."
+      },
+      {
+        "code": "V5",
+        "text": "Post-audit drift cannot be assessed: the audit PDF is inaccessible (no scoped commit or contract list), and the commits page for the GitHub repo could not be loaded. The repo shows only 12 total commits on main, suggesting limited post-open-source changes, but diff content was not sampled. Drift recorded as unknown per evidence discipline rules."
+      },
+      {
+        "code": "V6",
+        "text": "The protocol uses proxy patterns: Unitroller (proxy) → Comptroller (implementation); GovernorBravoDelegator (proxy) → GovernorBravoDelegate (implementation); CErc20Delegator (proxy) → CErc20Delegate (implementation); PriceOracleProxy (proxy) → PriceOracle (implementation). Verification of both proxy AND implementation contracts on Tronscan could not be confirmed this run due to all Tronscan fetch failures."
+      }
+    ],
+    "steelman": {
+      "red": "All on-chain bytecode verification fetches from Tronscan failed, the sole audit PDF link is broken, and the audit is >3.5 years old with no evidence of a re-audit — if Tronscan shows unverified bytecode or no audit can be confirmed from primary sources, this is effectively red.",
+      "orange": "A public GitHub repo with matching contract sources exists; CertiK (recognized firm) is named in secondary sources as auditor; however, the audit is clearly stale (circa 2022, >3.5 years before analysis date) and on-chain bytecode verification cannot be confirmed for any contract due to Tronscan access failures — orange best fits the available evidence.",
+      "green": "If Tronscan were fetchable and showed all proxy+implementation contracts verified, and the audit PDF confirms CertiK coverage of the current codebase with minimal drift on the repo's 12-commit history, a green grade would be arguable."
+    },
+    "verdict": "Choosing orange because the public GitHub repo with structurally matching Solidity sources is a meaningful positive signal (V2 partial), and CertiK is a recognized firm (V4), but two blockers prevent green: (1) no on-chain bytecode verification can be confirmed for any TRON contract this run (V1 unknown), and (2) the only identified audit dates to circa 2022 per secondary source — more than 3.5 years before the analysis date — with no evidence of any re-audit or follow-up review (V3 stale). Red is not chosen because a public repo does exist and a recognized-firm audit is named in secondary sources, which is more than a red-grade protocol typically provides."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/justlend/justlend-protocol",
+      "shows": "Public GitHub repo for JustLend protocol contracts exists under the justlend org, containing Solidity sources for Unitroller, Comptroller, CErc20Delegator, GovernorBravoDelegator, Timelock, PriceOracleProxy, and related contracts matching all address_book roles. 12 commits on main branch. Security contact listed as support@justlend.org.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://medium.com/@justfoundation/new-defi-milestone-trons-first-official-lending-protocol-justlend-dao-is-now-open-source-3214cddd3591",
+      "shows": "Secondary source (JUST Foundation Medium article, July 2022) states JustLend DAO 'passed the security audit by the leading blockchain security firm CertiK.' Establishes audit firm identity and approximate date (~2022), with no later audit mentioned. Also confirms open-sourcing of protocol on GitHub.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/justlend/justlend-protocol/blob/main/README.md",
+      "shows": "Derived: README lists all core contract types (CToken/CErc20/CEther, Comptroller, GovernorBravo, Timelock, InterestRateModel, PriceOracle) and references audit PDF at https://www.justlend.link/docs/justlend_audit_en.pdf (same as pinned audit_links). Security contact email support@justlend.org listed.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V1: Tronscan bytecode verification status for all 25+ deployed contracts (Unitroller TGjYzgCyPobsNS9n6WcbdLVR9dH7mWqFx7, Comptroller impl TB23wYojvAsSx6gR8ebHiBqwSeABiBMPAr, GovernorBravoDelegator TEqiF5JbhDPD77yjEfnEMncGRZNDt2uogD, all jToken proxies and implementations) could not be confirmed — all Tronscan domain fetches (tronscan.org, tronscan.io, api.tronscan.org) returned permission-denied errors; DeFiPunkd API does not support TRON chain",
+    "V2: No commit SHA pinned for the justlend/justlend-protocol repo — GitHub commits page returned permission-denied; source-to-deployment bytecode correspondence not formally verifiable without Tronscan data",
+    "V3: Audit PDF at https://www.justlend.link/docs/justlend_audit_en.pdf inaccessible this run — specific contracts in scope, audit date, and commit SHA from CertiK audit cannot be confirmed from primary source",
+    "V5: Post-audit drift unknown — audit PDF inaccessible so scoped commit cannot be compared; GitHub commits page inaccessible so diff content not sampled; cannot determine whether material changes were made post-audit",
+    "V6: Proxy-and-implementation verification parity on Tronscan unknown for all proxy contracts (Unitroller→Comptroller, GovernorBravoDelegator→GovernorBravoDelegate, CErc20Delegator→CErc20Delegate, PriceOracleProxy→PriceOracle) — all Tronscan fetches failed"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/justlend/justlend-protocol",
+      "https://github.com/justlend/justlend-interface",
+      "https://github.com/justlend/mcp-server-justlend"
+    ],
+    "docs_url": "https://docs.justlend.org",
+    "audits": [
+      {
+        "firm": "CertiK",
+        "url": "https://www.justlend.link/docs/justlend_audit_en.pdf",
+        "date": "2022-07"
+      }
+    ],
+    "security_contact": "support@justlend.org",
+    "admin_addresses": [],
+    "upgradeability": "upgradeable",
+    "about": "JustLend DAO is a TRON-based money market protocol where users supply TRX or TRC20 tokens to earn interest or borrow assets against collateral. Users receive jTokens (e.g., jTRX, jUSDT) as interest-bearing receipts for supplied assets, following the Compound V2 architecture with algorithmically determined interest rates. The protocol is governed by JST token holders via GovernorBravo on-chain voting with a Timelock, and also offers sTRX liquid staking and an Energy Rental service for TRON transaction fee optimization."
+  }
+}

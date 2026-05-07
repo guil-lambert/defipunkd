@@ -1,0 +1,169 @@
+{
+  "schema_version": 4,
+  "slug": "kelp",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Core contracts verified and multiply-audited by recognized firms, but implementation verification unconfirmed this run, bridge contracts recently exploited and mid-migration, and later audit coverage of post-2023 changes not pinned",
+  "short_headline": "Verified + audited, bridge exploit drift",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "The lrt_config proxy (0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7) is confirmed verified on Etherscan via the DeFiPunkd ABI API, which returns abiSource=etherscan and verified=true for the TransparentUpgradeableProxy. The proxy resolves to implementation 0xd4F475A7DF199b3106F622A3A825Ff399D4dafCe. The ABI API merges implementation ABI into the proxy response using etherscan-sourcecode, indicating the implementation is also accessible from Etherscan, but direct verification of the implementation address was not independently confirmed this run due to domain access block on kelpdao.xyz (required for the kelpdao.xyz domain-based ABI endpoint)."
+      },
+      {
+        "code": "V2",
+        "text": "A public GitHub repo exists at github.com/Kelp-DAO/LRT-rsETH (confirmed via web search), last updated November 27, 2025. A second repo, kernel-smart-contracts-public, also exists. The Sigma Prime audit (Dec 2023) was conducted on commits 3b4e36c and 2af8a04. No commit SHA was pinned to the current deployment this run; source-to-deployment correspondence is unconfirmed."
+      },
+      {
+        "code": "V3",
+        "text": "The Kelp audits page lists five audits: (1) Sigma Prime v2.1 LRT Review (December 2023, assessed at commit 3b4e36c / retested at 2af8a04) covering LRTConfig.sol, LRTDepositPool.sol, LRTOracle.sol, NodeDelegator.sol, RSETH.sol, ChainlinkPriceOracle.sol, and interfaces — 2 Medium (both Resolved), 3 Low, 5 Informational; (2) Code4rena audit November 10-15, 2023 — 3 High, 2 Medium findings; (3) MixBytes (date unconfirmed this run); (4) Sigma Prime second review 'includes withdrawals' (SigmaPrime_2.pdf, date unconfirmed this run); (5) Sigma Prime third review (SigmaPrime_3.pdf, date unconfirmed this run). The later three audits were not fetched this run, so their exact scope and dates are unknown."
+      },
+      {
+        "code": "V4",
+        "text": "Sigma Prime is a broadly recognized Solidity security firm. Code4rena is a recognized competitive audit platform. MixBytes is listed in the recognized firms. All three are recognized under the rubric's list."
+      },
+      {
+        "code": "V5",
+        "text": "Material post-audit drift is flagged on two dimensions: (a) The Kelp-DAO/LRT-rsETH GitHub repo was last updated November 27, 2025 — roughly 2 years after the initial audits (Nov-Dec 2023). Whether SigmaPrime_2 and SigmaPrime_3 cover the incremental changes is unconfirmed this run. (b) A major security incident occurred on April 18, 2026: an exploit of Kelp's LayerZero OFT bridge infrastructure drained approximately 116,500 rsETH (~$292M). The protocol is mid-migration from LayerZero to Chainlink CCIP. The bridge adapter contracts (e.g., 0x85d456B2DfF1fd8245387C0BfB64Dfb700e98Ef3, RSETH OFT Adapter on Ethereum) and corresponding L2 OFT contracts are directly involved, and their replacement CCIP contracts have not been audited per any evidence found in this run. This constitutes fund-custody-impacting post-audit drift with a proven exploit on the bridge path."
+      },
+      {
+        "code": "V6",
+        "text": "The lrt_config proxy (0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7) implementation is resolved as 0xd4F475A7DF199b3106F622A3A825Ff399D4dafCe via the DeFiPunkd ABI API (etherscan-sourcecode source). The proxy is verified; the implementation ABI was successfully merged from Etherscan data. Direct confirmation of the implementation address being independently verified on Etherscan could not be completed this run (direct domain fetch blocked for kelpdao.xyz, DeFiPunkd ABI API for the implementation address returned a 'domain not permitted' error)."
+      }
+    ],
+    "steelman": {
+      "red": "The bridge exploit in April 2026 affected fund-custody contracts (the OFT Adapter that holds/releases rsETH for bridging), the replacement CCIP contracts are unaudited, and the implementation verification of the core proxy could not be independently confirmed this run.",
+      "orange": "The core Ethereum staking contracts are verified and covered by multiple recognized audits (Sigma Prime x3, MixBytes, Code4rena); however, two later Sigma Prime audit dates/scopes are unconfirmed this run, the bridge path was exploited and is being replaced with unaudited CCIP contracts, and implementation verification of the lrt_config proxy is unconfirmed by direct fetch.",
+      "green": "All core contracts appear verified on Etherscan (proxy + implementation via merged ABI), the protocol has been audited five times by recognized firms including Sigma Prime (three times, covering withdrawals), and the bridge exploit affected cross-chain infrastructure that is peripheral to the core staking/restaking logic on Ethereum."
+    },
+    "verdict": "Choosing orange because: (1) the two later Sigma Prime audits' exact dates and scope were not confirmed this run, leaving drift coverage uncertain for the ~2 years of commits between Dec 2023 and Nov 2025; (2) the April 2026 LayerZero OFT bridge exploit directly affected the rsETH OFT Adapter (a fund-custody contract in the bridge path), and the replacement CCIP contracts are unaudited per evidence in this run; (3) implementation contract verification was not directly confirmed by an independent fetch. These gaps collectively prevent a green grade despite strong underlying audit pedigree."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7",
+      "shows": "lrt_config is a verified TransparentUpgradeableProxy (abiSource=etherscan) with implementation resolved to 0xd4F475A7DF199b3106F622A3A825Ff399D4dafCe; proxy is verified on Etherscan; pinned to block 25046011",
+      "chain": "ethereum",
+      "address": "0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7",
+      "shows": "Returns verified=true, abiSource=etherscan, proxy.implementation=0xd4F475A7DF199b3106F622A3A825Ff399D4dafCe, ABI merged with implementation via etherscan-sourcecode; confirms proxy contract is verified and implementation ABI is accessible via Etherscan",
+      "chain": "ethereum",
+      "address": "0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://kelp.gitbook.io/kelp/audits",
+      "shows": "Official Kelp audits page lists 5 audit reports: Sigma Prime (initial, PDF), Code4rena (2023-11), MixBytes (PDF), Sigma Prime second review including withdrawals (SigmaPrime_2.pdf), Sigma Prime third review (SigmaPrime_3.pdf). Page was last updated 1 year ago per GitBook metadata.",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://kelpdao.xyz/audits/smartcontracts/SigmaPrime.pdf",
+      "shows": "Sigma Prime Kelp LRT Review v2.1, December 2023. Assessed at commit 3b4e36c, retested at 2af8a04. Scope: LRTConfig.sol, LRTDepositPool.sol, LRTOracle.sol, NodeDelegator.sol, RSETH.sol, ChainlinkPriceOracle.sol, LRTConfigRoleChecker.sol, LRTConstants.sol, UtilLib.sol, and interface files. 10 findings: 2 Medium (both Resolved), 3 Low, 5 Informational.",
+      "commit": "3b4e36c",
+      "fetched_at": "2026-05-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/Kelp-DAO/LRT-rsETH",
+      "shows": "Public GitHub repository for Kelp DAO LRT-rsETH smart contracts (derived from web search result showing the repo exists, is public, Solidity, last updated Nov 27 2025). Source discovered via web search this run."
+    },
+    {
+      "url": "https://code4rena.com/reports/2023-11-kelp",
+      "shows": "Code4rena competitive audit of Kelp DAO rsETH, November 10-15 2023, 194 wardens, 3 High severity and 2 Medium severity findings identified. Recognized competitive audit platform.",
+      "commit": "3b4e36c"
+    },
+    {
+      "url": "https://github.com/orgs/Kelp-DAO/repositories",
+      "shows": "Kelp-DAO GitHub organization has public repos including LRT-rsETH (last updated Nov 27, 2025) and kernel-smart-contracts-public (last updated Dec 2, 2025), confirming active repo maintenance."
+    }
+  ],
+  "unknowns": [
+    "V1: Implementation contract 0xd4F475A7DF199b3106F622A3A825Ff399D4dafCe independent Etherscan verification not directly confirmed — domain access blocked for kelpdao.xyz and DeFiPunkd ABI for implementation address returned domain error this run",
+    "V2: No deploy-commit SHA pinned for currently-deployed contracts; source-to-deployment match not confirmed this run",
+    "V3: Sigma Prime SigmaPrime_2.pdf and SigmaPrime_3.pdf ('includes withdrawals') audit dates and exact contract scope not confirmed — PDFs not fetched this run (budget exhausted)",
+    "V3: MixBytes audit date and exact contract scope not confirmed — PDF not fetched this run",
+    "V5: Whether SigmaPrime_2 / SigmaPrime_3 cover the post-Dec-2023 code changes in github.com/Kelp-DAO/LRT-rsETH is unconfirmed; diff content not sampled this run",
+    "V5: Replacement Chainlink CCIP rsETH bridge contracts (post-April-2026 LayerZero exploit migration) audit status unknown — no audit PDF or report found this run covering CCIP contracts",
+    "V6: Direct Etherscan page for 0xd4F475A7DF199b3106F622A3A825Ff399D4dafCe not fetched this run due to budget constraints — implementation verification inferred from proxy ABI merge but not independently confirmed"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Kelp-DAO/LRT-rsETH",
+      "https://github.com/Kelp-DAO/kernel-smart-contracts-public"
+    ],
+    "docs_url": "https://kelp.gitbook.io/kelp",
+    "audits": [
+      {
+        "firm": "Sigma Prime",
+        "url": "https://kelpdao.xyz/audits/smartcontracts/SigmaPrime.pdf",
+        "date": "2023-12"
+      },
+      {
+        "firm": "Code4rena",
+        "url": "https://code4rena.com/reports/2023-11-kelp",
+        "date": "2023-11"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://kelpdao.xyz/audits/smartcontracts/mixbytes.pdf"
+      },
+      {
+        "firm": "Sigma Prime",
+        "url": "https://kelpdao.xyz/audits/smartcontracts/SigmaPrime_2.pdf"
+      },
+      {
+        "firm": "Sigma Prime",
+        "url": "https://kelpdao.xyz/audits/smartcontracts/SigmaPrime_3.pdf"
+      }
+    ],
+    "deployed_contracts_doc": "https://kelp.gitbook.io/kelp/rseth-smart-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xb9577E83a6d9A6DE35047aa066E3758221FE0DA2",
+        "role": "Kelp Admin multisig (3/5 threshold) — contract admin operations",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCbcdd778AA25476F203814214dD3E9b9c46829A1",
+        "role": "Kelp Manager multisig (2/5 threshold) — contract manager operations",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb3696a817D01C8623E66D156B6798291fa10a46d",
+        "role": "Kelp External Admin multisig (6/8 threshold) — proposer of timelock / contract upgrades",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x49bD9989E31aD35B0A62c20BE86335196A3135B1",
+        "role": "Timelock (main)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb61e0E39b6d4030C36A176f576aaBE44BF59Dc78",
+        "role": "Proxy admin",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7550eAEe86F649Dc5cbA74e92D3E2667b68753fa",
+        "role": "Proxy admin",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Kelp (rsETH) is a liquid restaking protocol on Ethereum where users deposit liquid staking tokens (stETH, ETHx, ETH) and receive rsETH — a liquid restaking receipt token — that accrues EigenLayer restaking rewards and ETH staking rewards while remaining transferable. Assets are delegated through NodeDelegator contracts to EigenLayer strategies operated by node operator partners. rsETH is bridged to multiple L2s via OFT adapters and can be used across DeFi; withdrawals are handled through a dedicated withdrawal flow audited separately."
+  }
+}
