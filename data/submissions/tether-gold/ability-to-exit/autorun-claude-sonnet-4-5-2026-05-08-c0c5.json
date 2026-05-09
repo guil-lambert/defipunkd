@@ -1,0 +1,117 @@
+{
+  "schema_version": 4,
+  "slug": "tether-gold",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "3-of-6 multisig can blocklist users indefinitely, blocking exits and destroying funds",
+  "short_headline": "Multisig can freeze & destroy user funds",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Primary exit functions are redeem(uint256), transfer(address,uint256), and transferFrom(address,address,uint256). The redeem function burns tokens on-chain (emits Redeem event), while transfers move tokens to other addresses, enabling exit to exchanges or self-custody."
+      },
+      {
+        "code": "E2",
+        "text": "The ABI includes addToBlockedList(address), removeFromBlockedList(address), isBlocked(address), and destroyBlockedFunds(address). These are owner-restricted functions (onlyOwner modifier pattern typical in OpenZeppelin Ownable contracts). The presence of BlockPlaced, BlockReleased, and DestroyedBlockedFunds events confirms active blocklist enforcement on user operations."
+      },
+      {
+        "code": "E3",
+        "text": "The owner() function returns 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828, which is a 3-of-6 multisig (required=3, 6 owners). This multisig holds the power to call addToBlockedList, removeFromBlockedList, destroyBlockedFunds, mint, and upgrade functions. There is no on-chain time cap visible on blocklist duration—once blocked, a user remains blocked until the multisig removes them."
+      },
+      {
+        "code": "E4",
+        "text": "No distinction between emergency and governance pause paths; the contract does not expose paused() or whenNotPaused modifiers in the ABI. However, the blocklist mechanism serves as a per-address freeze that is effectively an indefinite, targeted pause on that user's ability to transfer or exit."
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption mechanism visible on-chain. The redeem(uint256) function appears to be a direct burn operation. Off-chain redemption for physical gold requires KYC with TG Commodities and a minimum of ~430 XAUt (~1 full gold bar), but the on-chain burn via redeem is immediate if not blocked."
+      },
+      {
+        "code": "E6",
+        "text": "No permissionless escape hatch or emergency exit mechanism exists. If a user is added to the blocklist, only the 3-of-6 multisig can remove them. There is no on-chain governance vote requirement, no timelock on blocklist actions, and no user-initiated appeal process visible on-chain."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions (redeem, transfer, transferFrom) are standard ERC-20-style nonpayable functions callable directly via Etherscan, a wallet interface, or any contract interaction tool. No frontend dependency for execution. However, if a user is on the blocklist, the transaction will revert regardless of the interface used."
+      }
+    ],
+    "steelman": {
+      "red": "The 3-of-6 multisig can unilaterally and indefinitely block any user from transferring or redeeming tokens, and can destroy blocked users' funds with no on-chain recourse, governance vote, or time cap—functionally equivalent to full custodial control over exit.",
+      "orange": "While the blocklist is per-address (not a global pause), and transfers are otherwise permissionless, the multisig's unrestricted power to freeze and destroy funds without a timelock places adversarial-admin exit risk in the high category.",
+      "green": "Users who are not blocklisted can transfer and redeem tokens permissionlessly on-chain at any time with no delay, and the 3-of-6 threshold provides some defense against single-key compromise compared to an EOA or 2-of-3 multisig."
+    },
+    "verdict": "Choosing red because the protocol grants a 3-of-6 multisig the unilateral, indefinite power to blocklist any user and destroy their funds. This is not an emergency-scoped, time-capped pause—it is a permanent freeze on a per-user basis with no on-chain governance requirement or expiry. The destroyBlockedFunds function means blocked users not only lose exit rights but can have their tokens burned by the admin. Even though non-blocked users retain permissionless exit, the protocol's ability-to-exit grade is defined by adversarial-admin scenarios: any user can be arbitrarily and permanently denied exit, which is the defining characteristic of red-grade exit risk."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "shows": "Ethereum XAUt proxy contract at 0x68749665FF8D2d112Fa859AA293F07A622782F38 is a TransparentUpgradeableProxy with implementation at 0x4C0d2c74A8D26f1E4F5653021c521F5471F9e566. ABI includes write methods: redeem(uint256), transfer, transferFrom, addToBlockedList(address), removeFromBlockedList(address), destroyBlockedFunds(address), mint, and upgrade functions. Events include Redeem, BlockPlaced, BlockReleased, DestroyedBlockedFunds.",
+      "chain": "Ethereum",
+      "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x68749665FF8D2d112Fa859AA293F07A622782F38",
+      "shows": "Merged ABI for Ethereum XAUt shows 31 functions including redeem(uint256) nonpayable, addToBlockedList(address) nonpayable, removeFromBlockedList(address) nonpayable, destroyBlockedFunds(address) nonpayable, isBlocked(address) view, transfer, transferFrom, mint, upgradeTo, upgradeToAndCall. No paused() or whenNotPaused modifier visible. Events: Redeem(uint256), BlockPlaced(address indexed), BlockReleased(address indexed), DestroyedBlockedFunds(address indexed, uint256).",
+      "chain": "Ethereum",
+      "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x68749665FF8D2d112Fa859AA293F07A622782F38&method=owner&block=25045882",
+      "shows": "owner() on Ethereum XAUt proxy at block 25045882 returns 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828.",
+      "chain": "Ethereum",
+      "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+      "shows": "Ethereum 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 is a MultiSigWallet with required()=3 and getOwners() returning 6 addresses. This 3-of-6 multisig is the owner() of the Ethereum XAUt proxy and can call onlyOwner functions including addToBlockedList, destroyBlockedFunds, mint, and upgradeTo.",
+      "chain": "Ethereum",
+      "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://gold.tether.to/faq",
+      "shows": "Tether Gold documentation states that XAUt is transferable to any on-chain address and redeemable to physical gold. Off-chain redemption requires verification with TG Commodities and a minimum of approximately 430 XAUt (one full gold bar).",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    }
+  ],
+  "unknowns": [
+    "E2: Unable to fetch Etherscan source code to confirm exact modifiers on redeem/transfer/transferFrom functions. ABI analysis and event schema (BlockPlaced, DestroyedBlockedFunds) strongly indicate blocklist checks are enforced, but the exact code path (e.g., _beforeTokenTransfer hook vs explicit require in each function) could not be verified on-chain this run."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://gold.tether.to/faq",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "role": "owner() of XAUt proxy; controls blocklist, mint, upgrade",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7224BEef47a6A7B414a0d0AdADf3f691C2691005",
+        "role": "owner() of XAUt implementation contract",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8",
+        "role": "owner() of Arbitrum XAUt proxy",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Tether Gold (XAUt) is a gold-backed ERC-20 token where each token represents ownership of one fine troy ounce of LBMA-certified physical gold stored in Swiss vaults. Users can transfer tokens on-chain, trade on exchanges, or redeem for physical gold delivery in Switzerland (subject to KYC and minimum ~430 XAUt). The token is issued by TG Commodities, a Tether subsidiary, and is upgradeable via a TransparentUpgradeableProxy pattern."
+  }
+}

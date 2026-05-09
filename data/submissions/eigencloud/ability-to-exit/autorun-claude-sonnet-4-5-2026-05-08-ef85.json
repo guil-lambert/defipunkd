@@ -1,0 +1,129 @@
+{
+  "schema_version": 4,
+  "slug": "eigencloud",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "Exit requires 14-day queue and can be paused indefinitely by 1-of-9 multisig with no time cap",
+  "short_headline": "Indefinite pause, 1-of-9 control",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Primary exit path: users call queueWithdrawals() on DelegationManager (0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A), wait minWithdrawalDelayBlocks, then call completeQueuedWithdrawal(). Alternative: undelegate() auto-queues withdrawal."
+      },
+      {
+        "code": "E2",
+        "text": "Both queueWithdrawals and completeQueuedWithdrawal are subject to whenNotPaused modifiers. StrategyManager and DelegationManager both show paused()=0 at blocks 25045788 and 25045790, indicating system is currently unpaused."
+      },
+      {
+        "code": "E3",
+        "text": "PauserRegistry (0xB8765ed72235d279c3Fb53936E4606db0Ef12806) returns unpauser=0x369e6F597e22EaB55fFb173C6d9cD234BD699111 (Executor Multisig). Address book identifies 0x5050389572f2d220ad927CcbeA0D406831012390 as '1-of-9 emergency pause only' Pauser Multisig. Neither contract implements a maximum pause duration — pause can be set indefinitely."
+      },
+      {
+        "code": "E4",
+        "text": "No distinct emergency vs governance pause paths found on-chain. Single pause mechanism controlled by addresses registered in PauserRegistry. The 1-of-9 threshold for pausing is exceptionally low and allows unilateral action by any single member."
+      },
+      {
+        "code": "E5",
+        "text": "DelegationManager.minWithdrawalDelayBlocks() returns 100800 blocks, which equals approximately 14 days at 12 seconds per block. This queue delay applies to all withdrawal requests. Both queue placement (queueWithdrawals) and claim completion (completeQueuedWithdrawal) are pausable."
+      },
+      {
+        "code": "E6",
+        "text": "No permissionless escape hatch or forced-exit mechanism exists. All exit paths flow through the two-step queue-then-complete process on DelegationManager, and both steps are subject to pause."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions queueWithdrawals and completeQueuedWithdrawal are standard public contract methods with no frontend-specific dependencies. Users can call them directly via Etherscan write interface or any Web3 wallet."
+      }
+    ],
+    "steelman": {
+      "red": "A 1-of-9 multisig can pause both withdrawal queue placement AND claim completion indefinitely with no on-chain time cap, blocking all user exits including those already in the 14-day queue.",
+      "orange": "The 14-day withdrawal delay is long and both steps are pausable, but the system is currently unpaused and the unpauser role is held by a separate multisig, creating some operational separation.",
+      "green": "Exit functions are permissionless to call (no whitelist) and work without frontend dependency, and the protocol is currently unpaused with a documented governance structure."
+    },
+    "verdict": "Choosing red because any single member of the 1-of-9 Pauser Multisig can unilaterally freeze ALL user exits — including claims of already-queued withdrawals — with no on-chain time limit. The ABI and state confirm no MAX_PAUSE_DURATION constant exists in either StrategyManager or DelegationManager. While the unpauser (0x369e6F597e22EaB55fFb173C6d9cD234BD699111) could theoretically unpause, the protocol design allows indefinite user fund lock-up via a single-signer action, which is the defining characteristic of red grade per the rubric. The 14-day mandatory queue further extends user exposure to this pause risk."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+      "shows": "DelegationManager proxy at 0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A with write methods queueWithdrawals, completeQueuedWithdrawal, undelegate; view method minWithdrawalDelayBlocks()=100800; paused()=0 at block 25045790; pauserRegistry()=0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+      "chain": "Ethereum",
+      "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+      "shows": "StrategyManager proxy at 0x858646372CC42E1A627fcE94aa7A7033e7CF075A with paused()=0 at block 25045788; pauserRegistry()=0xB8765ed72235d279c3Fb53936E4606db0Ef12806; write methods include pause(), pauseAll(), unpause() but no MAX_PAUSE_DURATION in ABI",
+      "chain": "Ethereum",
+      "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+      "shows": "PauserRegistry at 0xB8765ed72235d279c3Fb53936E4606db0Ef12806 with unpauser()=0x369e6F597e22EaB55fFb173C6d9cD234BD699111 at block 25052323; write methods setIsPauser(address,bool) and setUnpauser(address) restricted to unpauser; no time-cap logic in ABI",
+      "chain": "Ethereum",
+      "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://docs.eigencloud.xyz/eigenlayer/restakers/concepts/overview",
+      "shows": "Documentation states 'EigenLayer contracts feature a withdrawal delay for all Liquid and Native restaking, a critical security measure for instances of vulnerability disclosure or when anomalous behavior is detected by monitoring systems.' Confirms pause is intended as security response mechanism.",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://github.com/Layr-Labs/eigenlayer-contracts/tree/main/docs",
+      "shows": "GitHub docs confirm 'Undelegating from an operator automatically queues a withdrawal that needs to go through the DelegationManager's withdrawal delay' and that stakers can also 'call queueWithdrawals directly.' Confirms two-step withdrawal process.",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3-offchain: Could not fetch Safe API to confirm 1-of-9 threshold for Pauser Multisig at 0x5050389572f2d220ad927CcbeA0D406831012390; relying on address_book metadata which states '1-of-9 emergency pause only'."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Layr-Labs/eigenlayer-contracts"
+    ],
+    "docs_url": "https://docs.eigencloud.xyz",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+        "role": "Community Multisig — 9-of-13 emergency governance",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+        "role": "Operations Multisig — 3-of-6 routine upgrades via timelock",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+        "role": "Pauser Multisig — 1-of-9 emergency pause only",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+        "role": "Executor Multisig — unpauser role in PauserRegistry",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+        "role": "PauserRegistry — pause/unpause role registry",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "EigenLayer (branded as EigenCloud) is an Ethereum restaking protocol where users deposit liquid staking tokens (LSTs) or point native ETH validators to EigenPods, delegating security to operators who validate Actively Validated Services (AVSs). Users earn additional yield on top of Ethereum staking rewards but accept additional slashing risk. Withdrawals require a two-step process: queue withdrawal, wait 14 days (100800 blocks), then complete withdrawal to reclaim funds as tokens or re-stake as shares."
+  }
+}

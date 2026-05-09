@@ -1,0 +1,121 @@
+{
+  "schema_version": 4,
+  "slug": "babylon-protocol",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "off-chain-only",
+  "grade": "orange",
+  "headline": "Self-custodial exit with permissionless unbonding, but 301-block (~50h) delay and covenant-committee co-signature requirement",
+  "short_headline": "Permissionless exit; 50h delay; covenant needed",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Exit functions are encoded in Bitcoin Script timelocks on the Bitcoin blockchain. Two paths exist: (1) Wait for original staking timelock to expire (e.g., 64,000 blocks ≈ 15 months in Phase 1), then withdraw immediately with only staker signature. (2) Submit on-demand unbonding transaction, wait 301 blocks (≈50 hours as of July 2025 governance change from 1008 blocks), then withdraw with only staker signature."
+      },
+      {
+        "code": "E2",
+        "text": "No pause guards exist on either exit path. The litepaper states exits are 'self-custodial' and 'trustless staking,' with unbonding described as 'permissionless' and 'on-demand.' No admin role can prevent a staker from submitting an unbonding transaction to Bitcoin or from claiming after the timelock expires."
+      },
+      {
+        "code": "E3",
+        "text": "No pause mechanism exists. The protocol design uses Bitcoin Script timelocks (OP_CHECKSEQUENCEVERIFY) which execute deterministically on the Bitcoin blockchain without admin intervention. The covenant committee verifies transaction structure but does not have veto power over validly constructed unbonding transactions."
+      },
+      {
+        "code": "E4",
+        "text": "Not applicable - no emergency vs governance pause distinction exists. The protocol has no pause capability."
+      },
+      {
+        "code": "E5",
+        "text": "Queued redemption timing: On-demand unbonding requires submitting an unbonding transaction to Bitcoin, then waiting 301 Bitcoin blocks (approximately 50 hours). This delay is enforced by Bitcoin Script relative timelock, not by any queue or admin gating. During unbonding, BTC remains slashable only via cryptographic double-signing detection (EOTS key extraction), not admin action. The 301-block parameter was set by Babylon Genesis governance vote (July 2025), reduced from 1008 blocks; governance can change this duration."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit / escape-hatch mechanism beyond the standard unbonding path. However, the standard unbonding is itself permissionless and non-custodial - stakers always control their own Bitcoin private keys and can broadcast unbonding transactions to Bitcoin at any time without permission."
+      },
+      {
+        "code": "E7",
+        "text": "Frontend dependency: Exit functions are directly callable on the Bitcoin blockchain via standard Bitcoin transactions. Users can construct and broadcast staking, unbonding, and withdrawal transactions using any Bitcoin wallet or script, without relying on Babylon's frontend. The litepaper emphasizes 'self-custodial vault' and 'your keys, your coins.'"
+      }
+    ],
+    "steelman": {
+      "red": "The covenant committee must co-sign unbonding transactions, creating a third-party dependency; if the committee goes offline or refuses to sign, exits could be blocked indefinitely despite the protocol's self-custodial design.",
+      "orange": "Governance can modify the unbonding delay parameter (currently 301 blocks ≈50 hours), and while the covenant committee must co-sign unbonding transactions, the design is intended to be permissionless with no admin veto over properly formatted exits.",
+      "green": "Exits are permissionless and self-custodial, with users controlling their Bitcoin private keys throughout; unbonding can be requested at any time, and after the timelock (50 hours), withdrawal requires only the staker's signature with no admin intervention."
+    },
+    "verdict": "Choosing orange because while the protocol design is fundamentally self-custodial with permissionless on-demand unbonding (no pause mechanism, no admin veto, Bitcoin-script-enforced timelocks), two material constraints prevent a green grade: (1) the covenant committee's required co-signature on unbonding transactions introduces a third-party dependency not present in purely self-executing smart contracts, and (2) governance retains the ability to modify the unbonding delay parameter, as demonstrated by the July 2025 change from 1008 to 301 blocks. The green steel-man is strong - there is no pause, no admin control over claim execution, and keys stay with users - but the committee dependency and governance parameter control place this in orange territory under the rubric's framework for queued redemptions and governance-controlled timing."
+  },
+  "evidence": [
+    {
+      "url": "https://babylonlabs.io",
+      "shows": "Website states 'Self-custodial: Your keys. Your coins.' and 'Request unbonding at anytime: Your bitcoin, your rules. Request unbonding at any time.'",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://docs.babylonlabs.io/papers/btc_staking_litepaper(EN).pdf",
+      "shows": "Pages 4-6 describe staking contract with two exit paths: (1) unbonding transaction with parameterized unbonding period, or (2) wait for existing timelock to expire. Page 3 states 'Staker security: Each Bitcoin staker is guaranteed to be able to withdraw its funds, or unbond, as long as the staker follows the PoS protocol honestly' and 'Staker liquidity: Unbonding of the staked bitcoins is guaranteed to be secure and fast without the need of social consensus.' Page 5 describes Bitcoin covenant emulation via OP_CHECKSEQUENCEVERIFY for relative timelocks.",
+      "fetched_at": "2026-05-08T11:25:00Z"
+    },
+    {
+      "url": "https://forum.babylon.foundation/t/reduce-btc-stake-unbonding-delay-from-1008-to-301-bitcoin-blocks/661",
+      "shows": "Governance proposal (July 8, 2025) to reduce unbonding_time_blocks parameter from 1008 to 301 blocks. Proposal states 'unbonding delay is the time between a BTC staker posting the unbonding transaction on Bitcoin and the staker being able to withdraw their BTC.' Approved for implementation July 14, 2025. Demonstrates governance control over unbonding timing parameter.",
+      "fetched_at": "2026-05-08T11:35:00Z"
+    },
+    {
+      "url": "https://www.figment.io/insights/babylons-bitcoin-staking-contract-explained/",
+      "shows": "Describes covenant committee role: 'there's a group called the Covenant Committee which checks every incoming staking request and verifies that the unbonding and slashing conditions... adhere to Babylon's rules.' States 'When unbonding before the timelock expires, the delegating wallet can create and sign a new staking transaction... Just as before, the covenant committee will have to approve and sign this new transaction.' Current unbonding period is 1008 blocks (this article predates the July 2025 reduction to 301 blocks).",
+      "fetched_at": "2026-05-08T11:30:00Z"
+    },
+    {
+      "url": "https://babylonlabs.io/learn/what-is-bitcoin-staking",
+      "shows": "States 'Unbonding time: Once unbonding is requested, BTC remains locked for 301 blocks (approximately 50 hours). Of note, during the unbonding period, your BTC can still be partially slashed.' Also states 'On-demand unbonding – You can unlock your BTC without needing permission.'",
+      "fetched_at": "2026-05-08T11:32:00Z"
+    },
+    {
+      "url": "https://github.com/babylonlabs-io",
+      "shows": "GitHub organization page lists repositories including babylon, finality-provider, btc-staker, covenant-emulator. Confirms open-source codebase for verification.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+      "shows": "Bug bounty program up to $500,000 on Immunefi, live since September 16, 2024. Program requires KYC and PoC. Lists completed audits available on docs.babylonlabs.io.",
+      "fetched_at": "2026-05-08T11:37:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3-offchain: Covenant committee composition, governance structure, and operational safeguards could not be determined from on-chain sources. The committee's required co-signature on unbonding transactions is documented in off-chain sources (Figment article), but no on-chain contract or multisig address was discoverable because staking transactions are Bitcoin Script on the Bitcoin blockchain (not EVM smart contracts), and the committee's signing process occurs off-chain before Bitcoin transaction broadcast.",
+    "E5-offchain: The mechanism by which governance votes modify the unbonding_time_blocks parameter could not be verified on-chain. The forum proposal documents the parameter change, but the governance contract/module address on Babylon Genesis chain was not discoverable from the provided sources."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/babylonlabs-io/babylon",
+      "https://github.com/babylonlabs-io/finality-provider",
+      "https://github.com/babylonlabs-io/btc-staker",
+      "https://github.com/babylonlabs-io/covenant-emulator"
+    ],
+    "docs_url": "https://docs.babylonlabs.io",
+    "audits": [
+      {
+        "firm": "Coinspect",
+        "url": "https://docs.babylonlabs.io/assets/files/coinspect-phase1-audit.pdf"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://docs.babylonlabs.io/assets/files/zellic-phase1-audit.pdf"
+      },
+      {
+        "firm": "Cantina",
+        "url": "https://docs.babylonlabs.io/assets/files/cantina-phase1-competition.pdf"
+      }
+    ],
+    "governance_forum": "https://forum.babylon.foundation",
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Babylon Protocol enables native Bitcoin staking without bridging, wrapping, or custodians. Users lock BTC in Bitcoin Script timelocks to secure Proof-of-Stake chains and earn rewards. Staking uses extractable one-time signatures (EOTS) for slashability: if a delegated finality provider double-signs, the staker's private key is exposed and their BTC can be burned. Unbonding is permissionless with a 301-block (~50-hour) delay enforced by Bitcoin Script, after which users can withdraw with only their own signature."
+  }
+}

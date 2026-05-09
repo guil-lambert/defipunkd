@@ -1,0 +1,147 @@
+{
+  "schema_version": 4,
+  "slug": "eigencloud",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "Indefinite pause of both withdrawal queue placement and claims by 1-of-9 multisig; 14-day escrow even when unpaused",
+  "short_headline": "Indefinite pause, no time cap",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Exit functions are queueWithdrawals() and completeQueuedWithdrawal() on DelegationManager (0x3905...f37A). Two-step process: user queues withdrawal, waits escrow period, then completes to receive tokens."
+      },
+      {
+        "code": "E2",
+        "text": "Both queueWithdrawals and completeQueuedWithdrawal are subject to pause guards via pauserRegistry (0xB876...2806). paused() returns 0 at block 25045790, indicating not currently paused. Pause uses bitmap allowing selective function disabling."
+      },
+      {
+        "code": "E3",
+        "text": "Pauser role held by 0x5050...2390 (documented as 1-of-9 multisig). Unpauser role held by 0x369e...9111 (Executor Multisig) per PauserRegistry.unpauser(). NO maximum pause duration found in contracts; pause can remain active until unpauser acts."
+      },
+      {
+        "code": "E4",
+        "text": "Per Eigen Foundation docs, Pauser Multisig (1-of-9) provides fast emergency pause. Operations Multisig (3-of-6) can also pause. Neither has built-in time cap. Unpausing requires separate Executor Multisig action—no automatic expiry."
+      },
+      {
+        "code": "E5",
+        "text": "minWithdrawalDelayBlocks is 100,800 blocks (~14 days at 12 seconds/block) per DelegationManager at block 25045790. Queue placement itself is pausable, as is the claim of finalized withdrawals—both stages can be frozen."
+      },
+      {
+        "code": "E6",
+        "text": "No permissionless emergency exit or escape hatch mechanism found. Exit path requires unpause if paused; no alternative route for users under adversarial pause."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions (queueWithdrawals, completeQueuedWithdrawal) are standard public contract methods callable via Etherscan write interface or any wallet. No frontend dependency for exit."
+      }
+    ],
+    "steelman": {
+      "red": "A 1-of-9 multisig can pause BOTH queue placement AND claim completion indefinitely with no time cap; unpausing requires separate multisig action; users have zero recourse during pause.",
+      "orange": "The 14-day withdrawal delay is documented and governance-controlled pause requires Executor Multisig to unpause, but emergency pause by 1-of-9 still blocks exits indefinitely.",
+      "green": "Exit functions are permissionless when unpaused and directly callable on-chain, avoiding frontend dependency; the system is currently unpaused."
+    },
+    "verdict": "Choosing red because any actor holding 1 of 9 keys in the Pauser Multisig can unilaterally freeze both new withdrawal requests AND the claiming of already-queued withdrawals, with no automatic time cap forcing unpause. While the current pause status is 0 (unpaused) and the protocol documentation describes this as an emergency measure, the on-chain reality is that a single keyholder can indefinitely block user exits until a separate multisig (the Unpauser) acts. This fails the 'even under adversarial admin conditions' test: a malicious or compromised 1-of-9 signer can trap funds with no permissionless escape."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+      "shows": "DelegationManager proxy at 0x3905...f37A with queueWithdrawals and completeQueuedWithdrawal write methods; minWithdrawalDelayBlocks() returns 100800; paused() returns 0; pauserRegistry() returns 0xB876...2806.",
+      "chain": "Ethereum",
+      "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+      "fetched_at": "2026-05-09T10:15:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+      "shows": "PauserRegistry contract; unpauser() returns 0x369e...9111 (Executor Multisig); isPauser(address) method available for checking pauser status.",
+      "chain": "Ethereum",
+      "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+      "fetched_at": "2026-05-09T10:15:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+      "shows": "StrategyManager proxy with depositIntoStrategy and withdrawSharesAsTokens methods; paused() returns 0; pauserRegistry() returns same 0xB876...2806; owner() returns 0x369e...9111.",
+      "chain": "Ethereum",
+      "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+      "fetched_at": "2026-05-09T10:14:00Z"
+    },
+    {
+      "url": "https://docs.eigenfoundation.org/protocol-governance/technical-architecture",
+      "shows": "Documentation states: 'The Pauser Multisig is a 1-of-8 multisig that can also pause EigenLayer functionality in emergency situations, but it holds no other powers.' Operations Multisig is 3-of-6 and can also pause."
+    },
+    {
+      "url": "https://blog.eigencloud.xyz/eigenlayer-stage-1-mainnet-launch/",
+      "shows": "Mainnet launch announcement confirms: 'The Pauser Multisig is a 1-of-9 multisig that can also pause EigenLayer functionality in emergency situations, but holds no other powers.'"
+    },
+    {
+      "url": "https://docs.eigencloud.xyz/eigenlayer/restakers/restaking-guides/restaking-developer-guide",
+      "shows": "Developer guide documents: 'Queue Withdrawal: invoke DelegationManager.queueWithdrawal() to trigger the escrow period. Wait for Escrow Period: 14 days.' Confirms two-step withdrawal with 14-day (100,800 block) delay."
+    },
+    {
+      "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/interfaces/IPausable.sol",
+      "shows": "Source code comment: 'It is permissioned to the pauser address, which is expected to be a low threshold multisig' and 'This function can only pause functionality, and thus cannot unflip any bit in _paused from 1 to 0.' Unpausing requires separate unpauser role."
+    },
+    {
+      "url": "https://medium.com/@jenpaff/eigenlayer-native-restaking-under-the-hood-an-in-depth-guide-to-native-restaking-on-eigenlayer-70b5ae6d9e55",
+      "shows": "External analysis notes: 'EigenLayer decided to design their smart contracts as upgradable and including paused functionality which can be changed by multisig governance.'"
+    }
+  ],
+  "unknowns": [
+    "E3: Exact current signer list for the 1-of-9 Pauser Multisig—Safe ABI on 0x5050...2390 shows only proxy constructor; actual threshold/owners require Safe-specific getOwners() call which API endpoint blocked.",
+    "E4: Whether any off-chain monitoring or social commitment exists to auto-unpause after N days; on-chain code has no time-bound unpause mechanism."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Layr-Labs/eigenlayer-contracts"
+    ],
+    "docs_url": "https://docs.eigencloud.xyz",
+    "audits": [],
+    "governance_forum": "https://forum.eigenlayer.xyz",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+        "role": "Pauser Multisig (1-of-9 emergency pause)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+        "role": "Executor Multisig (unpauser + owner of core contracts)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+        "role": "Operations Multisig (3-of-6 routine upgrades + pause)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+        "role": "Community Multisig (9-of-13 emergency governance)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+        "role": "PauserRegistry (pause/unpause role registry)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+        "role": "Primary upgrade timelock (10-day minimum delay)",
+        "actor_class": "timelock"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "EigenLayer (branded as EigenCloud) is a restaking protocol allowing ETH stakers to reuse their staked ETH or liquid staking tokens (LSTs) to secure additional services called Actively Validated Services (AVSs). Users deposit LSTs into StrategyManager or point native validator withdrawal credentials to an EigenPod, delegate to operators, and earn additional yield. Withdrawals require a two-step process: queue via DelegationManager, wait 14 days (100,800 blocks), then complete to receive tokens."
+  }
+}

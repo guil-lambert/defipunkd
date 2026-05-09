@@ -1,0 +1,118 @@
+{
+  "schema_version": 4,
+  "slug": "hyperliquid-bridge",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "orange",
+  "headline": "Withdrawal requires validator signatures and can be paused by 2-of-4 locker threshold or invalidated by cold validator quorum; 200-second dispute period applies",
+  "short_headline": "Validator-gated exit with pausable dispute window",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The bridge contract has two withdrawal-related functions: batchedRequestWithdrawals() (for creating pending withdrawal requests signed by validators) and batchedFinalizeWithdrawals() (for claiming finalized withdrawals after the dispute period). Deposits use batchedDepositWithPermit(). Users initiate withdrawals from Hyperliquid L1 via off-chain signature, then validators batch and submit requests on-chain."
+      },
+      {
+        "code": "E2",
+        "text": "batchedRequestWithdrawals() has no direct pause guard in the function signature, but the contract implements a locking mechanism via voteEmergencyLock()/unvoteEmergencyLock() functions. batchedFinalizeWithdrawals() similarly processes finalized withdrawals. The ABI shows Paused/Unpaused events and a paused() view method returning false as of block 460454452, indicating OpenZeppelin-style pause capability exists. Withdrawal invalidation is possible via invalidateWithdrawals() requiring cold validator signatures."
+      },
+      {
+        "code": "E3",
+        "text": "The bridge uses a locker-based emergency pause system. Current state shows lockerThreshold=2 and nValidators=4 (total validator power=4), meaning 2 lockers can trigger an emergency lock via voteEmergencyLock(). Documentation states any locker may lock the bridge during the dispute period, preventing further withdrawals or updates. Once locked, emergencyUnlock() requires cold wallet validator quorum (2/3 of validator power by cold signatures). The disputePeriodSeconds is 200 seconds (~3.3 minutes) as of block 460454452. getLockersVotingLock() currently returns an empty array, indicating no active lock votes."
+      },
+      {
+        "code": "E4",
+        "text": "The system distinguishes between hot wallet signatures (for routine 2/3 validator consensus on withdrawal requests) and cold wallet signatures (for dispute resolution and unlocking). Hot validators can approve withdrawals with 2/3 power threshold. Lockers (a subset of validators) can emergency-lock with lockerThreshold=2 votes. Cold validator quorum (2/3 of cold validator power) is required to unlock via emergencyUnlock() or to invalidate withdrawals via invalidateWithdrawals(). Documentation confirms cold wallet quorum requirement for unlocking."
+      },
+      {
+        "code": "E5",
+        "text": "The withdrawal flow uses a dispute-period queue: users sign withdrawal on Hyperliquid L1, validators batch-request on Arbitrum via batchedRequestWithdrawals(), then after disputePeriodSeconds (200s) anyone can call batchedFinalizeWithdrawals() to claim. The dispute period is not a daily cap but a security delay. Documentation states withdrawals take ~3-5 minutes total. No evidence of withdrawal amount caps beyond the bridge's USDC balance."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or permissionless escape hatch mechanism exists for adversarial-admin scenarios. If validators collude or lockers indefinitely pause, users cannot unilaterally exit. The emergencyUnlock() function requires validator cooperation (cold quorum), not user action. Documentation describes the locking mechanism as a safety feature controlled by validators, not users."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are directly on-chain. batchedFinalizeWithdrawals() can be called by anyone once the dispute period expires and validators have signed the request via batchedRequestWithdrawals(). However, the initial withdrawal request placement requires Hyperliquid L1 off-chain signature, then validator relay to Arbitrum. Users cannot unilaterally place withdrawal requests on the Arbitrum bridge contract without validator participation. The claim step (finalization) is permissionless post-dispute-period, but the request step depends on validator relay."
+      }
+    ],
+    "steelman": {
+      "red": "Withdrawals require validator signatures to relay requests from L1 to Arbitrum, and any 2 lockers (currently 2-of-4) can indefinitely pause the bridge with no auto-expiry, requiring cold validator quorum to unlock—giving validators full control over exit timing.",
+      "orange": "While withdrawals depend on validator relay and a 2-locker emergency pause exists, the pause mechanism is designed as a dispute-resolution tool with a short 200-second dispute window, claims of finalized withdrawals can proceed if already requested, and the cold-key unlock path provides a governance backstop rather than unilateral admin control.",
+      "green": "The 200-second dispute period is brief, withdrawal finalization is permissionless after that window, and the system is currently unpaused with no active lock votes, but this ignores that new withdrawal requests require validator relay and the emergency lock has no time cap."
+    },
+    "verdict": "Choosing orange because the bridge implements a validator-threshold design where users cannot unilaterally place withdrawal requests (they must be relayed by 2/3 hot validator consensus from L1) and the emergency lock mechanism (requiring only 2-of-4 lockers) can pause the system indefinitely until cold validator quorum unlocks it. However, this is governance-like rather than unilateral admin control: the 2-locker threshold and 2/3 cold quorum requirements distribute power across multiple parties, the 200-second dispute period is narrowly scoped to fraud detection, and withdrawals already in the finalization queue can complete. The system is not permissionless exit (blocking red's 'claims of finalized' exemption since request placement itself is validator-gated), but the multi-party threshold governance and short dispute window fit orange's 'pausable via governance' profile better than red's single-admin or custodial models."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/42161/0x2df1c51e09aecf9cacb7bc98cb1742757f163df7",
+      "shows": "Bridge2 contract on Arbitrum with view methods showing paused=false, disputePeriodSeconds=200, lockerThreshold=2, nValidators=4, totalValidatorPower=4, and getLockersVotingLock()=[] (empty) as of block 460454452.",
+      "chain": "Arbitrum",
+      "address": "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=42161&address=0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7",
+      "shows": "Bridge2 ABI with batchedRequestWithdrawals, batchedFinalizeWithdrawals, voteEmergencyLock, unvoteEmergencyLock, emergencyUnlock, invalidateWithdrawals, and paused() functions; Paused/Unpaused events confirm pause capability.",
+      "chain": "Arbitrum",
+      "address": "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7",
+      "fetched_at": "2026-05-08T11:25:00Z"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge",
+      "shows": "Bridge design documentation stating withdrawals require 2/3 validator signatures, dispute period allows lockers to lock the bridge for malicious withdrawals, and cold wallet quorum (2/3 stake-weighted) required to unlock.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint",
+      "shows": "Withdrawal flow: user signs withdraw3 action on Hyperliquid, L1 validators sign and send to bridge contract, $1 fee charged on Hyperliquid, ~5 minutes to finalize.",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading",
+      "shows": "User-facing withdrawal process: click Withdraw button, enter amount, sign transaction (no Arbitrum gas required from user), $1 withdrawal fee deducted from Hyperliquid balance.",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    },
+    {
+      "url": "https://github.com/hyperliquid-dex/contracts/blob/master/Bridge2.sol",
+      "shows": "Source code comments (from search result snippets) describe: validators sign withdrawals on L1 batched to batchedRequestWithdrawals(), pending withdrawals disputable, lockers can lock bridge during dispute period, cold wallet quorum unlocks bridge, hot wallet quorum for adding lockers, cold wallet quorum for removing.",
+      "fetched_at": "2026-05-08T11:26:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/hyperliquid-dex/contracts"
+    ],
+    "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs",
+    "audits": [
+      {
+        "firm": "Zellic",
+        "url": "https://2356094849-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyUdp569E6w18GdfqlGvJ%2Fuploads%2FRhEpax5uWlJelxdFNb9c%2F2312%20Hyperliquid%20-%20Zellic%20Audit%20Report.pdf?alt=media&token=1e76a9b0-3a04-4d44-a8c9-a468e60cf7f1",
+        "date": "2023-12"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://2356094849-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyUdp569E6w18GdfqlGvJ%2Fuploads%2FuiAL7ufANHbcsrAvZgLQ%2F2308%20Hyperliquid%20-%20Zellic%20Audit%20Report.pdf?alt=media&token=7450a0f9-c2c8-4c3e-907a-5619b431e86c",
+        "date": "2023-08"
+      }
+    ],
+    "bug_bounty_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/bug-bounty-program",
+    "admin_addresses": [
+      {
+        "chain": "Arbitrum",
+        "address": "0x2df1c51e09aecf9cacb7bc98cb1742757f163df7",
+        "role": "Bridge2 contract (validator-governed)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Hyperliquid Bridge enables USDC transfers between Arbitrum and Hyperliquid L1. Users deposit USDC on Arbitrum which validators sign to credit on Hyperliquid. Withdrawals are user-initiated via off-chain signature, then relayed and signed by validators (2/3 consensus) to the Arbitrum bridge contract, with a 200-second dispute period before finalization. The bridge uses a validator-set governance model with hot wallets for routine operations and cold wallets for emergency dispute resolution."
+  }
+}

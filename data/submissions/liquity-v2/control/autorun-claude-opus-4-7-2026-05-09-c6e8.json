@@ -1,0 +1,158 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v2",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Core CDP contracts are immutable with no admin/owner/pause/upgrade surface; BoldToken ownership is renounced; LQTY governance only routes incentives (T4)",
+  "short_headline": "Immutable cores, ownership renounced",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "BoldToken owner() returns 0x0000000000000000000000000000000000000000 — ownership has been renounced. Privileged setters setBranchAddresses() and setCollateralRegistry() are gated on onlyOwner / isOwner and so are unreachable."
+      },
+      {
+        "code": "C1",
+        "text": "TroveManager (ETH branch) ABI exposes no owner/admin/pendingOwner/governor/proxyAdmin view methods and no setter for any pool/registry/oracle address — only constructor-time wiring via the AddressesRegistry. Its only privileged-looking external is shutdown(), which is a permissionless emergency trigger keyed on oracle failure / TCR, not an admin gate."
+      },
+      {
+        "code": "C1",
+        "text": "BorrowerOperations (ETH branch) ABI exposes no owner/admin methods. shutdown() and shutdownFromOracleFailure() are permissionless and revert unless the oracle-failure / TCR-below-SCR conditions are met."
+      },
+      {
+        "code": "C1",
+        "text": "CollateralRegistry has no owner/admin/governor view methods and no privileged setter — only stateless redemption-rate accounting and a single non-mutating user-callable redeemCollateral()."
+      },
+      {
+        "code": "C2",
+        "text": "All four core contracts inspected (BoldToken, TroveManager, BorrowerOperations, CollateralRegistry) declare type:'constructor' in their ABIs and expose no implementation()/admin()/upgradeTo() functions. There is no transparent / UUPS / Beacon / Diamond proxy on the user-fund path. Cores are immutable."
+      },
+      {
+        "code": "C3",
+        "text": "EXECUTION PATH: there is no privileged execution path into the user-fund cores — the BoldToken's onlyOwner-gated setters cannot fire because owner() = 0x0, and TroveManager/BorrowerOperations/CollateralRegistry expose no admin entrypoints whatsoever. Delay on any T1/T2 path: N/A (path does not exist)."
+      },
+      {
+        "code": "C4",
+        "text": "No multisig sits on the upgrade or fund-control path of the V2 core (no admin to hold). The address-book entry labelled 'stakingV1 (governance)' (0x4f9fbb3f...) returns NAME='LQTYStaking' and references V1 contracts (LUSD, V1 TroveManager 0xA39739EF...); its owner() is also 0x0. No Safe was discovered with reach into V2 cores."
+      },
+      {
+        "code": "C5",
+        "text": "Liquity V2 has no Governor/Bravo/OZ/Aragon-style on-chain governance over protocol parameters. The 'governance' contract listed in the docs (0x636deb76...) is the LQTY-staking-based Protocol Incentivised Liquidity (PIL) router whose initiatives (curveUsdcBoldInitiative, curveLusdBoldInitiative, defiCollectiveInitiative) only direct BOLD-funded liquidity incentives to external venues — it has no calls into TroveManager / BorrowerOperations / CollateralRegistry / BoldToken state. (Derived from the docs governance section listing only Curve gauge / pool initiatives, plus the absence of any admin entrypoint on the cores.)"
+      },
+      {
+        "code": "C6",
+        "text": "Emergency powers are permissionless: shutdown() / shutdownFromOracleFailure() can be called by anyone but only execute when on-chain conditions (oracle failure or TCR < SCR=110%) are met. There is no guardian role or emergency multisig with discretionary pause authority."
+      },
+      {
+        "code": "C7",
+        "text": "Highest tier reachable on any privileged fast path: T4 only (PIL emissions routing to external Curve gauges and grant initiatives). T1/T2 on the user-fund cores are unreachable because the cores expose no admin functions and BoldToken ownership has been renounced."
+      }
+    ],
+    "steelman": {
+      "red": "If the address-book's 'stakingV1 (governance)' label or another off-path actor turned out to wrap a hidden upgrade hook on the cores that this run's view-method-only inspection missed, an undelayed admin path could reach user funds — but no such function appears in any of the four core ABIs read.",
+      "orange": "The PIL-governance contract (0x636deb76...) routes BOLD revenue (interestRouter is the same address) and a malicious initiative could redirect protocol revenue, which the rubric notes 'approaches T1 over time' for unbounded recurring extraction; this is materially different from a fully passive immutable system.",
+      "green": "Every core fund-holding contract (TroveManager, BorrowerOperations, CollateralRegistry, BoldToken) is a non-proxy with no admin/owner/pause function reachable by any actor; BoldToken's owner is the zero address; the only governance-like surface (LQTY-staked initiative voting) routes incentives to external venues and cannot upgrade or pause anything in the borrow/redeem/liquidation pipeline — the highest reachable tier is T4."
+    },
+    "verdict": "Choosing green because read-API queries on TroveManager, BorrowerOperations, CollateralRegistry, and BoldToken at block 25057841–25057843 confirm zero admin entrypoints on the user-fund cores and a renounced (zero-address) BoldToken owner, matching the rubric's 'T1 reachable only via immutable contracts (T1 is unreachable)' green clause; the orange steel-man about PIL revenue redirection is real but bounded to T4-class incentive routing (LQTY stakers vote on which external gauges receive BOLD-denominated incentives) and the red steel-man requires a hidden hook that the inspected ABIs do not contain."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xb01dd87B29d187F3E3a4Bf6cdAebfb97F3D9aB98",
+      "shows": "BoldToken (Bold Stablecoin) owner() returns 0x0000000000000000000000000000000000000000 at block 25057842 — ownership renounced. ABI's privileged setters setBranchAddresses / setCollateralRegistry / mint / burn / sendToPool / returnFromPool exist but onlyOwner-gated functions are unreachable; mint/burn are gated by branch-pool addresses set by the (unreachable) owner. No proxy admin, no upgradeTo, no implementation slot.",
+      "chain": "Ethereum",
+      "address": "0xb01dd87B29d187F3E3a4Bf6cdAebfb97F3D9aB98",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x81d78814df42da2cab0e8870c477bc3ed861de66",
+      "shows": "TroveManager (ETH branch) full ABI read at block 25057841: 12 view methods (CCR=1.5e18, activePool, borrowerOperations, sortedTroves, stabilityPool, troveNFT, getEntireSystemColl/Debt, shutdownTime=0, etc.) and 16 nonpayable methods. Zero admin/owner/governor/pause/upgrade functions. Privileged-looking externals (onAdjustTrove, onCloseTrove, onOpenTrove, onLiquidateTrove, etc.) are gated by CallerNotBorrowerOperations / CallerNotCollateralRegistry. shutdown() is permissionless.",
+      "chain": "Ethereum",
+      "address": "0x81D78814DF42DA2caB0E8870C477bC3Ed861DE66",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x0b995602b5a797823f92027e8b40c0f2d97aff1c",
+      "shows": "BorrowerOperations (ETH branch) full ABI read at block 25057842: 7 view methods (CCR=1.5e18, MCR=1.1e18, SCR=1.1e18, hasBeenShutDown=false, etc.) and 24 nonpayable methods. Zero admin/owner/governor functions. Both shutdown() and shutdownFromOracleFailure() are permissionless and revert unless on-chain conditions are met.",
+      "chain": "Ethereum",
+      "address": "0x0B995602B5a797823f92027E8b40c0F2D97Aff1C",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xd99de73b95236f69a559117ecd6f519af780f3f7",
+      "shows": "CollateralRegistry full ABI read at block 25057843: 6 view methods (baseRate, boldToken, totalCollaterals=3, redemption-rate getters) and exactly ONE nonpayable method redeemCollateral(uint256,uint256,uint256) which is user-callable. Zero admin/owner/governor functions, no setters of any kind. The set of TroveManagers / tokens is fixed at construction.",
+      "chain": "Ethereum",
+      "address": "0xd99dE73b95236F69A559117ECD6F519Af780F3f7",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4f9fbb3f1e99b56e0fe2892e623ed36a76fc605d",
+      "shows": "Address-book-labelled 'stakingV1 (governance)' is actually the Liquity V1 LQTYStaking contract: NAME() = 'LQTYStaking', troveManagerAddress() = 0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2 (V1 TroveManager), lusdToken() = 0x5f98805A...(V1 LUSD). owner() = 0x0000000000000000000000000000000000000000 (renounced). No reach into V2 cores.",
+      "chain": "Ethereum",
+      "address": "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-documentation/technical-resources",
+      "shows": "Official deployments page for Liquity V2 listing all ETH/wstETH/rETH branch contracts and the 'Governance' section. The governance entry is interestRouter address 0x636deb767cd7d0f15ca4ab8ea9a9b26e98b426ac with three initiatives that are external incentive sinks (curveUsdcBoldInitiative, curveLusdBoldInitiative, defiCollectiveInitiative) plus the V1 staking contract — there is no Governor / Timelock / proxy-admin entry, consistent with the immutable design.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://www.liquity.org/",
+      "shows": "Protocol homepage explicitly states V2 design properties: 'Liquity V2 cannot be changed or upgraded' (Immutable), 'Maximum control … BOLD can never be frozen', 'Minimal dependencies … oracles remain the sole external dependency', and BOLD properties 'Immutable — No governance or admins'. Corroborates on-chain finding that cores have no admin surface.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C3: Did not enumerate every wstETH-branch and rETH-branch core (TroveManager, BorrowerOperations, ActivePool, StabilityPool, PriceFeed) on-chain; relied on the design symmetry of the three branches sharing the same constructor pattern via AddressesRegistry. A reviewer should confirm wstETH/rETH cores are equally admin-less, though the docs and homepage strongly imply identical immutability.",
+    "C5: Did not read the LQTY-staking 'governance' contract at 0x636deb767cd7d0f15ca4ab8ea9a9b26e98b426ac on-chain (it is also the interestRouter); the claim that it can only route incentives to listed initiatives and cannot reach core admin functions is corroborated by (a) the absence of any admin function on the cores and (b) the docs grouping it with PIL incentive initiatives, but its full ABI was not surfaced in this run.",
+    "C6: The exact on-chain conditions and quorum for shutdownFromOracleFailure() were not read from BorrowerOperations source — the function is permissionless per ABI but its precise trigger conditions (oracle staleness threshold, fallback chain) require reading the contract source rather than just the ABI.",
+    "C2-relaunch: The website banner notes 'Liquity V2 is being relaunched' due to a stability-pool issue; whether the relaunch deploys a new core set or modifies the existing addresses (impossible by C2 since cores are immutable) was not investigated and may change the assessment for a future snapshot."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/bold"
+    ],
+    "docs_url": "https://docs.liquity.org/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.liquity.org/v2-documentation/technical-resources"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://docs.liquity.org/v2-documentation/technical-resources"
+      },
+      {
+        "firm": "Certora",
+        "url": "https://docs.liquity.org/v2-documentation/technical-resources"
+      },
+      {
+        "firm": "Coinspect",
+        "url": "https://docs.liquity.org/v2-documentation/technical-resources"
+      },
+      {
+        "firm": "Hats Finance",
+        "url": "https://docs.liquity.org/v2-documentation/technical-resources"
+      },
+      {
+        "firm": "Recon",
+        "url": "https://docs.liquity.org/v2-documentation/technical-resources"
+      },
+      {
+        "firm": "Chaos Labs",
+        "url": "https://docs.liquity.org/v2-documentation/technical-resources"
+      }
+    ],
+    "deployed_contracts_doc": "https://docs.liquity.org/v2-documentation/technical-resources",
+    "admin_addresses": [],
+    "upgradeability": "immutable",
+    "about": "Liquity V2 is an immutable, multi-collateral CDP protocol on Ethereum mainnet that lets users deposit ETH, wstETH, or rETH as collateral to mint the BOLD stablecoin at a user-set borrowing interest rate. Borrowers open Troves (NFT-represented positions) with MCR=110% and CCR=150%; BOLD is redeemable 1:1 for protocol collateral. The protocol has no admin, no proxy, and no upgrade path on its core borrow/redeem/liquidation contracts — a renounced-owner BoldToken is wired at construction to fixed branch contracts, and the only governance-like surface is LQTY-staked voting that directs Protocol Incentivised Liquidity (PIL) emissions to external Curve gauges and grant initiatives, with no reach into core state."
+  }
+}

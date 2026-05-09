@@ -1,0 +1,151 @@
+{
+  "schema_version": 4,
+  "slug": "usdt0",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "Permissionless cross-chain exit via LayerZero OFT; no pause mechanism",
+  "short_headline": "Permissionless LayerZero exit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Primary exit function is send((uint32,bytes32,uint256,uint256,bytes,bytes,bytes),(uint256,uint256),address) in both the Ethereum OFT adapter and destination-chain OFT contracts. This function bridges USDT0 to other chains or back to Ethereum (unlocking USDT)."
+      },
+      {
+        "code": "E2",
+        "text": "The send() function is payable with no access modifiers restricting who can call it. Examination of the merged ABI shows no whenNotPaused, _checkResumed, onlyRole, or similar guards on the send() function."
+      },
+      {
+        "code": "E3",
+        "text": "No pause mechanism exists in the OFT contracts. The ABIs contain no pause(), unpause(), paused(), or isPaused methods. The owner (0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8, a 3-of-5 multisig) can call setDelegate, setPeer, setEnforcedOptions, and upgrade functions, but these do not gate user exits."
+      },
+      {
+        "code": "E4",
+        "text": "No EMERGENCY vs GOVERNANCE pause distinction exists because no pause mechanism is present. The multisig owner has no ability to stop exits through the OFT send() function."
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption mechanism. LayerZero OFT operates on immediate cross-chain messaging with no withdrawal queue or delay period."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism is needed because the primary exit path (send()) is already permissionless and cannot be paused."
+      },
+      {
+        "code": "E7",
+        "text": "The send() function can be called directly on-chain via Etherscan write interface or any web3 wallet. No frontend dependency for exit—users can construct the call with dstEid (destination chain ID), to (recipient address as bytes32), amountLD, and fee parameters."
+      }
+    ],
+    "steelman": {
+      "red": "Individual addresses can be blocklisted (inherited from Tether's WithBlockedList), preventing those specific users from transferring or exiting, which would constitute exit requiring admin unblock.",
+      "orange": "The owner multisig can upgrade the OFT contracts via upgradeTo/upgradeToAndCall, which could theoretically add exit restrictions in a future implementation, though current code has none.",
+      "green": "The send() function is permissionless, has no pause guards, operates on immediate LayerZero messaging without queues, and can be called directly on-chain—users can exit at will."
+    },
+    "verdict": "Choosing green because the current deployed contracts impose no pause mechanism, no withdrawal queue, and no admin signature requirement for exits. The red argument (blocklist) is address-specific censorship rather than a protocol-wide exit restriction, and blocklisted users would face exit denial regardless of pause status. The orange argument (upgradeability) is a theoretical future risk, not a current restriction. The evidence shows USDT0 exits are permissionless via LayerZero OFT send() calls that cannot be paused by the owner multisig."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee",
+      "shows": "Ethereum OFT adapter (OAdapterUpgradeable) ABI and state. Contract owner is 0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8. Contains send() function with no access modifiers. No pause-related methods in the ABI.",
+      "chain": "Ethereum",
+      "address": "0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee",
+      "shows": "Full merged ABI for Ethereum OFT adapter confirms send((uint32,bytes32,uint256,uint256,bytes,bytes,bytes),(uint256,uint256),address) is payable with no onlyOwner or whenNotPaused modifier. Owner can call transferOwnership, setDelegate, setPeer, setEnforcedOptions, upgradeTo, upgradeToAndCall—none of which block user exits.",
+      "chain": "Ethereum",
+      "address": "0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/42161/0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92",
+      "shows": "Arbitrum OFT contract (TransparentUpgradeableProxy) ABI and state. Owner is 0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8. send() function is payable and permissionless. No pause-related methods.",
+      "chain": "Arbitrum",
+      "address": "0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8",
+      "shows": "Owner multisig (Safe 1.4.1) is 3-of-5 with threshold=3, nonce=155. getOwners() returns five addresses. This multisig is the owner of both the Ethereum OFT adapter and Arbitrum OFT.",
+      "chain": "Ethereum",
+      "address": "0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8",
+      "fetched_at": "2026-05-08T11:25:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee&method=owner&block=25045854",
+      "shows": "owner() returns 0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8 at block 25045854 on Ethereum.",
+      "chain": "Ethereum",
+      "address": "0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee",
+      "fetched_at": "2026-05-08T11:26:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=42161&address=0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92&method=owner&block=460768948",
+      "shows": "owner() returns 0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8 at block 460768948 on Arbitrum.",
+      "chain": "Arbitrum",
+      "address": "0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92",
+      "fetched_at": "2026-05-08T11:27:00Z"
+    },
+    {
+      "url": "https://blog.openzeppelin.com/usdt0-audit",
+      "shows": "OpenZeppelin audit of Everdawn-Labs/usdt0-tether-contracts-hardhat at commit 01cdf1d. States that the OFT contract has authority to mint and burn tokens during cross-chain transfers, and that the Owner role can update the OFT contract and manage critical functionalities—does not mention pause or exit restrictions.",
+      "fetched_at": "2026-05-08T11:28:00Z"
+    },
+    {
+      "url": "https://research.llamarisk.com/research/regulatory-pressure-on-usdt-and-legal-features-of-usdt0",
+      "shows": "Llama Risk analysis notes that TetherTokenOFTExtension on INK Chain includes blacklisting functionality (inherited from Tether). This is address-specific blocking, not a protocol-wide pause. States 'Users must bridge USDT0 back to Ethereum mainnet for redemption under the USDT Terms.'",
+      "fetched_at": "2026-05-08T11:29:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Everdawn-Labs/usdt0-audit-reports"
+    ],
+    "docs_url": "https://usdt0.to",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://blog.openzeppelin.com/usdt0-audit",
+        "date": "2025-09"
+      },
+      {
+        "firm": "Guardian",
+        "url": "https://github.com/Everdawn-Labs/usdt0-audit-reports/blob/main/Guardian/2025-01-14_USDT0.pdf",
+        "date": "2025-01-14"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://github.com/Everdawn-Labs/usdt0-audit-reports/blob/main/ChainSecurity/ChainSecurity_USDT0_audit.pdf",
+        "date": "2025"
+      },
+      {
+        "firm": "Paladin",
+        "url": "https://github.com/Everdawn-Labs/usdt0-audit-reports/blob/main/Paladin/20250110_Paladin_Everdawn_Final_Report.pdf",
+        "date": "2025-01-10"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8",
+        "role": "Owner multisig (controls OFT adapter, can upgrade)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8",
+        "role": "Owner multisig (controls OFT, can upgrade)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "USDT0 is an omnichain fungible token (OFT) that wraps Tether's USDT using LayerZero's cross-chain messaging protocol. Users lock USDT on Ethereum and mint equivalent USDT0 on destination chains (Arbitrum, Optimism, Polygon, etc.), maintaining 1:1 parity. The system uses a lock-and-mint design: USDT remains locked on Ethereum while USDT0 circulates on other chains. Administered by Everdawn Labs in partnership with Tether and LayerZero Labs."
+  }
+}

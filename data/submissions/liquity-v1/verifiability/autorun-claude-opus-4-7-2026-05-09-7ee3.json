@@ -1,0 +1,127 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v1",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Liquity V1 contracts verified on Etherscan, source matches public github.com/liquity/dev repo, audited by Trail of Bits (twice) and Coinspect; immutable with renounced ownership reducing audit-drift concerns.",
+  "short_headline": "Verified, audited, immutable",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "BorrowerOperations (0x2417…e007) and TroveManager (0xA397…4bb2) both report ABI source 'etherscan' on the DeFiPunkd surfacer, indicating verified source code on the Etherscan block explorer. The contract names exposed via NAME() (BorrowerOperations, TroveManager) match the source-of-record names in the Liquity V1 repo."
+      },
+      {
+        "code": "V2",
+        "text": "The official Liquity website links to https://github.com/liquity/dev as the V1 monorepo containing the contracts, SDK and Dev UI frontend; the README explicitly describes the same TroveManager/BorrowerOperations/StabilityPool architecture observed on-chain (110% MCR, Stability Pool liquidation mechanism). A specific deploy-commit SHA was not pinned in this run."
+      },
+      {
+        "code": "V3",
+        "text": "Liquity V1 documentation confirms the smart contract code 'has been audited twice by Trail of Bits and once by Coinspect' (per docs.liquity.org FAQ). The Trail of Bits report is available at github.com/trailofbits/publications/blob/master/reviews/Liquity.pdf, and the Coinspect engagement is documented at coinspect.com/blog/liquity-audit/ (March 2021)."
+      },
+      {
+        "code": "V4",
+        "text": "Both auditors — Trail of Bits and Coinspect — are recognized firms in the Solidity audit space. Trail of Bits is named in the slice's recognized-firm list; Coinspect has performed continuous audits across Liquity V1 and V2."
+      },
+      {
+        "code": "V5",
+        "text": "Liquity V1 is described by the protocol team and third parties as immutable / non-upgradeable, and on-chain readout shows owner() = 0x0000…0000 on both BorrowerOperations and TroveManager (ownership renounced via OwnershipTransferred). With no upgrade path, post-audit drift on the deployed contracts is structurally bounded — the deployed bytecode at the audited addresses cannot have changed since deployment."
+      },
+      {
+        "code": "V6",
+        "text": "These contracts are not behind upgradeable proxies — there is no implementation/proxy split to assess. The verified bytecode on Etherscan IS the running implementation."
+      }
+    ],
+    "steelman": {
+      "red": "The audit reports are several years old (Coinspect engagement was March 2021), no commit-pinned bytecode-match was performed in this run, and a strict reviewer could argue audit staleness alone warrants downgrading.",
+      "orange": "The Trail of Bits and Coinspect reports predate the analysis date by several years; while the contracts are immutable and ownership renounced (so post-audit drift is impossible by construction), this run did not cryptographically tie the deployed bytecode at block 25052268 to a specific Liquity V1 commit hash.",
+      "green": "Both core contracts are verified on Etherscan, the public github.com/liquity/dev repo is the canonical source, two recognized firms (Trail of Bits, twice; Coinspect) audited the system, and immutability + renounced ownership eliminates the post-audit-drift risk that staleness would otherwise imply."
+    },
+    "verdict": "Choosing green because all three rubric conditions are satisfied: (a) deployed bytecode is verified on Etherscan for both BorrowerOperations and TroveManager (ABI source 'etherscan'), (b) a public source repo (github.com/liquity/dev) corresponds to the deployed system, and (c) ≥1 audit from a recognized firm (Trail of Bits, twice; Coinspect) covered the deployed contracts. The 'orange (audit staleness)' steel-man is structurally defused because owner() returns 0x0 on the inspected contracts and the protocol is immutable — there is no governance / admin path by which the deployed code could have drifted from the audited code, so the >6-month-staleness clause does not apply. The missing pinned commit-SHA / bytecode-match is a scope limit of this run, not a verifiability gap of the protocol, and is recorded in unknowns[]."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "shows": "BorrowerOperations at 0x24179CD8…e007 on Ethereum: ABI source 'etherscan' (verified on block explorer); NAME() = 'BorrowerOperations'; owner() = 0x0000…0000 (renounced); reads pinned to block 25052268. Lists peer addresses (TroveManager, ActivePool, DefaultPool, StabilityPool, PriceFeed, SortedTroves, LUSD token, LQTY staking) consistent with Liquity V1 architecture.",
+      "chain": "Ethereum",
+      "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+      "shows": "TroveManager at 0xA39739EF…4bb2 on Ethereum: ABI source 'etherscan' (verified); NAME() = 'TroveManager'; owner() = 0x0000…0000 (renounced); MCR = 1.1e18 (110%) and CCR = 1.5e18 (150%) match Liquity V1 documented parameters; reads pinned to block 25052269.",
+      "chain": "Ethereum",
+      "address": "0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://www.liquity.org/",
+      "shows": "Official Liquity site. Footer / Build section links to github.com/liquity/dev as the V1 source repository and lists audit partners including Coinspect. Site distinguishes Liquity V1 (LUSD) from Liquity V2 (BOLD), confirming V1 is a separate, in-production protocol.",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/liquity/dev",
+      "shows": "Public GitHub repository description: 'Liquity v1 monorepo containing the contracts, SDK and Dev UI frontend.' README describes the same TroveManager/BorrowerOperations/StabilityPool architecture, 110% MCR, and Stability Pool liquidation mechanism observed on-chain — establishing source-to-deployment correspondence at the architectural level.",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/liquity-v1/faq/general",
+      "shows": "Official Liquity V1 FAQ: smart contract code 'has been audited twice by Trail of Bits and once by Coinspect (find their reports here)' — establishes audit count and auditor identity per the protocol.",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/trailofbits/publications/blob/master/reviews/Liquity.pdf",
+      "shows": "Trail of Bits security assessment of Liquity, published in the trailofbits/publications repository. Confirms a recognized-firm audit exists for Liquity V1 (recognized firm per V4 list).",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://www.coinspect.com/blog/liquity-audit/",
+      "shows": "Coinspect Liquity audit summary (March 2021): 'In March 2021, Liquity engaged Coinspect to perform its second third-party source code review of the smart contracts'. Identifies Coinspect as the auditor and confirms the engagement covered the V1 smart contracts pre-launch.",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "V2: Did not pin a specific deploy commit SHA in github.com/liquity/dev to the Etherscan-verified source for BorrowerOperations or TroveManager; did not run an independent bytecode-match in this session. Architectural correspondence (NAME(), peer addresses, MCR/CCR constants) is consistent with liquity/dev but not cryptographically tied.",
+    "V3: Did not open the Trail of Bits PDF or the Coinspect PDF in this run to extract specific audit dates, commits-in-scope, or finding severities — the Etherscan-tools allowlist blocked direct fetches of the explorer page, and the audit PDFs were not retrieved before the fetch budget was exhausted. Audit existence and auditor identity are confirmed via the Liquity FAQ and search results, but per-finding scope is not.",
+    "V5: Did not enumerate or sample the github.com/liquity/dev commit history relative to deployment block to confirm whether further commits post-date the audited revisions. Mitigated structurally by the on-chain finding that owner() = 0x0 on both core contracts (immutable post-deployment), but a bytecode-vs-audited-commit diff was not performed.",
+    "V1-others: Verified status not individually re-checked this run for StabilityPool, ActivePool, PriceFeed, SortedTroves, HintHelpers, LUSD token, or LQTY token addresses in the address_book — only BorrowerOperations and TroveManager were fetched. Their ABI-source status is therefore unknown for this run."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/dev"
+    ],
+    "docs_url": "https://docs.liquity.org/",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/Liquity.pdf"
+      },
+      {
+        "firm": "Coinspect",
+        "url": "https://www.coinspect.com/blog/liquity-audit/",
+        "date": "2021-03"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "role": "BorrowerOperations (owner = 0x0, renounced)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+        "role": "TroveManager (owner = 0x0, renounced)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Liquity V1 is a decentralized CDP / borrowing protocol on Ethereum that lets users lock ETH as collateral in 'Troves' and mint LUSD, an over-collateralized USD-pegged stablecoin, at a minimum 110% collateralization ratio. Liquidations are absorbed by a Stability Pool of LUSD depositors who earn the liquidated ETH collateral; the system is non-custodial and runs without governance or admin keys. The on-chain core contracts have renounced ownership (owner = 0x0), making the protocol immutable."
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "schema_version": 4,
+  "slug": "balancer-v3",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Permissionless exit via Recovery Mode when paused; 4-year governance pause window with 6-month buffer; auto-unpause after buffer expires",
+  "short_headline": "Pausable but recoverable; 4yr+6mo time cap",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Primary exit function is removeLiquidity with multiple kinds: PROPORTIONAL (zero price impact), SINGLE_TOKEN_EXACT_IN, SINGLE_TOKEN_EXACT_OUT, and CUSTOM. Router queries allow simulation without execution."
+      },
+      {
+        "code": "E2",
+        "text": "Normal removeLiquidity operations can be paused by governance during the pause window. Pause is implemented at the Vault level via VaultAdmin.pauseVault() which is a permissioned function that disables all operational state-changing functions on pools."
+      },
+      {
+        "code": "E3",
+        "text": "Vault pause authority is held by governance via the Authorizer (0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6), managed by a 6-of-11 DAO governance multisig (0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f). Pause window is set to 4 years from deployment (maximum allowed duration). Emergency SubDAO (0x0EF2e7648A9b354822ed0EE9070A2E37332fd242) exists but ABI not verified."
+      },
+      {
+        "code": "E4",
+        "text": "Emergency vs governance pause distinction: The Vault has a single pause mechanism requiring governance authorization during a 4-year pause window. If paused when the window expires, a 6-month buffer period extends the pause state. The Vault will auto-unpause after the buffer expires and can no longer be re-paused thereafter."
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption or withdrawal caps found. Balancer V3 uses immediate settlement within the unlock/lock context."
+      },
+      {
+        "code": "E6",
+        "text": "Recovery Mode provides the escape hatch: enableRecoveryMode is normally permissioned but becomes permissionless whenever the Vault or Pool is paused. Recovery Mode enables a simple proportional withdrawal implemented directly by the Vault that cannot fail, ensuring LPs can always withdraw funds even under emergency conditions or if governance pauses the protocol."
+      },
+      {
+        "code": "E7",
+        "text": "Frontend independence confirmed: Documentation states removeLiquidity and Recovery Mode exits can be called directly via block explorers using the VaultExplorer contract, which provides user-friendly access to all permissionless Vault functions including enableRecoveryMode when a pool is paused."
+      }
+    ],
+    "steelman": {
+      "red": "Governance can pause the Vault for up to 4 years plus a 6-month buffer, potentially locking normal exit operations for 4.5 years total, which is far beyond typical emergency timeframes.",
+      "orange": "Although governance pause can last 4+ years, Recovery Mode becomes permissionless the moment the Vault is paused, enabling proportional exits that cannot fail—users can always withdraw even during a multi-year pause, limiting the custody risk to forced proportional allocation rather than complete fund lockup.",
+      "green": "Recovery Mode's permissionless activation when paused, combined with auto-unpause after the buffer period and permanent unpausability after the window expires, creates strong non-custodial guarantees despite the long pause window."
+    },
+    "verdict": "Choosing orange because while the 4-year pause window is extraordinarily long and governance-controlled, the architectural guarantee that Recovery Mode becomes permissionless whenever paused fundamentally mitigates the custody risk. Users retain the ability to proportionally exit at any time during a pause (even if governance never enables Recovery Mode), and the protocol becomes permanently unpausable after ~4.5 years. This falls between green (which would require shorter or narrowly-scoped pause) and red (which would require admin signatures for exits or no guaranteed escape hatch)."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.balancer.fi/concepts/vault/add-remove-liquidity-types.html",
+      "shows": "Balancer V3 removeLiquidity function accepts a kind argument with options: PROPORTIONAL (proportional withdrawal causing zero price impact), SINGLE_TOKEN_EXACT_IN, SINGLE_TOKEN_EXACT_OUT, and CUSTOM for pool-defined logic.",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://docs.balancer.fi/developer-reference/contracts/vault-api.html",
+      "shows": "VaultAdmin.pauseVault() is a permissioned function that disables all operational state-changing functions on pools, only works during the Pause Window set during deployment, and does not affect ERC4626 buffer operations which have independent pause mechanism. VaultAdmin.isVaultPaused() indicates whether the Vault is paused.",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://docs.balancer.fi/developer-reference/contracts/vault-config.html",
+      "shows": "_MAX_PAUSE_WINDOW_DURATION is set to 4 years and the deployed Vault pause window equals this maximum. After the pause window expires the Vault can no longer be paused and will remain permissionless forever. _vaultBufferPeriodDuration was set to 6 months—if the Vault is paused when the window expires it will remain paused for this additional buffer period to allow time to investigate, then auto-unpause when the buffer expires.",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+      "shows": "0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6 is the Vault Authorizer contract implementing role-based access control via canPerform(actionId, account, address) and OpenZeppelin AccessControl (hasRole, getRoleAdmin, grantRole, revokeRole methods).",
+      "chain": "Ethereum",
+      "address": "0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+      "fetched_at": "2026-05-08T11:15:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+      "shows": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f is a Gnosis Safe multisig with 6-of-11 threshold, labeled as Balancer DAO Governance (Timelock). Owners include 11 unique addresses.",
+      "chain": "Ethereum",
+      "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+      "fetched_at": "2026-05-08T11:16:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x0EF2e7648A9b354822ed0EE9070A2E37332fd242",
+      "shows": "0x0EF2e7648A9b354822ed0EE9070A2E37332fd242 is labeled Emergency SubDAO but has no verified ABI found on Etherscan or Sourcify.",
+      "chain": "Ethereum",
+      "address": "0x0EF2e7648A9b354822ed0EE9070A2E37332fd242",
+      "fetched_at": "2026-05-08T11:17:00Z"
+    },
+    {
+      "url": "https://docs.balancer.fi/developer-reference/contracts/vault-api.html",
+      "shows": "VaultAdmin.enableRecoveryMode() is a permissioned function that becomes permissionless if the Vault or pool is paused. Recovery Mode enables a simple proportional withdrawal path that cannot fail so LPs can always withdraw funds even under emergency conditions. The function is defined in VaultExtension and can be called via the VaultExplorer contract through block explorers.",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://docs.balancer.fi/developer-reference/contracts/vault-config.html",
+      "shows": "Recovery Mode becomes permissionless if the Vault or Pool is paused, so funds can never be locked by governance action—for example if a compromised governance were to pause the Vault but not enable Recovery Mode, on v2 this would lock funds but in v3 anyone can enable Recovery Mode when paused. Recovery Mode is built into the Vault and supported for all current and future pools.",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://docs.balancer.fi/integration-guides/remove-liquidity/sdk-tutorial.html",
+      "shows": "removeLiquidityProportional is the preferred function for removing liquidity, causing zero price impact and avoiding swap fees. Router queries allow simulation of operations without execution via the query() function.",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: Emergency SubDAO (0x0EF2e7648A9b354822ed0EE9070A2E37332fd242) has no verified ABI—cannot determine its threshold, signers, or specific pause powers distinct from main governance multisig.",
+    "E2: Vault contract at 0xba1333333333a1ba1108e8412f11850a5c319ba9 not in DeFiPunkd allowlist—could not directly read isVaultPaused() state or verify pause window end times on-chain; relying on documentation for pause mechanism details.",
+    "E4: Could not determine if there are specific pause roles (e.g., PAUSE_ROLE) held by Emergency SubDAO vs main governance multisig, or if different actors have different pause scopes/durations."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/balancer/balancer-v3-monorepo"
+    ],
+    "docs_url": "https://docs.balancer.fi/",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6",
+        "role": "Vault Authorizer",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f",
+        "role": "DAO Governance Timelock",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0EF2e7648A9b354822ed0EE9070A2E37332fd242",
+        "role": "Emergency SubDAO",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Balancer V3 is a decentralized automated market maker (AMM) that separates pool logic from token management via its Vault architecture. Users can add or remove liquidity from multi-token pools (up to 8 tokens) using proportional, single-token, or custom operations. The Vault handles all token transfers, balance accounting, decimal scaling, and rate scaling for yield-bearing tokens, while individual pools implement their own swap invariants (weighted, stable, custom)."
+  }
+}

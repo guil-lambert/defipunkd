@@ -1,0 +1,107 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v1",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "Fully permissionless exit with zero admin control and no pause mechanisms",
+  "short_headline": "Permissionless exit, immutable",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Exit functions enumerated: closeTrove() (full exit), withdrawColl(uint256,address,address) (partial collateral withdrawal), repayLUSD(uint256,address,address) (partial debt repayment), adjustTrove(uint256,uint256,uint256,bool,address,address) (combined adjustment), and withdrawFromSP(uint256) for Stability Pool depositors. All are user-callable functions in BorrowerOperations.sol and StabilityPool.sol."
+      },
+      {
+        "code": "E2",
+        "text": "No access modifiers restrict exit functions to specific roles. closeTrove(), withdrawColl(), repayLUSD(), and adjustTrove() are public/external with no onlyOwner, whenNotPaused, or role-based guards. The ABI of BorrowerOperations (0x24179CD81c9e782A4096035f7eC97fB8B783e007) and StabilityPool (0x66017D22b0f8556afDd19FC67041899Eb65a21bb) contain no pause-related functions or modifiers."
+      },
+      {
+        "code": "E3",
+        "text": "Owner addresses read on-chain: BorrowerOperations.owner() returns 0x0000000000000000000000000000000000000000, TroveManager.owner() returns 0x0000000000000000000000000000000000000000, StabilityPool.owner() returns 0x0000000000000000000000000000000000000000. Ownership was renounced at deployment. No pause role, no guardian role, no timelock exists in the system."
+      },
+      {
+        "code": "E4",
+        "text": "No emergency vs governance pause distinction exists. The contracts have no pause functionality whatsoever. The GitHub README explicitly states: 'The system has no admin key or human governance. Once deployed, it is fully automated, decentralized and no user holds any special privileges in or control over the system.'"
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption mechanism for borrower exits. Users call closeTrove() or withdrawColl() and receive their collateral immediately (subject only to maintaining MCR if the trove remains open). Stability Pool depositors call withdrawFromSP() and receive their remaining deposit plus accumulated ETH gains immediately. No withdrawal caps, no delays."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism is present, because none is needed: all exit functions are already permissionless and cannot be paused or blocked by any actor. The protocol is immutable and has no admin control post-deployment."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are directly callable on-chain. The BorrowerOperations and StabilityPool contracts are verified on Etherscan and expose public write functions. Users can call closeTrove(), withdrawColl(), repayLUSD(), or withdrawFromSP() via Etherscan's write-contract interface, a wallet like MetaMask, or any Ethereum library without requiring the Liquity frontend."
+      }
+    ],
+    "steelman": {
+      "red": "A red grade would require exit to be controlled by an admin or pausable indefinitely by a single actor, or to be impossible without frontend access—none of which apply here.",
+      "orange": "An orange grade would require broad-scope pause powers held by governance, or queued withdrawals with unbounded delays—Liquity has no pause mechanism at all and no withdrawal delays.",
+      "green": "A green grade fits when exit is fully permissionless, unpausable, and executable on-chain without intermediaries—Liquity meets all criteria: zero-address owner, no pause functions in the ABI, immediate withdrawals, and direct on-chain callability."
+    },
+    "verdict": "Choosing green because all exit functions (closeTrove, withdrawColl, repayLUSD, withdrawFromSP) are public, have no access restrictions, cannot be paused by any party, execute immediately on-chain, and require no frontend. The contracts are immutable (owner renounced to 0x0), have no pause guards, and the codebase explicitly documents the absence of admin control. This is a reference implementation of fully permissionless exit."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "shows": "BorrowerOperations contract ABI and state at block 25052268. owner() returns 0x0000000000000000000000000000000000000000. Write methods include closeTrove(), withdrawColl(uint256,address,address), repayLUSD(uint256,address,address), adjustTrove(...) with no pause modifiers or role guards. No pause-related functions exist in the 46-entry ABI.",
+      "chain": "Ethereum",
+      "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+      "shows": "TroveManager contract ABI and state at block 25052269. owner() returns 0x0000000000000000000000000000000000000000. The 101-entry ABI contains liquidation and redemption functions but no pause-related methods. Ownership renounced.",
+      "chain": "Ethereum",
+      "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+      "shows": "StabilityPool contract ABI and state at block 25052269. owner() returns 0x0000000000000000000000000000000000000000. Write methods include provideToSP and withdrawFromSP with no pause guards. The 75-entry ABI has no pause-related functions.",
+      "chain": "Ethereum",
+      "address": "0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://github.com/liquity/dev",
+      "shows": "Liquity V1 monorepo README states: 'The system has no admin key or human governance. Once deployed, it is fully automated, decentralized and no user holds any special privileges in or control over the system.' and 'All the core smart contracts inherit from the OpenZeppelin Ownable.sol contract template... The contract's ownership is renounced either upon deployment, or immediately after its address setter has been called.' Exit functions (closeTrove, withdrawColl, repayLUSD, withdrawFromSP) are documented as public user-facing functions with no access restrictions.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://www.liquity.org/liquity-v1",
+      "shows": "Official V1 landing page describes Liquity as 'non-custodial, immutable and governance-free' and emphasizes 'Governance free - all operations are algorithmic and fully automated' and 'Censorship resistant - the protocol is controlled by nobody.'",
+      "fetched_at": "2026-05-08T11:19:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/dev"
+    ],
+    "docs_url": "https://docs.liquity.org/liquity-v1",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/Liquity.pdf",
+        "date": "2021"
+      },
+      {
+        "firm": "Coinspect",
+        "url": "https://www.coinspect.com/liquity-audit/",
+        "date": "2021"
+      }
+    ],
+    "admin_addresses": [],
+    "upgradeability": "immutable",
+    "about": "Liquity is a decentralized borrowing protocol that allows users to lock ETH as collateral in a smart contract (called a Trove) and mint LUSD, a USD-pegged stablecoin, at 0% interest with a minimum collateralization ratio of 110%. The protocol uses a Stability Pool for liquidations and a redistribution mechanism to maintain system solvency. Liquity is fully immutable and governance-free, with all operations algorithmic and automated, and no admin keys or special privileges post-deployment."
+  }
+}

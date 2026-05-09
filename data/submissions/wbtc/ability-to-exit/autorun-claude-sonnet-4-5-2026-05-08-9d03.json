@@ -1,0 +1,121 @@
+{
+  "schema_version": 4,
+  "slug": "wbtc",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "Exit requires custodian cooperation; token transfers pausable indefinitely by multisig with no on-chain escape hatch",
+  "short_headline": "No permissionless exit; indefinite pause",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "User-facing exit functions are burn(uint256) on the WBTC token contract and transfer() to send WBTC to a merchant. The on-chain burn function at 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599 is present in the ABI, but burning WBTC tokens on-chain does NOT trigger automatic BTC release—users must send WBTC to a merchant who initiates the burn-and-redeem process with the custodian (BitGo) off-chain."
+      },
+      {
+        "code": "E2",
+        "text": "The WBTC token inherits from OpenZeppelin's PausableToken, which applies the whenNotPaused modifier to transfer(), transferFrom(), approve(), increaseApproval(), and decreaseApproval(). The burn(uint256) function also inherits from BurnableToken, and while the BaseScan source excerpt does not explicitly show a whenNotPaused guard on burn itself, the transfer functions required to move tokens to merchants are gated. Both new-request placement (sending WBTC to merchants) and direct on-chain burns are blocked when paused() returns true."
+      },
+      {
+        "code": "E3",
+        "text": "The pause is controlled by the WBTC token's owner(), which returns 0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7 (the Controller contract). The Controller contract's owner() returns 0x972Eed35781f09987a5c40F761f6A24623C570DE. The Controller ABI includes pause() and unpause() functions with no time-bound auto-expiry logic. The address book identifies 0x972Eed35781f09987a5c40F761f6A24623C570DE as a 6-of-10 multisig with T1 power (mint, pause, ownership transfer). There is no separate emergency pause path with a time cap; the same multisig controls both pause and unpause with no maximum duration enforced on-chain."
+      },
+      {
+        "code": "E4",
+        "text": "No distinction between emergency pause and governance pause exists in the on-chain contracts. The Controller.pause() function is callable by the Controller's owner (the 6-of-10 multisig) with no separate role or time cap for emergency vs. long-term pause scenarios."
+      },
+      {
+        "code": "E5",
+        "text": "WBTC redemption involves an off-chain queued process: users send WBTC to a merchant, the merchant requests a burn from the WBTC DAO/Controller, and the custodian (BitGo) releases BTC after confirmation. No on-chain withdrawal queue or daily cap mechanism is enforced; the queue is managed off-chain by merchants and custodians. The entire redemption flow depends on merchant and custodian cooperation, which can be halted if the token is paused."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit, escape-hatch, or permissionless emergency-exit mechanism exists for adversarial-admin scenarios. Users cannot claim BTC directly from the custodian's Bitcoin address on-chain. Redemption absolutely requires merchant initiation and custodian confirmation off-chain."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions (burn, transfer) are directly callable on-chain via Etherscan or any wallet; however, calling burn() on-chain does NOT trigger BTC release—it only reduces the WBTC supply. Actual BTC redemption requires off-chain coordination with a merchant, making the protocol custodial and dependent on off-chain infrastructure beyond the Ethereum transaction layer."
+      }
+    ],
+    "steelman": {
+      "red": "Any actor with multisig control (6-of-10) can pause all token transfers and burns indefinitely with no on-chain time cap or escape hatch, and redemption for the underlying BTC is not permissionless—it requires off-chain merchant and custodian approval, making exit fully custodial.",
+      "orange": "The pause is controlled by a decentralized 6-of-10 multisig rather than a single EOA, and the protocol has operated transparently for years with public proof-of-reserves, suggesting that while technically pausable indefinitely, governance incentives and reputation pressure limit abuse in practice.",
+      "green": "Users can transfer WBTC freely when not paused, the protocol publishes on-chain verification of reserves, and the distributed multisig structure provides some check against unilateral admin action, approaching permissionless exit within the constraints of a BTC-to-Ethereum bridge."
+    },
+    "verdict": "Choosing red because WBTC fails the ability-to-exit test on two critical fronts: (1) the 6-of-10 multisig can pause all token movement (including burns and transfers to merchants) indefinitely with no on-chain time limit or auto-unpause, and (2) even when unpaused, users cannot exit permissionlessly—redeeming BTC requires off-chain merchant initiation and custodian confirmation, making the system fully custodial. The orange steelman correctly notes the multisig is not a single EOA, but the absence of any on-chain time cap on pause() and the total reliance on off-chain actors for BTC release place this squarely in red territory under the rubric's adversarial-admin lens."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "WBTC token contract surfacer showing burn(uint256) and paused() view methods in the ABI, with paused() returning false at block 25025457. Write methods include burn, pause, unpause, transfer, transferFrom. Owner is 0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7 (Controller).",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599&method=paused&block=25025457",
+      "shows": "On-chain read at block 25025457 confirms paused() returns false. Calldata 0x5c975abb, rawReturnData 0x0000...0000 (false).",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "Full ABI for WBTC token: includes burn(uint256), pause(), unpause(), transfer(address,uint256), transferFrom(address,address,uint256), paused() view, owner() view. Events include Pause, Unpause, Burn, Transfer. ABI sourced from Etherscan.",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "shows": "Controller contract surfacer: owner() returns 0x972Eed35781f09987a5c40F761f6A24623C570DE, includes pause() and unpause() functions, getWBTC() returns 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599. ABI shows pause() and unpause() as non-view state-mutating functions with no arguments.",
+      "chain": "Ethereum",
+      "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://basescan.org/token/0x1ceA84203673764244E05693e42E6Ace62bE9BA5",
+      "shows": "BaseScan source code excerpt (Base WBTC deployment) shows: contract WBTC is WrappedToken, DetailedERC20, which inherits from PausableToken. PausableToken applies modifier whenNotPaused() to transfer, transferFrom, approve, increaseApproval, decreaseApproval. Pausable.sol defines pause() onlyOwner whenNotPaused and unpause() onlyOwner whenPaused with no time-bound logic.",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://www.elliptic.co/blockchain-basics/a-case-study-wrapping-btc-to-wbtc",
+      "shows": "Describes the burn/redeem process: 'the merchant must request the burn by sending the WBTC back to the WBTC DAO to then be forwarded on to a burner address' and 'Users can also redeem their initial BTC by sending WBTC back to the custodian's Ethereum account.' Confirms off-chain merchant-initiated flow.",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://www.coingecko.com/learn/what-is-wrapped-bitcoin-wbtc-and-how-does-it-work",
+      "shows": "States 'To get BTC back, the process is reversed: a merchant sends WBTC to be \"burned\" (destroyed), and the custodian releases the equivalent BTC from its reserves. The minting and redemption of wBTC is usually only done by institutional investors.' Confirms custodial redemption model.",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/bitcoin-token-smart-contracts"
+    ],
+    "docs_url": "https://wbtc.network",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x972Eed35781f09987a5c40F761f6A24623C570DE",
+        "role": "Controller owner — 6-of-10 multisig with pause, mint, ownership-transfer authority",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+        "role": "Controller — mediates pause/mint/burn; owns WBTC token",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "WBTC is an ERC-20 token on Ethereum representing Bitcoin in a 1:1 peg. Users deposit BTC with custodian BitGo; merchants initiate on-chain minting of WBTC. To exit, users send WBTC to a merchant who requests a burn, and the custodian releases BTC off-chain. The system is custodial, relying on merchant and custodian coordination for redemptions."
+  }
+}

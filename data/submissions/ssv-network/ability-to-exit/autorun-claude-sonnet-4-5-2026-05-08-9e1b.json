@@ -1,0 +1,136 @@
+{
+  "schema_version": 4,
+  "slug": "ssv-network",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "Permissionless exit with no pause mechanism; cluster withdrawals and validator exits are always accessible",
+  "short_headline": "Unpausable permissionless exit",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Multiple exit paths exist: withdraw() for cluster balance withdrawals, exitValidator()/bulkExitValidator() to signal beacon chain exits, removeValidator()/bulkRemoveValidator() to remove validators from SSV network, withdrawUnlocked() and requestUnstake() for SSV staking positions. All are nonpayable or payable user-callable functions with no access restrictions beyond msg.sender ownership checks."
+      },
+      {
+        "code": "E2",
+        "text": "No pause mechanism exists in the SSVNetwork contract at 0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1. Examination of the complete ABI (67 functions, 55 events) reveals zero pause-related functions, modifiers, or state variables. The only functions restricted by role are admin operations (updateNetworkFee, updateModule, upgradeTo, etc.) which do not affect user withdrawals."
+      },
+      {
+        "code": "E3",
+        "text": "The owner address 0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6 is a 5-of-9 Gnosis Safe multisig. The contract is UUPS upgradeable, giving the multisig power to change the implementation contract. However, no pause or emergency withdrawal-blocking powers exist in the current implementation."
+      },
+      {
+        "code": "E4",
+        "text": "The SSV DAO multisig exercised emergency powers on May 6, 2026 to fix a critical Stale EB Snapshot Bug by upgrading the contract (forum post), but this was via upgrade, not pause. No indefinite pause capability exists; the only adversarial-admin scenario is a malicious upgrade, which would require 5-of-9 multisig signatures."
+      },
+      {
+        "code": "E5",
+        "text": "SSV network operates on a cluster balance model with continuous fee burn. Users can withdraw excess cluster balance at any time via withdraw() as long as they maintain the liquidation collateral threshold. Documentation states 'Users may not withdraw a cluster's liquidation collateral. The collateral can only be withdrawn only when off-boarding the cluster (by removing all validators in the cluster).' No maximum queue duration or daily caps exist for withdrawals."
+      },
+      {
+        "code": "E6",
+        "text": "No emergency escape hatch is present, but none is needed because normal exit paths are already permissionless and unpausable. In an adversarial-admin scenario (malicious upgrade), users would need to exit via the pre-upgrade implementation before the upgrade is executed."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions (withdraw, exitValidator, removeValidator, etc.) are standard nonpayable/payable functions with no frontend dependency. Documentation confirms they are directly callable via Etherscan write interface, generic wallets, or any Web3 provider. The SSV WebApp is a convenience layer, not a requirement."
+      }
+    ],
+    "steelman": {
+      "red": "The contract is UUPS upgradeable by a 5-of-9 multisig, creating a theoretical path for malicious code deployment that could block exits.",
+      "orange": "Cluster liquidation collateral cannot be withdrawn until all validators are removed, creating a multi-step exit process that might delay full capital recovery by hours or days depending on beacon chain exit queue.",
+      "green": "Exit functions are permissionless, unpausable, and directly callable on-chain; no admin signature can prevent a user from withdrawing their cluster balance above the collateral threshold or signaling validator exits; the multi-step exit flow (exitValidator → wait for beacon chain → removeValidator → withdraw collateral) is inherent to Ethereum staking, not an SSV-imposed restriction."
+    },
+    "verdict": "Choosing green because exit is permissionless and cannot be paused. While the contract is upgradeable, the current implementation (v2.0.0, running since the upgrade) contains zero pause guards on any user exit function. The cluster liquidation collateral requirement is a liveness incentive (to keep validators funded), not a withdrawal restriction — users can withdraw all excess balance instantly and recover collateral after completing the standard Ethereum validator exit process. The only adversarial-admin risk is a malicious upgrade, but that would require 5-of-9 signatures and users could exit pre-upgrade. The orange steel-man (multi-step exit) describes Ethereum's native validator lifecycle, not an SSV-imposed barrier, and the red steel-man (upgrade risk) does not constitute a pause power. The protocol meets the green bar: permissionless exit with no admin-imposed delays or caps under normal operation."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "shows": "Complete ABI of SSVNetwork contract (67 functions, 55 events) confirming presence of withdraw(), exitValidator(), bulkExitValidator(), removeValidator(), bulkRemoveValidator(), requestUnstake(), and withdrawUnlocked() functions. No pause(), unpause(), whenNotPaused, or paused() functions exist in the ABI. Only owner-restricted functions are admin operations like updateNetworkFee, updateModule, upgradeTo, rescueERC20.",
+      "chain": "Ethereum",
+      "address": "0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "fetched_at": "2026-05-08T19:01:41Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "shows": "SSVNetwork proxy contract at v2.0.0, owned by 0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6. The surfacer page displays pre-executed view methods including owner() returning the multisig address, getVersion() returning 'v2.0.0', and proxiableUUID() confirming UUPS upgradeability pattern.",
+      "chain": "Ethereum",
+      "address": "0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1",
+      "fetched_at": "2026-05-08T19:01:41Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6",
+      "shows": "Owner address is a Gnosis Safe v1.3.0 proxy with getThreshold() returning 5 and getOwners() returning 9 addresses, confirming 5-of-9 multisig configuration. No modules are enabled (getModules() returns empty array). This is the SSV DAO multisig that controls contract upgrades and admin functions.",
+      "chain": "Ethereum",
+      "address": "0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6",
+      "fetched_at": "2026-05-08T19:01:41Z"
+    },
+    {
+      "url": "https://docs.ssv.network/developers/smart-contracts/ssvnetwork/",
+      "shows": "SSV Network developer documentation lists withdraw() function with description 'Withdraws a specified amount of SSV tokens from cluster of msg.sender, will fail if msg.sender tries to withdraw more than the cluster's liquidation collateral.' Also documents exitValidator() for signaling beacon chain exits and removeValidator() for removing validators from the network. No pause or admin-controlled withdrawal restrictions are documented.",
+      "fetched_at": "2026-05-08T19:01:42Z"
+    },
+    {
+      "url": "https://docs.ssv.network/stakers/clusters/cluster-balance/",
+      "shows": "Cluster balance documentation states: 'Withdrawals allow users to remove any excess balance they have for capital efficiency. Users may not withdraw a cluster's liquidation collateral. The collateral can only be withdrawn only when off-boarding the cluster (by removing all validators in the cluster).' The liquidation collateral requirement is a liveness mechanism, not a withdrawal restriction — users control the full exit flow.",
+      "fetched_at": "2026-05-08T19:01:42Z"
+    },
+    {
+      "url": "https://docs.ssv.network/stakers/cluster-management/exiting-a-validator/",
+      "shows": "Validator exit documentation confirms two-step process: (1) exitValidator() generates a transaction to the SSV Network smart contract ensuring operators sign and execute voluntary exit on beacon chain, (2) after beacon chain exit completes, removeValidator() can be called to remove from SSV and reclaim collateral. States 'to exit a validator through the SSV protocol, the validator has to be registered to the ssv.network' and warns against removing before exiting. No admin approval or pause mechanism is mentioned.",
+      "fetched_at": "2026-05-08T19:01:42Z"
+    },
+    {
+      "url": "https://forum.ssv.network/t/publication-of-the-use-of-the-multi-sig-emergency-powers-on-the-6th-of-may-2026/2127",
+      "shows": "SSV DAO multisig exercised emergency powers on May 6, 2026 under DIP-2 to fix a critical Stale EB Snapshot Bug identified after v2.0.0 upgrade. The bug related to Effective Balance snapshots persisting after validators were removed from SSV-denominated clusters. Emergency action was via contract upgrade, not pause. This confirms the multisig has upgrade authority but no pause capability.",
+      "fetched_at": "2026-05-08T19:01:42Z"
+    },
+    {
+      "url": "https://github.com/ssvlabs/ssv",
+      "shows": "Official SSV Network GitHub repository (ssvlabs/ssv) lists node software, documentation, and audits. Audits folder includes Least Authority audit from August 2023. Repository README confirms this is the source for the SSV protocol implementing distributed validator technology using Istanbul BFT consensus. No pause or emergency shutdown mechanisms are documented in the high-level architecture descriptions.",
+      "fetched_at": "2026-05-08T19:01:43Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ssvlabs/ssv"
+    ],
+    "docs_url": "https://docs.ssv.network/",
+    "audits": [
+      {
+        "firm": "Least Authority",
+        "url": "https://github.com/ssvlabs/ssv/blob/main/audits/Least%20Authority.pdf",
+        "date": "2023-08"
+      }
+    ],
+    "governance_forum": "https://forum.ssv.network/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x9d65ff81a3c488d585bbfb0bfe3c7707c7917f54",
+      "symbol": "SSV"
+    },
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xb35096b074fdb9bBac63E3AdaE0Bbde512B2E6b6",
+        "role": "SSV DAO multisig — owner of SSVNetwork proxy, controls upgrades and admin functions",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4740aBe0B2f36e571C9c89BE027e4d85A10cb71E",
+        "role": "Upgrade authority for SSVNetwork and SSVNetworkViews UUPS proxies",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "SSV Network is a decentralized staking infrastructure that enables distributed operation of Ethereum validators using Distributed Validator Technology (DVT). Users register validators by splitting validator keys into KeyShares distributed across multiple non-trusting operators. The protocol manages cluster balances denominated in ETH (post-v2.0.0 upgrade) or SSV tokens, with users paying ongoing fees to operators while maintaining permissionless control over validator registration, exit, and balance withdrawals. SSV also offers a separate staking product (cSSV) where users stake SSV tokens to earn rewards from Ethereum infrastructure fees."
+  }
+}

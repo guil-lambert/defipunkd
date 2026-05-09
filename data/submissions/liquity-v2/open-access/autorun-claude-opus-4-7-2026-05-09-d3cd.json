@@ -1,0 +1,109 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v2",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "Liquity V2 contracts are fully permissionless with no whitelist, no admin pause, and no operator approval required to open/close/redeem; Liquity AG explicitly does not run a frontend and lists 5 independent community-operated frontends plus DeFi Saver aggregator routing.",
+  "short_headline": "Permissionless contracts, 5+ independent frontends",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Neither BorrowerOperations (ETH branch) nor TroveManager (ETH branch) expose any whitelist/allowlist/role-gating modifiers on user-facing entry points. The ABIs of openTrove, addColl, withdrawColl, withdrawBold, repayBold, closeTrove, claimCollateral, adjustTrove, redeemCollateral, batchLiquidateTroves, and urgentRedemption have no role parameter and no access-control errors. The only caller-check errors (CallerNotBorrowerOperations, CallerNotPriceFeed, CallerNotTroveManager, CallerNotCollateralRegistry) enforce cross-contract integrity, not user admission."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain operator approval is required to admit a borrower action. openTrove/closeTrove/redeemCollateral are unconditional public entry points; only price feed posting (an oracle dependency, scope of dependencies slice) is required for liquidation/redemption pricing. The shutdown() and shutdownFromOracleFailure() functions exist but are condition-gated by error types (TCRNotBelowSCR, NewOracleFailureDetected, NotShutDown), not admin-controlled — they can be triggered by anyone only when on-chain conditions are met. hasBeenShutDown()=false and shutdownTime()=0 at block 25,057,841/842, confirming the system is currently live."
+      },
+      {
+        "code": "A3-passive",
+        "text": "ToS / Website Terms / Protocol Disclaimer pages were not extractable in this run (allowlist rejected those subpaths), so verbatim jurisdictional clauses cannot be quoted. Recorded in unknowns; per the rubric this is publisher-side context and does not move the grade given A1+A3b."
+      },
+      {
+        "code": "A3-active",
+        "text": "Liquity AG does not operate any frontend, so there is no official UI on which to assess geo-blocking or wallet screening. Each independent frontend operator sets its own client policy; this is not a protocol-level admission control."
+      },
+      {
+        "code": "A3b",
+        "text": "Five independent community-operated frontends are publicly listed by Liquity AG: Liquity.App, DeFi Saver (a multi-protocol DeFi dashboard run by a separate legal entity, with explicit Liquity V2 automation features), LQTY.IO, Trove Zero, and LiquityV2.com. DeFi Saver in particular is a well-known third-party aggregator/manager whose existence satisfies the 'aggregator routing' independent-path criterion. The protocol's GitHub (liquity/bold) is also publicly linked, providing the SDK/library path. This is the strongest possible A3b posture: the protocol explicitly does not have an official frontend."
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain sanctions/OFAC blocklist check appears in the BorrowerOperations or TroveManager ABIs. The protocol website explicitly states 'BOLD can never be frozen' and that minters can always withdraw their collateral."
+      },
+      {
+        "code": "A5",
+        "text": "Read access (view methods such as getTroveStatus, getLatestTroveData, getEntireSystemColl/Debt, getTroveAnnualInterestRate) is unrestricted. Write access (openTrove, withdrawColl, etc.) is also unrestricted at the contract level; only per-trove ownership/manager permissions apply (NotBorrower, NotOwnerNorAddManager, NotOwnerNorRemoveManager errors), which are user-set delegations, not protocol gating."
+      },
+      {
+        "code": "A6",
+        "text": "ToS verbatim quote could not be extracted (allowlist blocked /website-terms and /protocol-disclaimer). Per Hard Rule 11 this is recorded as an unknown rather than paraphrased from memory. Footer of the homepage shows 'Liquity AG, Dufourstrasse 43, 8008 Zurich, Switzerland' with links to Protocol Disclaimer / Website Terms / Privacy Policy, but the text content was not retrievable this run."
+      }
+    ],
+    "steelman": {
+      "red": "If a future curator could show that BorrowerOperations imports a sanctions oracle or a role-gated guardian via the AddressesRegistry constructor parameter, or that all five 'independent' frontends are in fact operated by Liquity AG sockpuppets, then A1/A3b would collapse and red would apply.",
+      "orange": "If every listed third-party frontend were merely a redistribution of the same Liquity AG codebase under the same ToS, and if the GitHub repo had no published SDK/CLI, the protocol would be operationally captured despite open contracts — but DeFi Saver is demonstrably a separate product line predating Liquity V2.",
+      "green": "BorrowerOperations and TroveManager ABIs at the deployed addresses contain no whitelist/role/pause surfaces, hasBeenShutDown=false, shutdown is condition-gated rather than admin-gated, the protocol's marketing position itself is 'we do not run a frontend' with five independent community frontends listed, and DeFi Saver provides aggregator-style routing — every A3b path exists."
+    },
+    "verdict": "Choosing green because the on-chain evidence (TroveManager + BorrowerOperations ABIs, hasBeenShutDown=false) shows zero contract-level admission controls, and the off-chain evidence (frontend-v2 page enumerating 5 independent community frontends plus DeFi Saver aggregator) demonstrably satisfies A3b independent-path existence. The orange steelman (operational capture) is empirically false here — Liquity AG explicitly disclaims operating any frontend, which is the inverse of operational capture. The red steelman requires speculative facts not present in the evidence."
+  },
+  "evidence": [
+    {
+      "url": "https://www.liquity.org/",
+      "shows": "Liquity homepage — 'Liquity does not run its own Frontend. To use the protocol, choose one of the independent frontends below.' Lists Liquity.App, DeFi Saver, LQTY.IO, Trove Zero, LiquityV2.com. Also states 'Liquity V2 cannot be changed or upgraded' and 'Minters can always withdraw their collateral and BOLD can never be frozen.' (frontend-policy / A3b / A1 context — derived: maps Liquity-AG policy to A3b path-existence)",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://www.liquity.org/frontend-v2",
+      "shows": "Dedicated frontends page enumerating five independent community-operated V2 frontends with operator descriptions; includes DeFi Saver ('all-in-one dashboard for creating, managing, and tracking DeFi positions across multiple protocols'), LQTY.IO ('Untampered Frontend ... hosted on a secure German server'), Trove Zero, Liquity.App, LiquityV2.com. Q&A confirms 'To increase decentralization and resiliency of the protocol, Liquity AG does not operate a central frontend.' Direct A3b evidence.",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x0b995602b5a797823f92027e8b40c0f2d97aff1c",
+      "shows": "BorrowerOperations (ETH branch) full ABI and live state at block 25,057,842. View methods: CCR=1.5e18, MCR=1.1e18, SCR=1.1e18, hasBeenShutDown=false. Write methods include openTrove, addColl, withdrawColl, withdrawBold, repayBold, closeTrove, claimCollateral, adjustTrove, registerBatchManager — none with role-gating in ABI. Errors include NotBorrower / NotOwnerNorAddManager (per-trove delegation) but no Owner/Pauser/AccessControl/Whitelist surface. shutdown() and shutdownFromOracleFailure() exist as condition-gated functions with errors TCRNotBelowSCR / NewOracleFailureDetected. Direct A1/A2/A4 on-chain evidence.",
+      "chain": "Ethereum",
+      "address": "0x0b995602b5a797823f92027e8b40c0f2d97aff1c",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x81d78814df42da2cab0e8870c477bc3ed861de66",
+      "shows": "TroveManager (ETH branch) full ABI and live state at block 25,057,841. Public write methods: batchLiquidateTroves, redeemCollateral, urgentRedemption, shutdown — with no role/whitelist guard in ABI. shutdownTime=0 (system not shut down). hasBeenShutDown logic gated by error NotShutDown. Caller-restriction errors (CallerNotBorrowerOperations, CallerNotCollateralRegistry) enforce cross-contract integrity only. No owner()/pause()/setPaused()/Role/blocklist methods. Direct A1/A2/A5 on-chain evidence.",
+      "chain": "Ethereum",
+      "address": "0x81d78814df42da2cab0e8870c477bc3ed861de66",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x0B995602B5a797823f92027E8b40c0F2D97Aff1C&method=hasBeenShutDown&block=25057842",
+      "shows": "Block-pinned read: hasBeenShutDown() = false at block 25,057,842 — confirms the system is live and the conditional shutdown has not been triggered. (A2 — derived: shutdown is condition-gated, not admin-toggled)",
+      "chain": "Ethereum",
+      "address": "0x0b995602b5a797823f92027e8b40c0f2d97aff1c",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A6: Verbatim ToS / Website Terms / Protocol Disclaimer text could not be retrieved — defipunkd allowlist rejected https://www.liquity.org/website-terms and https://www.liquity.org/protocol-disclaimer. No quotable jurisdictional/sanctions clauses captured this run; per the rubric this is publisher-side context and does not move the grade given confirmed A1 and A3b.",
+    "A3b-offchain: Did not independently verify that DeFi Saver is operated by a legally separate entity from Liquity AG; relied on the homepage description plus DeFi Saver's broader multi-protocol footprint. A future run may want to corroborate via DeFi Saver's own ToS/legal page.",
+    "A1-offchain: Inspected only ETH-branch BorrowerOperations and TroveManager ABIs this run; did not directly inspect wstETH-branch and rETH-branch BorrowerOperations/TroveManager. They are deployments of the same code (per the immutable design claim) but were not individually fetched — a future run should sample at least one to confirm parity."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/bold"
+    ],
+    "docs_url": "https://docs.liquity.org/",
+    "audits": [],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x6dea81c8171d0ba574754ef6f8b412f2ed88c54d",
+      "symbol": "LQTY"
+    },
+    "admin_addresses": [],
+    "upgradeability": "immutable",
+    "about": "Liquity V2 is an immutable CDP protocol on Ethereum mainnet that lets users mint the BOLD stablecoin against ETH, wstETH, and rETH collateral with user-set fixed interest rates. Borrowers open a Trove (ERC-721 NFT) by depositing collateral and choosing their own annual interest rate; the protocol uses redemptions (paying $1 of BOLD to claim $1 of collateral from the lowest-rate Trove) and a Stability Pool to maintain the peg. There is no governance over the core lending contracts — they cannot be upgraded — and Liquity AG explicitly does not run a frontend, leaving access to community-run independent UIs and aggregators."
+  }
+}

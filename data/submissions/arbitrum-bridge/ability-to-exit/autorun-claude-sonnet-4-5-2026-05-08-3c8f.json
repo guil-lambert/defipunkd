@@ -1,0 +1,158 @@
+{
+  "schema_version": 4,
+  "slug": "arbitrum-bridge",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "orange",
+  "headline": "Permissionless withdrawal initiation from L2, but 7-day challenge period and Security Council can freeze L1 bridge contracts via emergency upgrade authority",
+  "short_headline": "7-day delay; council upgrade power",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Primary user exit functions: finalizeInboundTransfer (L1ERC20Gateway, L1GatewayRouter) for claiming L2→L1 withdrawals on Ethereum after challenge period; outboundTransfer (L2 gateway contracts) to initiate withdrawals from Arbitrum L2. No pause guards visible in the L1 gateway/router ABIs."
+      },
+      {
+        "code": "E2",
+        "text": "The L1 Bridge (0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3a), L1GatewayRouter (0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef), and L1ERC20Gateway (0xa3A7B6F88361F48403514059F1F16C8E78d60EeC) ABIs show no whenNotPaused or _checkResumed modifiers on finalizeInboundTransfer. Withdrawal initiation on L2 is permissionless. Claims of finalized withdrawals on L1 are not directly pause-gated at the function level."
+      },
+      {
+        "code": "E3",
+        "text": "No explicit pause role found in the examined L1 bridge contracts. However, the L1GatewayRouter owner() returns 0x3ffFbAdAF827559da092217e474760E2b2c3CeDd (Arbitrum Foundation Upgrade Executor). All three gateway/router contracts are TransparentUpgradeableProxy patterns with upgradeTo/upgradeToAndCall functions, allowing the owner to replace implementation logic. The Upgrade Executor is controlled by the Security Council (9-of-12 multisig for emergency actions) and the L1 Timelock (governed by ARB token vote)."
+      },
+      {
+        "code": "E4",
+        "text": "The Security Council is a 12-member elected multisig that can execute emergency actions with 9-of-12 approval. Emergency actions can be executed immediately without prior DAO vote and without an explicit time cap in the constitution. In April 2026, the Security Council froze 30,766 ETH on Arbitrum One via emergency action in response to the Kelp DAO exploit, demonstrating the ability to intervene in user funds on the L2 chain and potentially on bridge contracts via upgrade."
+      },
+      {
+        "code": "E5",
+        "text": "Arbitrum One withdrawals follow an optimistic rollup design: users initiate withdrawal on L2 permissionlessly; assertions are posted to L1 within ~1 hour; a challenge period of 45,818 L1 blocks (~6.5–7 days assuming 12-second blocks) must elapse before the withdrawal can be finalized on L1 via the Outbox executeTransaction function. This is not a daily cap but a fixed delay for fraud-proof verification. The queue itself is not admin-pausable at the function level but the bridge is upgradeable."
+      },
+      {
+        "code": "E6",
+        "text": "Arbitrum documentation describes a force-inclusion mechanism: users can send transactions directly to the L1 Delayed Inbox contract to bypass a non-responsive sequencer after 24 hours, ensuring censorship resistance for initiating withdrawals even if the sequencer is down. No explicit emergency-exit function for adversarial admin scenarios on the L1 bridge contracts themselves."
+      },
+      {
+        "code": "E7",
+        "text": "Withdrawal initiation on L2 is done via standard contract calls (outboundTransfer on gateway contracts); finalization on L1 requires calling the Outbox executeTransaction with a Merkle proof. Both are directly callable on-chain via block explorers or wallets without frontend dependency. The bridge interface simplifies the process but is not required."
+      }
+    ],
+    "steelman": {
+      "red": "The Security Council demonstrated in April 2026 that it can freeze user funds via emergency action, and upgrade authority over L1 bridge contracts means withdrawals could theoretically be blocked indefinitely by a 9-of-12 multisig without explicit time limits on emergency powers.",
+      "orange": "While the Security Council has broad emergency powers and upgrade authority, the 7-day challenge period is a protocol-level security feature (not an admin pause), finalized withdrawals on L1 are claimable permissionlessly once the period elapses, and the Council is DAO-elected and subject to transparency requirements and removal votes.",
+      "green": "L2 withdrawal initiation is permissionless, L1 claims have no pause guards at the function level, the 7-day delay is a fraud-proof mechanism inherent to optimistic rollups (not discretionary admin control), and force-inclusion after 24 hours ensures censorship resistance even if the sequencer is captured."
+    },
+    "verdict": "Choosing orange because the 7-day challenge period is a structural feature of the optimistic rollup (not an admin-imposed pause), and the L1 gateway contracts show no pause modifiers on finalizeInboundTransfer, suggesting claims of finalized exits are permissionless. However, the Security Council holds upgrade authority over all bridge contracts via a 9-of-12 multisig with emergency powers that can be exercised immediately and without explicit time caps. The April 2026 Kelp DAO incident confirms the Council's willingness and ability to freeze user funds in emergencies, which—while governance-elected and subject to transparency requirements—introduces discretionary intervention risk that pushes this beyond green. The force-inclusion mechanism and lack of direct pause guards on claims prevent a red grade, but the upgrade path and demonstrated emergency intervention justify orange."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x8315177ab297ba92a06054ce80a67ed4dbd7ed3a",
+      "shows": "L1 Bridge contract (0x8315...ed3a) ABI includes no pause-related functions; write methods listed include enqueueDelayedMessage, setOutbox, setSequencerInbox, updateRollupAddress, upgradeTo, upgradeToAndCall. View methods show rollup() and sequencerInbox() references.",
+      "chain": "Ethereum",
+      "address": "0x8315177ab297ba92a06054ce80a67ed4dbd7ed3a",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x72ce9c846789fdb6fc1f34ac4ad25dd9ef7031ef",
+      "shows": "L1GatewayRouter (0x72Ce...1ef) is a TransparentUpgradeableProxy; owner() returns 0x3ffFbAdAF827559da092217e474760E2b2c3CeDd; write methods include finalizeInboundTransfer, outboundTransfer, setDefaultGateway, setOwner, upgradeTo, upgradeToAndCall. No pause modifiers visible on finalizeInboundTransfer.",
+      "chain": "Ethereum",
+      "address": "0x72ce9c846789fdb6fc1f34ac4ad25dd9ef7031ef",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xa3a7b6f88361f48403514059f1f16c8e78d60eec",
+      "shows": "L1ERC20Gateway (0xa3A7...0eec) is a TransparentUpgradeableProxy; write methods include finalizeInboundTransfer, outboundTransfer, outboundTransferCustomRefund, transferExitAndCall, upgradeTo, upgradeToAndCall. Events include WithdrawalFinalized. No pause guards on finalizeInboundTransfer.",
+      "chain": "Ethereum",
+      "address": "0xa3a7b6f88361f48403514059f1f16c8e78d60eec",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x3ffFbAdAF827559da092217e474760E2b2c3CeDd",
+      "shows": "Owner address 0x3ffFbAdAF827559da092217e474760E2b2c3CeDd is a TransparentUpgradeableProxy (Arbitrum Foundation Upgrade Executor per Etherscan label); has changeAdmin, upgradeTo, upgradeToAndCall methods. Controlled by Security Council and L1 Timelock per governance docs.",
+      "chain": "Ethereum",
+      "address": "0x3ffFbAdAF827559da092217e474760E2b2c3CeDd",
+      "fetched_at": "2026-05-08T11:25:00Z"
+    },
+    {
+      "url": "https://docs.arbitrum.io/arbitrum-bridge/troubleshooting",
+      "shows": "Official Arbitrum docs confirm withdrawal period: \"Using the official Arbitrum Bridge, the process will take roughly one week\" and \"Arbitrum One's dispute window is 45818 blocks; this converts to about 6.5 days.\"",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://docs.superbridge.app/arbitrum/withdrawals",
+      "shows": "Withdrawal process documentation: \"Once assertions are posted to the settlement chain (usually within ~ 1 hour) and the assertion is confirmed (usually about ~ 1 week) the withdrawal can be finalized by posting a proof to the Outbox's executeTransaction function.\"",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://docs.arbitrum.foundation/gentle-intro-dao-governance",
+      "shows": "Governance structure: \"The Security Council is a 12-member council of entities elected by members of the Arbitrum DAO. This council is responsible for ensuring Arbitrum's security and performance through the selective application of emergency actions if/when necessary.\"",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://github.com/ArbitrumFoundation/governance/blob/main/docs/overview.md",
+      "shows": "Security Council configuration: \"The Security Council - is made up of a 9 of 12 multisig that can take quick action in case of an emergency.\"",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://docs.arbitrum.foundation/concepts/security-council",
+      "shows": "Security Council powers: \"The primary role of the Security Council is to address critical risks associated with the Arbitrum protocol and its ecosystem. The Security Council is responsible for making time-sensitive and emergency response decisions.\"",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://forum.arbitrum.foundation/t/security-council-emergency-action-21-04-2026/30803",
+      "shows": "April 2026 emergency action: \"At 11:26pm ET, 21st April 2026, the Security Council executed an emergency action to freeze 30,765.667501709008927568 ETH held by the KelpDAO Exploiter on Arbitrum One.\"",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://www.coindesk.com/markets/2026/04/21/arbitrum-freezes-usd71-million-in-ether-tied-to-kelp-dao-exploit",
+      "shows": "Security Council emergency powers demonstrated: \"Arbitrum's Security Council froze 30,766 ETH worth roughly $71 million\" and \"Its Security Council is a group of elected signers with emergency powers to take protective action.\"",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://docs.arbitrum.io/learn-more/faq",
+      "shows": "Force-inclusion mechanism: \"The mechanism that allows force-including transactions from Ethereum (bypassing the sequencer) is intended to be used in very rare cases\" with \"24 hours was chosen because it provides a comfortable period of time.\"",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/a-comprehensive-analysis-of-arbitrum-security-mechanism-1a61cbc4fe20",
+      "shows": "Emergency exit mechanisms: \"any user can send a transaction request to the Inbox contract on L1 to force a withdrawal\" and \"data availability ensures that users' assets and data on L2 can be recovered from L1 at any time.\"",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3ffFbAdAF827559da092217e474760E2b2c3CeDd",
+      "shows": "Etherscan labels 0x3ffFbAdAF827559da092217e474760E2b2c3CeDd as 'Arbitrum Foundation: Upgrade Executor', confirming its role as the owner of L1 gateway contracts.",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/OffchainLabs/nitro",
+      "https://github.com/ArbitrumFoundation/governance"
+    ],
+    "docs_url": "https://docs.arbitrum.io",
+    "audits": [],
+    "governance_forum": "https://forum.arbitrum.foundation",
+    "voting_token": {
+      "chain": "Arbitrum One",
+      "address": "0x912CE59144191C1204E64559FE8253a0e49E6548",
+      "symbol": "ARB"
+    },
+    "deployed_contracts_doc": "https://docs.arbitrum.io/build-decentralized-apps/reference/contract-addresses",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x3ffFbAdAF827559da092217e474760E2b2c3CeDd",
+        "role": "Arbitrum Foundation Upgrade Executor (owner of L1 gateways/router)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Arbitrum Bridge is the canonical bridge for transferring ETH and ERC-20 tokens between Ethereum (L1) and Arbitrum One/Nova (L2 optimistic rollups). Users deposit to L2 near-instantly by locking assets in L1 gateway contracts; withdrawals from L2 to L1 require initiating an outbound transfer on Arbitrum, waiting for assertion posting (~1 hour), then waiting through a 7-day fraud-proof challenge window before finalizing the claim on Ethereum via the Outbox contract. The bridge uses a gateway router pattern to support custom token bridges and is governed by the Arbitrum DAO via ARB token votes and a 12-member elected Security Council with emergency upgrade/intervention powers."
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "schema_version": 4,
+  "slug": "crvusd",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "Exit functions exist but pause scope and duration limits cannot be determined from available evidence",
+  "short_headline": "Pause scope undetermined",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Controller contracts expose repay(), repay_extended(), and self-liquidation functions for users to close positions and retrieve collateral. Documentation confirms these are the primary exit paths for borrowers who have minted crvUSD against collateral."
+      },
+      {
+        "code": "E2",
+        "text": "Address book states Emergency DAO 5-of-9 multisig has 'set_killed pause-only on Controllers' with immediate execution. However, contract source code for Controllers was not accessible to determine which specific functions are gated by set_killed checks."
+      },
+      {
+        "code": "E3",
+        "text": "Emergency DAO at 0x467947EE34aF926cF1DCac093870f613C96B1E0c is a 5-of-9 Gnosis Safe with immediate execution capability. No on-chain evidence was found of a time cap on set_killed pause duration or auto-expiry mechanism."
+      },
+      {
+        "code": "E4",
+        "text": "Ownership Agent (0x40907540d8a6C65c637785e8f8B742ae6b0b9968) operates with ~7-day Aragon vote timelock for admin functions on factory/Controllers/AMMs/MonetaryPolicy, but no evidence found whether governance can impose indefinite pause or only the Emergency DAO can."
+      },
+      {
+        "code": "E5",
+        "text": "No evidence of queued redemptions or withdrawal caps found in documentation. crvUSD operates as a CDP system where debt repayment is immediate if the Controller has not been paused."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism for adversarial-admin scenarios was identified in the available evidence."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions (repay, self-liquidate) are directly callable on-chain through the Controller contracts without frontend dependency, as confirmed by documentation describing the Controller as the on-chain interface for managing positions."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Cannot assign a grade because the scope of set_killed is unknown: if it blocks only new borrowing (create_loan, borrow_more) but allows repay and self-liquidation, that would suggest orange or green; if it blocks all user functions including repay, and has no time cap, that would be red. The Emergency DAO is a 5-of-9 multisig with immediate execution, which is a relatively broad group but not governance-vote-level decentralization. Without access to the Controller source code showing which functions check the killed flag, and without documentation confirming a time cap or auto-expiry on the pause, the assessment cannot be completed. Etherscan contract pages and Curve docs were inaccessible during this run, and search results provided architectural overview but not the critical implementation details."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO is a 5-of-9 Gnosis Safe multisig with threshold 5 and 9 owners on Ethereum",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "shows": "Curve DAO Ownership Agent is an Aragon AppProxyUpgradeable proxy contract with view methods including kernel() and getEVMScriptRegistry()",
+      "chain": "Ethereum",
+      "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://docs.curve.finance/crvUSD/controller/",
+      "shows": "Controller contract documentation stating it acts as on-chain interface for creating loans and managing positions, with functions including repay, borrow_more, and liquidate",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://resources.curve.finance/lending/how-to-borrow/",
+      "shows": "User guide confirming repay and self-liquidation options are available for closing positions, with repay being directly callable to improve health or fully close loans",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E2: Controller contract source code at deployed addresses (0x8472a9a7632b173c8cf3a86d3afec50c35548e76 and others) could not be fetched - Etherscan pages inaccessible",
+    "E2: Specific functions gated by set_killed modifier unknown - need to read Controller.vy source to identify which operations (repay, borrow, create_loan, etc.) check the killed flag",
+    "E3: Maximum duration of set_killed pause unknown - no on-chain read or documentation confirming time cap or auto-expiry for Emergency DAO pause",
+    "E4-emergency: Whether governance (Ownership Agent + 7-day timelock) can also invoke indefinite pause separate from Emergency DAO pause-only power",
+    "E6: No escape-hatch mechanism identified - unknown if one exists in code not accessed"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin"
+    ],
+    "docs_url": "https://docs.curve.finance/crvUSD/",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+        "role": "Curve DAO Ownership Voting (Aragon)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent — admin on crvUSD factory/Controllers/AMMs/MonetaryPolicy; ~7-day Aragon Ownership vote timelock",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO 5-of-9 Gnosis Safe — set_killed pause-only on Controllers, immediate execution",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "crvUSD is an overcollateralized stablecoin using Curve's LLAMMA (Lending-Liquidating AMM Algorithm) mechanism for soft liquidations. Users deposit whitelisted collateral into Controller contracts to mint crvUSD against their deposits. The system features automated liquidation bands that convert collateral to crvUSD gradually during price declines, and users can repay debt to retrieve collateral or self-liquidate positions."
+  }
+}

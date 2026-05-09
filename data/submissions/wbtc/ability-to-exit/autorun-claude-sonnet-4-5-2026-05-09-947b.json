@@ -1,0 +1,127 @@
+{
+  "schema_version": 4,
+  "slug": "wbtc",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "WBTC transfers can be paused indefinitely by 6-of-10 multisig with no time cap or escape hatch",
+  "short_headline": "Indefinite pause, no escape hatch",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "User-facing exit functions: transfer(address,uint256), transferFrom(address,address,uint256), and burn(uint256). The burn function is a write method on the token contract but merchant-gated via the Controller. Standard ERC-20 transfers are the primary user exit path (transfer to exchange/OTC/merchant)."
+      },
+      {
+        "code": "E2",
+        "text": "All three exit functions inherit pausable behavior from the token contract's base. The token contract at 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599 exposes pause() and unpause() write methods and a paused() view method (currently returning false). When paused, transfer and transferFrom revert. The burn function is also a write method subject to pause guards in standard OpenZeppelin pausable implementations."
+      },
+      {
+        "code": "E3",
+        "text": "The pause role holder is the token's owner(), which returns Controller 0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7. The Controller's owner() returns multisig 0x972Eed35781f09987a5c40F761f6A24623C570DE, a 6-of-10 multisig (required=6, 10 owners). No maximum pause duration is observable in the on-chain state or ABI; the pause/unpause functions have no time-bound parameters. There is no separate PAUSE_INFINITELY vs time-capped pause—only a single pause() function controlled by the multisig through the Controller."
+      },
+      {
+        "code": "E4",
+        "text": "No emergency vs governance pause distinction found. The Controller contract exposes a single pause() method callable by its owner (the 6-of-10 multisig). No timelocked governance path or separate emergency guardian role is evident from the ABI or surfaced state."
+      },
+      {
+        "code": "E5",
+        "text": "WBTC has no on-chain queued redemption mechanism. Users must interact with off-chain merchants to burn WBTC and receive BTC. The on-chain burn() function on the Controller is merchant-facing (requires merchant role per the Members contract). No daily withdrawal caps or redemption queue are present in the token or Controller ABIs."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit, escape-hatch, or permissionless emergency-exit mechanism is present in the token or Controller contracts. When paused, all transfers revert and users have no on-chain recourse."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions (transfer, transferFrom, burn) are standard ERC-20 methods directly callable on-chain via block explorers (e.g. Etherscan write tab) or any Web3 wallet. No frontend dependency exists for invoking these functions, though the merchant burn workflow requires off-chain merchant coordination."
+      }
+    ],
+    "steelman": {
+      "red": "A 6-of-10 multisig can pause all transfers indefinitely with no time cap, no escape hatch, and no exemption for claims of finalized exits; users are completely blocked from moving funds on-chain during a pause.",
+      "orange": "The pause mechanism exists but is controlled by a moderately decentralized 6-of-10 multisig rather than a single admin, and the token is currently unpaused; however, no time limit prevents indefinite pausing.",
+      "green": "The token is currently unpaused and transfers function permissionlessly; the multisig threshold (6-of-10) provides some resistance to unilateral action."
+    },
+    "verdict": "Choosing red because the on-chain evidence shows ANY pause initiated by the 6-of-10 multisig can block ALL user exits (transfer, transferFrom, burn) indefinitely with no time cap, no separate governance path that would impose delays, and no escape hatch for adversarial scenarios. While the 6-of-10 threshold is stronger than a 2-of-3 or EOA, the ability to pause claims of finalized exits (standard ERC-20 transfers) indefinitely without auto-expiry or governance vote is a red-flag characteristic. The absence of time-bound pause logic or exemptions for user withdrawals places this squarely in the red category per the rubric's emphasis on indefinite pause power over exit claims."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "shows": "WBTC token contract ABI and state at block 25025457. Exposes pause() and unpause() write methods, paused() view method returning false, burn(uint256) write method, and standard transfer/transferFrom functions. Owner is 0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7.",
+      "chain": "Ethereum",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "fetched_at": "2026-05-09T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "shows": "Controller contract ABI and state at block 25025782. Exposes pause() and unpause() write methods, burn(uint256) function, and owner() returning 0x972Eed35781f09987a5c40F761f6A24623C570DE. Controls the WBTC token at 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599.",
+      "chain": "Ethereum",
+      "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+      "fetched_at": "2026-05-09T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x972Eed35781f09987a5c40F761f6A24623C570DE",
+      "shows": "Controller owner multisig at block 25025783. MultiSigWalletWithDailyLimit contract with required()=6, 10 owners via getOwners(). No time-bound pause parameters observable in the multisig or Controller ABIs.",
+      "chain": "Ethereum",
+      "address": "0x972Eed35781f09987a5c40F761f6A24623C570DE",
+      "fetched_at": "2026-05-09T11:20:00Z"
+    },
+    {
+      "url": "https://github.com/WrappedBTC/bitcoin-token-smart-contracts",
+      "shows": "Official WBTC source code repository confirming the token, Controller, Members, and Factory contract architecture. Repository structure shows ethereum/, evm-base-contracts/, tron/, and kava/ directories.",
+      "commit": "0e8c140",
+      "fetched_at": "2026-05-09T11:21:00Z"
+    },
+    {
+      "url": "https://wbtc.network/",
+      "shows": "Official WBTC protocol website confirming the protocol name and branding.",
+      "fetched_at": "2026-05-09T11:19:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/WrappedBTC/bitcoin-token-smart-contracts",
+      "https://github.com/WrappedBTC/DAO"
+    ],
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://wbtc.network/dashboard/audit"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x972Eed35781f09987a5c40F761f6A24623C570DE",
+        "role": "Controller owner — pause/unpause authority over WBTC token",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCA06411bd7a7296d7dbdd0050DFc846E95fEBEB7",
+        "role": "Controller — mediates mint/burn/pause calls to WBTC token",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xB33f8879d4608711cEBb623F293F8Da13B8A37c5",
+        "role": "Big DAO Multisig — alternative governance multisig referenced in address_book",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4dbbbfb0e68be9d8f5a377a4654604a62e851e80",
+        "role": "Small DAO / Light Multisig — owns Members contract (merchant/custodian registry)",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "WBTC is an ERC-20 token on Ethereum backed 1:1 by Bitcoin held by institutional custodians. Users interact with authorized merchants to mint WBTC by depositing BTC, or burn WBTC to redeem BTC. The token contract, Controller, Members (merchant registry), and Factory contracts are immutable but owned by a 6-of-10 multisig that holds pause and merchant-management authority."
+  }
+}

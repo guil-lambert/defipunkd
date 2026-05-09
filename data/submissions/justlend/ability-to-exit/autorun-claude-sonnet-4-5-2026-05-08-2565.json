@@ -1,0 +1,107 @@
+{
+  "schema_version": 4,
+  "slug": "justlend",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "off-chain-only",
+  "grade": "unknown",
+  "headline": "Permissionless exit architecture inherited from Compound V2, but TRON chain prevents on-chain state verification",
+  "short_headline": "Compound V2 exit, TRON unverified",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "User exit functions identified: redeem(uint redeemTokens), redeemUnderlying(uint redeemAmount), and repayBorrow(uint amount) in the CToken contract. These allow users to withdraw supplied assets and repay debts."
+      },
+      {
+        "code": "E2",
+        "text": "The redeem and repay functions call comptroller.redeemAllowed() and comptroller.repayBorrowAllowed() respectively for collateral/liquidity checks, but no pause guards are present in the CToken.sol source code. The Compound V2 architecture pattern explicitly prohibits pausing redeem and repay operations."
+      },
+      {
+        "code": "E3",
+        "text": "No pause mechanism found in the documented redeem/repay flow. The Comptroller documentation describes collateral factor and liquidation checks but does not reference pause functionality for withdrawals."
+      },
+      {
+        "code": "E4",
+        "text": "Governance operates via JST token-weighted voting through GovernorBravo with a Timelock contract. External source reports minimum 48-hour timelock delay, though this could not be verified on-chain due to TRON chain limitation."
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption or daily withdrawal cap mechanisms found in the CToken contract or documentation. Standard Compound V2 architecture allows immediate withdrawals subject to liquidity and collateral constraints."
+      },
+      {
+        "code": "E6",
+        "text": "No emergency escape-hatch or forced-exit mechanism documented beyond the standard redeem/repay functions."
+      },
+      {
+        "code": "E7",
+        "text": "Documentation confirms exit functions are directly callable on-chain via TronScan or wallet interfaces. The interface repository notes that users can access the protocol without the official frontend."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Cannot assign a grade because TRON is not supported by the DeFiPunkd read API and on-chain state verification is required for ability-to-exit assessment. The source code review suggests a permissionless exit design inherited from Compound V2, where redeem and repay operations are explicitly protected from pause mechanisms. However, without on-chain verification of (1) whether pause guards were added in deployed contracts, (2) the actual timelock delay parameter, (3) current pause guardian address, and (4) whether any emergency admin keys exist on the deployed Unitroller/Comptroller proxy, the assessment remains incomplete. The 48-hour timelock claim from external sources and the absence of pause code in the GitHub repository are promising signals but cannot substitute for reading deployed contract state."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/justlend/justlend-protocol",
+      "shows": "Official JustLend protocol GitHub repository. README describes the protocol as based on Compound-style CToken architecture with mint, redeem, borrow, and repay operations. Lists GovernorBravo governance and Timelock contracts.",
+      "commit": "7c49ca980",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://github.com/justlend/justlend-protocol/blob/main/contracts/CToken.sol",
+      "shows": "CToken.sol source code (partial view). Contains redeemInternal() and redeemFresh() implementations that call comptroller.redeemAllowed() for collateral checks. No whenNotPaused or pause guard modifiers observed in the fetched portion. repayBorrowFresh() calls comptroller.repayBorrowAllowed().",
+      "commit": "7c49ca980",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://docs.justlend.org/developers/supply_and_borrow_market/sbm/",
+      "shows": "SBM contract documentation. Lists redeem(uint redeemTokens) and redeemUnderlying(uint redeemAmount) as user-callable exit functions that return 0 on success or revert on error. Documents repayBorrow(uint amount) for debt repayment. No mention of pause functionality on these operations.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://docs.justlend.org/developers/supply_and_borrow_market/comptroller/",
+      "shows": "Comptroller documentation. Describes risk management via collateral factors and liquidity checks through getAccountLiquidity(). Does not document pause functionality. Lists enterMarkets, exitMarket, and liquidation incentive methods.",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://docs.justlend.org/getting_started/overview/",
+      "shows": "Protocol overview confirming that suppliers can redeem underlying assets at any time and borrowers can repay loans at any time. States orders are automatically matched by smart contracts as long as token market has sufficient liquidity.",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    },
+    {
+      "url": "https://support.justlend.org/hc/en-us/articles/14318786816025-How-to-supply-withdraw-borrow-repay-assets-on-JustLend-DAO",
+      "shows": "User guide confirming withdrawal process via TronScan or wallet. States users with no debts can withdraw all supplied assets; users with debts must monitor risk value during withdrawal. No mention of admin pause controls.",
+      "fetched_at": "2026-05-08T11:25:00Z"
+    }
+  ],
+  "unknowns": [
+    "E2-offchain: Whether deployed Comptroller or CToken contracts on TRON contain pause functionality not present in the GitHub source code. TRON chain is not supported by the DeFiPunkd read API; cannot verify on-chain ABI or state.",
+    "E3-offchain: Actual timelock delay parameter value. External source (Exponential DeFi) claims 48-hour minimum but this is not verifiable without TRON chain support.",
+    "E3-offchain: Pause guardian address and role permissions in the deployed Comptroller. Compound V2 forks typically have a pauseGuardian address that can pause mint/borrow but NOT redeem/repay; cannot confirm JustLend follows this pattern without reading on-chain state.",
+    "E4-offchain: Current admin or owner address of the Unitroller proxy and whether emergency admin functions exist beyond governance+timelock. Address book lists TRON addresses but these cannot be queried via the read API."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/justlend/justlend-protocol"
+    ],
+    "docs_url": "https://docs.justlend.org",
+    "audits": [
+      {
+        "firm": "CertiK",
+        "url": "https://www.justlend.link/docs/justlend_audit_en.pdf",
+        "date": "2022"
+      }
+    ],
+    "governance_forum": "https://forum.justlend.org",
+    "security_contact": "support@justlend.org",
+    "deployed_contracts_doc": "https://docs.justlend.org/developers/deployed_contracts/",
+    "admin_addresses": [],
+    "upgradeability": "upgradeable",
+    "about": "JustLend is a decentralized money market protocol on TRON based on Compound V2 architecture. Users supply TRC20 tokens or TRX to mint interest-bearing jTokens, which can be redeemed at any time for the underlying asset. Borrowers can take loans against collateral subject to algorithmic interest rates and liquidation at 100% risk value. Governance is conducted by JST token holders through on-chain proposals with timelock execution."
+  }
+}

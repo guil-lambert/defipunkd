@@ -1,0 +1,119 @@
+{
+  "schema_version": 4,
+  "slug": "binance-bitcoin",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "Users cannot exit BTCB to native Bitcoin on-chain; redemption requires Binance custodial approval",
+  "short_headline": "Exit requires Binance custody",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The BTCB token contract at 0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c on BSC implements standard BEP-20 transfer() and burn() functions. The burn() function is publicly callable without restrictions, allowing any holder to destroy their BTCB tokens."
+      },
+      {
+        "code": "E2",
+        "text": "The contract's transfer() and burn() functions have no pause guards. Examination of the verified contract source shows the standard BEP20Token implementation with no whenNotPaused modifiers on user-facing transfer functions. The contract inherits from Context, IBEP20, and Ownable only—no Pausable contract is included."
+      },
+      {
+        "code": "E3",
+        "text": "No pause mechanism exists in the BTCB token contract itself. The contract does not import or inherit from any Pausable library. The only owner-restricted functions are mint(uint256) and transferOwnership(address). The owner address 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d has no verified ABI, preventing determination of its multisig composition or pause capabilities."
+      },
+      {
+        "code": "E4",
+        "text": "Not applicable—no pause mechanism exists at the token contract level. However, the critical exit blocker is off-chain: burning BTCB on BSC does NOT automatically release BTC from Binance custody. Redemption from BTCB to native Bitcoin requires interaction with Binance.com's centralized platform or the deprecated Binance Bridge."
+      },
+      {
+        "code": "E5",
+        "text": "Redemption is not a queued on-chain process. Per Binance documentation, users must deposit BTCB back to Binance.com and withdraw as native BTC through the exchange's custodial system. The 2019 announcement states BTCB balances were consolidated into BTC balances at a 1:1 ratio, and withdrawal network selection determines the asset received. There is no on-chain redemption contract that permissionlessly swaps BTCB for BTC."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or permissionless escape hatch exists. Users cannot redeem BTCB for underlying Bitcoin without Binance's cooperation. The peg relies entirely on Binance honoring withdrawal requests. The BNB Chain blog states 'your BTC remains locked, and you can redeem it back at any time by depositing back BTCB,' but this redemption path is custodial, not trustless."
+      },
+      {
+        "code": "E7",
+        "text": "BTCB can be transferred on-chain via standard BEP-20 transfer() calls, executable through BSCScan, MetaMask, or any BSC-compatible wallet without Binance's frontend. However, converting BTCB back to native Bitcoin—the actual 'exit' from the wrapped system—requires Binance.com's custodial withdrawal process, which is not callable on-chain."
+      }
+    ],
+    "steelman": {
+      "red": "Exit from BTCB to native Bitcoin requires Binance custodial approval with no on-chain recourse, making it indistinguishable from a centralized IOU system despite the on-chain token mechanics.",
+      "orange": "On-chain BTCB transfers are permissionless and unpausable, allowing users to move value freely within the BSC ecosystem, even if redemption to BTC requires Binance cooperation.",
+      "green": "The token contract itself has no pause mechanism and burning is permissionless, meeting the narrow definition of 'exit from the token contract' if not the broader wrapped-asset promise."
+    },
+    "verdict": "Choosing red because the fundamental user expectation for a Bitcoin-pegged token is the ability to redeem for actual Bitcoin, and this exit path is entirely custodial. While E2 confirms on-chain BTCB transfers are unpausable, findings E5 and E6 show that the critical redemption function—converting BTCB back to BTC—exists only through Binance's centralized withdrawal system, not as an on-chain smart contract. Users who hold BTCB cannot unilaterally exit to the underlying asset under adversarial conditions (e.g., Binance blocking withdrawals, going bankrupt, or facing regulatory seizure). The on-chain burn() function merely destroys the wrapper token; it does not release the Bitcoin. This custody dependency places BTCB in the same risk category as a centralized exchange balance, which is a red-grade outcome for ability-to-exit."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/56/0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+      "shows": "BTCB token contract at 0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c on BSC (chainId 56) with owner address 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d. The ABI lists mint(uint256) and burn(uint256) functions, with mint restricted by onlyOwner modifier. Burn is publicly callable. No pause-related methods appear in the ABI.",
+      "chain": "BSC",
+      "address": "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/56/0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d",
+      "shows": "Owner address 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d has no verified ABI on BSCScan or Sourcify. Generic method probes for owner(), getOwners(), getThreshold(), and paused() are listed but results are not shown, preventing determination of whether this is an EOA, multisig, or governance contract.",
+      "chain": "BSC",
+      "address": "0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/blog/ecosystem/experience-btcb--bitcoin-on-bnb-smart-chain-421499824684901264",
+      "shows": "Binance documentation states 'Your BTC remains locked, and you can redeem your BTCB and claim the locked BTC at any time' and describes BTCB as requiring 'transparency and a trusted issuer' rather than being trustless. Redemption occurs through Binance.com or the Binance Bridge, not via an on-chain contract.",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://www.bnbchain.org/en/blog/btcb-on-binance-smart-chain-101",
+      "shows": "BNB Chain blog confirms 'When you exchange your BTC for BTCB, your BTC remains locked, and you can redeem it back at any time by depositing back BTCB.' The official BTCB address is 0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c. Redemption is described as a deposit-to-Binance process, not an on-chain swap.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/support/announcement/binance-upgrades-deposits-and-withdrawals-for-btcb-usdsb-and-tusdb-360034156752",
+      "shows": "2019 Binance announcement states 'Users balances of BTCB, USDSB and TUSDB will be automatically converted to BTC, USDS and TUSD respectively, based on a ratio of 1 BTCB = 1 BTC' within Binance.com accounts. After the upgrade, users select their preferred blockchain network to withdraw. This confirms redemption is custodial, mediated by Binance account balances.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://bscscan.com/token/0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+      "shows": "Verified Solidity 0.5.16 source code for BEP20Token contract. The contract inherits Context, IBEP20, Ownable. It implements mint(uint256) with onlyOwner modifier and burn(uint256) with no access restriction. No Pausable inheritance or pause-related functions are present. The internal _transfer function has no require(!paused()) guard.",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/collateral-btokens",
+      "shows": "Binance Proof of Collateral page for B-Tokens. The page states 'we have a number of 0 tokens that are minted by Binance' and notes this refers to Binance Bridge pegged tokens, distinct from Binance.com proof of reserves. The page does not provide real-time collateral attestation or on-chain redemption mechanisms.",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: Owner address 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d has no verified ABI; cannot determine if EOA, multisig (threshold/signers), or governance contract.",
+    "E4-offchain: Binance's internal policies for BTCB redemption (daily limits, KYC requirements, freeze conditions) are not documented on-chain or in public smart contracts.",
+    "E6: No public audit of the BTCB custody reserves or redemption mechanism was found in the provided audit_links (none recorded) or discovered via search."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "docs_url": "https://www.bnbchain.org/en/blog/btcb-on-binance-smart-chain-101",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "BSC",
+        "address": "0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d",
+        "role": "owner of BTCB token (mint authority)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "BSC",
+        "address": "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+        "role": "BTCB token contract",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Binance Bitcoin (BTCB) is a BEP-20 token on BNB Smart Chain pegged 1:1 to Bitcoin held in Binance custody. Users deposit BTC to Binance, receive BTCB on BSC, and can use it in DeFi (lending, swaps, farming) with low fees and fast finality. Redemption to native BTC requires depositing BTCB back to Binance.com and withdrawing through the centralized exchange. The token contract itself is immutable and unpausable, but the peg and redemption mechanism are entirely custodial."
+  }
+}

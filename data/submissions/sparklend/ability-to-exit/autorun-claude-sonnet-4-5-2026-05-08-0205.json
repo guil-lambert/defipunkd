@@ -1,0 +1,157 @@
+{
+  "schema_version": 4,
+  "slug": "sparklend",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "Indefinite pause power held by 3-of-5 multisig with no time cap",
+  "short_headline": "Indefinite pause via multisig",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "The SparkLend pool contract (0xC13e21B648A5Ee794902342038FF3aDAB66BE987) exposes withdraw(address,uint256,address), repay(address,uint256,uint256,address), and repayWithATokens(address,uint256,uint256) as public exit functions for lenders and borrowers."
+      },
+      {
+        "code": "E2",
+        "text": "The pool configurator (0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738) includes write methods setReservePause(address,bool) and setPoolPause(bool). These are callable through the pool configurator, which is controlled by governance and emergency admin roles."
+      },
+      {
+        "code": "E3",
+        "text": "SparkLendFreezerMom (0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3) holds EMERGENCY_ADMIN_ROLE and RISK_ADMIN_ROLE. It exposes pauseMarket(address,bool), pauseAllMarkets(bool), freezeMarket(address,bool), and freezeAllMarkets(bool). These functions are callable by the hat in MakerDAO's Chief governance contract (0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9), authorized wards (including the 3-of-5 freezer multisig at 0x44efFc473e81632B12486866AA1678edbb7BEeC3), OR the MakerDAO PauseProxy."
+      },
+      {
+        "code": "E3b",
+        "text": "The freezer multisig (0x44efFc473e81632B12486866AA1678edbb7BEeC3) is a 3-of-5 Gnosis Safe with threshold 3. The GitHub documentation states this contract can 'bypass the 2-day GSM window to freeze or pause any SparkLend markets' but does NOT specify a maximum pause duration. The contract code shows no auto-expiry mechanism for pause or freeze states."
+      },
+      {
+        "code": "E4",
+        "text": "There is NO distinction in the code between emergency pause and governance pause. A single pauseMarket or pauseAllMarkets call sets the pause state, which can only be reversed by calling the same function with false. The 3-of-5 multisig holds a ward authorization, allowing it to pause indefinitely without requiring a governance vote to initiate OR to extend the pause."
+      },
+      {
+        "code": "E5",
+        "text": "SparkLend is an Aave V3 fork with standard instant withdrawal mechanics. There is no documented queue system for redemptions, no daily withdrawal cap mentioned in the documentation, and the withdraw function is not gated by any queue-checking logic in the ABI."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism was found in the pool contract, configurator, or FreezerMom. The only exit path is the standard withdraw/repay flow, which is subject to pause controls."
+      },
+      {
+        "code": "E7",
+        "text": "The withdraw function is a standard public method on the pool contract and is directly callable via block explorers (Etherscan write interface) or any wallet. There is no frontend dependency for exit."
+      }
+    ],
+    "steelman": {
+      "red": "A 3-of-5 multisig (freezer multisig) can pause all markets indefinitely, blocking both new withdrawals and claims of finalized positions, with no coded time cap or auto-expiry.",
+      "orange": "While the multisig can pause indefinitely, it requires 3-of-5 signatures and the pause can be reversed by the same multisig or governance vote, providing some checks.",
+      "green": "Pause is controlled by governance (Chief hat) and restricted to emergencies, with the multisig acting only as a backup for fast response, and Sky governance can unpause via executive vote."
+    },
+    "verdict": "Choosing red because the 3-of-5 freezer multisig holds permanent ward authorization to call pauseAllMarkets(true) without a time limit. The GitHub documentation explicitly states the FreezerMom contract allows 'bypass[ing] the 2-day GSM window' but nowhere specifies a maximum pause duration. The contract code shows pauseMarket and pauseAllMarkets accept a boolean parameter with no timestamp check or auto-expiry logic. While governance CAN reverse a pause through an executive vote (subject to the 30-hour GSM delay per the April 2024 governance decision), the multisig itself can maintain the pause indefinitely without governance action. This means a 3-of-5 actor set can unilaterally block all user exits for an unlimited period, which falls squarely into the red category under the rubric: 'ANY actor can pause CLAIMS of finalized exits indefinitely.'"
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+      "shows": "Pool contract ABI includes withdraw(address,uint256,address), repay(address,uint256,uint256,address), and repayWithATokens(address,uint256,uint256) as write methods for user exits.",
+      "chain": "Ethereum",
+      "address": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738",
+      "shows": "PoolConfigurator includes setReservePause(address,bool) and setPoolPause(bool) write methods, plus ReservePaused(address,bool) event.",
+      "chain": "Ethereum",
+      "address": "0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3",
+      "shows": "SparkLendFreezerMom contract exposes pauseMarket(address,bool), pauseAllMarkets(bool), freezeMarket(address,bool), freezeAllMarkets(bool) write methods. Authority is 0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9 (Chief), owner is 0x3300f198988e4C9C63F75dF86De36421f06af8c4 (Spark DAO proxy). Includes wards(address) view method for checking authorized callers.",
+      "chain": "Ethereum",
+      "address": "0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+      "shows": "Freezer multisig is a 3-of-5 Gnosis Safe (threshold=3) with 5 owner addresses. Nonce is 11, indicating active use.",
+      "chain": "Ethereum",
+      "address": "0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+      "shows": "Chief governance contract (DSChief) with hat() pointing to 0x06851b5235Cefb29C60EF3b29EB1f661D960B125, live=1, liftCooldown=10 blocks. Provides canCall(address,address,bytes4) authorization check.",
+      "chain": "Ethereum",
+      "address": "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://vote.makerdao.com/polling/QmRdew4b",
+      "shows": "January 2024 governance poll stating: 'The SparkLend Freezer Mom contract allows governance to bypass the 2-day GSM window to freeze or pause any SparkLend markets.'",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/sparkdotfi/sparklend-freezer",
+      "shows": "GitHub repo documents FreezerMom as callable 'by the hat in the Chief, an authorized contract (ward) or by the PauseProxy in MakerDAO' with functions pauseAllMarkets, pauseMarket, freezeAllMarkets, freezeMarket. No time cap or auto-expiry mechanism mentioned in the documentation.",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    },
+    {
+      "url": "https://vote.makerdao.com/executive/template-executive-vote-increase-gsm-pause-delay-increase-spark-metamorpho-vault-maximum-debt-ceiling-add-native-vaults-to-debt-ceiling-breaker-sparklend-proxy-spell-and-taco-resolutions-april-4-2024",
+      "shows": "April 2024 executive vote increased the Governance Security Module (GSM) Pause Delay from 16 hours to 30 hours, establishing the delay before governance actions take effect.",
+      "fetched_at": "2026-05-08T00:00:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/sparkdotfi"
+    ],
+    "docs_url": "https://docs.spark.fi",
+    "audits": [
+      {
+        "firm": "Multiple firms - see audit repo",
+        "url": "https://devs.spark.fi/security/security-and-audits"
+      }
+    ],
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/sparklend/information/",
+    "deployed_contracts_doc": "https://docs.spark.fi/dev/deployments/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x44efFc473e81632B12486866AA1678edbb7BEeC3",
+        "role": "Freezer multisig (emergency pause/freeze authority)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x237e3985dD7E373F2ec878EC1Ac48A228Cf2e7a3",
+        "role": "SparkLendFreezerMom (pause/freeze coordinator)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+        "role": "FreezerMom authority (MakerDAO Chief - governance contract)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3300f198988e4C9C63F75dF86De36421f06af8c4",
+        "role": "Spark DAO proxy (FreezerMom owner)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738",
+        "role": "PoolConfigurator (admin functions for pool)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "SparkLend is a decentralized non-custodial lending protocol forked from Aave V3. Users supply assets to liquidity pools to earn interest or borrow against collateral. SparkLend benefits from direct stablecoin liquidity provided by the Sky Protocol (formerly MakerDAO), enabling large-scale DAI/USDS borrowing at governance-set rates. Governed by Sky Governance with emergency controls delegated to a 3-of-5 multisig via the SparkLendFreezerMom contract."
+  }
+}

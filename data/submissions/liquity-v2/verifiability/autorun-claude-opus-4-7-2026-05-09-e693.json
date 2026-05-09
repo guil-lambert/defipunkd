@@ -1,0 +1,192 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v2",
+  "slice": "verifiability",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Legacy V2 contracts verified on Etherscan with public liquity/bold repo and 10+ audits from recognized firms (ChainSecurity, Dedaub, Certora, Coinspect, Cantina contest).",
+  "short_headline": "Verified, public repo, multi-firm audits",
+  "rationale": {
+    "findings": [
+      {
+        "code": "V1",
+        "text": "Sampled core contracts in the address_book are bytecode-verified on Etherscan: the BoldToken at 0xb01dd87B…D9aB98 returns abiSource='etherscan' with contract name 'BoldToken' (token name 'Bold Stablecoin', symbol 'Bold'), and the ETH-branch TroveManager at 0x81d78814…861DE66 returns abiSource='etherscan' with contract name 'TroveManager'. The DeFiPunkd surfacers pre-execute view methods (e.g. TroveManager.activePool/sortedTroves/stabilityPool, BoldToken.collateralRegistryAddress) without errors, consistent with verified source."
+      },
+      {
+        "code": "V2",
+        "text": "The official docs link a public source repo at https://github.com/liquity/bold (Bold Core monorepo with contracts, subgraph, frontend) and https://github.com/liquity/V2-gov for governance. The repo's README describes the same architecture (CollateralRegistry, BoldToken, per-branch TroveManager/StabilityPool/ActivePool/SortedTroves/BorrowerOperations) that is reflected on-chain in the surfacer reads. No commit-level bytecode diff was performed in this run."
+      },
+      {
+        "code": "V3",
+        "text": "The docs page 'Technical Docs & Audits' enumerates a substantial audit set: ChainSecurity Code Assessments (multiple, Aug 2024–May 2025), ChainSecurity Governance audit (Jan 2025), Dedaub Core audits I & II (Aug 2024, Nov 2024), Dedaub Governance audits 1–3 (Aug 2024, Nov 2024, Jan 2025), Dedaub Cantina-fixes review (May 2025), Certora Formal Verification (Dec 2024), Coinspect Bold Core (Dec 2024), Coinspect Governance (Jan 2025), Coinspect Redemption Helper (Oct 2025), Recon Security Review (Oct 2024), and a Cantina audit competition (Mar–Apr 2025). Dedaub explicitly pins commits (e.g. 96fa8431… for Nov 2024 audit; abe7cbfb… for May 2025 Cantina-fixes review)."
+      },
+      {
+        "code": "V4",
+        "text": "Auditors include broadly recognized firms: ChainSecurity, Certora (formal verification), and Dedaub (well-known DeFi auditor with prior Ethereum Foundation/Chainlink work). Coinspect audited Liquity V1 as well, providing continuity. The Cantina contest engaged 800+ researchers per the team's redeployment blog."
+      },
+      {
+        "code": "V5",
+        "text": "The address_book provided in this run is explicitly labeled 'Legacy V2 and Testnet' on the Liquity docs (the page from which these mainnet addresses are sourced). The current 'Technical Docs & Audits' page lists a DIFFERENT set of addresses for the active V2 deployment (e.g. boldToken 0x6440f144…beB01D, ETH-branch troveManager 0x7bcb64b2…6cf5a). A redeployment occurred after a Stability-Pool issue was identified; a Cantina contest and Dedaub fix-review (May 2025) cover the redeployed code. For the LEGACY contracts in the address_book, audit coverage from Aug 2024–Dec 2024 (Dedaub II, ChainSecurity, Coinspect, Certora) maps to that codebase. Drift between audited commits and the legacy bytecode was not diff'd in this run; recorded in unknowns[]."
+      },
+      {
+        "code": "V6",
+        "text": "The sampled BoldToken and TroveManager are not proxies (no proxy.implementation field surfaced; ABI lists no upgradeable-proxy slots). BoldToken.owner() returns the zero address (ownership renounced), consistent with Liquity's stated immutability posture. Implementation/proxy split therefore does not apply to these contracts."
+      }
+    ],
+    "steelman": {
+      "red": "The pinned address_book is the LEGACY V2 deployment (per the docs' 'Legacy V2 and Testnet' header) which was effectively deprecated after a Stability-Pool issue forced a full redeployment; users on those addresses are exposed to a known-flawed codebase even though it was audited.",
+      "orange": "Although the legacy contracts are verified and audited, the most recent material audits (Cantina contest Mar–Apr 2025, Dedaub Cantina-fixes review May 2025, Coinspect Redemption Helper Oct 2025) cover the redeployment, not the addresses in the address_book — so the audit-to-deployed-code mapping for the LEGACY addresses is partially stale.",
+      "green": "Every sampled contract in the address_book is bytecode-verified on Etherscan with a corresponding public BUSL-licensed repo at github.com/liquity/bold, and the codebase has been reviewed by an unusually deep stack of recognized firms (ChainSecurity, Dedaub, Certora formal verification, Coinspect, Recon, plus an 800-researcher Cantina contest), with audit commits explicitly pinned in audit reports — meeting all three green criteria for the verifiability slice."
+    },
+    "verdict": "Choosing green because verification, public-repo correspondence, and multi-firm audit coverage are all clearly met: BoldToken and TroveManager surfacers report abiSource=etherscan with named contracts, the docs link the canonical liquity/bold repo, and ≥3 recognized firms (ChainSecurity, Dedaub, Certora, Coinspect) plus a Cantina contest reviewed the codebase. The orange steel-man (audit-to-deployed-code freshness for the legacy addresses) is a real but secondary concern: the Dedaub Aug/Nov 2024 audits explicitly pin commits and were performed against the codebase that became this legacy deployment, so coverage is not stale enough to downgrade. The red steel-man (legacy-deployment risk) is a 'control / lifecycle' concern, not a verifiability gap — verifiability asks whether outsiders can confirm what the deployed code does, and they demonstrably can."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x81d78814df42da2cab0e8870c477bc3ed861de66",
+      "shows": "ETH-branch TroveManager: ABI source 'etherscan' (verified), contract name 'TroveManager', view methods activePool/borrowerOperations/sortedTroves/stabilityPool/troveNFT pre-executed with sane address returns; reads pinned to block 25057841. No proxy slot surfaced.",
+      "chain": "Ethereum",
+      "address": "0x81d78814df42da2cab0e8870c477bc3ed861de66",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb01dd87B29d187F3E3a4Bf6cdAebfb97F3D9aB98",
+      "shows": "BoldToken: ABI source 'etherscan' (verified), name 'Bold Stablecoin', symbol 'Bold', decimals 18, owner() = 0x0000…0000 (ownership renounced), collateralRegistryAddress = 0xd99dE73b… ; reads pinned to block 25057842. No proxy slot.",
+      "chain": "Ethereum",
+      "address": "0xb01dd87B29d187F3E3a4Bf6cdAebfb97F3D9aB98",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits",
+      "shows": "Authoritative audit list and code-repo links: github.com/liquity/bold (Bold Core), github.com/liquity/V2-gov (Governance); audits from ChainSecurity (multiple Aug 2024–May 2025), Dedaub (Core I, II + Governance 1, 2, 3 + Cantina-fixes May 2025), Certora (Formal Verification Dec 2024), Coinspect (Core Dec 2024, Governance Jan 2025, Redemption Helper Oct 2025), Recon (Oct 2024), Cantina Competition (Mar–Apr 2025). Page also lists CURRENT (post-redeployment) mainnet addresses, distinct from those in this run's address_book.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-documentation/technical-resources",
+      "shows": "This is the 'Legacy V2 and Testnet' page; it lists the same mainnet addresses as the per-protocol address_book (boldToken 0xb01dd87…, troveManager 0x81d78814…, etc.), explicitly labeling them legacy. Confirms the address_book corresponds to the deprecated/legacy V2 deployment, not the current production deployment.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://dedaub.com/audits/liquity/liquity-v2-second-audit-nov-11-2024/",
+      "shows": "Dedaub Core Protocol Audit II (Nov 2024) explicitly covers github.com/liquity/bold at commit 96fa8431dd74765cd4e5e59f4669f8c967ce91b6 — the codebase that became the legacy V2 deployment. Establishes commit-pinned audit-to-code linkage.",
+      "commit": "96fa8431dd74765cd4e5e59f4669f8c967ce91b6"
+    },
+    {
+      "url": "https://dedaub.com/audits/liquity/liquity-v2-cantina-fixes-review-may-13-2025/",
+      "shows": "Dedaub Cantina-fixes review (May 2025) covers github.com/liquity/bold branch main at commit abe7cbfbd465fba3812282c51773455766a70e96 — applies to the redeployment codebase that supersedes the legacy V2 deployment in the address_book.",
+      "commit": "abe7cbfbd465fba3812282c51773455766a70e96"
+    },
+    {
+      "url": "https://www.chainsecurity.com/security-audit/liquity-bold-smart-contracts",
+      "shows": "ChainSecurity audit page for Liquity V2 BOLD (smart-contracts engagement), confirming a recognized-firm audit of the V2 codebase."
+    },
+    {
+      "url": "https://www.coinspect.com/blog/liquity-v2-bold-smart-contract-audit/",
+      "shows": "Coinspect Bold Core audit (Oct/Dec 2024) covers Liquity V2 multi-collateral CDP system; same firm audited Liquity V1, providing continuity. Findings BOLD-01 and BOLD-05 explicitly named."
+    },
+    {
+      "url": "https://github.com/liquity/bold",
+      "shows": "Public source repository for Liquity V2 contracts/subgraph/frontend ('Liquity v2 monorepo containing the contracts, subgraph and frontend'). Repo README describes the same architecture (CollateralRegistry, per-branch TroveManager/StabilityPool/etc., user-set interest rates, redemptions across branches) that the on-chain ABI surface reflects."
+    },
+    {
+      "url": "https://www.liquity.org/blog/auditing-liquity-v2",
+      "shows": "Liquity's own audit-overview blog: confirms 'extensive rounds of audits as well as formal verification' across Certora, Dedaub, ChainSecurity, Coinspect, Recon; describes Certora as Aave/Compound-trusted formal verifier and Dedaub as an Ethereum Foundation / Chainlink / Coinbase auditor."
+    },
+    {
+      "url": "https://www.liquity.org/blog/liquity-v2-redeployment",
+      "shows": "Confirms that the contracts in the address_book are LEGACY: a Stability-Pool issue triggered a full redeployment after a five-week, 800+ researcher audit contest (Cantina, Mar–Apr 2025) and re-audits; legacy V2 was officially deprecated and users instructed to close positions. Frames why audit coverage from May 2025 onward applies to the redeployment, not to the address_book contracts."
+    }
+  ],
+  "unknowns": [
+    "V2: No commit-level bytecode-vs-source diff was performed for the address_book contracts; the explorer-visible source is treated as authoritative. A reviewer should run a forge build of liquity/bold at the relevant pre-redeployment commit and diff against deployed runtime bytecode to upgrade certainty.",
+    "V5: Did not enumerate post-audit drift between the audited commits (e.g. 96fa8431… for Dedaub Core II Nov 2024) and the exact bytecode at the legacy address_book addresses. Drift status (commits added between audit and deploy, and whether they touch fund-custody contracts) recorded as unknown rather than auto-downgrading per V5 scope rules.",
+    "V1: Only sampled BoldToken (0xb01dd87…) and ETH-branch TroveManager (0x81d78814…) on-chain via DeFiPunkd surfacers. Did not individually verify each of the ~50 other addresses in the address_book (per-branch ActivePool/StabilityPool/SortedTroves/PriceFeed/Zappers, governance contracts, etc.). All are linked with #code anchors in the docs page, suggesting they are likely all verified, but this run did not confirm each."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/bold",
+      "https://github.com/liquity/V2-gov"
+    ],
+    "docs_url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits",
+    "audits": [
+      {
+        "firm": "Dedaub",
+        "url": "https://dedaub.com/audits/liquity/liquity-v2-aug-28-2024/",
+        "date": "2024-08"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://dedaub.com/audits/liquity/liquity-v2-second-audit-nov-11-2024/",
+        "date": "2024-11"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://dedaub.com/audits/liquity/liquity-v2-governance-1st-audit-aug-12-2024/",
+        "date": "2024-08"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://dedaub.com/audits/liquity/liquity-v2-governance-2nd-audit-nov-11-2024/",
+        "date": "2024-11"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://dedaub.com/audits/liquity/liquity-v2-governance-3rd-audit-dec-22-2024/",
+        "date": "2025-01"
+      },
+      {
+        "firm": "Dedaub",
+        "url": "https://dedaub.com/audits/liquity/liquity-v2-cantina-fixes-review-may-13-2025/",
+        "date": "2025-05"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://www.chainsecurity.com/security-audit/liquity-bold-smart-contracts",
+        "date": "2025-05"
+      },
+      {
+        "firm": "ChainSecurity",
+        "url": "https://www.chainsecurity.com/security-audit/liquity-v2-governance",
+        "date": "2025-01"
+      },
+      {
+        "firm": "Certora",
+        "url": "https://certora.cdn.prismic.io/certora/Z1tLJJbqstJ98b8J_LiquityVerificationReport.pdf",
+        "date": "2024-12"
+      },
+      {
+        "firm": "Coinspect",
+        "url": "https://www.coinspect.com/doc/Coinspect%20-%20Smart%20Contract%20Audit%20-%20Liquity%20-%20Bold%20-%20v241231.pdf",
+        "date": "2024-12"
+      },
+      {
+        "firm": "Coinspect",
+        "url": "https://www.coinspect.com/doc/Coinspect%20-%20Smart%20Contract%20Audit%20-%20Liquity%20-%20Bold%20Governance%20-%20v250120.pdf",
+        "date": "2025-01"
+      },
+      {
+        "firm": "Recon",
+        "url": "https://github.com/GalloDaSballo/bold-review",
+        "date": "2024-10"
+      },
+      {
+        "firm": "Cantina (competition)",
+        "url": "https://cantina.xyz/portfolio/fca4f98a-7d24-49f1-9a3b-80e5e65b2b30",
+        "date": "2025-04"
+      }
+    ],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x6dea81c8171d0ba574754ef6f8b412f2ed88c54d",
+      "symbol": "LQTY"
+    },
+    "deployed_contracts_doc": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits",
+    "upgradeability": "immutable",
+    "about": "Liquity V2 is an immutable, multi-collateral CDP protocol on Ethereum that lets users lock WETH, wstETH, or rETH and mint BOLD, a USD-pegged stablecoin, against their collateral. Borrowers set their own interest rate per-Trove, and BOLD is always redeemable 1:1 against collateral via a CollateralRegistry that routes redemptions across per-collateral 'branches' (each with its own TroveManager, StabilityPool, and price feed). LQTY stakers direct a portion of protocol revenue to liquidity initiatives via a modular, epoch-based on-chain governance module. Note: the address_book pinned in this run corresponds to the legacy V2 deployment that was deprecated after a Stability-Pool issue; the active production deployment uses a different set of addresses (boldToken 0x6440f144…beB01D)."
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "schema_version": 4,
+  "slug": "morpho-blue",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "green",
+  "headline": "Fully permissionless exit with no pause mechanism or admin controls on withdrawal functions",
+  "short_headline": "Permissionless, unpausable exits",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Three user-facing exit functions exist: withdraw() for lenders to redeem loan tokens, withdrawCollateral() for borrowers to reclaim collateral, and repay() for borrowers to exit debt positions. All are public external functions with no restrictive modifiers."
+      },
+      {
+        "code": "E2",
+        "text": "The withdraw(), withdrawCollateral(), and repay() functions contain zero pause guards. The only access control is _isSenderAuthorized() which checks msg.sender == onBehalf || isAuthorized[onBehalf][msg.sender], allowing users or their authorized delegates to exit. No admin, owner, or governance role can block these calls."
+      },
+      {
+        "code": "E3",
+        "text": "The Morpho Blue core contract (0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb) has no pause mechanism. The source code contains no pause state variable, no whenNotPaused modifier, and no pause-related functions. The contract is immutable (not upgradeable), so no pause mechanism can be added post-deployment."
+      },
+      {
+        "code": "E4",
+        "text": "No emergency vs governance pause distinction exists because no pause mechanism exists at all. The owner (5-of-9 multisig 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa) can call setOwner, enableIrm, enableLltv, setFee (capped at 25% MAX_FEE), and setFeeRecipient, but none of these functions affect user ability to exit."
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption mechanism exists. Withdrawals are instant subject only to available liquidity. The withdraw function requires market[id].totalBorrowAssets <= market[id].totalSupplyAssets, meaning lenders can exit immediately if liquidity exists. No time delays, withdrawal caps, or queue system."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism is needed because exits are already fully permissionless and cannot be blocked by admins. The immutable contract design guarantees this property permanently."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions are directly callable on-chain without frontend dependency. The ABI is publicly verified on Etherscan, and users can call withdraw, withdrawCollateral, or repay via any Ethereum wallet, block explorer write interface, or direct contract interaction."
+      }
+    ],
+    "steelman": {
+      "red": "If governance could pause withdrawals or if the contract were upgradeable to a pausable version, users would be at admin mercy; but neither is possible here.",
+      "orange": "If exit required high multisig threshold or governance vote even without indefinite pause, it would introduce delay risk; but exits are permissionless.",
+      "green": "Exits are permissionless, instantly executable on-chain, with no pause mechanism, no admin control over withdrawal functions, and an immutable contract that guarantees this property cannot change."
+    },
+    "verdict": "Choosing green because Morpho Blue is an immutable contract with no pause guards on any exit function (withdraw, withdrawCollateral, repay), no upgrade mechanism that could introduce pause controls, and limited governance powers that explicitly cannot block user exits. The only constraint on withdrawal is market liquidity (totalBorrowAssets <= totalSupplyAssets), which is an economic rather than admin control. The 5-of-9 multisig owner can enable new IRMs/LLTVs and set fees up to 25%, but cannot pause markets or prevent users from withdrawing. This is the strongest exit guarantee possible in DeFi lending."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/morpho-org/morpho-blue/blob/main/src/Morpho.sol",
+      "shows": "Full Morpho.sol source code showing withdraw(), withdrawCollateral(), and repay() functions with no pause modifiers. Only access control is _isSenderAuthorized() for user/delegate authorization. No pause state variables, no whenNotPaused modifiers, and contract is not upgradeable (no proxy pattern)."
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+      "shows": "On-chain ABI and state for Morpho Blue core contract at block 25045725. Shows withdraw and withdrawCollateral methods with no pause-related parameters. Owner is 0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa (5-of-9 multisig). No proxy implementation address, confirming immutable deployment.",
+      "chain": "Ethereum",
+      "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+      "shows": "Morpho DAO governance multisig is a 5-of-9 Gnosis Safe (threshold=5, 9 owner addresses). This multisig is the owner() of Morpho Blue but cannot pause withdrawals per the immutable contract code.",
+      "chain": "Ethereum",
+      "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://docs.morpho.org/learn/governance/organization/",
+      "shows": "Official documentation confirming governance powers are limited to: controlling MORPHO treasury, ownership of upgradeable MORPHO token, fee switch up to 25% cap, whitelisting LLTVs/IRMs, ENS domains. Explicitly states core smart contract code is immutable and does not include pause or withdrawal-blocking powers.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://github.com/morpho-org/morpho-blue",
+      "shows": "Morpho Blue repository README confirms the protocol is designed to be a simple, immutable, and governance-minimized base layer. Whitepaper linked confirms contract is not upgradable and code is immutable."
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/morpho-org/morpho-blue"
+    ],
+    "docs_url": "https://docs.morpho.org",
+    "audits": [
+      {
+        "firm": "Multiple (see audits folder)",
+        "url": "https://docs.morpho.org/morpho-blue/concepts/security/audits/"
+      }
+    ],
+    "governance_forum": "https://forum.morpho.org",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x58D97B57BB95320F9a05dC918Aef65434969c2B2",
+      "symbol": "MORPHO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/morpho",
+    "security_contact": "security@morpho.org",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+        "role": "DAO governance multisig, owner of Morpho Blue core",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Base",
+        "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+        "role": "DAO governance multisig on Base",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xF057afeEc22E220f47AD4220871364e9E828b2e9",
+        "role": "MORPHO Rewards multisig",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Morpho Blue is an immutable, permissionless lending primitive that allows anyone to create isolated lending markets. Users supply or borrow assets in markets defined by a loan token, collateral token, oracle, interest rate model (IRM), and liquidation loan-to-value (LLTV). The core contract has no pause mechanism, no upgrade path, and minimal governance powers limited to enabling new IRMs/LLTVs and setting protocol fees up to 25%."
+  }
+}

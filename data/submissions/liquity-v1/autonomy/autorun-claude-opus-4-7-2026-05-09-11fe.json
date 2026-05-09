@@ -1,0 +1,104 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v1",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Liquity V1 is fully immutable with a Chainlink-primary / Tellor-fallback PriceFeed and on-chain status machine; impacted-TVS under any single external-dependency failure is effectively 0 because the dual-oracle fallback keeps the system whole.",
+  "short_headline": "Immutable; dual-oracle fallback live",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "Sole external on-chain dependency of the core system is the PriceFeed at 0x4c517D4e..., which calls a Chainlink ETH/USD EACAggregatorProxy at 0x5f4eC3Df... (description='ETH / USD', decimals=8, latestAnswer=230845645216 / ~$2308.45, latestTimestamp=1778282375) plus a Tellor caller at 0xAd430500.... PriceFeed view methods confirm priceAggregator=0x5f4eC3Df..., tellorCaller=0xAd430500..., status=0 (chainlinkWorking), lastGoodPrice=2294670000000000000000, fetchPrice=2308456452160000000000."
+      },
+      {
+        "code": "A1",
+        "text": "On-chain safety constants in the PriceFeed contract: TIMEOUT=14400s (4 hours), MAX_PRICE_DEVIATION_FROM_PREVIOUS_ROUND=5e17 (50%), MAX_PRICE_DIFFERENCE_BETWEEN_ORACLES=5e16 (5%). These bound how a single bad Chainlink round propagates before the contract switches state machine to a fallback path."
+      },
+      {
+        "code": "A2",
+        "text": "No off-chain reporter committees. Liquity V1 collateral is native ETH only (no LSTs, no node operators, no oracle committees reporting into the protocol beyond Chainlink/Tellor); base-chain validators / consensus are substrate, not an A2 dependency."
+      },
+      {
+        "code": "A3",
+        "text": "No bridge dependencies. The verified core (BorrowerOperations 0x24179CD8..., TroveManager 0xA39739EF..., StabilityPool 0x66017D22..., ActivePool 0xDf9Eb223..., PriceFeed) is Ethereum-mainnet-only; no cross-chain messaging in the core path."
+      },
+      {
+        "code": "A4",
+        "text": "No nested collateral / restaking. Collateral is native ETH, held in ActivePool / DefaultPool. No receipt-of-receipt or wrapped yield-bearing assets at the protocol layer."
+      },
+      {
+        "code": "A5",
+        "text": "Lineage: Liquity V1 is the upstream (no forkedFrom relevant); not assessed further."
+      },
+      {
+        "code": "A6",
+        "text": "Fallback mechanism is LIVE and on-chain: PriceFeed implements a multi-state status enum (status()=0 chainlinkWorking observed) that transitions to Tellor or lastGoodPrice when Chainlink returns stale/zero/out-of-bounds data per the documented rules. The MAX_PRICE_DEVIATION (50%) and TIMEOUT (4h) constants are enforced in fetchPrice() at the EVM level, not advisory. tellorCaller is non-zero and wired. Activation status: (i) LIVE."
+      },
+      {
+        "code": "A7",
+        "text": "Not applicable. Liquity V1 is not its own L2/L3 — deployed natively on Ethereum L1, so sequencer risk is substrate."
+      },
+      {
+        "code": "A8",
+        "text": "Liquidations and redemptions are fully permissionless (TroveManager.liquidate / liquidateTroves / batchLiquidateTroves / redeemCollateral are publicly callable). Stability Pool depositors and external liquidators are economically incentivized via gas compensation (LUSD_GAS_COMPENSATION=200 LUSD + 0.5% colliquidated coll). Failure mode if no keepers run: undercollateralized troves persist longer, but the Stability Pool's LUSD self-funded backstop and trove-redistribution logic absorb losses graduately — degraded yield, not principal loss."
+      },
+      {
+        "code": "A9",
+        "text": "Governance-mutable external dependency surface = ZERO. owner() of PriceFeed = 0x0000...0000, owner() of TroveManager = 0x0000...0000, owner() of BorrowerOperations = 0x0000...0000. The only setAddresses() write methods are gated by Ownable's onlyOwner; with owner zeroed, those calls revert. No admin can swap the oracle, the Tellor fallback, the TroveManager, or any wired contract. The Chainlink aggregator itself is owned by Chainlink (0x21f73D42...) and can be upgraded by Chainlink — that is a Chainlink-side risk handled by A6's fallback, not a Liquity governance vector."
+      }
+    ],
+    "steelman": {
+      "red": "Liquity is critically dependent on the Chainlink ETH/USD feed for liquidations and redemptions; if Chainlink were compromised and Tellor simultaneously failed (or returned a price within 5% of the malicious Chainlink price, defeating the inter-oracle deviation check), borrowers could be wrongly liquidated and lose principal.",
+      "orange": "The Tellor fallback exists and the contracts are immutable, but Tellor itself has a smaller, less battle-tested security model than Chainlink; under a stale-Chainlink path the system relies on a single fallback feed, and the 50% single-round deviation cap is wide enough to admit material price-manipulation losses — autonomy is not perfect but failure is bounded.",
+      "green": "Owners are zeroed across PriceFeed, TroveManager, and BorrowerOperations so no admin can introduce a new dependency; the only on-chain external touchpoint is a Chainlink feed protected by a documented, LIVE, on-chain dual-oracle status machine with deviation/timeout bounds, and collateral is native ETH on the base chain — every requirement of DefiScan v1 Stage-2 autonomy is met."
+    },
+    "verdict": "Choosing green because the steel-man for green is supported by direct on-chain reads (owner=0x0 on all three core contracts, PriceFeed status=0 with non-zero priceAggregator and non-zero tellorCaller, on-chain constants TIMEOUT/MAX_PRICE_DEVIATION/MAX_PRICE_DIFFERENCE_BETWEEN_ORACLES), while the red steel-man requires a simultaneous compromise of two independent oracle providers AND a price-manipulation that lands within 5% of the malicious feed — a multi-failure correlated scenario, not a single-dependency failure. Module weighting: Liquity V1 ships a single core module (Trove + Stability Pool) holding 100% of TVS (~$53M coll / 28.6M LUSD debt at block 25052269); there are no separate sub-modules or product lines, so weighted overall = green. Impacted TVS under any single-dependency failure: <1%, bounded by the on-chain deviation/timeout caps and the lastGoodPrice fallback."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x4c517d4e2c851ca76d7ec94b805269df0f2201de",
+      "shows": "PriceFeed at block 25053837: priceAggregator=0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419, tellorCaller=0xAd430500ECDa11E38C9bCB08a702274b94641112, owner=0x0 (renounced), status=0 (chainlinkWorking), TIMEOUT=14400, MAX_PRICE_DEVIATION_FROM_PREVIOUS_ROUND=5e17 (50%), MAX_PRICE_DIFFERENCE_BETWEEN_ORACLES=5e16 (5%), fetchPrice=2308456452160000000000 (~$2308), lastGoodPrice=2294670000000000000000.",
+      "chain": "ethereum",
+      "address": "0x4c517D4e2C851CA76d7eC94B805269Df0f2201De",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+      "shows": "TroveManager at block 25052269: owner=0x0 (renounced), priceFeed=0x4c517D4e..., activePool/defaultPool/stabilityPool/borrowerOperationsAddress all wired to verified addresses. System state: getEntireSystemColl=75441 ETH, getEntireSystemDebt=28.6M LUSD, getTroveOwnersCount=94. MCR=110%, CCR=150%. liquidate/liquidateTroves/batchLiquidateTroves/redeemCollateral are public (no access modifier in ABI inputs); setAddresses gated by Ownable.",
+      "chain": "ethereum",
+      "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "shows": "BorrowerOperations at block 25052268: owner=0x0 (renounced), priceFeed=0x4c517D4e..., troveManager=0xA39739EF..., activePool/defaultPool/sortedTroves/lusdToken/lqtyStaking all wired. No pause function in ABI; user-facing entrypoints (openTrove, adjustTrove, closeTrove, addColl, withdrawColl, withdrawLUSD, repayLUSD, claimCollateral) are unconditionally callable.",
+      "chain": "ethereum",
+      "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+      "shows": "Chainlink EACAggregatorProxy ETH/USD at block 25053838 is live: description='ETH / USD', decimals=8, latestAnswer=230845645216, latestRoundData updatedAt=1778282375 (recent), aggregator=0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5, owner=0x21f73D42Eb58Ba49dDB685dc29D3bF5c0f0373CA (Chainlink, NOT Liquity-controlled). Confirms A1 primary feed is operational.",
+      "chain": "ethereum",
+      "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A6: Tellor caller liveness (0xAd430500ECDa11E38C9bCB08a702274b94641112) was not directly read this run — surfacer not pre-fetched. The Tellor fallback's current value freshness is therefore inferred from PriceFeed.status=0 (chainlinkWorking, fallback not currently exercised) rather than directly verified.",
+    "A1-offchain: Did not enumerate every potentially upgradable Chainlink-side aggregator transition path (proposeAggregator/confirmAggregator on the Chainlink proxy) — these are Chainlink-side and bounded by the on-chain MAX_PRICE_DEVIATION/TIMEOUT checks regardless."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "audits": [],
+    "admin_addresses": [],
+    "upgradeability": "immutable",
+    "about": "Liquity V1 is an immutable, ETH-collateralized CDP protocol on Ethereum. Users open Troves by depositing ETH and minting LUSD (a USD-pegged stablecoin) at a 110% minimum collateral ratio with a one-time borrowing fee; LUSD holders can redeem 1 LUSD for $1 of ETH at any time, and Stability Pool depositors absorb liquidations in exchange for ETH gains. Core contracts have owner()=0x0 (renounced) — no admin, no governance, no upgrade path."
+  }
+}

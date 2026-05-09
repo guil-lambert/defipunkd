@@ -1,0 +1,105 @@
+{
+  "schema_version": 4,
+  "slug": "zyfai",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "off-chain-only",
+  "grade": "unknown",
+  "headline": "Smart Account users retain direct Safe ownership with documented escape hatch; Vault withdrawal mechanics and pause controls undocumented",
+  "short_headline": "Safe owners can exit; Vault unclear",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "ZyFAI offers two architectures: (1) Smart Accounts where users deploy individual Safe7579 smart wallets, with SDK methods withdrawFunds() for async backend processing; (2) Vault on Base with vaultWithdraw() requesting redemption and vaultClaim() claiming funds. Smart Account users can also bypass the SDK entirely and interact directly with their Safe via safe.global UI."
+      },
+      {
+        "code": "E2",
+        "text": "For Smart Accounts, no pause guards found in documentation—users own the Safe directly and session keys are scoped to rebalancing only. For Vault, the vaultWithdraw/vaultClaim docs describe a 2-step async flow but do not mention any pause modifiers, access controls, or whether requestRedeem can be blocked."
+      },
+      {
+        "code": "E3",
+        "text": "No pause mechanism, role holders, or time caps documented for either architecture. The pinned address 0xba1523ed1c7c9fbb7d1f38c9d7de548e3a119626 on Base has no verified ABI per the surfacer page, blocking on-chain inspection of pause guards or admin roles."
+      },
+      {
+        "code": "E4",
+        "text": "No emergency vs governance pause distinction found in docs. No governance forum, voting token, or timelock references discovered."
+      },
+      {
+        "code": "E5",
+        "text": "Vault docs state withdrawals are asynchronous (request → claim) but provide no maximum queue duration, daily withdrawal caps, or statement about whether the queue itself can be paused. Smart Account withdrawals are also async but users can bypass the SDK and withdraw directly via Safe UI."
+      },
+      {
+        "code": "E6",
+        "text": "Smart Account architecture provides a documented escape hatch: 'The owner retains the full control over deployed Safe Smart Account, enabling them to directly access, manage, or withdraw funds via the Safe UI at any time, independent of Zyfai.' Users can revoke session keys and interact with their Safe at safe.global. Vault architecture has no documented forced-exit mechanism."
+      },
+      {
+        "code": "E7",
+        "text": "Smart Accounts are standard Safe smart wallets directly callable via Etherscan write tab or safe.global UI, independent of ZyFAI frontend. Vault withdrawal functions (requestRedeem, claim) are callable on-chain but no verified ABI or contract address is published, making direct interaction difficult without the SDK."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Cannot assign a grade due to incomplete evidence. For Smart Accounts, the documented escape hatch (direct Safe ownership + Safe UI access) suggests green/orange, but the async withdrawal path via SDK lacks transparency about processing delays or failure modes. For Vault, the absence of verified contract ABI, published contract address, maximum queue duration, pause mechanism disclosure, and audit reports (404 error) prevents on-chain verification of exit controls. The pinned address returned no verified ABI, blocking checklist items E2, E3, E4. The audit_links page was inaccessible (404). Without on-chain evidence or complete documentation, assigning green/orange/red would be speculative. Recommend: (1) publish Vault contract address + verified ABI; (2) document max withdrawal queue duration; (3) clarify whether Vault withdrawals can be admin-paused; (4) restore audit page; (5) add direct Safe.global UI instructions to docs for Smart Account users."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.zyf.ai/docs/product/infra/safe7579",
+      "shows": "Smart Accounts architecture: 'The owner retains the full control over deployed Safe Smart Account, enabling them to directly access, manage, or withdraw funds via the Safe UI at any time, independent of Zyfai.' Session keys grant 'permission to execute only pre-approved transactions.'",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/sdk/vault/overview",
+      "shows": "Vault withdrawal flow: 'Vault withdrawals are asynchronous and require two steps: // Step 1: Request withdrawal const withdraw = await sdk.vaultWithdraw(); // Step 2: Claim when ready if (withdraw.status === \"claimable\") { const claim = await sdk.vaultClaim(withdraw.withdrawKey); }' No mention of max queue duration, pause mechanism, or admin controls.",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/sdk/vault/vault-withdraw",
+      "shows": "vaultWithdraw documentation: 'Withdrawals are asynchronous — after requesting, you must wait for processing and then claim.' Returns withdrawKey and status ('claimable' or 'pending'). No maximum processing time documented.",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/8453/0xba1523ed1c7c9fbb7d1f38c9d7de548e3a119626",
+      "shows": "Pinned address 0xba1523ed1c7c9fbB7D1F38C9D7dE548E3a119626 on Base: 'No verified ABI found for this address. No verified ABI found for 0xba1523ed1c7c9fbB7D1F38C9D7dE548E3a119626 on chainId 8453 (etherscan + sourcify both failed).' Generic method URLs returned.",
+      "fetched_at": "2026-05-08T11:15:00Z"
+    },
+    {
+      "url": "https://github.com/ondefy/zyfai-sdk",
+      "shows": "Official SDK repo. README documents withdrawFunds() as async: 'Withdrawals are processed asynchronously by the backend... Use getHistory() to track the withdrawal transaction once it's processed.' No contract addresses, ABI files, or pause mechanism references in visible repo structure.",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/docs/sdk/getting-started",
+      "shows": "SDK documentation: 'Withdrawals are processed asynchronously. Use sdk.getHistory() to track the transaction status once it's on-chain.' Session keys 'cannot withdraw funds to arbitrary addresses; they are strictly limited to rebalancing assets within the Zyfai ecosystem.'",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    },
+    {
+      "url": "https://docs.zyf.ai/support/use-zyfai-through-safe-global",
+      "shows": "Tutorial for Smart Account users: 'even if the ZyFAI front-end becomes inaccessible, Safe will still allow you to interact directly with your account.' Instructions for sending tokens via Safe UI: 'Click the Send button. Choose the token you want to send. Enter the destination address (your EOA or another) Execute the transaction!'",
+      "fetched_at": "2026-05-08T11:25:00Z"
+    }
+  ],
+  "unknowns": [
+    "E2: Vault architecture—no documentation of access modifiers or pause guards on requestRedeem or claim functions; no verified ABI available for on-chain inspection",
+    "E3: No pause mechanism, role holders, or time caps documented for Vault; pinned address 0xba1523ed1c7c9fbb7d1f38c9d7de548e3a119626 has no verified ABI (Etherscan + Sourcify both failed)",
+    "E3-offchain: Attempted on-chain read of pinned address via DeFiPunkd API—no verified ABI found; attempted audit page fetch at https://docs.zyf.ai/audits—returned 404",
+    "E4-offchain: No emergency vs governance pause distinction found in docs; no governance forum or voting token discovered",
+    "E5: Vault—no maximum queue duration, daily withdrawal caps, or statement about whether the queue is pausable documented in SDK API docs",
+    "E5: Smart Accounts—SDK withdrawFunds() is async with no documented max processing time or failure/timeout behavior",
+    "E6: Vault—no forced-exit or escape-hatch mechanism documented for adversarial-admin scenarios",
+    "E7-offchain: Vault contract address not published in docs or GitHub; no verified ABI available, making direct on-chain interaction (bypassing SDK) difficult"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/ondefy/zyfai-sdk"
+    ],
+    "docs_url": "https://docs.zyf.ai",
+    "audits": [],
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "ZyFAI is a DeFi yield optimization protocol offering two architectures: Smart Accounts (individual Safe7579 wallets owned by users with session-key-scoped automation) and a shared Vault on Base (USDC deposit, share-based redemption). Users deposit stablecoins, and the protocol rebalances across curated low-risk lending and liquidity pools to maximize capital efficiency. Smart Account users retain direct Safe ownership and can bypass the SDK via Safe.global UI."
+  }
+}

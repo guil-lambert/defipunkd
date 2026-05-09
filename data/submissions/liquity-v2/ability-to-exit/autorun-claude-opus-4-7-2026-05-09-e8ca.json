@@ -1,0 +1,120 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v2",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "green",
+  "headline": "Permissionless exits across all branches: no pause role, no admin key, immutable contracts; closeTrove / withdrawColl / repayBold / withdrawFromSP / claimCollateral / urgentRedemption all callable directly on-chain.",
+  "short_headline": "Permissionless exits, no pause",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Borrower-side exits enumerated on BorrowerOperations (ETH branch, 0x0b99…ff1c): closeTrove(uint256), withdrawColl(uint256,uint256), repayBold(uint256,uint256), claimCollateral(), adjustTrove(...) (with debt/coll decrease branch), and applyPendingDebt. Stability-Pool depositor exits on StabilityPool (0xf69e…93cf): withdrawFromSP(uint256,bool) and claimAllCollGains(). Surplus-claim path via CollSurplusPool (0x4672…ef4b).claimColl(address), which is gated to borrowerOperationsAddress and reached by users through BorrowerOperations.claimCollateral(). System-wide BOLD-holder exit: CollateralRegistry (0xd99d…f3f7).redeemCollateral(uint256,uint256,uint256), and TroveManager.urgentRedemption(...) once a branch is shut down."
+      },
+      {
+        "code": "E2",
+        "text": "None of the four core user-facing contracts (BorrowerOperations, TroveManager, StabilityPool, CollSurplusPool) expose a paused() / isPaused() view, a pause() / unpause() write, AccessControl methods (hasRole / getRoleAdmin), or any owner / Ownable surface in their on-chain ABIs. Exit functions therefore have no pause-guard or role-gate; the only access constraint on closeTrove/withdrawColl is the trove-owner / addManager / removeManager check on the user's own NFT, and on withdrawFromSP it is the depositor's own balance."
+      },
+      {
+        "code": "E3",
+        "text": "Pause-guard / role-holder check returns nothing to find: there is no PAUSE_ROLE / GUARDIAN / EMERGENCY_COUNCIL surface in the ABI to query. Live state read on BorrowerOperations.hasBeenShutDown() = false and TroveManager.shutdownTime() = 0 at block 25057841/42 confirms no branch is currently in shutdown mode either."
+      },
+      {
+        "code": "E4",
+        "text": "There is no emergency-vs-governance pause distinction because there is no pause at all. The only branch-level kill-switch is shutdown(), which is callable when TCR < SCR (1.10e18 on ETH branch, read live), and shutdownFromOracleFailure(), which is callable on a price-feed failure — both are permissionless / oracle-driven, not admin-controlled. Per the Liquity V2 risk-disclosure docs, 'Liquity V2 has no manual pause, freeze, or shutdown functions.'"
+      },
+      {
+        "code": "E5",
+        "text": "There is no withdrawal queue and no daily withdrawal cap on borrower exits or Stability-Pool exits. closeTrove repays debt + returns collateral atomically; withdrawFromSP returns BOLD atomically. The ABIs of BorrowerOperations and StabilityPool show no cap / queue / cooldown view methods."
+      },
+      {
+        "code": "E6",
+        "text": "Permissionless escape hatch in adversarial scenarios: TroveManager.urgentRedemption(uint256,uint256[],uint256) is callable by anyone once a branch is shut down (NotShutDown error otherwise), letting BOLD holders redeem 1 BOLD for ~$1.01 of collateral on the shut-down branch even with no Trove of their own. CollateralRegistry.redeemCollateral(...) is permissionless under normal operation as well."
+      },
+      {
+        "code": "E7",
+        "text": "All exit functions are external nonpayable on-chain entry points with no frontend dependency: closeTrove/withdrawColl/claimCollateral on BorrowerOperations, withdrawFromSP/claimAllCollGains on StabilityPool, and redeemCollateral on CollateralRegistry can be called directly from Etherscan's write tab or any wallet. Hint helpers and zappers exist but are convenience layers, not gating layers — the core contract is reachable directly."
+      }
+    ],
+    "steelman": {
+      "red": "An adversarial admin path exists if you reach for one — but no role-gated function, owner, or upgradeability surface appears in any of the four core contract ABIs read this run, so the red argument has nothing to anchor to.",
+      "orange": "Branches CAN enter shutdown, which restricts new borrowing and adjustments — but shutdown is permissionless (driven by TCR<SCR or oracle-staleness checks), it does not gate closeTrove or urgentRedemption, and live state shows no branch currently shut down.",
+      "green": "Every enumerated user-exit function (closeTrove, withdrawColl, claimCollateral, withdrawFromSP, claimAllCollGains, urgentRedemption, CollateralRegistry.redeemCollateral) is permissionless with no pause guard, no admin role, and no time cap; the protocol publicly states it has no manual pause/freeze/shutdown and the on-chain ABIs confirm it."
+    },
+    "verdict": "Choosing green because the on-chain ABI surface of BorrowerOperations, TroveManager, StabilityPool, and CollSurplusPool contains zero pause / role / owner / upgrade hooks, every user-facing exit function is unguarded, and the only kill-switch (per-branch shutdown) is itself permissionless and does not block claims of finalized exits — the green steel-man is the only one supported by evidence rather than speculation."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x0b995602b5a797823f92027e8b40c0f2d97aff1c",
+      "shows": "BorrowerOperations (ETH branch) full ABI + live reads. Write surface includes closeTrove, withdrawColl, withdrawBold, repayBold, adjustTrove, claimCollateral, shutdown, shutdownFromOracleFailure — none with pause/role/owner modifiers; no paused() view; hasBeenShutDown()=false at block 25057842. Errors enumerate IsShutDown / NotBorrower / NotOwnerNor* — gating is per-trove ownership, not admin role.",
+      "chain": "Ethereum",
+      "address": "0x0b995602b5a797823f92027e8b40c0f2d97aff1c",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x81d78814df42da2cab0e8870c477bc3ed861de66",
+      "shows": "TroveManager (ETH branch) full ABI + live reads. Exposes urgentRedemption(uint256,uint256[],uint256) (callable post-shutdown), shutdown(), redeemCollateral (callable only by CollateralRegistry). shutdownTime()=0 at block 25057841. No pause / role / owner methods.",
+      "chain": "Ethereum",
+      "address": "0x81d78814df42da2cab0e8870c477bc3ed861de66",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xf69eb8c0d95d4094c16686769460f678727393cf",
+      "shows": "StabilityPool (ETH branch) full ABI. Write methods are exactly: provideToSP, withdrawFromSP, claimAllCollGains, offset (TM-only), triggerBoldRewards. No pause/role/owner; depositor exit (withdrawFromSP) is unguarded.",
+      "chain": "Ethereum",
+      "address": "0xf69eb8c0d95d4094c16686769460f678727393cf",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x46720b3d63e38583d8f6d77d52c52df32604ef4b",
+      "shows": "CollSurplusPool (ETH branch) full ABI. Write methods: accountSurplus, claimColl(address). claimColl is reached through BorrowerOperations.claimCollateral() (borrowerOperationsAddress=0x0b99…ff1c). No pause/role/owner.",
+      "chain": "Ethereum",
+      "address": "0x46720b3d63e38583d8f6d77d52c52df32604ef4b",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xd99de73b95236f69a559117ecd6f519af780f3f7",
+      "shows": "CollateralRegistry full ABI. Single write method redeemCollateral(uint256,uint256,uint256) is permissionless (no access modifier in ABI; no admin/role surface). totalCollaterals()=3. Provides BOLD-holder exit path independent of any trove ownership.",
+      "chain": "Ethereum",
+      "address": "0xd99de73b95236f69a559117ecd6f519af780f3f7",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-documentation/risk-disclosure",
+      "shows": "Official risk disclosure (derived from search snippet): explicit statement that Liquity V2 has no manual pause, freeze, or shutdown functions; the protocol can only auto-shut a branch on extreme price drop or oracle failure of that collateral. Confirms ability-to-exit is not admin-gated.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-faq/general",
+      "shows": "Docs FAQ (derived from search snippet): 'Liquity V2 is subject to minimal governance which is solely tasked with distributing Protocol Liquidity Incentives (PIL)... Governance has no other functions or powers, as Liquity V2's smart contracts are immutable and not upgradeable.' Rules out any governance-driven indefinite pause of exits.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E1-offchain: Did not enumerate write methods on the leverageZapper / wethZapper / gasCompZapper helpers this run; these are convenience routers and not the canonical exit path, but a future run could confirm they do not introduce additional gating on top of BorrowerOperations.",
+    "E2: Did not read wstETH-branch and rETH-branch BorrowerOperations / TroveManager / StabilityPool ABIs this run; structural symmetry with the ETH branch is asserted by docs but not directly verified on-chain in this run."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/bold"
+    ],
+    "docs_url": "https://docs.liquity.org/",
+    "audits": [],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x6dea81c8171d0ba574754ef6f8b412f2ed88c54d",
+      "symbol": "LQTY"
+    },
+    "admin_addresses": [],
+    "upgradeability": "immutable",
+    "about": "Liquity V2 is an immutable CDP-based stablecoin protocol on Ethereum where users lock ETH, wstETH, or rETH as collateral in isolated per-collateral branches and mint BOLD, a USD-pegged stablecoin, at user-chosen interest rates. Each branch has its own Stability Pool that absorbs liquidations and pays yield in BOLD to depositors. The core contracts have no admin key, no pause, and no upgrade path; only an LQTY-staker-directed minimal-governance module allocates 25% of revenue to liquidity incentives. Branches auto-shut on TCR-below-SCR or oracle failure, after which urgent redemptions let BOLD holders permissionlessly drain remaining collateral."
+  }
+}

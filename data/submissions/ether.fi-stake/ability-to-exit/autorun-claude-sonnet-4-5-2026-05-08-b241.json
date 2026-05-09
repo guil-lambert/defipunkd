@@ -1,0 +1,114 @@
+{
+  "schema_version": 4,
+  "slug": "ether.fi-stake",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "Both withdrawal request placement AND claims of finalized exits are pausable indefinitely by governance timelock with no automatic unpause",
+  "short_headline": "Exit pausable indefinitely",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Exit functions identified: (1) eETH/weETH token transfers (permissionless ERC20), (2) LiquidityPool.requestWithdraw() creates WithdrawRequestNFT (pausable), (3) WithdrawRequestNFT.claimWithdraw() releases ETH after finalization (pausable)."
+      },
+      {
+        "code": "E2",
+        "text": "Both requestWithdraw and claimWithdraw carry the whenNotPaused modifier. Source code at https://github.com/etherfi-protocol/smart-contracts/blob/master/src/WithdrawRequestNFT.sol lines 58 and 75 shows requestWithdraw(...) onlyLiquidityPool whenNotPaused and claimWithdraw(...) whenNotPaused."
+      },
+      {
+        "code": "E3",
+        "text": "Pause control: pauseContract() requires PROTOCOL_PAUSER role via RoleRegistry (0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9), whose owner() is the timelock at 0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761. No time cap or auto-expiry exists; unPauseContract() requires PROTOCOL_UNPAUSER role. Contract includes a paused boolean state variable with no maximum duration enforcement."
+      },
+      {
+        "code": "E4",
+        "text": "No distinct emergency vs governance pause paths. Single pause mechanism controlled by role-based actors appointed by the timelock-governed RoleRegistry."
+      },
+      {
+        "code": "E5",
+        "text": "Queued redemption: GitBook technical documentation states withdrawal requests enter a queue if insufficient unbonded ETH exists in the pool, triggering full validator exits. Ethereum validator exit takes up to ~14 days on the beacon chain. Once finalized, users call claimWithdraw to receive ETH, but this claim step is also pausable."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism. Users cannot bypass the pause to claim already-finalized requests. The pauseContract function at line 248 has no exception for pre-finalized claims."
+      },
+      {
+        "code": "E7",
+        "text": "Frontend dependency: Exit functions are standard Solidity methods callable via any Ethereum interface (Etherscan, Gnosis Safe, direct wallet interaction). No proprietary signature or off-chain oracle approval required for claimWithdraw once a request is finalized."
+      }
+    ],
+    "steelman": {
+      "red": "Governance can pause BOTH new withdrawal requests AND claims of already-finalized exits indefinitely with no time cap, no auto-expiry, and no escape hatch.",
+      "orange": "If the pause were time-capped at 7–30 days OR if claims of finalized requests were exempt from pause, adversarial risk would be significantly reduced.",
+      "green": "If pause were absent, narrowly scoped to emergencies with auto-expiry ≤7 days, or if finalized-claim exemptions existed, users would retain continuous exit ability."
+    },
+    "verdict": "Choosing red because both the placement of new withdrawal requests AND the claiming of already-finalized withdrawals can be paused indefinitely by the governance timelock with no automatic unpause mechanism. The WithdrawRequestNFT contract's pause applies to claimWithdraw (line 75), meaning even users who submitted requests, waited through the Ethereum validator exit queue (~14 days), and reached finalized status cannot retrieve their ETH during a pause. No time cap, no emergency-vs-governance distinction, and no escape hatch exists. This configuration grants an admin actor (the timelock-governed role holders) unilateral control over user exits without temporal bounds, meeting the red-grade criteria."
+  },
+  "evidence": [
+    {
+      "url": "https://github.com/etherfi-protocol/smart-contracts/blob/master/src/WithdrawRequestNFT.sol",
+      "shows": "WithdrawRequestNFT.sol lines 58 and 75 apply whenNotPaused to requestWithdraw and claimWithdraw; pauseContract() at line 248 checks PROTOCOL_PAUSER role; unPauseContract() at line 254 checks PROTOCOL_UNPAUSER; no time cap or auto-expiry logic present.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-08T11:42:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9",
+      "shows": "RoleRegistry at 0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9 has owner() = 0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761 (the timelock), which controls role grants for PROTOCOL_PAUSER and PROTOCOL_UNPAUSER.",
+      "chain": "Ethereum",
+      "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9",
+      "fetched_at": "2026-05-08T11:45:00Z"
+    },
+    {
+      "url": "https://etherfi.gitbook.io/etherfi/ether.fi-whitepaper/technical-documentation",
+      "shows": "\"To withdraw ETH, a user burns their eETH or weETH. The pool attempts to fulfill the redemption from its unbonded ETH. If insufficient ETH is available, it will queue full validator exits and process redemptions once the [ETH] is released from the beacon chain.\" No mention of pause exemptions for finalized claims.",
+      "fetched_at": "2026-05-08T11:40:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+      "shows": "eETH token at 0x35fA164735182de50811E8e2E824cFb9B6118ac2 is a standard ERC20 (with rebase via shares); owner() = 0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761 (timelock). Token transfers are not pausable, but withdrawal-to-ETH requires the LiquidityPool's requestWithdraw flow.",
+      "chain": "Ethereum",
+      "address": "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+      "fetched_at": "2026-05-08T11:35:00Z"
+    },
+    {
+      "url": "https://etherfi.gitbook.io/etherfi/ether.fi-whitepaper/ether.fi-re-staking",
+      "shows": "\"you can redeem your ETH out of eETH/weETH without the 14 days withdrawal period as long as ether.fi has the available liquid ETH in the contract.\" Instant redemption available when pool has liquidity, but still subject to pause.",
+      "fetched_at": "2026-05-08T11:38:00Z"
+    }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/etherfi-protocol/smart-contracts"
+    ],
+    "docs_url": "https://etherfi.gitbook.io/etherfi",
+    "audits": [],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB",
+      "symbol": "ETHFI"
+    },
+    "security_contact": "security@ether.fi",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761",
+        "role": "Timelock (owner of eETH, weETH, RoleRegistry)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9",
+        "role": "RoleRegistry (controls pause/unpause role grants)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "ether.fi is a liquid restaking protocol where users deposit ETH to receive eETH (a rebasing liquid staking token) or weETH (a non-rebasing wrapped version). The protocol stakes ETH via distributed validator technology (DVT) and natively restakes through EigenLayer. Users can exit by requesting withdrawal through the LiquidityPool, receiving a WithdrawRequestNFT, waiting for finalization (instant if liquidity available, otherwise up to ~14 days for beacon chain validator exit), then claiming their ETH."
+  }
+}

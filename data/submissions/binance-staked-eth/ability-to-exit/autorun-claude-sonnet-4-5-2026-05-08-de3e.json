@@ -1,0 +1,144 @@
+{
+  "schema_version": 4,
+  "slug": "binance-staked-eth",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "red",
+  "headline": "Single Binance-controlled address holds uncapped pause power over withdrawals; redemptions subject to platform-managed daily quotas without on-chain enforcement",
+  "short_headline": "Uncapped pause, platform quota",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Primary exit function is requestWithdrawEth(uint256) on contract 0xa2E3356610840701BDf5611a53974510Ae27E2e1. Standard ERC-20 transfer and transferFrom functions also available. Burn function exists but requires user action."
+      },
+      {
+        "code": "E2",
+        "text": "The contract includes pause() and unpause() functions. Currently paused() returns false at block 25025843. The ABI shows these functions are nonpayable state-changing methods, indicating they gate user operations."
+      },
+      {
+        "code": "E3",
+        "text": "The pauser role is held by 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7, which is also the owner, blacklister, and masterMinter. This address has no verified ABI on Etherscan, preventing determination of whether it is an EOA or multisig. No time cap on pause duration is visible in the contract code."
+      },
+      {
+        "code": "E4",
+        "text": "No separate emergency vs governance pause mechanism detected. The contract exposes a single pause/unpause pattern with the same actor (0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7) controlling both."
+      },
+      {
+        "code": "E5",
+        "text": "The Binance website states there is a daily redemption quota per user based on 15-day average holdings, limited by Ethereum network processing. The website warns redemption may take several days. However, no on-chain enforcement of this queue is visible in the contract ABI—the queue appears to be managed off-chain by Binance."
+      },
+      {
+        "code": "E6",
+        "text": "No on-chain escape hatch or forced-exit mechanism for adversarial scenarios. Users can trade wBETH on secondary markets (Binance spot market) as an alternative exit path, but this introduces price risk and reliance on market liquidity."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions (requestWithdrawEth, transfer, transferFrom) are standard on-chain methods callable directly via Etherscan or any web3 wallet. No frontend dependency for basic exit, though the off-chain redemption queue is managed by Binance infrastructure."
+      }
+    ],
+    "steelman": {
+      "red": "A single Binance-controlled address holds owner, pauser, blacklister, and masterMinter roles with no visible time cap on pause, and redemptions are subject to off-chain platform quotas without on-chain enforcement.",
+      "orange": "While the pause is currently inactive and users can transfer wBETH freely, the architecture centralizes multiple critical roles in one address whose governance structure cannot be verified, and redemption queues introduce delay but not indefinite blocking.",
+      "green": "Users retain the ability to transfer wBETH on-chain at any time, and the contract is currently unpaused with standard ERC-20 functionality, plus secondary market liquidity offers an alternative exit path."
+    },
+    "verdict": "Choosing red because the combination of (1) uncapped pause authority held by a single unverified address, (2) that same address controlling blacklisting, and (3) redemption quotas managed off-chain by the platform creates a scenario where Binance can block exits indefinitely through pause or blacklist without on-chain time bounds. While users can currently transfer wBETH, the pauser can halt this at will, and even without pause, redemptions depend on Binance's off-chain queue management. The lack of ABI verification for 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7 prevents confirmation of whether it's an EOA or multisig, but the concentration of owner, pauser, and blacklister roles in a single address—regardless of its type—enables unilateral exit blocking. This pattern falls squarely into the red rubric: exit requires admin cooperation (for redemption queue) and ANY actor (the single pauser/blacklister) can pause claims indefinitely."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "shows": "wBETH token contract at 0xa2E3356610840701BDf5611a53974510Ae27E2e1 exposes requestWithdrawEth(uint256), pause(), unpause(), transfer(), transferFrom(), and burn() functions. The paused() view method returns false at block 25025843. The pauser() method returns 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7, which also holds owner, blacklister, and masterMinter roles.",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xa2E3356610840701BDf5611a53974510Ae27E2e1&method=paused&block=25025843",
+      "shows": "paused() returns false at block 25025843, confirming the contract is not currently paused.",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xa2E3356610840701BDf5611a53974510Ae27E2e1&method=pauser&block=25025843",
+      "shows": "pauser() returns 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7.",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xa2E3356610840701BDf5611a53974510Ae27E2e1&method=owner&block=25025843",
+      "shows": "owner() returns 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7.",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xa2E3356610840701BDf5611a53974510Ae27E2e1&method=blacklister&block=25025843",
+      "shows": "blacklister() returns 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7.",
+      "chain": "Ethereum",
+      "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7",
+      "shows": "No verified ABI found for 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7, preventing determination of whether this address is an EOA, multisig, or governance contract.",
+      "chain": "Ethereum",
+      "address": "0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://www.binance.com/en/wbeth",
+      "shows": "Website FAQ states: 'there is a limit on the daily quota due to the processing limitations on the Ethereum network. The redemption processing time may vary.' Personal daily quota is based on past 15-day average holding of staked ETH. When redeeming, users share ETH from a pool replenished throughout the day. Waiting period is 'subject to change without prior notice' and users will receive ETH 'several days after successfully submitting a redemption request'.",
+      "fetched_at": "2026-05-08T11:19:00Z"
+    },
+    {
+      "url": "https://cryptoadventure.com/binance-earn-review-2026-simple-earn-eth-staking-liquid-staking-tokens-fees-and-withdrawal-rules/",
+      "shows": "Third-party analysis from February 2026 states: 'Redemptions face network-rate limits. Binance explains that only a limited amount of staked ETH can be unstaked daily due to Ethereum's rate limits, so Binance sets a daily redemption quota per user.' Recommends users 'Plan liquidity: assume redemption queues can appear for ETH staking redemptions'."
+    }
+  ],
+  "unknowns": [
+    "E3: The actor class of 0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7 (pauser/owner/blacklister) could not be determined—no verified ABI on Etherscan and DeFiPunkd Safe API call failed. Unable to confirm if this is an EOA, multisig (and if so, threshold), or governance contract.",
+    "E3: No time cap on pause duration is visible in the contract ABI. The contract exposes pause() and unpause() but no MAX_PAUSE_DURATION constant or auto-expiry logic.",
+    "E5-offchain: The daily redemption quota and queue are described on the website but no on-chain enforcement mechanism is visible in the contract ABI. The queue appears to be managed entirely by Binance's off-chain infrastructure, with no verifiable on-chain time bounds or caps."
+  ],
+  "protocol_metadata": {
+    "docs_url": "https://www.binance.com/en/wbeth",
+    "audits": [
+      {
+        "firm": "PeckShield",
+        "url": "https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-wBETH-v1.0.pdf",
+        "date": "2023"
+      }
+    ],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x099d699C07Bbc8eE6eB5703746063E04B2aA62A7",
+        "role": "owner / pauser / blacklister / masterMinter",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA3eE6926edcce93BacF05F4222c243c4d9F6d853",
+        "role": "proxy admin",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2B59215778e99035CF38663454eF1240a7AE70F5",
+        "role": "operator (deposits/withdraws ETH)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x81720695e43A39C52557Ce6386feB3FAAC215f06",
+        "role": "oracle (updates exchange rate)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Binance staked ETH (wBETH) is a liquid staking token representing ETH staked on the Ethereum beacon chain through Binance. Users deposit ETH and receive wBETH, which accumulates staking rewards through an increasing exchange rate. Redemptions convert wBETH back to ETH subject to daily quotas managed by Binance."
+  }
+}

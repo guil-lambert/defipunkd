@@ -1,0 +1,162 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v2",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Immutable Chainlink-only price feeds with hardcoded oracle-failure shutdown to lastGoodPrice; ~100% of TVS exposed to Chainlink mis-reports within staleness/deviation thresholds, but governance cannot swap oracles (owner=0x0) — principal bounded, ~unclaimed yield / shutdown bad-debt distortions are the residual risk.",
+  "short_headline": "Chainlink-only feeds, immutable, shutdown fallback",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "All three branch PriceFeeds (ETH 0x3279…, wstETH 0x4c27…, rETH 0x93d3…) read Chainlink AggregatorV3 feeds: ETH/USD 0x5f4eC3Df…8419 (24h staleness), stETH/USD 0xCfE54B5c…b4a8 (24h staleness), and rETH/ETH 0x536218f9…2d0 (48h staleness). The wstETH and rETH PriceFeeds also read canonical exchange rates from the LST contracts (stETH 0x7f39C581… and rETH 0xae78736C…) as sanity checks, with deviation thresholds verified on-chain at 1% (STETH_USD_DEVIATION_THRESHOLD = 1e16) and 2% (RETH_ETH_DEVIATION_THRESHOLD = 2e16) respectively."
+      },
+      {
+        "code": "A2",
+        "text": "Chainlink aggregator committees are the off-chain reporters; Liquity V2 has no protocol-internal oracle committee, exit-bus, or guardian set."
+      },
+      {
+        "code": "A3",
+        "text": "Core CDP / mint / redeem activity is mainnet-only; BOLD is bridged to Base/Arb/OP/Scroll/Avax via canonical bridges per docs, but those L2 deployments do not carry trove-level TVL — collateral and debt accounting live on Ethereum."
+      },
+      {
+        "code": "A4",
+        "text": "wstETH and rETH branches inherit the underlying LST's slashing / depeg risk by design; per protocol docs each collateral asset is an isolated branch with its own Stability Pool, so a failure of one LST does not propagate to other branches' borrowers — this is the borrower's opted-in underlying risk per Hard Rule guardrails."
+      },
+      {
+        "code": "A5",
+        "text": "Liquity V2 is a from-scratch redesign by the same team as Liquity V1 (multi-collateral CDP architecture); no upstream dependency on V1 contracts other than shared LQTY/LUSD legacy tokens used in governance."
+      },
+      {
+        "code": "A6",
+        "text": "Live on-chain fallback: MainnetPriceFeedBase has hardcoded `_disableFeedAndShutDown` that calls `borrowerOperations.shutdownFromOracleFailure(...)` and returns `lastGoodPrice` on any oracle-validity failure (stale, reverting, zero, or deviation > threshold for LST branches). Verified on-chain: priceSource()=0 (PRIMARY path active, not yet in lastGoodPrice mode) and ShutDownFromOracleFailure event in ABI on all three feeds. This is state (i) LIVE."
+      },
+      {
+        "code": "A6",
+        "text": "Residual A6 gap: under shutdown, urgent redemptions price LST collateral at lastGoodPrice — Coinspect audit and team docs explicitly note this can leave 'bad debt' (under-redemption when lastGoodPrice > market) or over-redeem (when lastGoodPrice < market); no second-opinion oracle and no fallback to ETH/USD × canonical-rate composite was implemented (Tellor-style fallback was deliberately removed for V2)."
+      },
+      {
+        "code": "A7",
+        "text": "N/A — Ethereum L1 deployment; no protocol-owned sequencer."
+      },
+      {
+        "code": "A8",
+        "text": "Liquidations and redemptions are permissionless and economically incentivized (Stability Pool absorbs first, then redistribution to remaining troves) — keeper failure degrades gracefully via redistribution rather than catastrophically."
+      },
+      {
+        "code": "A9",
+        "text": "Strongest signal: all three PriceFeed contracts have owner() = 0x0000000000000000000000000000000000000000 (verified on-chain at block 25057863–25057864) and the only owner-gated write is setAddresses(address) which is one-shot. There is no admin-mutable oracle address, no upgrade path, and no module registry that would let anyone introduce a new external dependency. The 'governance' contract (interestRouter 0x636deb…) only routes interest into Curve initiatives — it does NOT have authority over the core CDP/oracle stack."
+      },
+      {
+        "code": "A4-modules",
+        "text": "Module TVS weighting: per DeFiLlama and the on-chain CollateralRegistry totalCollaterals=3, the protocol has three branches (ETH ~50–70%, wstETH ~20–35%, rETH ~5–15% of TVS — exact figures vary). All three share the same MainnetPriceFeedBase architecture, the same shutdown-on-oracle-failure logic, and the same lastGoodPrice fallback. There is no module-specific autonomy divergence; the weighted overall grade tracks the architecture, not a single branch."
+      }
+    ],
+    "steelman": {
+      "red": "Every branch is single-provider Chainlink with no second-opinion oracle; if Chainlink reports a wrong-but-fresh price within the deviation threshold (LST: 1–2%) or within the 24–48h staleness window, the system cannot detect it — borrowers can be unfairly liquidated and BOLD over-minted, an external-dependency failure causing principal loss.",
+      "orange": "Failure of an external dependency (Chainlink feed disabled, stale, reverting, or deviation-busting) triggers automatic branch shutdown to lastGoodPrice, which during urgent redemptions can leave bad debt or over-redeem — materially changing expected performance and impairing unclaimed yield, but principal is bounded by the borrower's opted-in collateral exposure and governance cannot inject a new dependency (owner=0x0).",
+      "green": "Core PriceFeeds are owner-renounced (owner=0x0), oracle addresses are immutable, fallback is hardcoded to safe-by-shutdown, deviation + staleness checks are live on-chain, and no admin can introduce a new external dependency — every dependency failure is survivable without principal loss."
+    },
+    "verdict": "Choosing orange because the immutable owner=0x0 PriceFeeds and hardcoded shutdown-to-lastGoodPrice fallback rule out the green-disqualifier of governance-mutable dependencies and rule out the red-disqualifier of unmitigated principal loss — but the lastGoodPrice fallback during urgent redemptions, combined with single-provider Chainlink within deviation/staleness thresholds, can produce bad debt and unfair-liquidation distortions per the Coinspect audit and the team's own published risk disclosure. The orange steel-man fits the on-chain evidence (priceSource=0, owner=0x0, deviation thresholds at 1–2%, staleness at 24–48h, ShutDownFromOracleFailure wired into BorrowerOperations) better than green (which would require a second-opinion oracle or fallback composite price) or red (which would require ability to lose principal from a single oracle failure, which the deviation+staleness+canonical-rate sanity checks materially mitigate)."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x3279e2b49ff60dafb276fbaff847383b67a7ec2d",
+      "shows": "ETH branch PriceFeed: ethUsdOracle = 0x5f4eC3Df…8419 with 86400s (24h) staleness; owner = 0x0 (renounced); priceSource = 0 (primary path active); fetchPrice returns 2316.26 USD; ShutDownFromOracleFailure event in ABI confirms shutdown wiring.",
+      "chain": "ethereum",
+      "address": "0x3279e2B49ff60dAFb276FBAFF847383B67a7ec2d",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4c275608887ad2eb049d9006e6852bc3ee8a00fa",
+      "shows": "WSTETHPriceFeed: ethUsdOracle = 0x5f4eC3Df…8419 (24h), stEthUsdOracle = 0xCfE54B5c…b4a8 (24h), rateProviderAddress = 0x7f39C581…2Ca0 (Lido stETH), STETH_USD_DEVIATION_THRESHOLD = 1e16 (1%), owner = 0x0, priceSource = 0.",
+      "chain": "ethereum",
+      "address": "0x4c275608887ad2eB049d9006E6852BC3ee8A00Fa",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x93d3a2234e67c2ad494735cd6676fb4b79a6de97",
+      "shows": "RETHPriceFeed: ethUsdOracle = 0x5f4eC3Df…8419 (24h), rEthEthOracle = 0x536218f9…2d0 with 172800s (48h) staleness, rateProviderAddress = 0xae78736C…6393 (RocketPool rETH), RETH_ETH_DEVIATION_THRESHOLD = 2e16 (2%), owner = 0x0, priceSource = 0.",
+      "chain": "ethereum",
+      "address": "0x93d3a2234e67C2aD494735cd6676fb4b79a6De97",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xd99de73b95236f69a559117ecd6f519af780f3f7",
+      "shows": "CollateralRegistry: totalCollaterals = 3 (ETH, wstETH, rETH branches confirmed); only write method is redeemCollateral (permissionless); no admin/owner functions on the registry itself.",
+      "chain": "ethereum",
+      "address": "0xd99dE73b95236F69A559117ECD6F519Af780F3f7",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-documentation/technical-resources",
+      "shows": "Authoritative deployment table for ETH, wstETH, rETH branches and shared/governance contracts; confirms branch separation and that 'governance' is the interestRouter at 0x636deb… (interest routing only, not core control).",
+      "chain": "ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/liquity/bold/blob/fd9b1cdb58f756a1c600c6dcc01236d7bfd8ad68/contracts/src/PriceFeeds/MainnetPriceFeedBase.sol",
+      "shows": "Source for the on-chain shutdown fallback: `_disableFeedAndShutDown` calls `borrowerOperations.shutdownFromOracleFailure(_failedOracleAddr)` and returns lastGoodPrice; `_isValidChainlinkPrice` checks success + (block.timestamp - timestamp < stalenessThreshold).",
+      "chain": "ethereum",
+      "commit": "fd9b1cdb58f756a1c600c6dcc01236d7bfd8ad68",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations",
+      "shows": "Liquity docs: 'Shutdown Mode is triggered when the Total Collateral Ratio (TCR) of a specific branch drops below the Shutdown Collateral Ratio (SCR), or when the branch's price oracle fails.' SCRs: ETH 110%, wstETH/rETH 120%. Confirms branch isolation.",
+      "chain": "ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://docs.liquity.org/v2-documentation/risk-disclosure",
+      "shows": "Liquity's own risk disclosure: 'Liquity V2 has no manual pause, freeze, or shutdown functions' — confirms no governance-mutable dependency surface — and 'staleness thresholds (e.g., 48 hours for rETH)' triggers branch shutdown; oracle failure can cause 'unfavorable redemptions or excessive or delayed liquidations'.",
+      "chain": "ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://www.coinspect.com/doc/Coinspect%20-%20Smart%20Contract%20Audit%20-%20Liquity%20-%20Bold%20-%20v241231.pdf",
+      "shows": "Coinspect audit (Dec 2024) — confirms try-catch logic on canonical exchange-rate calls triggers branch shutdown when rate feeds revert; documents that osETH and ETHX were removed as collateral types during fix; supports orange grade by documenting residual oracle-failure-to-bad-debt path.",
+      "chain": "ethereum",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A4-modules: exact current TVS share per branch (ETH/wstETH/rETH) was not re-fetched live in this run; figures bracketed from prior public disclosures rather than re-verified.",
+    "A3: whether the L2 BOLD bridge endpoints (Base/Arb/OP/Scroll/Avalanche, all at 0x087C440F…) carry material outstanding BOLD relative to mainnet supply — surfacers are mainnet-only, so cross-chain TVS distribution was not re-verified on-chain.",
+    "A1-extra: whether any new collateral branch beyond ETH/wstETH/rETH has been registered since totalCollaterals=3 was read at block 25057843 — would change the per-module weighting but not the architectural grade."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/bold"
+    ],
+    "docs_url": "https://docs.liquity.org/v2-documentation/technical-resources",
+    "audits": [
+      {
+        "firm": "Coinspect",
+        "url": "https://www.coinspect.com/doc/Coinspect%20-%20Smart%20Contract%20Audit%20-%20Liquity%20-%20Bold%20-%20v241231.pdf",
+        "date": "2024-12"
+      }
+    ],
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x6dea81c8171d0ba574754ef6f8b412f2ed88c54d",
+      "symbol": "LQTY"
+    },
+    "deployed_contracts_doc": "https://docs.liquity.org/v2-documentation/technical-resources",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x636deb767cd7d0f15ca4ab8ea9a9b26e98b426ac",
+        "role": "interestRouter / Governance (interest distribution only — no core CDP authority)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "immutable",
+    "about": "Liquity V2 is an immutable multi-collateral CDP protocol on Ethereum that lets users mint the BOLD stablecoin against WETH, wstETH, or rETH at user-set interest rates. Each collateral is an isolated branch with its own Stability Pool, TroveManager, and PriceFeed; redemptions and liquidations are permissionless. Core contracts including all three PriceFeeds have owner = 0x0, oracle addresses are immutable, and oracle failure (stale, reverting, or deviation > 1–2% from canonical LST rate) triggers automatic branch shutdown that thereafter prices collateral via lastGoodPrice for urgent redemptions."
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v1",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Permissionless CDP: contracts have renounced owner, no whitelist or operator approval on user actions, and ~9 independent frontends operate on top of the protocol.",
+  "short_headline": "Permissionless, no operator gates",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "BorrowerOperations and TroveManager expose no whitelist/KYC modifiers on user-facing entry points; both contracts report owner() = 0x0000000000000000000000000000000000000000 (ownership renounced) at block 25052268/25052269."
+      },
+      {
+        "code": "A2",
+        "text": "Core user actions on BorrowerOperations (openTrove, closeTrove, addColl, withdrawColl, withdrawLUSD, repayLUSD, adjustTrove, claimCollateral) and TroveManager (redeemCollateral, liquidate, batchLiquidateTroves) are directly callable with no operator/relayer/keeper approval required to admit a user. Oracle dependency is a liveness concern, deferred to dependencies slice."
+      },
+      {
+        "code": "A3",
+        "text": "Liquity AG explicitly states it does not run its own frontend; the official site only lists third-party frontend operators. No A3-active enforcement (geo-blocking, sanctions oracle, KYC) is applied by Liquity AG since it operates no UI."
+      },
+      {
+        "code": "A3b",
+        "text": "Multiple legally distinct independent frontends are documented on liquity.org/frontend (freely.finance, Instadapp, DeFi Saver, B.Protocol, ChickenBonds.net, cp0x, BorrowCrypto, LQTY.IO, Liquity.App). The Liquity v1 SDK and GitHub source are publicly available, providing direct contract-interaction paths."
+      },
+      {
+        "code": "A4",
+        "text": "The LUSD token ABI exposes only standard ERC-20 + permit + protocol-restricted mint/burn/sendToPool/returnFromPool methods — no blacklist/freeze/pause function, so there is no on-chain sanctions blocklist on LUSD transfers."
+      },
+      {
+        "code": "A5",
+        "text": "Both read and write surfaces are fully permissionless on the deployed contracts; all view methods are public and write methods accept any caller subject only to economic/state preconditions (e.g., MCR for borrowing)."
+      }
+    ],
+    "steelman": {
+      "red": "If LUSD had a hidden blacklist or BorrowerOperations had an admin-controlled whitelist, users could be censored at the contract level — but the deployed ABIs and renounced owner() show neither exists.",
+      "orange": "If only Liquity AG operated a UI and no SDK or third-party frontend existed, the protocol could be operationally captured despite permissionless contracts — but ~9 independent frontends and a published SDK rule this out.",
+      "green": "Contracts admit any user unconditionally, ownership is renounced (owner=0x0), no on-chain blocklist exists on the stablecoin, and multiple independent frontends plus an SDK provide credible non-publisher access paths."
+    },
+    "verdict": "Choosing green because every checklist item that bears on the grade resolves cleanly toward permissionless: BorrowerOperations and TroveManager have owner()=0x0 with no whitelist modifiers (A1), all user actions are directly callable without operator approval (A2), the LUSD token has no blacklist function (A4), and the official frontend page itself enumerates ~9 legally independent third-party frontends plus a published SDK (A3b), so the orange 'operational capture' steel-man fails on its facts and the red 'contract-level censorship' steel-man has no ABI surface to support it."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "shows": "BorrowerOperations contract: owner() returns 0x0000000000000000000000000000000000000000 at block 25052268 (ownership renounced); user-facing write methods are openTrove, closeTrove, addColl, withdrawColl, withdrawLUSD, repayLUSD, adjustTrove, claimCollateral, moveETHGainToTrove — none have whitelist or operator-approval modifiers in the ABI.",
+      "chain": "ethereum",
+      "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+      "shows": "TroveManager contract: owner() returns 0x0000000000000000000000000000000000000000 at block 25052269; redeemCollateral, liquidate, batchLiquidateTroves, liquidateTroves are all permissionless write methods with no whitelist gating in the ABI.",
+      "chain": "ethereum",
+      "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+      "shows": "LUSD token ABI at block 25053847: name='LUSD Stablecoin', symbol='LUSD'; write surface is exclusively standard ERC-20 (transfer, transferFrom, approve, increaseAllowance, decreaseAllowance), permit, and protocol-restricted mint/burn/sendToPool/returnFromPool. No blacklist, freeze, pause, or sanctions-screening function exists.",
+      "chain": "ethereum",
+      "address": "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://www.liquity.org/frontend",
+      "shows": "Official Liquity V1 frontend page: 'Liquity does not run its own Frontend. To interact with the protocol, users may choose from the list of Frontend Operators below.' Lists 9 independent third-party frontends: freely.finance, Instadapp, LQTY.IO, ChickenBonds.net, cp0x, DeFi Saver, B.Protocol, Liquity.App, BorrowCrypto. Includes 'Run a frontend' link to liquity.org/frontend-operators and a GitHub link to liquity/dev.",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://www.liquity.org/",
+      "shows": "Liquity homepage links to docs.liquity.org/liquity-v1, github.com/liquity/dev (V1 source repo), and confirms V1 is immutable: 'Liquity V1 is here to stay: it is battle-tested and LUSD is the stable of choice for users who prefer a pure ETH backing.' Audit logos shown for Trail of Bits and Coinspect among others.",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A6: Could not fetch https://www.liquity.org/protocol-disclaimer (web_fetch returned 'You don't have permission to access this domain') — verbatim ToS / jurisdictional clause text not extracted this run. This does not affect the grade because the official website does not host a frontend and contracts are permissionless, but a future run should re-attempt the disclaimer page to record any sanctions/eligibility clause text."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/liquity/dev"
+    ],
+    "docs_url": "https://docs.liquity.org/liquity-v1",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/Liquity.pdf"
+      },
+      {
+        "firm": "Coinspect",
+        "url": "https://www.coinspect.com/liquity-audit/"
+      }
+    ],
+    "admin_addresses": [],
+    "upgradeability": "immutable",
+    "about": "Liquity V1 is an immutable Ethereum CDP protocol where users lock ETH as collateral in a 'Trove' to mint LUSD, an ETH-backed stablecoin, at 0% interest with a one-time borrowing fee and a minimum collateral ratio of 110%. Stability Pool depositors absorb liquidations and earn liquidated collateral plus LQTY rewards; LUSD holders can redeem 1 LUSD for $1 of ETH from the riskiest Troves. The deployed contracts have renounced ownership (owner=0x0) and Liquity AG does not operate a frontend — users access the system via independent third-party frontends or the published SDK."
+  }
+}

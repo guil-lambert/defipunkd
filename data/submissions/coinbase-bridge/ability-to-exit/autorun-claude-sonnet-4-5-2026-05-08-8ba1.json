@@ -1,0 +1,104 @@
+{
+  "schema_version": 4,
+  "slug": "coinbase-bridge",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "red",
+  "headline": "Exit requires Coinbase cooperation; pause and blacklist powers are indefinite with no user escape mechanism",
+  "short_headline": "Exit gated by Coinbase pause/blacklist",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Primary exit functions are transfer(address to, uint256 value) and transferFrom(address from, address to, uint256 value). Users exit by transferring cbBTC to their Coinbase account address, triggering automatic 1:1 redemption for the underlying BTC/XRP/DOGE/ADA/LTC."
+      },
+      {
+        "code": "E2",
+        "text": "Both transfer and transferFrom have whenNotPaused modifiers and notBlacklisted checks for both sender and recipient. The ABI shows these are nonpayable state-changing functions subject to pause and blacklist guards."
+      },
+      {
+        "code": "E3",
+        "text": "The pause mechanism has no time cap. The tokendesign.md documentation states that pause() sets a paused flag to true, blocking all transfers, minting, and burning. Only the pauser role (controlled by Coinbase) can call unpause(). No automatic expiry or maximum duration is specified."
+      },
+      {
+        "code": "E4",
+        "text": "No distinction between emergency and governance pause exists in this implementation. A single pauser role (Coinbase-controlled) can invoke pause() with indefinite duration. The documentation notes that during pause, only administrative functions (blacklist management, role changes, upgrades) remain operational."
+      },
+      {
+        "code": "E5",
+        "text": "No queued redemption system exists. The mint/burn model is custodial: users send cbBTC to Coinbase addresses to redeem. If paused or blacklisted, no redemption path is available."
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit, escape-hatch, or permissionless emergency-exit mechanism exists. If Coinbase pauses the contract or blacklists a user address, that user has no on-chain recourse to recover their funds."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are directly callable on-chain via standard ERC20 methods (transfer, transferFrom). No frontend dependency for the transfer itself, but the redemption flow (converting cbBTC back to BTC) requires depositing to a Coinbase-controlled address, making Coinbase cooperation essential."
+      }
+    ],
+    "steelman": {
+      "red": "Coinbase holds unilateral, indefinite pause and blacklist powers over all user exits, with no time caps, no governance vote requirement, and no permissionless escape mechanism—users are entirely dependent on Coinbase's continued operation and goodwill.",
+      "orange": "Although pause is indefinite and centralized, the protocol operates under a recognized custodian with reputational and regulatory accountability, and historical uptime suggests pauses would be limited to genuine emergencies.",
+      "green": "Exit is permissionless in normal operation via standard ERC20 transfers, and Coinbase's documented roles suggest transparent operational practices."
+    },
+    "verdict": "Choosing red because the contract grants Coinbase indefinite pause and blacklist powers with no on-chain time bounds, no governance requirement, and no user escape hatch. While finding E7 notes that transfers are technically on-chain permissionless, finding E1 clarifies that actual redemption (converting cbBTC to BTC) requires sending to a Coinbase address, making exit fundamentally dependent on Coinbase cooperation. Finding E3 confirms no maximum pause duration, and finding E6 confirms no forced-exit mechanism. The orange steelman's appeal to reputation does not alter the on-chain reality: any actor (including Coinbase) can pause claims of already-held tokens indefinitely. The green steelman's claim of permissionless exit is negated by the custodial redemption requirement."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/8453/0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "shows": "cbBTC (0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf) on Base is a FiatTokenProxy with implementation at 0x7458bfDC30034EB860B265E6068121D18Fa5Aa72. ABI includes transfer(address,uint256), transferFrom(address,address,uint256), pause(), unpause(), paused(), blacklist(address), isBlacklisted(address), pauser(), blacklister(), owner(), admin() functions.",
+      "chain": "Base",
+      "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/abi?chainId=8453&address=0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "shows": "Full merged ABI for cbBTC proxy + implementation. Confirms transfer and transferFrom are nonpayable state-changing functions. Pause-related functions: pause() nonpayable, unpause() nonpayable, paused() view returns bool. Blacklist functions: blacklist(address) nonpayable, unBlacklist(address) nonpayable, isBlacklisted(address) view returns bool.",
+      "chain": "Base",
+      "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://github.com/coinbase/wrapped-tokens-os/blob/main/doc/tokendesign.md",
+      "shows": "Official Coinbase documentation states: 'The entire contract can be paused in case a serious bug is found or there is a serious key compromise. All transfers, minting, burning, and adding minters will be prevented while the contract is paused.' Pause section describes pause() and unpause() but specifies no time limit. 'Only the pauser role may call unpause.' Roles section: 'Coinbase will control the addresses of all roles detailed above' (masterMinter, minters, pauser, blacklister, owner, admin).",
+      "fetched_at": "2026-05-08T11:22:00Z"
+    },
+    {
+      "url": "https://www.coinbase.com/cbbtc",
+      "shows": "Coinbase official page states: 'Coinbase customers can unwrap cbBTC and redeem a corresponding amount of the underlying BTC simply by depositing the cbBTC into their Coinbase accounts.' This confirms exit requires sending cbBTC to Coinbase-controlled addresses.",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://github.com/coinbase/wrapped-tokens-os",
+      "shows": "README states the implementation 'reusing centre-tokens audited and battle tested code' and describes 4-contract architecture including proxy, token, mint forwarder, and exchange rate updater. Confirms upgradeable proxy pattern with admin-controlled upgrades.",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3-offchain: Live on-chain reads of pauser(), owner(), paused() state via DeFiPunkd API failed due to rate limiting. Could not verify current pause state or identify specific pauser address at assessment time.",
+    "E4-offchain: No on-chain data retrieved for current role holders (pauser, blacklister, owner, admin addresses). Documentation confirms Coinbase controls all roles, but specific addresses and multisig vs EOA structure could not be verified on-chain."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/coinbase/wrapped-tokens-os"
+    ],
+    "docs_url": "https://www.coinbase.com/cbbtc",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Base",
+        "address": "0x158cFA498B1f72f458aCf8DF993c709efCA11e31",
+        "role": "blacklister",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Coinbase Bridge issues wrapped tokens (cbBTC, cbXRP, cbDOGE, cbADA, cbLTC) backed 1:1 by reserves held by Coinbase. Users deposit native assets to Coinbase and receive ERC20 wrapped tokens on Ethereum or Base. Redemption occurs by sending wrapped tokens to Coinbase addresses, triggering automatic conversion back to the underlying asset in the user's Coinbase account. The system uses a custodial mint/burn model with Coinbase-controlled admin roles for pausing, blacklisting, minting, and upgrading."
+  }
+}

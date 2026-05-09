@@ -1,0 +1,118 @@
+{
+  "schema_version": 4,
+  "slug": "curve-llamalend",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-08",
+  "model": "claude-sonnet-4-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "on-chain",
+  "grade": "orange",
+  "headline": "Permissionless exit functions with no admin pause, but withdrawals limited by available liquidity and rare bad debt can lock funds",
+  "short_headline": "Exit limited by liquidity, not admin",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Lenders exit via ERC-4626 withdraw(uint256) and redeem(uint256) functions on the Vault contract. Borrowers exit via repay(uint256) and remove_collateral(uint256) functions on the Controller contract."
+      },
+      {
+        "code": "E2",
+        "text": "The Vault implementation ABI (0xc014F34D5Ba10B6799d76b0F5ACdEEe577805085) contains no pause-related modifiers or functions - no paused(), whenNotPaused, or similar guards on withdraw/redeem functions."
+      },
+      {
+        "code": "E3",
+        "text": "The Controller implementation ABI (0x17C6e1DdF1ccE3D33240A53FcE8a2ee48541F4D4) contains no pause-related modifiers or functions - no guards on repay() or remove_collateral() functions."
+      },
+      {
+        "code": "E4",
+        "text": "No emergency vs governance pause distinction found. Documentation and ABIs show no pause mechanisms at any privilege level."
+      },
+      {
+        "code": "E5",
+        "text": "Documentation states 'You can withdraw a supplied asset provided there are sufficient available (un-borrowed) assets in the market.' High utilization increases APY to incentivize repayment. Bad debt, though rare, 'may be impossible to withdraw supplied assets, as it locks supplied assets as borrowed indefinitely.'"
+      },
+      {
+        "code": "E6",
+        "text": "No forced-exit or escape-hatch mechanism found. In adversarial scenarios where bad debt accumulates, there is no emergency withdrawal path that bypasses the liquidity constraint."
+      },
+      {
+        "code": "E7",
+        "text": "Vault functions (withdraw, redeem) are standard ERC-4626 and directly callable on-chain. Controller functions (repay, remove_collateral) are permissionless and callable via Etherscan or any wallet interface."
+      }
+    ],
+    "steelman": {
+      "red": "Bad debt can permanently lock lender funds with no admin recourse or escape hatch, making exit impossible in those (rare) scenarios.",
+      "orange": "While there is no admin-controlled pause and exit functions are permissionless, withdrawals are strictly limited by available liquidity, and documented bad debt scenarios can lock funds indefinitely without recovery mechanism.",
+      "green": "Exit functions are permissionless with no pause capability, and the protocol is designed to minimize bad debt through over-collateralization and soft liquidations."
+    },
+    "verdict": "Choosing orange because while the protocol architecture is permissionless (no admin pause, no time locks, direct on-chain callability), the economic design creates a structural exit constraint. Lenders face indefinite withdrawal delays when utilization is high, and the documentation explicitly warns that bad debt 'may be impossible to withdraw' and 'locks supplied assets as borrowed indefinitely.' This is not an admin-gated restriction (which would warrant red), but rather an inherent pooled-lending limitation where users cannot exit 'on their own terms' when liquidity is exhausted or bad debt exists. The orange grade reflects the absence of admin abuse vectors but acknowledges the non-trivial systemic exit risks."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xc014F34D5Ba10B6799d76b0F5ACdEEe577805085",
+      "shows": "Vault implementation contract (ERC-4626) exposes withdraw(uint256), withdraw(uint256,address), withdraw(uint256,address,address), redeem(uint256), redeem(uint256,address), and redeem(uint256,address,address) functions. ABI contains no pause-related functions or modifiers.",
+      "chain": "Ethereum",
+      "address": "0xc014F34D5Ba10B6799d76b0F5ACdEEe577805085",
+      "fetched_at": "2026-05-08T11:20:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x17C6e1DdF1ccE3D33240A53FcE8a2ee48541F4D4",
+      "shows": "Controller implementation contract exposes repay(uint256), repay(uint256,address), repay(uint256,address,int256), and remove_collateral(uint256), remove_collateral(uint256,address) functions. ABI contains no pause-related functions or modifiers.",
+      "chain": "Ethereum",
+      "address": "0x17C6e1DdF1ccE3D33240A53FcE8a2ee48541F4D4",
+      "fetched_at": "2026-05-08T11:21:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "shows": "OneWayLendingFactory contract at block 25025805 with admin() returning 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79 and market_count() returning 47 deployed markets.",
+      "chain": "Ethereum",
+      "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "fetched_at": "2026-05-08T11:19:00Z"
+    },
+    {
+      "url": "https://resources.curve.finance/lending/overview/",
+      "shows": "Documentation states 'You can withdraw a supplied asset provided there are sufficient available (un-borrowed) assets in the market' and 'Bad debt is rare, but if it exists within a lending market, it may be impossible to withdraw supplied assets, as it locks supplied assets as borrowed indefinitely.'",
+      "fetched_at": "2026-05-08T11:23:00Z"
+    },
+    {
+      "url": "https://www.curve.finance/llamalend/ethereum/disclaimer?tab=dex",
+      "shows": "Disclaimer states 'While these Vaults enable Users to supply liquidity and potentially earn returns, Users maintain the right to withdraw their assets at any time, so long as liquidity is available. There may be temporary or permanent states of illiquidity that prevent Lenders from fully or partially withdrawing their funds.'",
+      "fetched_at": "2026-05-08T11:24:00Z"
+    }
+  ],
+  "unknowns": [
+    "E6: No emergency escape hatch mechanism was found in the ABIs or documentation - unclear if any permissionless exit path exists for bad-debt scenarios beyond waiting for liquidity to return."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-frontend",
+      "https://github.com/curvefi/curve-stablecoin-js"
+    ],
+    "docs_url": "https://docs.curve.finance/protocol/lending/",
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
+        "role": "OneWayLendingFactory admin",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "Curve DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency DAO multisig",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Curve LlamaLend is an isolated lending protocol that allows users to supply liquidity to earn interest or borrow assets against collateral. It uses the LLAMMA (Lending-Liquidating AMM Algorithm) soft liquidation mechanism to gradually convert collateral during market downturns. Markets are ERC-4626 compliant vaults with interest rates determined by a semi-log utilization-based model."
+  }
+}

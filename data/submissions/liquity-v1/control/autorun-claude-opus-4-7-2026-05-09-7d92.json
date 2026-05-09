@@ -1,0 +1,132 @@
+{
+  "schema_version": 4,
+  "slug": "liquity-v1",
+  "slice": "control",
+  "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-09",
+  "model": "claude-opus-4-7 (autorun)",
+  "chat_url": null,
+  "grade": "green",
+  "headline": "Liquity V1 core contracts are fully immutable with ownership renounced (owner=0x0) on BorrowerOperations, TroveManager, StabilityPool, ActivePool, and PriceFeed; no proxy, no pause, no admin parameter setters reachable.",
+  "short_headline": "Immutable, ownership renounced",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "owner() returns 0x0000000000000000000000000000000000000000 on BorrowerOperations (0x24179CD8…), TroveManager (0xA39739EF…), StabilityPool (0x66017D22…), ActivePool (0xDf9Eb223…), and PriceFeed (0x4c517D4e…). Ownership has been renounced on all core fund-holding and price-source contracts."
+      },
+      {
+        "code": "C2",
+        "text": "No proxy pattern is present on any core contract. The verified ABIs contain no upgradeTo/upgradeToAndCall, no implementation(), no admin/proxyAdmin, no diamond facet methods. All bytecode is the running implementation; the system is immutable by construction."
+      },
+      {
+        "code": "C3",
+        "text": "There is no execution path. The only privileged write surface on each core contract is setAddresses(...), a one-shot initializer guarded by Ownable; with owner()==address(0), Ownable's onlyOwner modifier reverts every call. No timelock exists because no privileged path exists."
+      },
+      {
+        "code": "C4",
+        "text": "No multisig has reachable control on the core protocol contracts inspected — owner()==0x0 on every one. (Peripheral addresses such as CommunityIssuance / LQTYStaking, surfaced as crawl manifest entries, were not inspected this run; recorded as unknowns.)"
+      },
+      {
+        "code": "C5",
+        "text": "No on-chain governance contract is wired into BorrowerOperations / TroveManager / StabilityPool / ActivePool / PriceFeed. None of these contracts expose a governor / timelock / voting setter; LQTY is a non-voting reward / staking token in V1."
+      },
+      {
+        "code": "C6",
+        "text": "No emergency pause, guardian, or freeze role exists on any core contract inspected. Their ABIs contain no pause(), no setPaused(), no guardian, no emergency methods. The only immutable parameters are hard-coded constants (MCR=110%, CCR=150%, MIN_NET_DEBT=1800 LUSD, MAX_BORROWING_FEE=5%, BOOTSTRAP_PERIOD=1209600s)."
+      },
+      {
+        "code": "C7",
+        "text": "Highest reachable tier on the upgrade path: NONE. T1 fund-critical actions (replace implementation, change collateral logic, drain user funds, pause withdrawals) are unreachable because no privileged surface remains. T2/T3/T4 are likewise unreachable. This satisfies the green rule 'T1 reachable only via immutable contracts (T1 is unreachable).'"
+      }
+    ],
+    "steelman": {
+      "red": "An EOA-controlled hot wallet still routinely calls deposit/withdraw paths and could in principle compromise individual user troves — but this is not a control-slice concern, and no contract-level admin EOA exists.",
+      "orange": "The PriceFeed is hard-wired to a Chainlink ETH/USD aggregator with a Tellor fallback whose own caller contract was not inspected this run; if Chainlink's own admin acted maliciously, ETH price could move unexpectedly — but PriceFeed itself has owner()==0x0, no setter for the aggregator address, and Liquity cannot change its oracle.",
+      "green": "Every core contract reads owner()==0x0, ABIs contain no upgrade / pause / parameter-setter functions, and the only Ownable-gated method (setAddresses) is permanently unreachable; the contract surface that exists today is the contract surface that will exist forever."
+    },
+    "verdict": "Choosing green because on-chain reads at block 25052268–25053830 show owner()==address(0) on all five inspected core contracts (BorrowerOperations, TroveManager, StabilityPool, ActivePool, PriceFeed), and their verified ABIs contain no proxy upgrade hooks, no pause, no parameter setters, and no governor wiring — so the highest tier reachable on any control path is 'no path exists,' which clears the rubric's 'T1 reachable only via immutable contracts' green criterion. The orange steel-man (oracle dependency) is a verifiability concern, not a control concern, since Liquity itself cannot rotate the oracle."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x24179CD81c9e782A4096035f7eC97fB8B783e007&method=owner&block=25052268",
+      "shows": "BorrowerOperations.owner() == 0x0000000000000000000000000000000000000000 at block 25052268; ownership renounced.",
+      "chain": "Ethereum",
+      "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "shows": "Full BorrowerOperations ABI — no proxy / upgrade / pause / parameter-setter functions; only owner-gated method is setAddresses (deployment-time wiring, unreachable once owner=0). MCR=1.1e18, CCR=1.5e18, MIN_NET_DEBT=1800e18 are hard-coded constants.",
+      "chain": "Ethereum",
+      "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2&method=owner&block=25052269",
+      "shows": "TroveManager.owner() == 0x0000000000000000000000000000000000000000 at block 25052269; ownership renounced on the redemption / liquidation engine.",
+      "chain": "Ethereum",
+      "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+      "shows": "Full TroveManager ABI — no upgrade hook, no pause, no parameter setter; setAddresses is the only owner-gated method. MAX_BORROWING_FEE=5e16, BORROWING_FEE_FLOOR=5e15, REDEMPTION_FEE_FLOOR=5e15, BOOTSTRAP_PERIOD=1209600 (14 days) all hard-coded constants.",
+      "chain": "Ethereum",
+      "address": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x66017D22b0f8556afDd19FC67041899Eb65a21bb&method=owner&block=25052269",
+      "shows": "StabilityPool.owner() == 0x0000000000000000000000000000000000000000 at block 25052269; ownership renounced on the LUSD/ETH stability pool that holds depositor funds (~7.79M LUSD + ~626 ETH at snapshot).",
+      "chain": "Ethereum",
+      "address": "0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+      "shows": "Full StabilityPool ABI — no upgrade hook, no pause, no admin parameter setter; only owner-gated method is setAddresses. User-callable surface is provideToSP, withdrawFromSP, withdrawETHGainToTrove, registerFrontEnd; offset() is restricted to TroveManager.",
+      "chain": "Ethereum",
+      "address": "0x66017D22b0f8556afDd19FC67041899Eb65a21bb",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F&method=owner&block=25053830",
+      "shows": "ActivePool.owner() == 0x0000000000000000000000000000000000000000 at block 25053830; ownership renounced on the contract holding the system's ETH collateral (~75,441 ETH at snapshot).",
+      "chain": "Ethereum",
+      "address": "0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F",
+      "shows": "Full ActivePool ABI — only sendETH / increaseLUSDDebt / decreaseLUSDDebt (caller-restricted to BorrowerOperations / TroveManager / StabilityPool by the contract logic) and setAddresses (owner-gated, unreachable). No proxy, no pause, no escape hatch.",
+      "chain": "Ethereum",
+      "address": "0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x4c517D4e2C851CA76d7eC94B805269Df0f2201De&method=owner&block=25053830",
+      "shows": "PriceFeed.owner() == 0x0000000000000000000000000000000000000000 at block 25053830; the Chainlink+Tellor oracle wrapper has renounced ownership — Liquity governance cannot rotate the price source.",
+      "chain": "Ethereum",
+      "address": "0x4c517D4e2C851CA76d7eC94B805269Df0f2201De",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x4c517D4e2C851CA76d7eC94B805269Df0f2201De",
+      "shows": "Full PriceFeed ABI — only owner-gated method is setAddresses (price aggregator + Tellor caller); priceAggregator is locked to Chainlink ETH/USD (0x5f4eC3Df…), tellorCaller to 0xAd430500…. No way to change the oracle source post-deployment.",
+      "chain": "Ethereum",
+      "address": "0x4c517D4e2C851CA76d7eC94B805269Df0f2201De",
+      "fetched_at": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C4: Peripheral contracts surfaced via crawl manifest — CommunityIssuance (0xD8c9D9071123a059C6E0A945cF0e0c82b508d816), LQTYStaking (0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d), DefaultPool (0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C), CollSurplusPool, GasPool — were not inspected in this run. They affect LQTY rewards / staking accounting, not core LUSD borrowing safety, but should be confirmed renounced in a future pass.",
+    "C2: LUSD token (0x5f98805A4E8be255a32880FDeC7F6728C6568bA0) and LQTY token (0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D) ownership / mint authority were not directly read this run. LUSD's mint/burn is documented to be permanently restricted to TroveManager / BorrowerOperations / StabilityPool by the V1 design, but that on-chain claim should be re-verified."
+  ],
+  "protocol_metadata": {
+    "admin_addresses": [],
+    "upgradeability": "immutable",
+    "about": "Liquity V1 is an Ethereum CDP protocol where users deposit ETH as collateral into individual 'troves' and borrow the LUSD stablecoin against it at a 110% minimum collateral ratio (MCR), with a one-time borrowing fee (floor 0.5%, capped at 5%) and no recurring interest. Stability is maintained by an LUSD Stability Pool that absorbs liquidations of under-collateralized troves in exchange for the discounted ETH collateral, plus a redemption mechanism that lets anyone redeem 1 LUSD for $1 of ETH from the lowest-CR troves. The system is fully immutable on-chain — owner() is the zero address on every core contract — so no party (team, multisig, governance, or token holders) can upgrade, pause, change parameters, or rotate the oracle."
+  }
+}
