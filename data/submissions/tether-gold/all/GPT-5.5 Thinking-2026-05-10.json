@@ -1,0 +1,593 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0065cd-fdb0-8328-8eb7-7c5ed076a011",
+    "grading_basis": "on-chain",
+    "grade": "orange",
+    "headline": "Ethereum XAUt is owned by a 3-of-6 Tether multisig that can immediately mint, blocklist, burn blocked balances, and exercise token-owner powers; proxy-admin slot was not successfully read.",
+    "short_headline": "3-of-6 controls XAUt",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "Ethereum owner() at block 25064190 returns 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828; that address has six owners and required() = 3."
+        },
+        {
+          "code": "C2",
+          "text": "Ethereum XAUt is a TransparentUpgradeableProxy to implementation 0x4C0d2c74a8d26f1e4f5653021c521f5471f9e566; explorer/ABI expose changeAdmin, upgradeTo, and upgradeToAndCall."
+        },
+        {
+          "code": "C3",
+          "text": "Evidenced fast path is 3 multisig confirmations then executeTransaction; no timelock/governor delay constant was found on that path."
+        },
+        {
+          "code": "C4",
+          "text": "Reachable control multisig is 3-of-6; signer identities were not verified, so it does not meet the Security Council standard."
+        },
+        {
+          "code": "C5",
+          "text": "No Governor/GovernorBravo/OZ Governor/Aragon Voting contract was identified in the fetched path."
+        },
+        {
+          "code": "C6",
+          "text": "No separate pause guardian was identified; emergency-like powers are owner-operated blocklist/burn controls."
+        },
+        {
+          "code": "C7",
+          "text": "Highest evidenced tier is T1: owner can mint, blocklist, and burn blocked balances; proxy upgrade functions can replace token logic if the proxy-admin path is controlled by the same apparatus."
+        }
+      ],
+      "steelman": {
+        "red": "The same privileged apparatus can mint, blocklist, burn blocked funds, and potentially upgrade token logic with no evidenced user exit window.",
+        "orange": "The directly evidenced actor is a 3-of-6 multisig, not a single EOA or 2-of-3, but it fails Security Council criteria and has no evidenced timelock.",
+        "green": "Green would require T1 to be unreachable, delayed at least seven days through broad governance, or guarded by a qualifying Security Council; none was shown."
+      },
+      "verdict": "Choosing orange because T1 token-owner powers are reachable through a 3-of-6 multisig with no evidenced timelock, which fails green, while the fetched evidence does not prove a single EOA or 2-of-3 path that would force red."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "shows": "Ethereum proxy surfacer: TransparentUpgradeableProxy, implementation, owner, totalSupply, and write methods including addToBlockedList, destroyBlockedFunds, mint, redeem, changeAdmin, upgradeTo, upgradeToAndCall.",
+        "chain": "Ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0x68749665FF8D2d112Fa859AA293F07A622782F38&block=25064190&chainId=1&method=owner",
+        "shows": "owner() at block 25064190 returns 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828.",
+        "chain": "Ethereum",
+        "address": "0x68749665FF8D2d112Fa859AA293F07A622782F38"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828&block=25064190&chainId=1&method=getOwners",
+        "shows": "Multisig owners at block 25064190: six owner addresses.",
+        "chain": "Ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828&block=25064190&chainId=1&method=required",
+        "shows": "required() at block 25064190 is 3.",
+        "chain": "Ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828"
+      },
+      {
+        "url": "https://etherscan.io/address/0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "shows": "Etherscan proxy page shows current implementation and transparent-proxy admin/upgrade ABI.",
+        "chain": "Ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      },
+      {
+        "url": "https://defillama.com/protocol/tether-gold",
+        "shows": "Protocol info: XAUt provides ownership of real physical gold; TVL by chain; TVL = total XAUt minted."
+      },
+      {
+        "url": "https://tether.to/en/bug-bounty/",
+        "shows": "Tether bug-bounty / disclosure page."
+      }
+    ],
+    "unknowns": [
+      "C1: Arbitrum/Polygon live owner/admin reads were not completed; proxy-only surfacers did not expose zero-arg owner reads and direct read-API URLs were rejected by the fetch allowlist.",
+      "C2: EIP-1967 proxy admin slot was not successfully read for Ethereum, Arbitrum, or Polygon.",
+      "C3: if an external proxy-admin timelock exists, it was not verified.",
+      "C4: multisig signer identities and insider/non-insider status were not verified.",
+      "C5: voting threshold, voting period, quorum, and queue delay are unknown because no governor was identified.",
+      "C6: maximum duration/scope documentation for blocklist/burn powers was not found."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://tether.to/en/bug-bounty/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "role": "XAUt owner",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is a tokenized gold asset: DeFiLlama describes it as ownership of real physical gold, and the Ethereum contract is an ERC-20-like XAUt token. Users transfer XAUt on-chain, while issuance/redemption against gold is issuer-operated; Ethereum is an upgradeable proxy and L2 deployments expose OFT-style cross-chain mint/burn."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0065cd-fdb0-8328-8eb7-7c5ed076a011",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "There is no permissionless on-chain redemption to the underlying asset; transfers can be blocked indefinitely and blocked balances can be burned by the owner multisig.",
+    "short_headline": "No permissionless redemption",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing movement is transfer/transferFrom/multiTransfer. redeem(uint256) exists but is onlyOwner and burns from owner(), so it is not a permissionless holder exit."
+        },
+        {
+          "code": "E2",
+          "text": "transferFrom is onlyNotBlocked; _beforeTokenTransfer blocks transfers from blocked accounts unless msg.sender is owner; redeem/mint/blocklist/burn are onlyOwner."
+        },
+        {
+          "code": "E3",
+          "text": "The pause-equivalent guard is owner-controlled isBlocked; no maximum block duration was found, and destroyBlockedFunds burns a blocked balance."
+        },
+        {
+          "code": "E4",
+          "text": "No distinct time-capped emergency pause versus governance pause was identified; blocklist/burn uses the owner path."
+        },
+        {
+          "code": "E5",
+          "text": "No on-chain queued-redemption system, maximum queue duration, or daily cap was found."
+        },
+        {
+          "code": "E6",
+          "text": "No forced-exit or permissionless emergency withdrawal was found for a blocked holder or unprocessed redemption."
+        },
+        {
+          "code": "E7",
+          "text": "Direct on-chain token calls are possible through explorer write tabs/generic wallets, but that does not create permissionless gold redemption."
+        }
+      ],
+      "steelman": {
+        "red": "A holder has no permissionless on-chain redemption and can be indefinitely blocked from transferring, after which the owner can burn the balance.",
+        "orange": "Unblocked holders can still transfer on-chain without the official frontend, so secondary-market exit works until blocklisting.",
+        "green": "Green would require permissionless exit or tightly capped pause powers and non-paused finalized claims; the fetched code shows neither."
+      },
+      "verdict": "Choosing red because the only redemption-named on-chain function is owner-only, transfers are subject to an uncapped owner-controlled blocklist, and blocked funds can be destroyed."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "shows": "Ethereum surfacer lists transfer/transferFrom plus privileged addToBlockedList, removeFromBlockedList, destroyBlockedFunds, mint, and redeem.",
+        "chain": "Ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      },
+      {
+        "url": "https://arbiscan.io/address/0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001",
+        "shows": "Implementation source shows onlyNotBlocked, isBlocked, owner-only blocklist functions, owner-only redeem/mint, and destroyBlockedFunds burning blocked balances.",
+        "chain": "Arbitrum",
+        "address": "0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0x68749665FF8D2d112Fa859AA293F07A622782F38&block=25064190&chainId=1&method=owner",
+        "shows": "Privileged owner is 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 at block 25064190.",
+        "chain": "Ethereum",
+        "address": "0x68749665FF8D2d112Fa859AA293F07A622782F38"
+      },
+      {
+        "url": "https://etherscan.io/address/0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "shows": "Explorer exposes direct Read/Write and Read/Write as Proxy tabs for on-chain calls.",
+        "chain": "Ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      },
+      {
+        "url": "https://defillama.com/protocol/tether-gold",
+        "shows": "Protocol info: XAUt provides ownership of real physical gold; TVL by chain; TVL = total XAUt minted."
+      },
+      {
+        "url": "https://tether.to/en/bug-bounty/",
+        "shows": "Tether bug-bounty / disclosure page."
+      }
+    ],
+    "unknowns": [
+      "E1: gold-specific off-chain redemption terms from gold.tether.to/faq and gold.tether.to/legal/termsofservice could not be extracted because those pages returned JavaScript-only shells.",
+      "E3: no PAUSE_ROLE/GUARDIAN role was found; role-style hasRole/getRoleAdmin reads were not applicable to the fetched Ownable blocked-list code.",
+      "E4: off-chain redemption suspension rules were not reconstructed from gold-specific terms.",
+      "E5: any off-chain redemption queue maximum duration remains unverified.",
+      "E6: no separate recovery/escape-hatch contract was identified.",
+      "E7: direct callability of off-chain redemption was not applicable because redemption against gold was not found as a permissionless on-chain flow."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://tether.to/en/bug-bounty/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "role": "XAUt owner",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is a tokenized gold asset: DeFiLlama describes it as ownership of real physical gold, and the Ethereum contract is an ERC-20-like XAUt token. Users transfer XAUt on-chain, while issuance/redemption against gold is issuer-operated; Ethereum is an upgradeable proxy and L2 deployments expose OFT-style cross-chain mint/burn."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0065cd-fdb0-8328-8eb7-7c5ed076a011",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Worst-unmitigated dependency can affect ~100% of TVS: XAUt is a claim on off-chain physical gold, and L2 XAUt0 adds mutable OFT mint/burn dependencies with no verified fallback.",
+    "short_headline": "Custody and OFT dependencies",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No reserve/price oracle call was found on the Ethereum surfacer; the material dependency is the off-chain gold/issuer process. L2 contracts add an external oftContract authorized for mint/burn."
+        },
+        {
+          "code": "A2",
+          "text": "DeFiLlama describes XAUt as ownership of real physical gold and TVL as minted XAUt; the fetched contracts do not prove vault custody, allocation, or reserve solvency."
+        },
+        {
+          "code": "A3",
+          "text": "Arbitrum/Polygon deployments expose OFT-style crosschainMint/crosschainBurn; failure of the configured OFT/messaging path can affect L2 supply."
+        },
+        {
+          "code": "A4",
+          "text": "No nested on-chain collateral chain was found; the nested asset is off-chain physical gold/custody, whose failure propagates to XAUt economic value."
+        },
+        {
+          "code": "A5",
+          "text": "The fetched DeFiLlama page did not show a fork lineage; no fork dependency was identified."
+        },
+        {
+          "code": "A6",
+          "text": "No live on-chain fallback, reserve sanity check, second oracle, or circuit breaker was found that keeps holders whole after reserve/custody or OFT failure."
+        },
+        {
+          "code": "A7",
+          "text": "No protocol-owned L2/L3/appchain sequencer was identified; listed L2s are treated as third-party chain substrate."
+        },
+        {
+          "code": "A8",
+          "text": "Plain transfers need no keeper; cross-chain mint/burn liveness/correctness depends on the configured OFT/messaging path."
+        },
+        {
+          "code": "A9",
+          "text": "The external dependency surface is owner-mutable on L2: setOFTContract(address) is onlyOwner and changes the contract authorized to mint/burn cross-chain supply."
+        }
+      ],
+      "steelman": {
+        "red": "The core asset depends on external gold/custody and L2 supply depends on mutable OFT endpoints; worst-case dependency failure can impair principal across effectively all XAUt TVS.",
+        "orange": "The ERC-20 transfer layer is simple, and OFT risk is small relative to Ethereum TVL, so some external failures are bounded to non-Ethereum deployments.",
+        "green": "Green would require no material external dependency or live fallbacks that keep users whole, which was not evidenced."
+      },
+      "verdict": "Choosing red because the worst unmitigated dependency is the off-chain physical-gold/issuer/custody layer behind the minted-token TVL, and the contracts expose no on-chain mechanism that keeps holders whole if that external layer fails; L2 OFT dependencies are also owner-mutable."
+    },
+    "evidence": [
+      {
+        "url": "https://defillama.com/protocol/tether-gold",
+        "shows": "Protocol info, TVL $3.359b, Ethereum $3.332b, chain split, ownership-of-real-physical-gold description, and TVL=minted XAUt methodology."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "shows": "Ethereum token/proxy surfacer with owner-controlled mint/redeem/blocklist/burn and no reserve-oracle reads surfaced.",
+        "chain": "Ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      },
+      {
+        "url": "https://arbiscan.io/address/0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001",
+        "shows": "Arbitrum source defines oftContract, onlyAuthorizedSender, crosschainMint/crosschainBurn, and onlyOwner setOFTContract.",
+        "chain": "Arbitrum",
+        "address": "0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x6d205337f45d6850c3c3006e28d5b52c8a432c35",
+        "shows": "Polygon implementation ABI includes crosschainMint, crosschainBurn, oftContract, setOFTContract, mint, redeem, and blocklist methods.",
+        "chain": "Polygon",
+        "address": "0x6d205337f45d6850c3c3006e28d5b52c8a432c35"
+      },
+      {
+        "url": "https://tether.to/en/legal/",
+        "shows": "Tether legal terms evidence issuer-operated eligibility, freezes, blacklists, and service restrictions; used as corroboration, not as gold-specific terms."
+      },
+      {
+        "url": "https://tether.to/en/bug-bounty/",
+        "shows": "Tether bug-bounty / disclosure page."
+      }
+    ],
+    "unknowns": [
+      "A1: exhaustive grep of every listed-chain deployment was not completed; Ethereum, Arbitrum, and Polygon pinned addresses were sampled.",
+      "A2: exact custodian, vault operator, bar allocation, insurance, reserve audit cadence, and reporting committee/quorum were not verified from gold-specific official documents.",
+      "A3: live oftContract address was not read because direct read-API URLs for L2 proxies were rejected and explorer read tabs rendered dynamic values as loading.",
+      "A4: legal ownership chain from tokenholder to specific bars was not reconstructed because gold-specific pages rendered JavaScript-only shells.",
+      "A6: if off-chain attestations, insurance, or redemption contingencies exist, their live status was not verified.",
+      "A8: exact cross-chain messaging provider / relayer set was not fully verified from primary docs.",
+      "A9: no timelock or exit window for setOFTContract was verified."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://tether.to/en/bug-bounty/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "role": "XAUt owner",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is a tokenized gold asset: DeFiLlama describes it as ownership of real physical gold, and the Ethereum contract is an ERC-20-like XAUt token. Users transfer XAUt on-chain, while issuance/redemption against gold is issuer-operated; Ethereum is an upgradeable proxy and L2 deployments expose OFT-style cross-chain mint/burn."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0065cd-fdb0-8328-8eb7-7c5ed076a011",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Ordinary transfer access is open until blocklisting, but the contract has an owner-controlled on-chain blocklist that can prevent transfers and lead to burned balances.",
+    "short_headline": "Blocklist gates transfers",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No allowlist/KYC modifier was found on ordinary transfer, but transferFrom is onlyNotBlocked and _beforeTokenTransfer blocks transfers from blocked addresses unless owner."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain operator approval is needed for an ordinary unblocked ERC-20 transfer; OFT authorization is separate cross-chain mint/burn admission."
+        },
+        {
+          "code": "A3",
+          "text": "Tether web/legal pages state jurisdictional, U.S.-person, sanctions, service-restriction, freeze, and blacklist policies; these are context, not the grade driver."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent direct-contract access exists through Etherscan Read/Write and Read/Write as Proxy tabs."
+        },
+        {
+          "code": "A4",
+          "text": "Contract-level blocklist tooling exists: owner-only addToBlockedList/removeFromBlockedList update isBlocked, and destroyBlockedFunds can burn blocked balances."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public; write access is permissionless only for unblocked transfers, while mint/redeem/blocklist/burn are owner-only."
+        },
+        {
+          "code": "A6",
+          "text": "General Tether legal pages include sanctions/restriction clauses; gold-specific ToS extraction failed and the general page says it excludes gold.tether.to sub-pages."
+        }
+      ],
+      "steelman": {
+        "red": "The contract itself has an owner-controlled blocklist gating transfers and can burn blocked balances.",
+        "orange": "Unblocked users can transfer via wallets/explorer without the official UI, so the official frontend/legal posture alone would not block access.",
+        "green": "Green would require no contract-level whitelist/KYC/blocklist and no operator approval for entry/exit; the fetched code fails that."
+      },
+      "verdict": "Choosing red because access restriction is enforced in the deployed token code, not merely the official frontend: owner-controlled blocklisting can prevent transfers and owner can burn blocked balances."
+    },
+    "evidence": [
+      {
+        "url": "https://arbiscan.io/address/0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001",
+        "shows": "Source shows isBlocked, onlyNotBlocked, owner-only blocklist functions, _beforeTokenTransfer transfer blocking, and destroyBlockedFunds.",
+        "chain": "Arbitrum",
+        "address": "0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "shows": "Ethereum surfacer lists public transfer methods and privileged blocklist/burn/mint/redeem methods.",
+        "chain": "Ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      },
+      {
+        "url": "https://etherscan.io/address/0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "shows": "Etherscan exposes direct Read/Write and proxy interaction tabs.",
+        "chain": "Ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      },
+      {
+        "url": "https://tether.to/en/in-what-countries-and-states-does-tether-have-limited-functionality/",
+        "shows": "Tether states platform restrictions for listed jurisdictions and U.S. persons unless Eligible Contract Participants."
+      },
+      {
+        "url": "https://tether.to/en/legal/",
+        "shows": "General Tether legal terms include prohibited-person, sanctions, VPN-circumvention, suspension/termination, freeze, and blacklist language, while excluding gold.tether.to sub-pages."
+      },
+      {
+        "url": "https://defillama.com/protocol/tether-gold",
+        "shows": "Protocol info: XAUt provides ownership of real physical gold; TVL by chain; TVL = total XAUt minted."
+      },
+      {
+        "url": "https://tether.to/en/bug-bounty/",
+        "shows": "Tether bug-bounty / disclosure page."
+      }
+    ],
+    "unknowns": [
+      "A1: every listed-chain deployment was not fully grepped; conclusion is based on pinned Ethereum, Arbitrum, and Polygon surfaces.",
+      "A2: cross-chain admission through OFT messaging was not fully reconstructed because live oftContract was not read.",
+      "A3: runtime IP geoblocking or wallet screening on gold.tether.to was not verified because the site rendered as a JavaScript-only shell.",
+      "A3b: no third-party frontend, SDK, wallet integration, or aggregator path was exhaustively enumerated beyond direct block-explorer/generic contract access.",
+      "A6: gold-specific ToS clause text could not be extracted verbatim from https://gold.tether.to/legal/termsofservice."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://tether.to/en/bug-bounty/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "role": "XAUt owner",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is a tokenized gold asset: DeFiLlama describes it as ownership of real physical gold, and the Ethereum contract is an ERC-20-like XAUt token. Users transfer XAUt on-chain, while issuance/redemption against gold is issuer-operated; Ethereum is an upgradeable proxy and L2 deployments expose OFT-style cross-chain mint/burn."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0065cd-fdb0-8328-8eb7-7c5ed076a011",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Main proxy and implementation bytecode are verified on explorers, but the pinned context has no public source repo and no audit links; checked explorers report no submitted contract audits.",
+    "short_headline": "Verified but unaudited",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Ethereum, Arbitrum, and Polygon proxy/implementation surfaces checked are explorer-verified or similar-match for standard proxy code; implementations are separately visible/resolved."
+        },
+        {
+          "code": "V2",
+          "text": "No canonical public source-code repository was pinned, and no commit SHA was established."
+        },
+        {
+          "code": "V3",
+          "text": "The protocol context contains no audit_links; checked Etherscan/Arbiscan/PolygonScan pages report No Contract Security Audit Submitted."
+        },
+        {
+          "code": "V4",
+          "text": "No recognized Solidity auditor report covering current deployed contracts was verified."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift could not be assessed because no audit baseline or canonical repo commit was verified; downgrade is absence of audit/repo evidence, not sampled drift."
+        },
+        {
+          "code": "V6",
+          "text": "Proxy/implementation pairing was checked: Ethereum resolves to 0x4C0d2c74..., Arbitrum to 0x9001dbe4..., and PolygonScan shows 0x6D205337... as implementation."
+        }
+      ],
+      "steelman": {
+        "red": "No public repo and no audit links mean outsiders cannot tie deployed bytecode to a maintained reviewed codebase, despite explorer verification.",
+        "orange": "Explorer verification and proxy/implementation resolution make it better than opaque bytecode.",
+        "green": "Green would require verified bytecode plus matching public repo and a recognized audit covering current deployments; not evidenced."
+      },
+      "verdict": "Choosing red because explorer verification exists, but no public GitHub repository or audit links were pinned/found and checked explorer pages report no submitted contract security audits."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?address=0x68749665FF8D2d112Fa859AA293F07A622782F38&chainId=1",
+        "shows": "DeFiPunkd ABI: Ethereum proxy verified true, abiSource etherscan, implementation 0x4C0d2c74A8D26f1E4F5653021c521F5471F9e566.",
+        "chain": "Ethereum",
+        "address": "0x68749665FF8D2d112Fa859AA293F07A622782F38"
+      },
+      {
+        "url": "https://etherscan.io/address/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566",
+        "shows": "Ethereum implementation verified exact match; Etherscan reports no contract security audit submitted.",
+        "chain": "Ethereum",
+        "address": "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+      },
+      {
+        "url": "https://arbiscan.io/address/0x40461291347e1ecbb09499f3371d3f17f10d7159",
+        "shows": "Arbitrum proxy shows implementation 0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001 and verified/similar proxy source.",
+        "chain": "Arbitrum",
+        "address": "0x40461291347e1ecbb09499f3371d3f17f10d7159"
+      },
+      {
+        "url": "https://arbiscan.io/address/0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001",
+        "shows": "Arbitrum implementation source is visible; explorer reports no contract security audit submitted.",
+        "chain": "Arbitrum",
+        "address": "0x9001dbe4d68d36ab87923a2a9dfb0c745fd25001"
+      },
+      {
+        "url": "https://polygonscan.com/address/0xf1815bd50389c46847f0bda824ec8da914045d14",
+        "shows": "Polygon proxy shows Source Code (Proxy), implementation 0x6D205337f45d6850c3C3006E28d5B52c8A432c35, and no submitted contract audit.",
+        "chain": "Polygon",
+        "address": "0xf1815bd50389c46847f0bda824ec8da914045d14"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x6d205337f45d6850c3c3006e28d5b52c8a432c35",
+        "shows": "Polygon implementation ABI/source area is visible; explorer reports no contract security audit submitted.",
+        "chain": "Polygon",
+        "address": "0x6d205337f45d6850c3c3006e28d5b52c8a432c35"
+      },
+      {
+        "url": "https://defillama.com/protocol/tether-gold",
+        "shows": "Protocol info: XAUt provides ownership of real physical gold; TVL by chain; TVL = total XAUt minted."
+      },
+      {
+        "url": "https://tether.to/en/bug-bounty/",
+        "shows": "Tether bug-bounty / disclosure page."
+      }
+    ],
+    "unknowns": [
+      "V1: Monad, Plasma, Avalanche, Celo, and Ink bytecode was not checked because no pinned addresses for those chains were provided.",
+      "V2: no bytecode-to-repo correspondence or commit SHA was established.",
+      "V3: no audit PDFs/reports were linked in the protocol context.",
+      "V4: no recognized-auditor report was found in fetched/pinned evidence.",
+      "V5: post-audit drift is not measurable without an audit baseline or canonical source commit."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": null,
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://tether.to/en/bug-bounty/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "role": "XAUt owner",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is a tokenized gold asset: DeFiLlama describes it as ownership of real physical gold, and the Ethereum contract is an ERC-20-like XAUt token. Users transfer XAUt on-chain, while issuance/redemption against gold is issuer-operated; Ethereum is an upgradeable proxy and L2 deployments expose OFT-style cross-chain mint/burn."
+    }
+  }
+]
