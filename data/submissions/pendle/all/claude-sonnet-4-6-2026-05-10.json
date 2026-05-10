@@ -1,0 +1,339 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/3437a3ed-8d0a-49dc-909b-7bcfb7a8dd8a",
+    "grade": "orange",
+    "headline": "3-of-5 governance Safe owns the V2 ProxyAdmin and MarketFactoryV3 with no timelock; T1/T2 reachable on the fast path but the multisig fails Security Council criteria.",
+    "short_headline": "3-of-5 multisig, no timelock",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "PendleMarketFactoryV3 (0x1A6fCc85557BC4fB7B534ed835a03EF056552D52) owner() returns 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1 at block 25022853; pendingOwner() is the zero address. The V2 ProxyAdmin (0xA28c08f165116587D4F3E708743B4dEe155c5E64) owner() returns the same 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1 at block 25022852. Both reads via the DefiPunkD read API content-addressed to specific blocks."},
+        {"code": "C1", "text": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1 is a GnosisSafe v1.3.0; getThreshold()=3, getOwners() returns 5 EOAs (0x231FC5b039d66BA234CB90357082Bf16Be79B17c, 0x7BD456937104Ca5eFfFBD895ccbba52421021C29, 0x9Ce6De7ec862e25a515AA0D8EcFbBBb2DaA8E0fb, 0x38ab4A7Dea2753757F29fe6d10280Df2C42abe27, 0xF517364727Fcc764D58DdF4e53280874A4d0c476) — i.e. a 3-of-5 Safe controls upgrades and key parameters."},
+        {"code": "C1", "text": "0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1 (devMultisig) is a GnosisSafe v1.4.1; getThreshold()=2, getOwners() returns 5 EOAs (0x806c8c2D35f32849Cd71A075E2Af2826bdc5987B, 0xE397e61707be78f46BFB7884155C79C0e6af5C13, 0xF517364727Fcc764D58DdF4e53280874A4d0c476, 0xe81B325766d7A271486Ae2d7D60d7B57386Ba9e7, 0x231FC5b039d66BA234CB90357082Bf16Be79B17c) — i.e. a 2-of-5 ops/dev Safe sharing 2 signers with the governance Safe; scope of devMultisig powers not enumerated this run."},
+        {"code": "C2", "text": "Upgradeability is mixed: Router V3 (0x00000000005BBB0EF59571E58418F9a4357b68A0) is a constructor-immutable facet dispatcher (ACTION_* fields are immutable per the verified Etherscan source); PendleMarketV3 markets and PT/YT tokens are non-proxy CREATE deployments by their factories; SY adapter contracts and certain factories are TransparentUpgradeableProxy or UUPSProxy and reach upgrade via the V2 ProxyAdmin or per-chain factory admins. DefiPunkD inventory lists 9 proxies in scope."},
+        {"code": "C3", "text": "No timelock contract was identified between the 3-of-5 governance multisig and the V2 ProxyAdmin. The V2 ProxyAdmin's write surface (upgrade(address,address), upgradeAndCall(address,address,bytes), changeProxyAdmin(address,address)) has no MIN_DELAY / getMinDelay / queue-execute pattern in its ABI; the only constants on the ABI are owner / OwnershipTransferred. Uncontested fast path = single 3-of-5 Safe execution; effective delay is 0 seconds."},
+        {"code": "C4", "text": "Reachable multisigs identified: (a) 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1 — 3-of-5 governance Safe controlling V2 ProxyAdmin and MarketFactoryV3 ownership; (b) 0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1 — 2-of-5 devMultisig (scope unenumerated this run); (c) for many factories on Arbitrum/Mantle/Sonic the proxy/factory owner is 0x2ad631F72FB16D91c4953a7F4260A97c2Fe2f31E, which DefiPunkD's protocol page flags as a Safe (8 of 20 owners are Safes) but I did not independently verify its threshold and signer set this run; (d) Boros accessController on Arbitrum at 0x2080808080262c1706598c9DBDD3a0cD3601e5ea has no verified ABI on Etherscan/Sourcify, so its membership / threshold / role grants cannot be read deterministically. Signer identities are addresses only — no off-chain pseudonym-to-identity mapping was attempted, so the Security Council criterion of publicly announced signers cannot be affirmed."},
+        {"code": "C5", "text": "PENDLE token (0x808507121b80c02388fad14726482e061b8da827) and vePENDLE voting escrow (0x4f30A9D41B80ecC5B94306AB4364951AE3170210) exist and are referenced by MarketFactoryV3, but no on-chain Governor / Bravo / Aragon Voting / Timelock contract was identified on the upgrade path this run. vePENDLE is documented as governing reward distribution and gauge voting via GaugeController (0x47D74516B33eD5D70ddE7119A40839f6Fcc24e57), not as a proposal-and-queue governance pipeline that gates ProxyAdmin upgrades."},
+        {"code": "C6", "text": "Per-SY pause: ChainSecurity August 2024 V2 Core report states 'the owner can pause() and unpause() an SY from being active.' This is a per-SY emergency control not the same as the upgrade authority; role-holder addresses for individual SYs were not enumerated this run. This pause power is in addition to, not a substitute for, the protocol-wide upgrade authority on the V2 ProxyAdmin."},
+        {"code": "C7", "text": "Power tier on the uncontested fast path: T2 is clearly reachable — MarketFactoryV3.setTreasuryAndFeeReserve(newTreasury, newReserveFeePercent) is callable by the 3-of-5 owner with on-chain bound maxReserveFeePercent=100 (i.e., bounded but at the maximum the owner can redirect 100% of reserved swap fees to a chosen treasury). T1 is reachable on the upgradable surface — for any TUP whose ProxyAdmin is the 3-of-5-controlled 0xA28c08f165116587D4F3E708743B4dEe155c5E64, ProxyAdmin.upgrade(proxy, newImplementation) lets the multisig replace the implementation with arbitrary bytecode, including for SY adapter contracts that custody underlying yield-bearing tokens. Highest tier on the fast path = T1, with no timelock and no exit window."},
+        {"code": "C7", "text": "Security Council standard not met: 3-of-5 has fewer than 7 signers and has not been demonstrated to be ≥50% non-insider with publicly announced identities. Per the rubric this is a multisig 'failing one or more Security Council criteria' on a T1 path, which the rubric maps to orange rather than red (3-of-5 is also strictly above the 2-of-3 EOA-equivalent red threshold)."}
+      ],
+      "steelman": {
+        "red": "A 3-of-5 multisig with no timelock and no audit-trail of public signer identities can replace TUP implementations on contracts that custody user-deposited yield-bearing assets, which is functionally indistinguishable from a 2-of-3 with no timelock when the signer set is small and unverifiable.",
+        "orange": "The 3-of-5 multisig is more decentralized than the red threshold (2-of-3 / single EOA) but does not meet Security Council criteria, sits on a T1 path with no timelock, and cannot earn green even with diversified signers because the 7-day uncontested-delay bar fails.",
+        "green": "Router V3, market V3 contracts, and PT/YT tokens are immutable, so the largest-blast-radius surface (the AMM and tokenization core) cannot be silently changed; the multisig's reachable scope is bounded to the upgradable SY/factory periphery and bounded fee parameters."
+      },
+      "verdict": "Choosing orange because the green steel-man only holds for the immutable parts of the address surface — the upgradable surface (V2 ProxyAdmin reaching SY/factory implementations, MarketFactoryV3.setTreasuryAndFeeReserve at maxReserveFeePercent=100) puts T1 and T2 on the uncontested fast path of a 3-of-5 multisig with zero timelock, which exceeds both the orange-vs-green threshold (T2 reachable with delay <7 days) and the T1-with-Security-Council-7-day path that would otherwise allow green; the multisig is, however, larger than the red 2-of-3 / single-EOA threshold, so red does not fit either."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1", "shows": "Pre-executed view methods at block 25022851: VERSION='1.3.0', getThreshold()=3, getOwners()=[0x231FC5b039d66BA234CB90357082Bf16Be79B17c, 0x7BD456937104Ca5eFfFBD895ccbba52421021C29, 0x9Ce6De7ec862e25a515AA0D8EcFbBBb2DaA8E0fb, 0x38ab4A7Dea2753757F29fe6d10280Df2C42abe27, 0xF517364727Fcc764D58DdF4e53280874A4d0c476], NAME='Default Callback Handler' (Safe v1.3 fallback handler).", "chain": "ethereum", "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1", "shows": "Pre-executed view methods at block 25022852: VERSION='1.4.1', getThreshold()=2, getOwners()=[0x806c8c2D35f32849Cd71A075E2Af2826bdc5987B, 0xE397e61707be78f46BFB7884155C79C0e6af5C13, 0xF517364727Fcc764D58DdF4e53280874A4d0c476, 0xe81B325766d7A271486Ae2d7D60d7B57386Ba9e7, 0x231FC5b039d66BA234CB90357082Bf16Be79B17c]; getChainId()=1.", "chain": "ethereum", "address": "0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0xA28c08f165116587D4F3E708743B4dEe155c5E64", "shows": "ProxyAdmin contract; pre-executed owner() at block 25022852 returns 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1; write surface includes upgrade(proxy, implementation), upgradeAndCall(proxy, implementation, data), changeProxyAdmin(proxy, newAdmin), transferOwnership — no MIN_DELAY / getMinDelay / queue-execute methods present in the ABI.", "chain": "ethereum", "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "shows": "PendleMarketFactoryV3 pre-executed view methods at block 25022853: owner()=0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1, pendingOwner()=zero address, treasury()=0x8270400d528c34e1596EF367eeDEc99080A1b592, reserveFeePercent()=80, maxReserveFeePercent()=100, vePendle()=0x4f30A9D41B80ecC5B94306AB4364951AE3170210, gaugeController()=0x47D74516B33eD5D70ddE7119A40839f6Fcc24e57. Write surface includes setTreasuryAndFeeReserve(address,uint8), setOverriddenFee(address,address,uint80), transferOwnership.", "chain": "ethereum", "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://etherscan.io/address/0x00000000005bbb0ef59571e58418f9a4357b68a0", "shows": "Verified Etherscan source for Pendle Router V3: 'contract PendleRouterV3 is Proxy, IDiamondLoupe' with five 'address internal immutable ACTION_*' fields set in the constructor — confirming Router V3 itself is not upgradable through any admin.", "chain": "ethereum", "address": "0x00000000005BBB0EF59571E58418F9a4357b68A0", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/protocol/pendle", "shows": "Inventory shows 9 proxies in scope and notes '8 of 20 owners are Safes'; flags Mainnet TUPs whose owner is 0x2ad631F72FB16D91c4953a7F4260A97c2Fe2f31E and PendleMarketFactoryV3 deployments whose owner on Mainnet is 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1 (3/5 Safe).", "chain": "ethereum", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "shows": "ChainSecurity Aug 2024 audit (V2 Core) explicitly states 'Last, the owner can pause() and unpause() an SY from being active' — confirming an SY-owner pause role separate from the protocol-wide upgrade authority.", "fetched_at": "2026-05-10T00:00:00Z"}
+    ],
+    "unknowns": [
+      "C1: 0x2ad631F72FB16D91c4953a7F4260A97c2Fe2f31E acts as proxy/factory admin for several Arbitrum/Mantle/Sonic deployments and is reported to be a Safe by DefiPunkD's protocol page, but I did not independently read its threshold, signer set, or Safe version this run.",
+      "C1-boros: Boros accessController (Arbitrum 0x2080808080262c1706598c9DBDD3a0cD3601e5ea) has no verified ABI on Etherscan/Sourcify; role grants and admin module ownership were not deterministically read this run.",
+      "C2-boros: Boros adminModule (Arbitrum 0x353C6Ba99500f9F5a7937aF7BF26c8E40817518B) is an ERC1967 UUPS proxy whose implementation/admin slot was not queried this run; Boros's own upgrade authority (which the ChainSecurity Aug 2025 audit characterizes as an admin trust-required for solvency) is therefore identified by role but not by holder address.",
+      "C3: I confirmed absence of timelock methods on the V2 ProxyAdmin and MarketFactoryV3 ABIs, but did not exhaustively check that no Timelock contract sits in front of the multisig signer flow off-chain (e.g., a Safe with a TimelockController as a signer); I treat the on-chain absence of MIN_DELAY/getMinDelay on the upgrade path as conclusive for the fast-path delay = 0 claim.",
+      "C4: signer identities are on-chain addresses only — no public attestation linking the 5 governance owners to named individuals/entities was sought, so the Security Council criterion of 'every signer publicly announced' cannot be confirmed or denied from the read evidence alone.",
+      "C5: presence/absence of an on-chain Governor + Timelock executor (in addition to vePENDLE + GaugeController) gating ProxyAdmin upgrades was not exhaustively verified; the vePENDLE / GaugeController role in reward routing was visible but no pipeline from on-chain vote → queued upgrade → executed proxy upgrade was identified."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/pendle-finance/pendle-core-v2-public",
+        "https://github.com/pendle-finance/Pendle-SY-Public",
+        "https://github.com/pendle-finance/boros-core-public"
+      ],
+      "docs_url": "https://docs.pendle.finance/",
+      "audits": [
+        {"firm": "ChainSecurity", "url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "date": "2024-08"},
+        {"firm": "ChainSecurity", "url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "date": "2025-08"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x808507121b80c02388fad14726482e061b8da827", "symbol": "PENDLE"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/pendle/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1", "role": "V2 governance multisig — owner of MarketFactoryV3 and V2 ProxyAdmin (3-of-5 Safe v1.3.0)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1", "role": "V2 devMultisig (2-of-5 Safe v1.4.1)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64", "role": "V2 ProxyAdmin — TransparentUpgradeableProxy upgrade authority; owner = V2 governance multisig", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x8270400d528c34e1596EF367eeDEc99080A1b592", "role": "MarketFactoryV3 fee treasury", "actor_class": "unknown"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Pendle V2 splits yield-bearing assets into PT/YT via SY wrappers and trades them on a time-decay AMM. The Router V3 and PendleMarketV3 contracts are immutable; SY adapters and several factories are upgradable via a TransparentUpgradeableProxy ProxyAdmin owned by a 3-of-5 Safe with no timelock. Boros is a separate, smaller IRS module on Arbitrum with its own permissioned admin/risk surface."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "claude-opus-4-7",
+    "grading_basis": "mixed",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "V2 PT/YT/AMM exits are permissionless on immutable markets, but per-SY pause held by an owner can gate SY-level deposits/withdrawals and Boros position exit depends on permissioned liquidation/cancel bots.",
+    "short_headline": "Per-SY pause; Boros gated",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "V2 user-facing exit functions are: PendleMarket.swapExactPtForSy / swapSyForExactPt (AMM exit), PendleMarket.burn (LP withdraw), PendleYieldToken.redeemPY / redeemPYToToken (PT+YT redemption pre/post-expiry), PendlePrincipalToken redemption at maturity, and SY.redeem (SY-to-underlying). These are described in Pendle's developer docs (PendleMarket page) and confirmed by the public V2 Core repo structure and the ChainSecurity Aug 2024 audit. For Boros: position closing happens through the Boros Router (Arbitrum), with permissioned operator-driven liquidation/force-cancel paths described in the Boros docs and ChainSecurity Aug 2025 audit."},
+        {"code": "E2", "text": "PendleMarketV3, PendlePrincipalToken, and PendleYieldToken are non-proxy, non-pausable CREATE deployments per the ChainSecurity V2 Core audit and the verified MarketFactoryV3 source — so AMM swaps, LP burn, and PT post-expiry redemption are not gated by a protocol-wide pause modifier on the Pendle side. SY base contracts implement pause/unpause; functions inheriting whenNotPaused (deposit / redeem in SYBase variants) revert when paused. PT post-expiry redemption goes through the YieldToken/SY pair and may therefore depend on the relevant SY not being paused."},
+        {"code": "E3", "text": "Per ChainSecurity Aug 2024 V2 Core audit: 'Last, the owner can pause() and unpause() an SY from being active.' Each SY has an owner that holds the pause authority; ownership is set at SY deployment and is typically the Pendle dev/governance multisig but specific role-holder addresses for each deployed SY were not enumerated this run. There is no published time cap on SY pause — it is a binary pause/unpause held by the SY owner."},
+        {"code": "E4", "text": "No emergency-vs-governance pause split was identified for V2; the SY pause is the only V2 pause primitive identified. For Boros, ChainSecurity Aug 2025 documents that contracts are upgradeable and pausable; the Boros admin holds risk operations including order cancellation, order purging, and liquidations. The Boros docs (Margin page) confirm that 'Liquidation is a permissioned action carried out by Pendle to maintain protocol solvency.' No public time cap on Boros pause was identified this run."},
+        {"code": "E5", "text": "There is no queued-redemption / withdrawal-queue mechanism in V2 — PT redemption at maturity is direct, AMM exits are atomic, and SY redeem is direct. Boros position closing is order-book-mediated and may require liquidity to exit at fair price; force-deleverage is a documented last-resort mechanism executed by the Boros admin/bots when health ratio drops below a threshold."},
+        {"code": "E6", "text": "No permissionless emergency-exit / escape-hatch was identified for V2 SY-paused scenarios: if an SY is paused, holders of its corresponding PT can still redeem 1:1 to the underlying SY at maturity (the AMM and PT contract are not pausable by the SY owner), but the actual SY-to-yield-token unwrap depends on the SY not being paused. For Boros, a permissionless 'close-only' or unilateral exit by users without admin participation was not identified."},
+        {"code": "E7", "text": "All identified exit functions on V2 are directly callable from any wallet (via Etherscan write tab or any RPC) — they are not gated by the official frontend. This is consistent with the docs' emphasis that Pendle's smart contract architecture is permissionless and routable through SDKs and aggregators. Boros entry/exit is on-chain via its Router on Arbitrum, but the realized exit (especially under stress) depends on the permissioned operator set."}
+      ],
+      "steelman": {
+        "red": "If the SY owner pauses an SY indefinitely, holders of that SY (who have not yet split into PT+YT) cannot redeem to the underlying yield token, and Boros users with positions cannot reliably exit when permissioned liquidation/cancel bots disappear — both look like indefinite, single-actor pauses on user funds.",
+        "orange": "PT-at-maturity, AMM swaps, and LP burn on V2 are exit paths that the SY pause does not visibly gate, so the worst-case effect of an SY pause is bounded to SY-level deposits/redeems on a single market rather than the whole user base; Boros is small in TVS but its operator dependence is genuine.",
+        "green": "Markets V3, PT, and YT contracts are immutable and not pausable, AMM exits are always available pre-expiry, and there is no protocol-wide withdrawal queue — exit functions are directly on-chain callable without the official frontend."
+      },
+      "verdict": "Choosing orange because the green steel-man overstates the universality of the immutable-exit story (an SY-paused market still impairs SY-level redeems and is held by a single owner with no documented time cap), and the red steel-man overstates the systemic effect (it scopes per-market for V2 and to ~<1% of TVS for Boros), so the rubric's orange band — 'pausable with broad scope OR indefinite pause is reachable only through governance vote… OR claims-of-finalized are exempt but new-request placement can be paused indefinitely' — fits the V2 SY-pause + Boros operator-dependence picture more closely than green or red."
+    },
+    "evidence": [
+      {"url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "shows": "ChainSecurity Aug 2024 audit, scope statements and SY assumptions: 'The SY contracts have an owner that can pause the SY contract'; SY owner can pause()/unpause(); markets V1 trust model 'severely depends on the SY used'; PT/YT independent redemption post-expiry described. This is the textual basis for the per-SY pause role-holder claim.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "shows": "ChainSecurity Aug 2025 Boros audit: 'Decentralization is improvable. Risk operations that are required to maintain the economic security of the protocol, such as order cancellation, order purging, and liquidations, are permissioned and can only be performed by whitelisted accounts'; Boros contracts are 'upgradeable and pausable'.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/boros-dev/Mechanics/Margin", "shows": "Boros margin doc: 'Liquidation is a permissioned action carried out by Pendle to maintain protocol solvency'; force-deleverage at health ratio 0.7 is a last-resort mechanism; force-cancel of all open orders when accountHR < riskyThresHR; 'Closing only' (CLO) mode triggered near hard cap with whitelisted exemptions.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "shows": "PendleMarketFactoryV3 has no pause / unpause function in its ABI; the only owner-only mutating functions are setTreasuryAndFeeReserve, setOverriddenFee, transferOwnership, claimOwnership — confirming the factory itself does not provide a system-wide pause.", "chain": "ethereum", "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/pendle-v2/Developers/Contracts/PendleMarket", "shows": "PendleMarket developer docs document swapExactPtForSy and swapSyForExactPt; PT post-expiry redemption via Router; LP mint/burn — described as user-callable functions (no pause guard mentioned in the public docs for the market itself).", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/pendle-v2/Introduction", "shows": "'Pendle's smart contract architecture is permissionless — any user or protocol can create a new yield-trading market on-chain' — supports the E7 claim that exit functions do not require official frontend cooperation.", "fetched_at": "2026-05-10T00:00:00Z"}
+    ],
+    "unknowns": [
+      "E3: SY-pause role holders for individual SY adapters were not enumerated this run; ChainSecurity confirms the role exists but does not pin a specific owner address per SY, so I cannot say whether the SY pause is held by the dev multisig (2-of-5), the governance multisig (3-of-5), per-asset owners, or some mix.",
+      "E2: I did not exhaustively read on-chain whether each currently-listed SY has whenNotPaused on its redeem() path versus only on its deposit() path — the Sherlock 2024 contest report and SYBase variants suggest pause guards are present on at least the deposit/redeem entry but a per-SY-version diff was not done.",
+      "E4-boros: The Boros pause time-cap (or absence of one) and the Boros admin actor class (single multisig, set of role-holders, etc.) were not deterministically resolved this run because the Boros accessController has no verified ABI and the adminModule UUPS proxy was not queried for its current admin/implementation.",
+      "E6-offchain: I did not independently observe a permissionless escape-hatch path that would let Boros users exit positions when liquidation/force-cancel/close-only bots are offline; absence in the docs and audit text is consistent with there not being one but I did not exhaust this with on-chain reads.",
+      "E1-offchain: Verbatim function-by-function review of the deployed PendleYieldToken / PendleMarketV3 source against the audited reference was not done — the exit-function list is sourced from docs and audit text rather than from reading every function selector on-chain."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/pendle-finance/pendle-core-v2-public", "https://github.com/pendle-finance/boros-core-public"],
+      "docs_url": "https://docs.pendle.finance/",
+      "audits": [
+        {"firm": "ChainSecurity", "url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "date": "2024-08"},
+        {"firm": "ChainSecurity", "url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "date": "2025-08"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x808507121b80c02388fad14726482e061b8da827", "symbol": "PENDLE"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/pendle/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Pendle V2 PT/YT/AMM exits are non-proxy, non-pausable on the market side; SY wrappers, by contrast, expose pause/unpause to a per-SY owner that gates SY deposits and SY-to-yield-token redeems. Boros position exit on Arbitrum depends on a permissioned operator set for liquidation, force-cancel, and close-only mode actions."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "claude-opus-4-7",
+    "grading_basis": "mixed",
+    "chat_url": "https://claude.ai/share/3437a3ed-8d0a-49dc-909b-7bcfb7a8dd8a",
+    "grade": "orange",
+    "headline": "V2 yield tokenization isolates external dependencies per market and per SY (~>99% of TVS), but Boros (~<1% of TVS) depends on per-market F-Index oracles and permissioned solvency-critical operator bots — weighted overall: orange.",
+    "short_headline": "V2 isolates risk; Boros operator-dependent",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "V2 core (PendleRouter V3, PendleMarketV3, PT, YT, SY) does not require any oracle for ordinary mint/redeem/swap. Pendle's PT and LP oracles are integration-side TWAP libraries used by external lending protocols (Aave, Morpho, etc.) consuming Pendle assets — they are not a dependency of V2 user flows. SY adapters individually call into the underlying yield source (e.g., Lido stETH/wstETH, Aave aTokens, Renzo ezETH, etherfi weETH, Aura LPs) for deposit/redeem and exchangeRate. Boros is the divergent module: ChainSecurity Aug 2025 documents per-market F-Index oracles for floating-index settlement, with TWAP/Mark-rate parameters where mis-reporting can cause healthy positions to become liquidatable."},
+        {"code": "A2", "text": "No protocol-level off-chain oracle committee was identified for V2 mint/redeem/swap. Boros has oracle-reported floating rates plus a permissioned set of operator/risk accounts (cancellation, purging, liquidation, force-cancel, close-only). ChainSecurity Aug 2025 explicitly states 'Risk operations that are required to maintain the economic security of the protocol… are permissioned and can only be performed by whitelisted accounts' and that 'users must trust the admin to perform these obligations at all times for the protocol to remain solvent.' Committee size, quorum, and member-selection process were not enumerated this run."},
+        {"code": "A3", "text": "V2 has multi-chain deployments (Ethereum, Arbitrum, BSC, Base, Optimism, Mantle, Avalanche, Sonic, Berachain, HyperEVM, Plasma) and uses LayerZero endpoint addresses in some cross-chain exchange-rate-oracle and PT OFT factory deployments per prior DefiPunkD discovery findings. Local Mainnet/L2 V2 mint/redeem/swap on a given chain does not require a bridge for a user already on that chain; cross-chain PT/SY transfers via LayerZero introduce LayerZero's standard guardian-set trust assumptions where used. Material TVS routed through cross-chain PT adapters versus local-chain exit was not quantified this run."},
+        {"code": "A4", "text": "V2 is a yield-tokenization protocol that explicitly wraps third-party yield-bearing assets (LSTs, LRTs, ERC-4626 vaults, lending receipts, AMM LPs, restaked tokens). Each SY market is opt-in and isolated: a failure of one underlying yield source impairs only its own SY/PT/YT/Market and does not cross-cut other markets. Per the rubric, this is risk the user opted into per market and is not by itself an autonomy-red signal."},
+        {"code": "A5", "text": "DefiLlama's forkedFrom field was not the basis of any finding; no fork-lineage dependency was used for grading."},
+        {"code": "A6", "text": "Live fallback mechanisms identified: per-SY pause/unpause on V2 SYs (a circuit-breaker, not a fund-keeping fallback after bad oracle/exchangeRate); the Pendle invariant SY_value = PT_value + YT_value, where any underlying loss is absorbed by YT holders, so PT remains redeemable for a predictable amount of the SY at maturity (this is structural, not a swappable fallback). For Boros: ChainSecurity describes long TWAP windows (~5 min initial) and capped maximum rate-deviation as live mitigations against oracle manipulation; permissioned close-only / force-cancel / liquidation are characterized as 'trust assumptions needed for solvency' rather than as autonomous fallbacks. No live secondary oracle / cross-check is documented for Boros's per-market F-Index in scope of this run."},
+        {"code": "A7", "text": "V2 deployments on L2s (Arbitrum, Optimism, Base, Mantle, Sonic, Berachain, HyperEVM) and Boros on Arbitrum inherit each L2's sequencer/DA risk as substrate, not as an A7-protocol-level dependency. A7 fires for an appchain whose sequencer is part of the protocol's own stack — Pendle does not run its own L2/L3, so sequencer risk is properly recorded as host-chain substrate, capable of freezing local use but not of stealing principal."},
+        {"code": "A8", "text": "V2 mint, redeem, and AMM actions are user-callable through Router V3 / Market / SY contracts and do not depend on a permissioned keeper set for core execution. Boros explicitly relies on a permissioned set of off-chain bots / relayers (liquidation, force-cancel, close-only, order purging) where ChainSecurity states users 'must trust the admin to perform these obligations at all times for the protocol to remain solvent' — i.e. a non-trivial keeper-liveness dependency on permissioned actors for Boros."},
+        {"code": "A9", "text": "V2 markets bind PT/YT/SY at market-creation time and the MarketFactoryV3 owner-only mutating functions identified on-chain (setTreasuryAndFeeReserve, setOverriddenFee, transferOwnership) are fee/treasury rotations, not external-dependency swaps; market dependencies are therefore largely fixed once the market exists. SY adapters do, however, expose owner-settable adapter / external-pointer addresses in some deployments, and Boros market configuration includes per-market oracle addresses where governance-mutable changes are possible. No timelock or exit window protecting these dependency-pointer changes was identified this run, so A9 is genuinely live for the SY-adapter and Boros-oracle change paths."},
+        {"code": "A4", "text": "Module weighting (TVS-share-aware): V2 yield-tokenization core (Router V3 + V3 Market + V3 Factory + SY adapters across Ethereum and L2s) holds approximately the entire DefiLlama-reported $1.5B Pendle TVL; Boros on Arbitrum holds the order of $8.3M of explorer-visible collateral per the existing DefiPunkD autonomy submission, i.e. <1% of total protocol TVS. V2 graded against the green/orange A1–A9 picture is at most orange (per-SY-adapter governance-mutable dependency without timelock); Boros graded against red on A1+A2+A6+A8 (per-market oracle, permissioned solvency-critical bots, no autonomous fallback). Weighted overall = orange because the red module is small relative to the isolated V2 core but is live and unbounded by an exit window."}
+      ],
+      "steelman": {
+        "red": "Boros's per-market F-Index oracles plus permissioned solvency-critical bots are explicitly characterized by ChainSecurity as trust assumptions needed for protocol solvency, and the Pendle docs confirm liquidations are a permissioned action — that meets the rubric's red bar (failure of an external dependency CAN cause loss of principal).",
+        "orange": "The red Boros surface is bounded to roughly $8.3M of explorer-visible collateral, while the dominant V2 architecture (~>99% of TVS) isolates external yield-source failures to opt-in per-market SYs that the user explicitly chose, fitting orange's 'bounded and recoverable / opt-in / non-cross-cutting' pattern.",
+        "green": "If we consider only V2 core ignoring Boros, V2 has no required external dependency for ordinary mint/redeem/swap, oracles are integration-side, and the per-SY underlying-asset risk is opt-in — meeting green's 'failure of external dependencies cannot cause loss of principal' on the dominant module."
+      },
+      "verdict": "Choosing orange because the green steel-man fits the dominant V2 architecture but ignores Boros, and the red steel-man fits Boros but ignores its small TVS share — the rubric's module-weighting rule says a small (<5% of TVS) red sub-module bounds the overall grade to orange rather than dragging it to red. ~>99% of TVS in orange/green V2 + ~<1% of TVS in red Boros = weighted orange. This matches the existing DefiPunk'd autonomy quorum of 4/4 models on orange."
+    },
+    "evidence": [
+      {"url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "shows": "ChainSecurity Aug 2025 Boros audit: per-market oracle-reported rates + on-chain orderbook; 'Decentralization is improvable. Risk operations that are required to maintain the economic security of the protocol, such as order cancellation, order purging, and liquidations, are permissioned and can only be performed by whitelisted accounts'; TWAP windows and max rate-deviation are explicit live mitigations; users 'must trust the admin to perform these obligations at all times for the protocol to remain solvent.'", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "shows": "ChainSecurity Aug 2024 V2 Core audit: trust model 'severely depends on the SY used and the external system' — confirming V2's external dependencies are per-SY (opt-in per market); SY pause is the documented circuit-breaker; the PY system absorbs underlying loss into YT holders, leaving PT redeemable for a predictable SY amount at maturity.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/boros-dev/Mechanics/Margin", "shows": "Boros margin doc explicitly: 'Liquidation is a permissioned action carried out by Pendle to maintain protocol solvency'; force-deleverage triggered by Pendle when health ratio drops to 0.7; force-cancel of all open orders when accountHR < riskyThresHR. Confirms A8 keeper/operator dependence is non-trivial for Boros.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/boros-dev", "shows": "Boros developer overview: 'Boros is an on-chain interest rate swap (IRS) trading platform by Pendle, deployed on Arbitrum… hybrid central limit order book (CLOB) and AMM architecture' — confirms Boros scope and Arbitrum-only deployment used for module-weighting.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/protocol/pendle", "shows": "DefiLlama-pinned Pendle TVL ~$1.5B; existing DefiPunkD autonomy quorum (4/4 models, all orange) records Boros explorer-visible collateral around $8.3M, used here as the basis for the <1% Boros TVS share in module weighting.", "chain": "ethereum", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "shows": "MarketFactoryV3 owner-only write surface (setTreasuryAndFeeReserve, setOverriddenFee, transferOwnership) is fee/treasury related, not external-dependency-pointer related — supports the A9 finding that V2 market dependencies are largely fixed at market creation rather than governance-mutable post-deployment.", "chain": "ethereum", "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/pendle-v2/Introduction", "shows": "'Pendle's smart contract architecture is permissionless — any user or protocol can create a new yield-trading market on-chain. While on-chain creation is open to all, the visibility of these markets on the official Pendle UI is curated through a review process' — confirms permissionless market creation, supporting the A4 'opt-in per market' finding.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/42161/0x2080808080262c1706598c9DBDD3a0cD3601e5ea", "shows": "Boros accessController on Arbitrum (chainId 42161) — DefiPunkD reports 'No verified ABI found for 0x2080808080262c1706598c9DBDD3a0cD3601e5ea on chainId 42161 (etherscan + sourcify both failed)'; recorded for A2 transparency on Boros admin actor unknowns.", "chain": "arbitrum", "address": "0x2080808080262c1706598c9DBDD3a0cD3601e5ea", "fetched_at": "2026-05-10T00:00:00Z"}
+    ],
+    "unknowns": [
+      "A2: Boros oracle committee size, quorum, and member-selection process were not deterministically resolved; ChainSecurity Aug 2025 confirms permissioned operator/risk roles exist but does not enumerate the membership.",
+      "A3: cross-chain TVS share riding on LayerZero / PT OFT adapters versus local-chain TVS was not quantified this run.",
+      "A6-boros: whether a live secondary oracle or sanity-check exists for the Boros F-Index per-market oracles was not confirmed; documentation describes TWAP and max-deviation parameters but not a redundant feed.",
+      "A9-offchain: SY-adapter implementations expose owner-settable adapter pointers in some deployments — exhaustive per-SY enumeration of governance-mutable external addresses (and the timelock/exit-window status of each) was not done this run.",
+      "A4-offchain: a per-market census of every SY and its underlying yield source across all 11 chains is infeasible at run scale; the architecture-level grade does not depend on it but per-market depth was not exhaustively mapped."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/pendle-finance/pendle-core-v2-public", "https://github.com/pendle-finance/boros-core-public", "https://github.com/pendle-finance/Pendle-SY-Public"],
+      "docs_url": "https://docs.pendle.finance/",
+      "audits": [
+        {"firm": "ChainSecurity", "url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "date": "2025-08"},
+        {"firm": "ChainSecurity", "url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "date": "2024-08"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x808507121b80c02388fad14726482e061b8da827", "symbol": "PENDLE"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/pendle/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "V2 yield tokenization wraps third-party yield assets into per-market SY/PT/YT silos with no required protocol-level oracle for mint/redeem/swap. Boros, the smaller IRS module on Arbitrum, depends on per-market F-Index oracles plus a permissioned operator set for solvency-critical actions (liquidation, force-cancel, close-only). Module-weighted: V2 ~>99% TVS / orange; Boros ~<1% TVS / red; weighted overall = orange."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "claude-opus-4-7",
+    "grading_basis": "mixed",
+    "chat_url": "https://claude.ai/share/3437a3ed-8d0a-49dc-909b-7bcfb7a8dd8a",
+    "grade": "green",
+    "headline": "Permissionless on-chain market creation, no contract-level KYC/whitelist on V2 user flows, and multiple independent paths (SDK, third-party UIs, aggregators) exist alongside the official frontend's passive ToS sanctions clause.",
+    "short_headline": "Permissionless contracts, multi-path",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "Pendle's docs explicitly state: 'Pendle's smart contract architecture is permissionless — any user or protocol can create a new yield-trading market on-chain. While on-chain creation is open to all, the visibility of these markets on the official Pendle UI is curated through a review process.' V2 user-facing entry/exit functions on PendleMarketV3, PendlePrincipalToken, PendleYieldToken, and SY contracts use standard non-whitelisted access (no onlyWhitelisted/onlyKYCed/isAccredited modifier observed in the V2 core source); the ChainSecurity Aug 2024 audit's role enumeration confirms an SY 'owner' for pause but no per-user allowlist on deposit/redeem/mint/burn."},
+        {"code": "A2", "text": "V2: no off-chain operator approval is required to admit a user action — mint/redeem/swap/LP all clear unconditionally on-chain via Router V3. Boros: deposit (margin posting) and order placement on Boros are user-callable on-chain, but downstream solvency operations (liquidation, force-cancel, close-only mode, order purging) are permissioned to whitelisted accounts. By the rubric's distinction (admission unconditional + downstream operator dependence = liveness dependency, not admission gate), Boros admission is permissionless and operator-dependence belongs in the dependencies / autonomy slice, not as an open-access grade lever."},
+        {"code": "A3-passive", "text": "Pendle's official ToS at docs.pendle.finance/pendle-v2/TermsOfUse contains passive sanctions / restricted-territory self-certification clauses: users certify they are 'not prohibited and/or restricted under the laws of any jurisdiction', not 'an Excluded Person', and not 'accessing… from an Excluded Jurisdiction', where Excluded Jurisdiction includes FATF high-risk-listed jurisdictions, OFAC/EU/UN-sanctioned jurisdictions, and any jurisdiction where Pendle's use is prohibited. This is boilerplate self-certification — A3-passive."},
+        {"code": "A3-active", "text": "Whether the official frontend (app.pendle.finance, boros.pendle.finance) implements active runtime enforcement (IP geo-block banner, on-chain wallet-screening) was not observed directly this run. The ToS quote above does not by itself prove active enforcement; if active screening exists, it lives on the official UI and is publisher policy on one client, not a contract-level gate."},
+        {"code": "A3b", "text": "Independent access paths exist: (i) the @pendle/core-v2 SDK / interfaces published in pendle-finance/pendle-core-v2-public for direct contract interaction (the docs' Router Integration Guide shows raw Solidity / SDK calls against router 0x888888888889758F76e7103c6CbF23ABbF58F946); (ii) the Pendle V2 REST API at api-v2.pendle.finance/core/docs for off-chain calculation and routing; (iii) the Boros developer SDK and REST API documented at docs.pendle.finance/boros-dev — described as the alternative to on-chain direct calls; (iv) standard EVM wallets (Etherscan write tab, MetaMask/Rabby on the contract addresses) can call exits directly, and Pendle PT/YT/LP markets are routed by major DEX aggregators as a matter of practice. The protocol's permissionless on-chain market creation also implies third-party UIs can permissionlessly index and surface markets."},
+        {"code": "A4", "text": "No contract-level OFAC blocklist or on-chain sanctions screening was identified on V2 user-facing functions in the ChainSecurity Aug 2024 V2 Core audit's role/access section, which enumerates only an SY owner and standard ERC-20 / ERC-5115 surface. The protocol's open-source repos and audit reports do not mention an on-chain compliance hook on user entry/exit."},
+        {"code": "A5", "text": "Read access is fully public (Etherscan / DefiPunkD / RPC). Write access for V2 mint/redeem/swap is open to any address; Boros write access for deposit/order placement is similarly open at the contract level. The privileged write paths are scoped to admin/owner roles for upgrades, fee parameters, SY pause, and Boros operator actions — not to user admission."},
+        {"code": "A6", "text": "Verbatim ToS quote from docs.pendle.finance/pendle-v2/TermsOfUse: 'User is not prohibited and/or restricted under the laws of any jurisdiction applicable to User from accessing and/or using Pendle Protocol; User is compliant with all laws of any jurisdiction applicable to User in relation to User's access and/or use of Pendle Protocol… User is not an Excluded Person (as defined below), and User is not accessing and/or using Pendle Protocol from an Excluded Jurisdiction.' Excluded Jurisdiction is defined as FATF-listed, OFAC/EU/UN-sanctioned, or jurisdictions in which 'Pendle Protocol and the use of which are prohibited or would subject Pendle Group to licensing, permissions or approvals.'"}
+      ],
+      "steelman": {
+        "red": "If contracts enforced an on-chain whitelist or required operator approval to admit a deposit, open-access would collapse, but neither holds for Pendle V2 or Boros — admission is permissionless at the contract layer.",
+        "orange": "If the only practical access path were the official frontend (no SDK, no third-party UIs, no aggregator routing), the protocol would be operationally captured even if contracts are permissionless — but a published SDK, REST API, third-party aggregator routing, and the protocol's own permissionless market creation rule out that scenario.",
+        "green": "Contracts admit any caller for mint/redeem/swap, the protocol explicitly documents permissionless on-chain market creation, and at least four independent A3b paths exist (SDK, REST API for V2 and Boros, generic EVM wallet on Etherscan, third-party aggregators)."
+      },
+      "verdict": "Choosing green because contracts are permissionless at the V2 entry/exit surface (A1, A2, A4, A5), at least one A3b independent path exists (A3b lists four), and the official frontend's ToS sanctions clause (A3-passive) is publisher policy on one client and is reported as context per the rubric's default-grade guidance, not a grade lever. The orange steel-man requires affirmatively showing that all independent paths are absent or also gated, which is contradicted by the SDK/API/aggregator evidence."
+    },
+    "evidence": [
+      {"url": "https://docs.pendle.finance/pendle-v2/Introduction", "shows": "Verbatim quote: 'Pendle's smart contract architecture is permissionless — any user or protocol can create a new yield-trading market on-chain. While on-chain creation is open to all, the visibility of these markets on the official Pendle UI is curated through a review process to ensure quality and safety.'", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/pendle-v2/TermsOfUse", "shows": "Verbatim ToS clause: 'User is not prohibited and/or restricted under the laws of any jurisdiction applicable to User from accessing and/or using Pendle Protocol… User is not an Excluded Person… not accessing and/or using Pendle Protocol from an Excluded Jurisdiction.' Excluded Jurisdiction = FATF high-risk list, OFAC/EU/UN-sanctioned, or jurisdictions where use is locally prohibited / requires licensing. A3-passive evidence.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/pendle-v2-dev/Contracts/PendleRouter/ContractIntegrationGuide", "shows": "Pendle V2 contract integration guide showing direct Solidity calls against router 0x888888888889758F76e7103c6CbF23ABbF58F946 with raw IPAllActionV3 interface — confirms an SDK/library path exists for direct contract interaction independent of the official UI (A3b path).", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/boros-dev", "shows": "Boros developer docs explicitly distinguish two integration paths: 'Use the REST API and SDK via the agent-based Send Txs Bot architecture' OR 'Call Boros contracts from your own on-chain or off-chain code' — confirming Boros also has independent access paths beyond the official frontend.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://docs.pendle.finance/pendle-v2/Developers/Contracts/PendleMarket", "shows": "PendleMarket developer reference describes user-callable swap/mint/burn/redeemRewards functions with no whitelist or KYC modifier — supports A1 and A5 (open contract-level entry/exit).", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "shows": "ChainSecurity V2 Core role enumeration identifies only the SY owner (pause/unpause), market factory owner (fee parameters), and standard ERC-20/EIP-5115 access — no per-user whitelist, KYC, or admission committee at the V2 contract level.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://api-v2.pendle.finance/core/docs", "shows": "Pendle V2 REST API documentation page exists for developers integrating Pendle products — additional independent access path (A3b) for off-chain calculation and quotation.", "fetched_at": "2026-05-10T00:00:00Z"}
+    ],
+    "unknowns": [
+      "A3-active: I did not directly fetch app.pendle.finance / boros.pendle.finance to observe runtime IP-geoblocking or wallet-screening behavior; the ToS clause is a passive self-certification and does not by itself prove active enforcement on the official frontend.",
+      "A3b-third-party: while the existence of SDKs, REST APIs, and aggregator routing is documented, I did not enumerate a specific third-party frontend operated by an unaffiliated legal entity for Pendle V2; I rely on the SDK/API/aggregator-routing paths and the protocol's own permissionless market-creation guarantee for the 'independent path exists' claim."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/pendle-finance/pendle-core-v2-public", "https://github.com/pendle-finance/boros-core-public"],
+      "docs_url": "https://docs.pendle.finance/",
+      "audits": [
+        {"firm": "ChainSecurity", "url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "date": "2024-08"},
+        {"firm": "ChainSecurity", "url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "date": "2025-08"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x808507121b80c02388fad14726482e061b8da827", "symbol": "PENDLE"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/pendle/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "V2 mint, redeem, swap, and LP burn are open to any address at the contract level, with no whitelist, no KYC, and no operator approval to admit user actions. Markets can be created permissionlessly on-chain even though the official UI curates visibility. Boros admission is similarly contract-level open; its permissioned operator surface (liquidation, force-cancel, close-only) belongs to dependencies/autonomy, not to admission. Multiple independent access paths exist (V2 SDK, V2 REST API, Boros REST API, raw EVM wallet, aggregators)."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/3437a3ed-8d0a-49dc-909b-7bcfb7a8dd8a",
+    "grade": "green",
+    "headline": "Verified bytecode on Etherscan; multiple top-firm audits (ChainSecurity, Spearbit, Dedaub, Ackee) covering both V2 Core and Boros; public source repos.",
+    "short_headline": "Verified, multi-firm audits",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "Pendle Router V3 (0x00000000005BBB0EF59571E58418F9a4357b68A0) has verified source on Etherscan (PendleRouterV3 contract returned in search of the Etherscan address page); DefiPunkD inventory lists 41 of 71 contracts as having verified source; PendleMarketFactoryV3 (0x1A6fCc85557BC4fB7B534ed835a03EF056552D52) shows verified source on its Etherscan page and on the DefiPunkD read API (ABI source 'etherscan')."},
+        {"code": "V2", "text": "Public source repos exist and are linked from pendle.finance: pendle-finance/pendle-core-v2-public, pendle-finance/Pendle-SY-Public, pendle-finance/boros-core-public, pendle-finance/pendle-core; the verified Router V3 source visible on Etherscan corresponds to the PendleRouterV3 contract layout described in the public docs (immutable ACTION_* facets in the constructor)."},
+        {"code": "V3", "text": "26 audit reports listed in DefiPunkD's protocol page including ChainSecurity 2024 (Pendle V2 Core, August 2024), ChainSecurity 2025 (Pendle Boros Markets, August 2025), Spearbit July 2024, Spearbit August 2025, Dedaub, Ackee, multiple WatchPug reports across marketV6/V7/sPendle/oracle scopes, and Sherlock contest July 2024."},
+        {"code": "V4", "text": "Recognized firms in the audit set: ChainSecurity, Spearbit, Dedaub, Ackee Blockchain — all explicitly named in the recognized list in the rubric — plus a Sherlock audit contest. Multiple independent reviews from these firms across V2 Core, Boros, market V6/V7, oracle, and sPendle scopes."},
+        {"code": "V5", "text": "Drift not sampled this run (no commit SHA / file diff inspected), but ChainSecurity audited V2 Core (Aug 2024) and Boros (Aug 2025), and Spearbit covers both V2 (Jul 2024) and a follow-up review (Aug 2025). The Aug 2025 reviews are within ~9 months of analysis_date, providing relatively recent coverage on the modules that have evolved."},
+        {"code": "V6", "text": "Router V3 is itself an immutable diamond-style facet aggregator (constructor sets ACTION_ADD_REMOVE_LIQ, ACTION_SWAP_PT, ACTION_SWAP_YT, ACTION_MISC, ACTION_CALLBACK as immutables) — not a transparent proxy — so V6 'verify proxy and implementation separately' does not apply to Router V3. Where TransparentUpgradeableProxy / UUPSProxy is used (e.g. Boros adminModule 0x353C6Ba99500f9F5a7937aF7BF26c8E40817518B on Arbitrum), the proxy contract itself returns 'ABI source: etherscan' on the DefiPunkD read API, meaning the proxy contract bytecode is verified; current implementation contracts were not separately diff-inspected this run."}
+      ],
+      "steelman": {
+        "red": "If a verified proxy were paired with an unverified implementation, or if no audit existed in scope, verifiability would collapse, but neither holds for Pendle.",
+        "orange": "The Aug 2024 V2 Core ChainSecurity review predates the August 2025 Boros review by a year, and 30 of the 71 inventoried contracts on DefiPunkD lack the verified-source flag, so coverage is uneven across the address surface.",
+        "green": "Deployed contracts on Etherscan are verified for the user-facing core (Router V3, MarketFactoryV3, governance multisigs), the public source repos are in active use, and multiple recognized firms (ChainSecurity, Spearbit, Dedaub, Ackee) have audited both V2 Core and Boros within the last ~12 months."
+      },
+      "verdict": "Choosing green because the conditions for green (verified bytecode on the user-facing core, a public source repo, and ≥1 recognized-firm audit covering currently-deployed contracts) all hold and the orange steel-man reduces to uneven verification across peripheral contracts and a per-component diff that was not run this round — neither downgrades the verifiability posture for the deployed core."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/protocol/pendle", "shows": "Protocol-level inventory: 41 verified-source contracts of 71 listed; 26 audits enumerated with links (ChainSecurity, Spearbit, Dedaub, Ackee, Sherlock, WatchPug, Dingbats, CMichel, 0xleastwood, HickupHH3); 4 public GitHub repos under github.com/pendle-finance.", "chain": "ethereum", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "shows": "PendleMarketFactoryV3 ABI source 'etherscan' (verified), pre-executed view methods returning real values (owner, treasury, vePendle, gaugeController, reserveFeePercent=80, maxReserveFeePercent=100); reads pinned to block 25022853.", "chain": "ethereum", "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://etherscan.io/address/0x00000000005bbb0ef59571e58418f9a4357b68a0", "shows": "Pendle Router V3 has verified source code on Etherscan; the displayed source is contract PendleRouterV3 inheriting Proxy/IDiamondLoupe with five immutable ACTION_* facet addresses set in the constructor, confirming Router V3 is an immutable facet-dispatch contract.", "chain": "ethereum", "address": "0x00000000005BBB0EF59571E58418F9a4357b68A0", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://github.com/pendle-finance/pendle-core-v2-public/tree/main/audits", "shows": "Public audits directory in the canonical V2 Core repo, hosting the multi-firm audit PDFs referenced from DefiPunkD and the Pendle landing page.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "shows": "ChainSecurity August 15, 2024 audit of Pendle V2 Core: scope covers SY base, PY V1, markets V1; states 'codebase provides a good level of security' and documents SY owner pause/unpause capability — recognized firm, in-scope coverage.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "shows": "ChainSecurity August 8, 2025 audit of Pendle Boros Markets: scope covers Boros IRS markets; identifies upgradeable + pausable nature of contracts and permissioned risk operations (liquidation, order purging, force-cancel) — recognized firm, recent coverage.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Pendle-Spearbit-Security-Review-August-2025.pdf", "shows": "Spearbit Pendle Security Review August 2025 — additional recognized-firm coverage within ~9 months of analysis_date, listed in protocol.audit_links.", "fetched_at": "2026-05-10T00:00:00Z"},
+      {"url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Pendle-Spearbit-Security-Review-July-2024.pdf", "shows": "Spearbit Pendle Security Review July 2024 — earlier recognized-firm coverage of Pendle V2 contracts, listed in protocol.audit_links.", "fetched_at": "2026-05-10T00:00:00Z"}
+    ],
+    "unknowns": [
+      "V2: did not pin a commit SHA for the deployed Router V3 / MarketFactoryV3 source against pendle-finance/pendle-core-v2-public — only structural correspondence was confirmed via the verified Etherscan source.",
+      "V5: post-audit drift was not measured by sampling commits or file diffs in pendle-finance/pendle-core-v2-public against the audited commits cited in the ChainSecurity / Spearbit reports — coverage recency was inferred from audit dates only.",
+      "V1-peripheral: 30 of 71 inventoried contracts on DefiPunkD do not have the verified-source flag set; many appear to be discovery-only entries (Boros accessController, vePendle, GaugeController, market creation code helpers) — per-address verification was not exhausted this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/pendle-finance/pendle-core-v2-public",
+        "https://github.com/pendle-finance/Pendle-SY-Public",
+        "https://github.com/pendle-finance/boros-core-public",
+        "https://github.com/pendle-finance/pendle-core"
+      ],
+      "docs_url": "https://docs.pendle.finance/",
+      "audits": [
+        {"firm": "ChainSecurity", "url": "https://reports.chainsecurity.com/Pendle/ChainSecurity_Pendle_PendleV2Core_Audit.pdf", "date": "2024-08"},
+        {"firm": "ChainSecurity", "url": "https://cdn.prod.website-files.com/65d35b01a4034b72499019e8/689b39fda37c83273bf3a111_ChainSecurity_Pendle_Boros_Markets_audit.pdf", "date": "2025-08"},
+        {"firm": "Spearbit", "url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Pendle-Spearbit-Security-Review-August-2025.pdf", "date": "2025-08"},
+        {"firm": "Spearbit", "url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Pendle-Spearbit-Security-Review-July-2024.pdf", "date": "2024-07"},
+        {"firm": "Sherlock", "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2024.07.03%20-%20Final%20-%20Notional%20Leveraged%20Vaults:%20Pendle%20PT%20and%20Vault%20Incentives%20Audit%20Report.pdf", "date": "2024-07-03"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x808507121b80c02388fad14726482e061b8da827", "symbol": "PENDLE"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/pendle/information/",
+      "security_contact": "https://github.com/pendle-finance/pendle-core-v2-public/tree/main/audits",
+      "deployed_contracts_doc": "https://docs.pendle.finance/pendle-v2/Developers/Deployments",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1", "role": "V2 governance multisig (owner of MarketFactoryV3 and V2 ProxyAdmin)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0xE6F0489ED91dc27f40f9dbe8f81fccbFC16b9cb1", "role": "V2 devMultisig", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64", "role": "V2 ProxyAdmin (TUP upgrade authority); owner = V2 governance multisig", "actor_class": "multisig"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Pendle is a yield-trading protocol that wraps yield-bearing assets into Standardized Yield (SY) tokens, then splits each SY into a Principal Token (PT) and a Yield Token (YT) so users can lock in fixed yield, long the floating yield, or trade either component on Pendle's time-decay AMM. The newer Boros product on Arbitrum extends this to leveraged trading of off-chain funding rates via a hybrid CLOB+AMM with cross-margined positions. Markets are permissionless to create on-chain; the official frontend curates which markets are displayed."
+    }
+  }
+]

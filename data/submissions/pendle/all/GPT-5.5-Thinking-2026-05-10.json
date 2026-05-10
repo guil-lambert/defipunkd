@@ -1,0 +1,398 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0066b3-5628-832f-9bec-0aca0bd2423f",
+    "grade": "orange",
+    "headline": "V2 fee and treasury controls are reachable by a 3-of-5 governance Safe with no on-chain timelock observed; T2 is confirmed and a ProxyAdmin T1 path remains partially unresolved.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "V2 ProxyAdmin.owner() and MarketFactoryV3.owner() both return 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1, and the governance Safe surfacer shows a 3-of-5 Gnosis Safe with five owner addresses."
+        },
+        {
+          "code": "C2",
+          "text": "V2 ProxyAdmin exposes upgrade, upgradeAndCall, and changeProxyAdmin; the Router V3 address is a proxy/diamond-style surface with facets; Boros AdminModule and multiple Boros deployed contracts are TransparentUpgradeableProxy contracts, so upgradeability is mixed."
+        },
+        {
+          "code": "C3",
+          "text": "For the confirmed V2 owner path, no Governor or Timelock delay was identified before the 3-of-5 Safe owner; the observable fast path for MarketFactoryV3 owner functions is Safe threshold execution, with no on-chain delay constant fetched."
+        },
+        {
+          "code": "C4",
+          "text": "The governance Safe threshold is 3/5 and the fetched owner addresses are 0x231FC5b039d66BA234CB90357082Bf16Be79B17c, 0x7BD456937104Ca5eFfFBD895ccbba52421021C29, 0x9Ce6De7ec862e25a515AA0D8EcFbBBb2DaA8E0fb, 0x38ab4A7Dea2753757F29fe6d10280Df2C42abe27, and 0xF517364727Fcc764D58DdF4e53280874A4d0c476; identities and insider/non-insider classification were not established."
+        },
+        {
+          "code": "C5",
+          "text": "The Ethereum deployment file verifies a PENDLE token and vePendle/gauge-controller addresses, but this run did not fetch a Governor votingDelay, votingPeriod, quorum, proposal threshold, or queue/execute timelock path."
+        },
+        {
+          "code": "C6",
+          "text": "No separate emergency guardian or pause path was confirmed in the fetched V2 owner/factory/router surfaces; Boros has an accessController but that address had no verified ABI in this run."
+        },
+        {
+          "code": "C7",
+          "text": "Confirmed highest reachable tier is at least T2: MarketFactoryV3 exposes owner-only economic functions setTreasuryAndFeeReserve and setOverriddenFee, with maxReserveFeePercent read as 100 and maxLnFeeRateRoot read from the surfacer/API. ProxyAdmin upgrade functions may be T1 if they administer fund-holding proxies, but that exact administered-proxy mapping was not closed in this run."
+        }
+      ],
+      "steelman": {
+        "red": "If the ProxyAdmin is confirmed to administer fund-holding contracts, a 3-of-5 Safe could execute T1 upgrades without a fetched timelock.",
+        "orange": "At minimum, T2 fee/treasury controls are directly owned by a 3-of-5 multisig that fails the Security Council standard and no 7-day on-chain delay was observed.",
+        "green": "Some core market contracts are non-proxy and fee parameters have observable bounds, and no single EOA or 2-of-3 path was confirmed."
+      },
+      "verdict": "Choosing orange because T2 economic controls are confirmed under a 3-of-5 non-Security-Council Safe with no fetched delay, while the stronger red case depends on a ProxyAdmin-to-fund-holding-proxy mapping not proven in this run."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xA28c08f165116587D4F3E708743B4dEe155c5E64&block=25061871&chainId=1&method=owner",
+        "shows": "ProxyAdmin.owner() at block 25061871 returns governance Safe 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1 with calldata/rawReturnData.",
+        "chain": "Ethereum",
+        "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0x1A6fCc85557BC4fB7B534ed835a03EF056552D52&block=25061871&chainId=1&method=owner",
+        "shows": "MarketFactoryV3.owner() at block 25061871 returns governance Safe 0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1 with calldata/rawReturnData.",
+        "chain": "Ethereum",
+        "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1",
+        "shows": "Governance Safe surfacer identifies a Gnosis Safe proxy, 3-of-5 threshold, five owner addresses, and Safe write methods including execTransaction/module and owner-management functions.",
+        "chain": "Ethereum",
+        "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?address=0xA28c08f165116587D4F3E708743B4dEe155c5E64&chainId=1",
+        "shows": "ProxyAdmin ABI includes changeProxyAdmin, transferOwnership, upgrade, and upgradeAndCall functions.",
+        "chain": "Ethereum",
+        "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1A6fCc85557BC4fB7B534ed835a03EF056552D52",
+        "shows": "MarketFactoryV3 surfacer pre-executes owner, maxLnFeeRateRoot, maxReserveFeePercent=100, treasury, vePendle, yieldContractFactory, and lists write methods setOverriddenFee, setTreasuryAndFeeReserve, and transferOwnership.",
+        "chain": "Ethereum",
+        "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52"
+      }
+    ],
+    "unknowns": [
+      "C2: exact ProxyAdmin-administered proxy set and whether it includes current fund-custody/settlement proxies was not read with getProxyAdmin.",
+      "C3: no on-chain timelock MIN_DELAY/getMinDelay was found on the confirmed V2 owner path, but a full governance execution chain was not reconstructed.",
+      "C4: governance Safe owner identities and insider/non-insider classifications were not established; /api/safe/owners direct fetch for devMultisig and Boros accessController did not yield threshold/owner data.",
+      "C5: Governor/vePendle voting delay, voting period, quorum, proposal threshold, and queue/execute delay were not read.",
+      "C6: emergency pause/guardian powers across all V2 adapters, Router facets, and Boros modules were not exhaustively enumerated.",
+      "C7: T1 blast radius for ProxyAdmin remains unresolved because the administered proxy mapping was not proven from an on-chain read in this run."
+    ]
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0066b3-5628-832f-9bec-0aca0bd2423f",
+    "grade": "unknown",
+    "headline": "Exit-like functions and direct access paths are visible, but pause guards, role holders, queue caps, and claim-finalized semantics were not reconstructed.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Observed exit-like functions include Router V3 redeemPyToSy, redeemPyToToken, redeemSyToToken, redeemDueInterestAndRewards, Boros SDK withdraw and exitMarkets, and Boros MarketHub transactions labelled Finalize Vault Withdrawal and ExitMarket."
+        },
+        {
+          "code": "E7",
+          "text": "Direct/non-frontend access exists at least in part: Pendle Terms explicitly describe Direct Access to smart contracts, the V2 repo publishes interface artifacts, and the Boros SDK shows wallet/RPC-based deposit, withdraw, order, cancel, and exitMarkets flows."
+        }
+      ],
+      "steelman": null,
+      "verdict": "The assessment is blocked because the fetched evidence did not determine access modifiers, pause guards, role holders, maximum pause duration, queue caps, or whether finalized claims are unpausable across V2 and Boros exit paths."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x00000000005BBB0EF59571E58418F9a4357b68A0",
+        "shows": "Router V3 surfacer lists redeemPyToSy, redeemPyToToken, redeemSyToToken, redeemDueInterestAndRewards, mint, swap, and multicall surfaces.",
+        "chain": "Ethereum",
+        "address": "0x00000000005BBB0EF59571E58418F9a4357b68A0"
+      },
+      {
+        "url": "https://app.pendle.finance/trade/markets",
+        "shows": "Official app page says PT is redeemable 1:1 for the accounting asset at maturity, and describes yield markets, liquidity pools, sPENDLE staking, and cross-chain PT."
+      },
+      {
+        "url": "https://github.com/pendle-finance/sdk-boros-public",
+        "shows": "Boros SDK README documents wallet/RPC initialization and methods for deposit, withdraw, cancelOrders, enterMarkets, and exitMarkets."
+      },
+      {
+        "url": "https://ww9.arbiscan.io/address/0x1080808080f145b14228443212e62447c112adad",
+        "shows": "Arbiscan page for Boros MarketHub shows proxy source/implementation and recent transactions labelled Settle, Finalize Vault Withdrawal, and ExitMarket.",
+        "chain": "Arbitrum",
+        "address": "0x1080808080f145b14228443212e62447C112ADaD"
+      },
+      {
+        "url": "https://docs.pendle.finance/pendle-v2/TermsOfUse?utm_medium=landing&utm_source=landing",
+        "shows": "Terms say the website facilitates smart-contract use while smart contracts are also accessible via Direct Access, and a user can generate transaction messages to interact directly without the website."
+      }
+    ],
+    "unknowns": [
+      "E2: access modifiers and pause guards for each V2 redeem/withdraw/claim function and Boros withdraw/exit/finalize function were not extracted from verified source.",
+      "E3: pause role holders, maximum pause duration, and whether any PAUSE_INFINITELY-equivalent exists were not determined.",
+      "E4: emergency versus governance pause paths were not separated because no complete pause-role surface was reconstructed.",
+      "E5: maximum queue duration, daily withdrawal caps, and whether any withdrawal/finalization queue is pausable were not determined.",
+      "E6: forced-exit, escape-hatch, or permissionless emergency-exit mechanisms were not identified.",
+      "E7: direct callability was evidenced generally through Terms and SDK, but write-tab/direct-call coverage for every exit function across all deployed chains and adapters was not verified."
+    ]
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0066b3-5628-832f-9bec-0aca0bd2423f",
+    "grade": "orange",
+    "headline": "Worst unmitigated dependency is Boros's funding-rate oracle surface, impacting roughly 0.7% of Pendle+Boros TVS; V2 dependency risk is mainly opt-in per-market collateral/yield exposure.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "V2 integrates yield-bearing primitives through SY markets; the fetched docs name LSTs, LRTs, stablecoins, RWAs, and other primitives, making failures primarily per-market and opt-in. Boros explicitly requires an oracle for the underlying yield-rate, including off-chain centralized-exchange funding rates; derived impact: a bad oracle can change expected PnL/performance and, because Boros uses collateral and maintenance margin, can affect liquidation outcomes."
+        },
+        {
+          "code": "A2",
+          "text": "No V2 off-chain reporter committee was identified. Boros oracle reporter/committee size, quorum, and member-selection process were not determined from the fetched docs or contracts."
+        },
+        {
+          "code": "A3",
+          "text": "Pendle has material multi-chain deployment: DefiLlama shows $1.602b total TVL with Ethereum $916.62m, Plasma $257.91m, Sonic $249.69m, Arbitrum $135.04m and smaller chains. Official app text mentions Cross-chain PT bridging; bridge operator/trust model was not reconstructed."
+        },
+        {
+          "code": "A4",
+          "text": "V2 nested collateral is per-market: users choose yield-bearing assets such as LSTs, LRTs, stablecoins, or RWAs and receive PT/YT exposure. This is recorded as isolated opt-in underlying risk, not a cross-cutting autonomy red finding."
+        },
+        {
+          "code": "A6",
+          "text": "No live on-chain fallback, sanity check, second-opinion oracle, or circuit breaker was verified for Boros's underlying-yield oracle path; no complete fallback inventory was built for V2 SY adapters."
+        },
+        {
+          "code": "A7",
+          "text": "No evidence was found that Pendle itself operates an L2/L3/appchain sequencer or DA layer; deployments on Ethereum, Arbitrum, Base, Plasma, Sonic, HyperEVM and other chains are treated as chain substrate rather than protocol-operated sequencer dependencies."
+        },
+        {
+          "code": "A8",
+          "text": "Boros SDK shows user/agent signing flows, order placement/cancellation, deposit/withdraw, and market exit methods. Arbiscan shows settlement and finalize-withdrawal transactions, but whether those settlement/finalization flows require a permissioned off-chain bot versus any caller was not determined."
+        },
+        {
+          "code": "A9",
+          "text": "Boros AdminModule exposes newAMM with create parameters including router, market, oracleImpliedRateWindow, totalSupplyCap, seeder, and permissionController; derived impact: new Boros markets can introduce new dependency surfaces, but whether existing user positions can have dependencies silently swapped without an exit window was not determined."
+        }
+      ],
+      "steelman": {
+        "red": "Boros has an off-chain funding-rate oracle dependency tied to margin and liquidation, and no live fallback was verified for that dependency.",
+        "orange": "The potentially red Boros dependency affects only about $10.98m versus $1.602b in Pendle V2 TVL, while V2 dependencies are mostly isolated, opt-in market-underlying risks.",
+        "green": "V2's core architecture is permissionless and per-market isolated, so a single underlying failure should not propagate across all markets."
+      },
+      "verdict": "Choosing orange because Module V2 holds about $1.602b, approximately 99.3% of Pendle+Boros TVS (grade: orange due per-market external yield-asset dependencies), while Module Boros holds about $10.98m, approximately 0.7% (grade: red/unknown due off-chain oracle and margin/liquidation coupling without verified fallback); weighted overall is orange because the worst dependency is real but currently small relative to total TVS."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.pendle.finance/pendle-v2/Introduction",
+        "shows": "Official docs say Pendle is a permissionless yield-trading protocol; users wrap yield-bearing assets into SY, split into PT and YT, and trade them through Pendle's AMM."
+      },
+      {
+        "url": "https://docs.pendle.finance/boros-docs/Introduction",
+        "shows": "Official Boros docs say Boros trades funding rates, including off-chain centralized-exchange funding rates; it obtains yield-rate via an oracle and uses collateral, margin, and liquidation parameters."
+      },
+      {
+        "url": "https://defillama.com/protocol/pendle",
+        "shows": "DefiLlama page shows Pendle Total Value Locked $1.602b and chain TVL distribution: Ethereum $916.62m, Plasma $257.91m, Sonic $249.69m, Arbitrum $135.04m, Hyperliquid L1 $17.26m, BSC $13.73m, Base $11.05m, and smaller chains."
+      },
+      {
+        "url": "https://defillama.com/protocol/boros",
+        "shows": "DefiLlama page shows Boros Total Value Locked $10.98m on Arbitrum, Open Interest $110.03m, and methodology that Boros TVL sums collateral tokens held in the Boros MarketHub contract."
+      },
+      {
+        "url": "https://app.pendle.finance/trade/markets",
+        "shows": "Official app page says Pendle wraps yield-bearing assets such as stETH, sUSDe, aUSDC and ezETH into SY, splits into PT/YT, and includes cross-chain PT bridging."
+      }
+    ],
+    "unknowns": [
+      "A1: exact V2 external contract call graph and every SY adapter dependency were not enumerated from source.",
+      "A1: Boros oracle contract addresses, latestAnswer/latestRoundData values, provider identities, and on-chain oracle update mechanics were not fetched.",
+      "A2: Boros oracle reporter committee size, quorum, selection process, and slashing/accountability were not determined.",
+      "A3: bridge operators, trust models, and TVL routed through each cross-chain PT bridge were not determined.",
+      "A6: no live fallback/sanity-check status was verified for Boros oracle reports or V2 SY adapters.",
+      "A8: keeper/relayer permissionlessness for Boros settlement/finalize flows was not proven.",
+      "A9: whether an admin can silently swap dependencies for existing markets without an exit window was not determined."
+    ]
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0066b3-5628-832f-9bec-0aca0bd2423f",
+    "grade": "green",
+    "headline": "Contracts and SDK paths are practically reachable without the official UI; official Terms impose eligibility/sanctions restrictions, but the fetched contract/source evidence does not show contract-level KYC or whitelist gating.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Official V2 docs say Pendle's smart-contract architecture is permissionless and that any user or protocol can create a new yield-trading market on-chain, while official UI visibility is curated. The fetched Router/Factory surfaces show public user-action methods but no observed allowlist/KYC modifier in the surfaced ABI; exhaustive source grep was not completed."
+        },
+        {
+          "code": "A2",
+          "text": "No single off-chain operator approval requirement was found for V2 admission. Boros SDK order flow requires the user to create/approve an agent and sign transactions with a wallet/RPC path, which is user-controlled transaction signing rather than publisher admission."
+        },
+        {
+          "code": "A3",
+          "text": "Official Terms contain active eligibility/sanctions language: users agree not to use the protocol if they are Excluded Persons, may not use VPN/proxy to circumvent geo-blocks, and excluded persons include certain sanctioned-list and wallet-screening matches. This is frontend/legal context and not used as the grade lever."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent/direct paths exist: the Terms explicitly describe Direct Access without the website, the V2 repo publishes npm interface artifacts, the Boros SDK is public and installable as @pendle/sdk-boros, and the app page lists 35+ integrations including Aave, Morpho, and Yearn."
+        },
+        {
+          "code": "A4",
+          "text": "No contract-level OFAC/KYC/blocklist check was observed in the fetched Router V3, MarketFactoryV3, or Boros AdminModule ABI surfaces; a complete source grep across all modules was not performed."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through block explorers/DeFiPunkd surfaces, and write access to representative V2/Boros user-action surfaces is exposed through public router/factory contracts and SDK flows rather than an official-frontend-only path."
+        },
+        {
+          "code": "A6",
+          "text": "Verbatim Terms excerpts fetched: 'User is not an Excluded Person ... and User is not accessing and/or using Pendle Protocol from an Excluded Jurisdiction'; 'You shall not use a virtual private network, proxy or any other method to circumvent geo-blocks or eligibility criteria'; and excluded persons include cases where 'your wallet address is listed on the Specially Designated Nationals and Blocked Persons List' or other adverse/wallet-screening lists."
+        }
+      ],
+      "steelman": {
+        "red": "The Terms claim the Pendle Group may restrict access and even blacklist a supported wallet, and official UI visibility is curated.",
+        "orange": "If all practical access were through the publisher UI, the ToS and curation posture would create operational capture even if contracts are theoretically open.",
+        "green": "Direct Access, public source/interfaces, public SDKs, and integration paths provide practical non-official access, and no contract-level admission whitelist was observed in the fetched core surfaces."
+      },
+      "verdict": "Choosing green because the operative grade inputs are contract admission and independent reachability: official docs/Terms/SDK evidence show direct non-UI access, and no contract-level whitelist/KYC/operator admission gate was found in the representative fetched surfaces; ToS/sanctions restrictions are reported as context."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.pendle.finance/pendle-v2/Introduction",
+        "shows": "Official docs say Pendle is a permissionless yield-trading protocol; users wrap yield-bearing assets into SY, split into PT and YT, and trade them through Pendle's AMM."
+      },
+      {
+        "url": "https://docs.pendle.finance/pendle-v2/TermsOfUse?utm_medium=landing&utm_source=landing",
+        "shows": "Terms say the Website facilitates smart-contract use but smart contracts can be used via Direct Access; a user can generate transaction messages and interact directly without the website."
+      },
+      {
+        "url": "https://docs.pendle.finance/pendle-v2/TermsOfUse?utm_medium=landing&utm_source=landing",
+        "shows": "Terms quote eligibility/sanctions restrictions: 'User is not an Excluded Person ... and User is not accessing and/or using Pendle Protocol from an Excluded Jurisdiction'; users shall not use VPN/proxy to circumvent geo-blocks; excluded persons include sanctioned-list and wallet-screening matches."
+      },
+      {
+        "url": "https://github.com/pendle-finance/pendle-core-v2-public",
+        "shows": "Public GitHub repository states it contains the core smart contracts for Pendle V2 and points to audits and npm interface artifacts."
+      },
+      {
+        "url": "https://github.com/pendle-finance/sdk-boros-public",
+        "shows": "Boros SDK README shows installation with yarn add @pendle/sdk-boros and wallet/RPC-based flows for creating an agent, approving it, placing orders, depositing, withdrawing, cancelling, and exiting markets."
+      }
+    ],
+    "unknowns": [
+      "A1: full source grep for onlyWhitelisted, onlyRole, allowlist, isAccredited, and isKYCed across every V2 adapter, Router facet, and Boros module was not completed.",
+      "A2: Boros backend/API execution role, if any, was not fully characterized beyond the public SDK's user wallet/agent signing flow.",
+      "A4: exhaustive on-chain sanctions/blocklist grep across all modules was not completed; finding is limited to the representative fetched ABI surfaces."
+    ]
+  },
+  {
+    "schema_version": 4,
+    "slug": "pendle",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0066b3-5628-832f-9bec-0aca0bd2423f",
+    "grade": "orange",
+    "headline": "Most representative Pendle V2 and Boros contracts are verified and public, but a pinned Boros accessController has no verified ABI and audit scope/drift was not fully closed.",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Representative V2 privileged contracts were verified: the governance Safe API response says verified=true and resolves a proxy implementation, ProxyAdmin is verified via Sourcify, MarketFactoryV3 is verified via Etherscan, and the Router V3 surfacer shows an Etherscan ABI source with proxy implementation and facets. However, the pinned Boros accessController returned no verified ABI."
+        },
+        {
+          "code": "V2",
+          "text": "Public source repositories exist for both Pendle V2 and Boros core contracts, and the deployment files in those repositories list the same representative addresses used in this run; no independent bytecode diff or source-to-commit match was performed."
+        },
+        {
+          "code": "V3",
+          "text": "Audit evidence exists in the linked repositories and pinned report URLs: Pendle docs point to the audits folder, the Boros site links ChainSecurity/Spearbit/WatchPug audit reports, and Spearbit/Sherlock PDF wrapper pages were fetched; the actual PDF bodies, specific contract scopes, and commit scopes were not extractable in this run."
+        },
+        {
+          "code": "V4",
+          "text": "Recognized Solidity auditors were present in fetched evidence: Spearbit and ChainSecurity appear in the Boros audit sources, and Ackee appears in Pendle's security docs. WatchPug, Dingbats, Dedaub, and Sherlock were observed but are not all on the rubric's recognized-firm list."
+        },
+        {
+          "code": "V5",
+          "text": "The core V2 repository latest observed main-branch commit was fdcfe39 on Mar 10, 2026, after the 2024 and 2025 audit filenames; without sampled diffs or extracted PDF scopes, post-audit drift remains unresolved."
+        },
+        {
+          "code": "V6",
+          "text": "Proxy/implementation evidence was resolved for several contracts: governance Safe proxy, ProxyAdmin, Router V3 diamond proxy, and Boros AdminModule proxy. The Boros accessController lacked a verified ABI, and every individual Router facet and Boros proxy implementation was not separately fetched."
+        }
+      ],
+      "steelman": {
+        "red": "A pinned Boros control address with no verified ABI and unextracted audit scopes could make a material part of the control surface opaque.",
+        "orange": "The core public-source and audit posture is strong, but verification is not complete across pinned Boros controls and the current deployed source-to-audit drift was not closed.",
+        "green": "Most important V2 and Boros contracts checked here are verified, public repositories exist, and recognized auditors appear in the fetched evidence."
+      },
+      "verdict": "Choosing orange because verified/public source evidence is strong enough to avoid red, but the unverified Boros accessController plus unresolved audit scope and drift prevents a green verifiability call."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?address=0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1&chainId=1",
+        "shows": "DeFiPunkd ABI API returns verified=true, abiSource=etherscan, contractName=Proxy, and proxy implementation 0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F.",
+        "chain": "Ethereum",
+        "address": "0x8119EC16F0573B7dAc7C0CB94EB504FB32456ee1"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?address=0xA28c08f165116587D4F3E708743B4dEe155c5E64&chainId=1",
+        "shows": "ProxyAdmin ABI API returns verified=true, abiSource=sourcify, proxy=null, and includes upgrade/changeProxyAdmin functions.",
+        "chain": "Ethereum",
+        "address": "0xA28c08f165116587D4F3E708743B4dEe155c5E64"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?address=0x1A6fCc85557BC4fB7B534ed835a03EF056552D52&chainId=1",
+        "shows": "MarketFactoryV3 ABI API returns verified=true, abiSource=etherscan, contractName=PendleMarketFactoryV3, and a non-proxy ABI.",
+        "chain": "Ethereum",
+        "address": "0x1A6fCc85557BC4fB7B534ed835a03EF056552D52"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x00000000005BBB0EF59571E58418F9a4357b68A0",
+        "shows": "Router V3 surfacer shows ABI source etherscan, proxy implementation 0x8086174bE8FC721CbF275545193a73f56FBF3384, facetAddresses/facets reads, and DiamondCut events.",
+        "chain": "Ethereum",
+        "address": "0x00000000005BBB0EF59571E58418F9a4357b68A0"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0x2080808080262c1706598c9DBDD3a0cD3601e5ea",
+        "shows": "Boros accessController surfacer says no verified ABI found on Arbitrum from etherscan or sourcify and falls back to generic methods.",
+        "chain": "Arbitrum",
+        "address": "0x2080808080262c1706598c9DBDD3a0cD3601e5ea"
+      }
+    ],
+    "unknowns": [
+      "V1: every Router V3 facet and every Boros proxy implementation was not individually fetched through /api/contract/abi.",
+      "V2: no independent local compile, bytecode diff, or explorer-source-to-GitHub commit match was performed.",
+      "V3: linked PDF bodies for Spearbit/Sherlock reports could not be extracted through the available fetch path, so specific audited contracts and commit scopes remain unresolved.",
+      "V5: post-audit drift was not sampled with GitHub compare views or file-level diffs; commit count/date was observed but not treated as a material-drift finding."
+    ]
+  }
+]
