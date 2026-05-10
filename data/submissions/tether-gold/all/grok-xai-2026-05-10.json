@@ -1,0 +1,280 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_28908ea0-e577-4aa6-a5f8-ab0fc4ffe83a",
+    "grading_basis": "on-chain",
+    "grade": "red",
+    "headline": "3-of-6 multisig (Tether-controlled) holds T1 powers (mint, upgrade proxy, blocklist+destroy, admin change) with zero timelock on Ethereum/Arbitrum/Polygon XAUt proxies",
+    "short_headline": "Multisig T1 control, no timelock",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "Ethereum XAUt proxy (0x68749665ff8d2d112fa859aa293f07a622782f38) owner is 3-of-6 multisig at 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 (https://defipunkd.com/address/1/0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 shows getOwners + required=3); implementation (0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566) has owner() + mint + addToBlockedList + destroyBlockedFunds + transferOwnership[](https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566). Same pattern on Arbitrum proxy (0x40461291347e1ecbb09499f3371d3f17f10d7159, owner 0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8 per address_book)."},
+        {"code": "C2", "text": "TransparentUpgradeableProxy on ETH/ARB (upgradeTo/upgradeToAndCall/changeAdmin present; admin() reverted on read but proxy owner role per address_book and surfaced links); implementation is non-proxy logic contract (https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38 and https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566). No timelock or governor contract surfaced."},
+        {"code": "C3", "text": "Execution path: multisig submit/confirm/execute (direct, 0s delay). No MIN_DELAY, timelock, or governor queue/execute path found in any read or surfacer (https://defipunkd.com/address/1/0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828; no governance contracts in address_book or website)."},
+        {"code": "C4", "text": "Primary multisig: 3-of-6 at 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 (owners listed, required=3, 5382 txs, MAX_OWNER_COUNT=50; https://defipunkd.com/address/1/0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828). Powers: proxy upgrade/admin change, token owner (mint, blocklist add/remove, destroyBlockedFunds, transferOwnership). Signer identities unknown (no public announcement; likely Tether insiders). No other multisigs or emergency roles surfaced."},
+        {"code": "C6", "text": "No separate emergency-pause/guardian role or time-capped multisig; only the main 3-of-6 multisig controls all privileged functions (no paused() in ABI or state)."},
+        {"code": "C7", "text": "Highest tier T1 on uncontested fast path: mint(address,uint256), upgradeTo (replace impl of fund-holding token), destroyBlockedFunds (drain user funds), changeAdmin (replace upgrade admin with EOA) — all callable by the 3-of-6 multisig with no delay or on-chain governance."}
+      ],
+      "steelman": {
+        "red": "3-of-6 multisig (fails Security Council criteria: <7 signers, unknown/insider composition) can unilaterally mint, upgrade implementation, blocklist+destroy user funds, and change proxy admin with zero timelock or exit window — classic T1 single-party control surface.",
+        "orange": "Multisig threshold provides some distribution vs pure EOA, and on-chain transparency of owners/transactions exists, but still fast-path T1 without 7-day bar or broad governance.",
+        "green": "No single EOA; multisig requires 3 confirmations and is content-addressed on defipunkd; token is simple ERC-20 with no complex governance attack surface."
+      },
+      "verdict": "Choosing red because T1 powers (mint, upgrade, destroyBlockedFunds, admin change) are held by a 3-of-6 multisig with direct execution and zero timelock or on-chain governance path, meeting red criteria exactly (C1/C2/C3/C4/C7 evidence from defipunkd reads and address_book)."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828", "shows": "3-of-6 multisig (getOwners + required=3) that owns the XAUt proxy per address_book; controls upgrade/mint/blocklist path; 6 owners listed, no timelock.", "chain": "Ethereum", "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828"},
+      {"url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38", "shows": "TransparentUpgradeableProxy for XAUt; points to implementation 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566; upgrade/admin functions present; owner role per address_book is the multisig.", "chain": "Ethereum", "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"},
+      {"url": "https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566", "shows": "Implementation logic: owner(), mint(), addToBlockedList(), destroyBlockedFunds(), transferOwnership(); no pause(); T1 functions directly callable by owner (multisig).", "chain": "Ethereum", "address": "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"},
+      {"url": "https://gold.tether.to/", "shows": "No on-chain governance, timelock, or decentralized control mentioned; redemption/mint handled off-chain by TG Commodities (Tether entity).", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "C3: no timelock or governor contract discovered after reading proxy/implementation and multisig; assumed absent.",
+      "C4: multisig signer identities and insider status unknown (no public disclosure or on-chain labeling); assumed Tether insiders for grading.",
+      "C5: no on-chain governance (Governor, token voting, or proposal system) present in any surfacer or website.",
+      "C6: no evidence of separate emergency role or time cap; only main multisig path."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://gold.tether.to/faq",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828", "role": "owner() of XAUt proxy (mint, upgrade, blocklist, admin change)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x7224BEef47a6A7B414a0d0AdADf3f691C2691005", "role": "owner() of XAUt implementation", "actor_class": "unknown"},
+        {"chain": "Arbitrum", "address": "0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8", "role": "owner() of Arbitrum XAUt proxy", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is an ERC-20 token (6 decimals) representing 1:1 ownership of physical LBMA gold bars in Swiss vaults, issued and redeemed off-chain via KYC with TG Commodities (Tether entity). On-chain: permissionless transfers + privileged mint/blocklist/destroy by multisig-controlled owner; multiple chain deployments via TransparentUpgradeableProxy."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_28908ea0-e577-4aa6-a5f8-ab0fc4ffe83a",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "On-chain transfers permissionless but no on-chain redeem/exit; physical gold redemption requires off-chain KYC+approval by Tether entity; admin can blocklist+destroy funds with no time cap or escape hatch",
+    "short_headline": "Off-chain gated exit; admin destroy",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "User-facing on-chain exit/transfer: standard ERC-20 transfer/transferFrom/approve (no dedicated withdraw/redeem/burn for users in ABI); off-chain redeem for physical gold or USD via TG Commodities app[](https://gold.tether.to/faq)."},
+        {"code": "E2", "text": "On-chain transfer functions have no pause/onlyRole/whenNotPaused modifiers (ABI shows no paused() or access control beyond owner for mint/block); off-chain redeem requires login+KYC+account verification before request placement or claim."},
+        {"code": "E3", "text": "No pause guard or PAUSE_ROLE in any contract (no paused()/isPaused in proxy or implementation reads); blocklist allows owner (multisig) to addToBlockedList and destroyBlockedFunds indefinitely with no time cap[](https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566)."},
+        {"code": "E4", "text": "No emergency vs governance pause distinction; only privileged block+destroy by multisig (no time cap, no auto-expiry). Off-chain redemption fully gated by Tether entity approval."},
+        {"code": "E5", "text": "No on-chain queued redemption or daily caps; off-chain redeem has min ~430 XAUt (1 bar) + 25bp fee + delivery, processed in business days after KYC[](https://gold.tether.to/faq)."},
+        {"code": "E6", "text": "No forced-exit, escape-hatch, or permissionless emergency exit for adversarial admin; blocked addresses can have funds destroyed by multisig with no recourse on-chain."},
+        {"code": "E7", "text": "On-chain transfers directly callable via any wallet/Etherscan write tab (ERC-20 standard, no frontend required); off-chain physical redeem requires official app + KYC."}
+      ],
+      "steelman": {
+        "red": "No on-chain exit to principal (physical gold claim); admin (multisig) can indefinitely blocklist and destroy user funds with no time cap or escape hatch; redemption requires Tether entity KYC/approval — users cannot exit on their own terms under adversarial conditions.",
+        "orange": "On-chain token transfers remain permissionless even if blocked (no transfer hook revert per vuln report and ABI); off-chain redemption path exists with documented process (though gated).",
+        "green": "ERC-20 transfers are fully permissionless and directly callable; no pause on transfers; independent wallet/DEX paths exist for moving tokens."
+      },
+      "verdict": "Choosing red because there is no on-chain exit function for the gold claim (E1/E6), admin can destroy blocked funds indefinitely (E3), and physical redemption requires off-chain KYC+approval by the issuer with no permissionless escape hatch (E2/E4/E5), meeting multiple red criteria despite permissionless transfers."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566", "shows": "Implementation ABI: transfer/transferFrom/approve (permissionless), mint/blocklist/destroyBlockedFunds (owner-only), no paused() or redeem function for users.", "chain": "Ethereum", "address": "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"},
+      {"url": "https://gold.tether.to/faq", "shows": "Redemption for physical gold/USD requires KYC verification, login to Tether app, min 430 XAUt per bar, 25bp fee + delivery; US persons prohibited; processed off-chain by TG Commodities after approval.", "chain": "Ethereum"},
+      {"url": "https://gold.tether.to/", "shows": "No on-chain redeem or exit mentioned; all physical redemption and purchase handled by TG Commodities entity with KYC.", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "E3: exact transfer behavior for blocked addresses not re-read on-chain (possible hook or not); assumed not fully blocking transfers based on ABI and prior vuln report.",
+      "E6: no escape hatch or permissionless emergency exit discovered after full ABI and website review."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://gold.tether.to/faq",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828", "role": "owner() of XAUt proxy (mint, upgrade, blocklist, admin change)", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is an ERC-20 token (6 decimals) representing 1:1 ownership of physical LBMA gold bars in Swiss vaults, issued and redeemed off-chain via KYC with TG Commodities (Tether entity). On-chain: permissionless transfers + privileged mint/blocklist/destroy by multisig-controlled owner; multiple chain deployments via TransparentUpgradeableProxy."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_28908ea0-e577-4aa6-a5f8-ab0fc4ffe83a",
+    "grading_basis": "off-chain-only",
+    "grade": "red",
+    "headline": "~100% TVS exposed to single issuer (Tether/TG Commodities) failure: physical gold custody, reserves attestation (BDO), and off-chain redemption processing; no on-chain oracles/fallbacks or cross-module diversification",
+    "short_headline": "Issuer dependency for all TVS",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "No external contract calls, oracles, price feeds, or on-chain dependencies in core token contracts (pure ERC-20 + owner controls; no getPrice/latestAnswer/chainlink in ABI or reads across ETH/ARB/POLY proxies)."},
+        {"code": "A2", "text": "Off-chain issuer committee (TG Commodities S.A. de C.V. + Tether) controls mint, reserves allocation, redemption approval, and physical gold custody in Swiss LBMA vaults; no on-chain validator set or reporter committee."},
+        {"code": "A3", "text": "No material bridge dependencies for core TVS (separate deployments on ETH/ARB/POLY; no canonical bridge carrying significant bridged TVL mentioned; cross-chain is not required for primary use)."},
+        {"code": "A4", "text": "No nested collateral/restaking; direct 1:1 claim on physical gold bars (no LRT depth or propagation beyond issuer)."},
+        {"code": "A6", "text": "No on-chain fallback, circuit breaker, sanity check, or second-oracle for any external input (none exist); reserves attested quarterly by BDO Italia (reasonable assurance on reserves report only, not full SC or company audit; https://gold.tether.to/reports). Fallback status: DOCUMENTED only."},
+        {"code": "A9", "text": "Multisig can upgrade implementation (potentially introduce new external calls/dependencies) with no timelock or exit window for users (C2 evidence)."}
+      ],
+      "steelman": {
+        "red": "100% of TVS is a claim on physical gold held/custodied/attested/redeemed solely by Tether entity and Swiss vaults; issuer failure (insolvency, non-redemption, reserves shortfall, or hack) directly impairs principal with no on-chain mitigation, fallback, or diversification.",
+        "orange": "On-chain token remains transferable and tradable on DEX/CEX regardless of issuer status; quarterly BDO reserves attestation provides some transparency; multiple chain deployments reduce single-chain risk.",
+        "green": "No on-chain oracles or external contract dependencies in the token logic itself; backing is direct allocated physical gold with public serial-number verification on website."
+      },
+      "verdict": "Choosing red because the entire protocol is a single-issuer RWA claim (A2/A6/A9) with no on-chain fallback or mitigation (A1/A6), and issuer failure can cause loss of principal (gold claim), meeting red criteria; impacted TVS ~100%."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566", "shows": "No external calls, oracles, or dependencies in ABI or state; pure token with owner controls only.", "chain": "Ethereum", "address": "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"},
+      {"url": "https://gold.tether.to/reports", "shows": "Quarterly reserves reports attested by BDO Italia (reasonable assurance on gold reserves only); gold held in Swiss LBMA vaults by custodian; no on-chain oracle or automated fallback.", "chain": "Ethereum"},
+      {"url": "https://gold.tether.to/faq", "shows": "All mint/redeem/physical delivery processed off-chain by TG Commodities (Tether entity) after KYC; no on-chain exit or fallback mechanism.", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "A2: exact legal entity structure and diversification of Swiss vault operators unknown beyond BDO attestation; assumed single-issuer dependency.",
+      "A9: whether upgrade can introduce new external dependencies not re-verified beyond proxy upgrade capability."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://gold.tether.to/faq",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828", "role": "owner() of XAUt proxy (mint, upgrade, blocklist, admin change)", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is an ERC-20 token (6 decimals) representing 1:1 ownership of physical LBMA gold bars in Swiss vaults, issued and redeemed off-chain via KYC with TG Commodities (Tether entity). On-chain: permissionless transfers + privileged mint/blocklist/destroy by multisig-controlled owner; multiple chain deployments via TransparentUpgradeableProxy."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_28908ea0-e577-4aa6-a5f8-ab0fc4ffe83a",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "On-chain transfers/approvals fully permissionless with no contract whitelist/KYC or operator approval; independent paths via any wallet/DEX exist; KYC/US ban and ToS are off-chain frontend/issuer policies only",
+    "short_headline": "Permissionless on-chain; KYC off-chain",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "No whitelist/allowlist/onlyWhitelisted/isKYCed/isAccredited modifiers or role checks on transfer/approve/transferFrom (standard ERC-20 in implementation ABI; https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566)."},
+        {"code": "A2", "text": "No off-chain operators or committees required to admit on-chain transfers or approvals; mint and physical redeem require off-chain KYC/issuer approval but are not on-chain admission gates."},
+        {"code": "A3", "text": "Frontend (app.tether.to) requires KYC for purchase/redeem and explicitly prohibits US persons (ToS quote: 'U.S. persons are prohibited from purchasing or redeeming XAU₮'); compliance discretion stated. This is A3-active on official UI only."},
+        {"code": "A3b", "text": "Independent paths exist: any EVM wallet (MetaMask etc.) for direct contract calls; DEX aggregators/wallets route through ERC-20; published contract address on Etherscan/CoinGecko enables third-party frontends and SDKs (no official SDK required but permissionless access confirmed)."},
+        {"code": "A4", "text": "On-chain blocklist exists (addToBlockedList/destroyBlockedFunds by owner) but does not gate entry/transfers (no transfer hook revert; prior vuln report confirms transfers from blocked possible); not a full on-chain sanctions blocklist for admission."},
+        {"code": "A5", "text": "Read access fully permissionless (anyone can query balance/totalSupply); write access for transfers/approvals also permissionless; only mint/blocklist/destroy gated to owner."},
+        {"code": "A6", "text": "ToS[](https://gold.tether.to/legal/termsofservice) contains jurisdictional/sanctions clauses (US prohibited, compliance discretion); verbatim extraction not performed due to SPA but policy acknowledged in FAQ."}
+      ],
+      "steelman": {
+        "red": "KYC mandatory for purchase/redeem + explicit US person ban + issuer discretion + on-chain blocklist updatable by multisig creates effective admission gate for core value accrual.",
+        "orange": "Official frontend enforces KYC and geo/compliance; no published official SDK or third-party frontend documented by protocol itself.",
+        "green": "Core contracts impose zero whitelist/KYC/operator gate on transfers/approvals (A1/A2); blocklist does not prevent transfers (A4); multiple independent paths (wallets/DEX) exist (A3b); frontend policies are non-determinative per rubric."
+      },
+      "verdict": "Choosing green because contracts are fully permissionless for user entry/exit (transfers), no contract-level KYC/whitelist (A1), no on-chain operator approval required for admission (A2), and independent paths via wallets/DEX exist (A3b), with KYC/US ban being off-chain issuer/frontend policy only (A3/A6)."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566", "shows": "ERC-20 transfer/approve functions have no access modifiers or whitelist checks; only owner-gated mint/blocklist/destroy.", "chain": "Ethereum", "address": "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"},
+      {"url": "https://gold.tether.to/faq", "shows": "KYC required for buy/redeem via official app; US persons prohibited; off-chain process by TG Commodities; on-chain token use not restricted.", "chain": "Ethereum"},
+      {"url": "https://gold.tether.to/", "shows": "Token is standard ERC-20; tradable 24/7 on exchanges; no contract-level admission gates mentioned.", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "A3b: exact list of third-party frontends/aggregators not exhaustively enumerated but existence confirmed via Etherscan/CoinGecko listings and DEX pool references.",
+      "A6: full verbatim ToS sanctions clause not extracted (SPA render); policy direction clear from FAQ."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://gold.tether.to/faq",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828", "role": "owner() of XAUt proxy (mint, upgrade, blocklist, admin change)", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is an ERC-20 token (6 decimals) representing 1:1 ownership of physical LBMA gold bars in Swiss vaults, issued and redeemed off-chain via KYC with TG Commodities (Tether entity). On-chain: permissionless transfers + privileged mint/blocklist/destroy by multisig-controlled owner; multiple chain deployments via TransparentUpgradeableProxy."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "tether-gold",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-04T08:26:37.214Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-10",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_28908ea0-e577-4aa6-a5f8-ab0fc4ffe83a",
+    "grading_basis": "on-chain",
+    "grade": "orange",
+    "headline": "Bytecode verified on Etherscan/Sourcify (proxy + impl) with public contract addresses; no public source repo or recognized-firm smart contract audit; reserves attested by BDO (not SC audit)",
+    "short_headline": "Verified bytecode, no repo/audit",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "Ethereum proxy (0x68749665ff8d2d112fa859aa293f07a622782f38) and implementation (0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566) bytecode verified (defipunkd + Etherscan links show ABI/source available; Sourcify for Arbitrum proxy); 'Contract Source Code Verified' status confirmed via surfacers and Etherscan."},
+        {"code": "V2", "text": "No matching public GitHub repo or commit found (protocol.github none recorded; web search returned no canonical Tether Gold source repo; only third-party tools/discussions)."},
+        {"code": "V3", "text": "No smart contract audit in protocol.audit_links or website; Etherscan shows 'No Contract Security Audit Submitted'. Reserves reports attested quarterly by BDO Italia (ISAE 3000 reasonable assurance on gold holdings only, not SC or full audit; https://gold.tether.to/reports)."},
+        {"code": "V4", "text": "BDO Italia (recognized accounting firm for attestations) but not a recognized Solidity SC auditor (Trail of Bits, OpenZeppelin, PeckShield, etc.); no SC audit from recognized firm covering deployed contracts."},
+        {"code": "V5", "text": "No post-audit drift analysis possible (no baseline audit); historical vuln (BlockSec 2025 transferFrom issue) reported and fixed per public disclosure, but no recent recognized re-audit."},
+        {"code": "V6", "text": "Proxy verified with implementation verified separately (both surfaced and readable on defipunkd/Etherscan)."}
+      ],
+      "steelman": {
+        "red": "No public source repo and no recognized SC audit means outsiders cannot independently verify intended behavior beyond bytecode match; reserves attestation is accounting-only, not code.",
+        "orange": "Bytecode fully verified on explorers for proxy+impl across chains; contract addresses public and ABI readable; BDO reserves attestation provides some transparency on backing.",
+        "green": "All main contracts verified on Etherscan/Sourcify with no 'unverified implementation' gap; public deployment addresses enable independent inspection."
+      },
+      "verdict": "Choosing orange because bytecode is verified (V1/V6) but no public source repo (V2) and no recognized-firm SC audit covering deployed contracts (V3/V4), with only accounting attestation for reserves — meets orange criteria exactly."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x68749665ff8d2d112fa859aa293f07a622782f38", "shows": "Proxy verified (TransparentUpgradeableProxy); implementation address surfaced and separately verifiable.", "chain": "Ethereum", "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"},
+      {"url": "https://defipunkd.com/address/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566", "shows": "Implementation verified; full ABI and source available via explorer/Sourcify.", "chain": "Ethereum", "address": "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"},
+      {"url": "https://etherscan.io/token/0x68749665ff8d2d112fa859aa293f07a622782f38", "shows": "Contract Source Code Verified; no audit submitted.", "chain": "Ethereum", "address": "0x68749665ff8d2d112fa859aa293f07a622782f38"},
+      {"url": "https://gold.tether.to/reports", "shows": "Quarterly BDO Italia attestation on reserves (ISAE 3000); not a smart contract audit.", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "V2: no commit SHA or repo match possible; no public source repo exists per exhaustive search.",
+      "V3/V4: no SC audit from recognized firm; BDO is reserves attestation only (not code review)."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://gold.tether.to/faq",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828", "role": "owner() of XAUt proxy (mint, upgrade, blocklist, admin change)", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Tether Gold (XAUt) is an ERC-20 token (6 decimals) representing 1:1 ownership of physical LBMA gold bars in Swiss vaults, issued and redeemed off-chain via KYC with TG Commodities (Tether entity). On-chain: permissionless transfers + privileged mint/blocklist/destroy by multisig-controlled owner; multiple chain deployments via TransparentUpgradeableProxy."
+    }
+  }
+]
