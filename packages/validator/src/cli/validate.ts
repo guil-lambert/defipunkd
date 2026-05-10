@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { PROMPT_VERSION } from "@defipunkd/prompts";
-import { SubmissionSchema } from "../schema";
+import { ALL_SUBMISSIONS_DIR, SubmissionSchema, validateAllSubmissionsFileShape } from "../schema";
 import { cleanupSubmission } from "../cleanup";
 import { crossCheck, isPublicChatShareUrl, verifyChatUrlReachable } from "../cross-check";
 import { findRepoRoot, loadSnapshot } from "../repo";
@@ -51,6 +51,10 @@ async function main(): Promise<number> {
     const rawItems = isArray ? (raw as unknown[]) : [raw];
     const cleanedItems: unknown[] = [];
     let anyChanges = false;
+    const parentDir = relative.split("/").at(-2);
+    if (parentDir === ALL_SUBMISSIONS_DIR) {
+      for (const e of validateAllSubmissionsFileShape(raw)) report.errors.push(e);
+    }
 
     for (let i = 0; i < rawItems.length; i++) {
       const prefix = isArray ? `[#${i}] ` : "";

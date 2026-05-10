@@ -1,10 +1,11 @@
 #!/usr/bin/env tsx
-import { writeFileSync, mkdirSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { buildPromptParts, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { findRepoRoot, loadSnapshot } from "../repo";
+import { loadSubmissionEntriesBySlice } from "../submission-files";
 import { postProcess } from "./autorun-postprocess";
 
 type QueueEntry = { slug: string; slice: SliceId };
@@ -240,34 +241,14 @@ function estimateCost(
   );
 }
 
-// Counts assessments in a slice directory. Each .json file contains either a
-// single submission (object) or a batch (array of submissions) — e.g.
-// chatGPT-all-*.json bundles several reports. The autorun threshold checks
-// "have we collected enough voices for this slice"; a batch file represents
-// many voices, so we sum array lengths rather than counting filenames.
-function countSubmissions(dir: string): number {
-  if (!existsSync(dir)) return 0;
-  let total = 0;
-  for (const f of readdirSync(dir)) {
-    if (!f.endsWith(".json")) continue;
-    try {
-      const parsed = JSON.parse(readFileSync(join(dir, f), "utf8"));
-      total += Array.isArray(parsed) ? parsed.length : 1;
-    } catch {
-      total += 1;
-    }
-  }
-  return total;
-}
-
 function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string, sliceFilter: SliceId | null, slugFilter: string | null): QueueEntry[] {
   const tasks: Array<QueueEntry & { priority: number; tvl: number | null; isDiscovery: boolean }> = [];
   for (const [slug, p] of Object.entries(snapshot.protocols)) {
     if (slugFilter !== null && slug !== slugFilter) continue;
     if (p.delisted_at || p.is_dead) continue;
 
-    const discoveryDir = join(submissionsDir, slug, "discovery");
-    const discoveryCount = countSubmissions(discoveryDir);
+    const entriesBySlice = loadSubmissionEntriesBySlice(submissionsDir, slug);
+    const discoveryCount = entriesBySlice.get("discovery")?.length ?? 0;
     const meta = getProtocolMetadata(slug);
     const hasRatchet = (meta?.admin_addresses?.length ?? 0) > 0;
     // Evaluation slices need a non-empty addressBook to be useful. Until
@@ -281,8 +262,7 @@ function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: s
       if (sliceFilter !== null && slice !== sliceFilter) continue;
       const isDiscovery = slice === "discovery";
       if (!isDiscovery && evaluationGated) continue;
-      const dir = join(submissionsDir, slug, slice);
-      const count = countSubmissions(dir);
+      const count = entriesBySlice.get(slice)?.length ?? 0;
       if (count >= (isDiscovery ? 1 : 3)) continue;
       tasks.push({ slug, slice, priority: count, tvl: p.tvl, isDiscovery });
     }

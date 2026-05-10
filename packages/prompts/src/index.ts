@@ -74,6 +74,16 @@ export const SLICE_IDS = [
 
 export type SliceId = (typeof SLICE_IDS)[number];
 
+export const RISK_SLICE_IDS = [
+  "control",
+  "ability-to-exit",
+  "autonomy",
+  "open-access",
+  "verifiability",
+] as const;
+
+export type RiskSliceId = (typeof RISK_SLICE_IDS)[number];
+
 export type PromptInputs = {
   slug: string;
   name: string;
@@ -96,14 +106,16 @@ const BODIES: Record<SliceId, string> = {
   verifiability: verifiabilityBody,
 };
 
-/**
- * Split the prompt into a slice-stable `system` block (byte-identical across
- * protocols of the same slice — cacheable as the system prompt) and a
- * per-protocol `userContext` block (placed in the user message; never cached).
- */
-export function buildPromptParts(slice: SliceId, inputs: PromptInputs): { system: string; userContext: string } {
-  const system = `${preamble}\n\n---\n\n${BODIES[slice]}\n\n---\n\n### JSON output contract\n\nReturn exactly one JSON object inside a single \`\`\`json fenced block. Shape:\n\n{\n  "schema_version": ${SCHEMA_VERSION},\n  "slug": "<copy protocol.slug from the per-protocol context>",\n  "slice": "${slice}",\n  "snapshot_generated_at": "<copy snapshot.generated_at from the per-protocol context>",\n  "prompt_version": ${PROMPT_VERSION},\n  "analysis_date": "<copy analysis_date from the per-protocol context>",\n  "model": "<exact model name, e.g. claude-opus-4-7 / gpt-5-thinking / gemini-3-pro>",\n  "chat_url": null,\n  "grading_basis": "on-chain | off-chain-only | mixed (optional; omit for on-chain)",\n  "grade": "green | orange | red | unknown",\n  "headline": "<one-line summary>",\n  "short_headline": "<≤6 words, ≤80 chars; omit if you can't fit>",\n  "rationale": {\n    "findings": [{ "code": "E1", "text": "<concrete, source-cited finding>" }],\n    "steelman": { "red": "<one sentence>", "orange": "<one sentence>", "green": "<one sentence>" },\n    "verdict": "Choosing <grade> because <reason ranking one steel-man above the others, citing specific evidence>."\n  },\n  "evidence": [{ "url": "https://...", "shows": "<what this URL demonstrates>", "chain": "...", "address": "0x...", "commit": "<hex SHA>", "fetched_at": "2026-04-23T11:20:00Z" }],\n  "unknowns": ["E3: <thing you looked for but couldn't determine>"],\n  "protocol_metadata": {\n    "github": ["https://github.com/org/repo"],\n    "docs_url": "https://docs.protocol.xyz",\n    "audits": [{ "firm": "Trail of Bits", "url": "https://...report.pdf", "date": "2025-09" }],\n    "governance_forum": "https://forum.protocol.xyz",\n    "voting_token": { "chain": "Ethereum", "address": "0x...", "symbol": "XYZ" },\n    "bug_bounty_url": "https://immunefi.com/bounty/protocol",\n    "security_contact": "security@protocol.xyz",\n    "deployed_contracts_doc": "https://docs.protocol.xyz/deployments",\n    "admin_addresses": [{ "chain": "Ethereum", "address": "0x...", "role": "DAO treasury multisig", "actor_class": "multisig" }],\n    "upgradeability": "immutable | upgradeable | mixed | unknown",\n    "about": "<2–4 sentences>"\n  }\n}\n\nRules recap:\n- grade="unknown" ⇒ steelman=null; unknowns[] ≥1; evidence[] may be empty.\n- grade!="unknown" ⇒ steelman={red,orange,green}; evidence[] ≥1; verdict starts with "Choosing ".\n- findings[].code matches the slice's checklist prefix verbatim (E1, C2-emergency, V4a, …); unknowns[] entries are checklist-coded ("E3: …").\n- Wrap in a single \`\`\`json fence; nothing before or after. URLs are bare strings, never markdown links.\n`;
+function buildSingleJsonContract(slice: SliceId): string {
+  return `### JSON output contract\n\nReturn exactly one JSON object inside a single \`\`\`json fenced block. Shape:\n\n{\n  "schema_version": ${SCHEMA_VERSION},\n  "slug": "<copy protocol.slug from the per-protocol context>",\n  "slice": "${slice}",\n  "snapshot_generated_at": "<copy snapshot.generated_at from the per-protocol context>",\n  "prompt_version": ${PROMPT_VERSION},\n  "analysis_date": "<copy analysis_date from the per-protocol context>",\n  "model": "<exact model name, e.g. claude-opus-4-7 / gpt-5-thinking / gemini-3-pro>",\n  "chat_url": null,\n  "grading_basis": "on-chain | off-chain-only | mixed (optional; omit for on-chain)",\n  "grade": "green | orange | red | unknown",\n  "headline": "<one-line summary>",\n  "short_headline": "<≤6 words, ≤80 chars; omit if you can't fit>",\n  "rationale": {\n    "findings": [{ "code": "E1", "text": "<concrete, source-cited finding>" }],\n    "steelman": { "red": "<one sentence>", "orange": "<one sentence>", "green": "<one sentence>" },\n    "verdict": "Choosing <grade> because <reason ranking one steel-man above the others, citing specific evidence>."\n  },\n  "evidence": [{ "url": "https://...", "shows": "<what this URL demonstrates>", "chain": "...", "address": "0x...", "commit": "<hex SHA>", "fetched_at": "2026-04-23T11:20:00Z" }],\n  "unknowns": ["E3: <thing you looked for but couldn't determine>"],\n  "protocol_metadata": {\n    "github": ["https://github.com/org/repo"],\n    "docs_url": "https://docs.protocol.xyz",\n    "audits": [{ "firm": "Trail of Bits", "url": "https://...report.pdf", "date": "2025-09" }],\n    "governance_forum": "https://forum.protocol.xyz",\n    "voting_token": { "chain": "Ethereum", "address": "0x...", "symbol": "XYZ" },\n    "bug_bounty_url": "https://immunefi.com/bounty/protocol",\n    "security_contact": "security@protocol.xyz",\n    "deployed_contracts_doc": "https://docs.protocol.xyz/deployments",\n    "admin_addresses": [{ "chain": "Ethereum", "address": "0x...", "role": "DAO treasury multisig", "actor_class": "multisig" }],\n    "upgradeability": "immutable | upgradeable | mixed | unknown",\n    "about": "<2–4 sentences>"\n  }\n}\n\nRules recap:\n- grade="unknown" ⇒ steelman=null; unknowns[] ≥1; evidence[] may be empty.\n- grade!="unknown" ⇒ steelman={red,orange,green}; evidence[] ≥1; verdict starts with "Choosing ".\n- findings[].code matches the slice's checklist prefix verbatim (E1, C2-emergency, V4a, …); unknowns[] entries are checklist-coded ("E3: …").\n- Wrap in a single \`\`\`json fence; nothing before or after. URLs are bare strings, never markdown links.\n`;
+}
 
+function buildAllRiskJsonContract(): string {
+  const slices = RISK_SLICE_IDS.map((s) => `"${s}"`).join(", ");
+  return `### JSON output contract\n\nReturn exactly one JSON array inside a single \`\`\`json fenced block. The array MUST contain exactly five objects, one per risk slice, in this exact order: ${slices}. Do not include the discovery slice.\n\nEach object has the same shape as a normal slice submission:\n\n{\n  "schema_version": ${SCHEMA_VERSION},\n  "slug": "<copy protocol.slug from the per-protocol context>",\n  "slice": "<one of: ${RISK_SLICE_IDS.join(" | ")}>",\n  "snapshot_generated_at": "<copy snapshot.generated_at from the per-protocol context>",\n  "prompt_version": ${PROMPT_VERSION},\n  "analysis_date": "<copy analysis_date from the per-protocol context>",\n  "model": "<exact model name, e.g. claude-opus-4-7 / gpt-5-thinking / gemini-3-pro>",\n  "chat_url": null,\n  "grading_basis": "on-chain | off-chain-only | mixed (optional; omit for on-chain)",\n  "grade": "green | orange | red | unknown",\n  "headline": "<one-line summary>",\n  "short_headline": "<≤6 words, ≤80 chars; omit if you can't fit>",\n  "rationale": {\n    "findings": [{ "code": "E1", "text": "<concrete, source-cited finding>" }],\n    "steelman": { "red": "<one sentence>", "orange": "<one sentence>", "green": "<one sentence>" },\n    "verdict": "Choosing <grade> because <reason ranking one steel-man above the others, citing specific evidence>."\n  },\n  "evidence": [{ "url": "https://...", "shows": "<what this URL demonstrates>", "chain": "...", "address": "0x...", "commit": "<hex SHA>", "fetched_at": "2026-04-23T11:20:00Z" }],\n  "unknowns": ["E3: <thing you looked for but couldn't determine>"],\n  "protocol_metadata": {\n    "github": ["https://github.com/org/repo"],\n    "docs_url": "https://docs.protocol.xyz",\n    "audits": [{ "firm": "Trail of Bits", "url": "https://...report.pdf", "date": "2025-09" }],\n    "governance_forum": "https://forum.protocol.xyz",\n    "voting_token": { "chain": "Ethereum", "address": "0x...", "symbol": "XYZ" },\n    "bug_bounty_url": "https://immunefi.com/bounty/protocol",\n    "security_contact": "security@protocol.xyz",\n    "deployed_contracts_doc": "https://docs.protocol.xyz/deployments",\n    "admin_addresses": [{ "chain": "Ethereum", "address": "0x...", "role": "DAO treasury multisig", "actor_class": "multisig" }],\n    "upgradeability": "immutable | upgradeable | mixed | unknown",\n    "about": "<2–4 sentences>"\n  }\n}\n\nRules recap:\n- Produce one complete object for each of these slices only: ${RISK_SLICE_IDS.join(", ")}.\n- Reuse the same model, chat_url, snapshot_generated_at, prompt_version, analysis_date, and slug values across all five objects.\n- grade="unknown" ⇒ steelman=null; unknowns[] ≥1; evidence[] may be empty.\n- grade!="unknown" ⇒ steelman={red,orange,green}; evidence[] ≥1; verdict starts with "Choosing ".\n- findings[].code matches that object's slice checklist prefix verbatim (C1, E2, AU3, A3b, V4a, …); unknowns[] entries are checklist-coded ("C3: …").\n- Wrap the array in a single \`\`\`json fence; nothing before or after. URLs are bare strings, never markdown links.\n`;
+}
+
+function buildUserContext(inputs: PromptInputs): string {
   const chains = inputs.chains.length > 0 ? inputs.chains.join(", ") : "(none recorded)";
   const githubs = inputs.github.length > 0 ? inputs.github.join(", ") : "(none recorded)";
   const audits = inputs.auditLinks.length > 0 ? inputs.auditLinks.join(", ") : "(none recorded)";
@@ -112,8 +124,17 @@ export function buildPromptParts(slice: SliceId, inputs: PromptInputs): { system
       ? JSON.stringify(inputs.addressBook, null, 2)
       : "null";
 
-  const userContext = `### Per-protocol context (ground truth for this run)\n\n- protocol.slug:              ${inputs.slug}\n- protocol.name:              ${inputs.name}\n- protocol.chains:            ${chains}\n- protocol.category:          ${inputs.category ?? "(unknown)"}\n- protocol.website:           ${inputs.website ?? "(none recorded)"}\n- protocol.github:            ${githubs}\n- protocol.audit_links:       ${audits}\n- snapshot.generated_at:      ${inputs.snapshotGeneratedAt}\n- analysis_date:              ${inputs.analysisDate}\n- prompt_version:             ${PROMPT_VERSION}\n- address_book:               ${addresses}\n\n### Pre-built read-API surfacer URLs (verbatim — fetchable as-is)\n${buildSurfacerUrlBlock(inputs.addressBook)}\n`;
+  return `### Per-protocol context (ground truth for this run)\n\n- protocol.slug:              ${inputs.slug}\n- protocol.name:              ${inputs.name}\n- protocol.chains:            ${chains}\n- protocol.category:          ${inputs.category ?? "(unknown)"}\n- protocol.website:           ${inputs.website ?? "(none recorded)"}\n- protocol.github:            ${githubs}\n- protocol.audit_links:       ${audits}\n- snapshot.generated_at:      ${inputs.snapshotGeneratedAt}\n- analysis_date:              ${inputs.analysisDate}\n- prompt_version:             ${PROMPT_VERSION}\n- address_book:               ${addresses}\n\n### Pre-built read-API surfacer URLs (verbatim — fetchable as-is)\n${buildSurfacerUrlBlock(inputs.addressBook)}\n`;
+}
 
+/**
+ * Split the prompt into a slice-stable `system` block (byte-identical across
+ * protocols of the same slice — cacheable as the system prompt) and a
+ * per-protocol `userContext` block (placed in the user message; never cached).
+ */
+export function buildPromptParts(slice: SliceId, inputs: PromptInputs): { system: string; userContext: string } {
+  const system = `${preamble}\n\n---\n\n${BODIES[slice]}\n\n---\n\n${buildSingleJsonContract(slice)}`;
+  const userContext = buildUserContext(inputs);
   return { system, userContext };
 }
 
@@ -126,6 +147,18 @@ export function buildPromptParts(slice: SliceId, inputs: PromptInputs): { system
  */
 export function buildPrompt(slice: SliceId, inputs: PromptInputs): string {
   const { system, userContext } = buildPromptParts(slice, inputs);
+  return `${userContext}\n\n---\n\n${system}`;
+}
+
+/**
+ * Single-string prompt for running all five risk slices in one LLM session.
+ * Discovery is intentionally excluded because it is a preparatory cataloguing
+ * task, not a graded risk dimension.
+ */
+export function buildAllRiskPrompt(inputs: PromptInputs): string {
+  const userContext = buildUserContext(inputs);
+  const bodies = RISK_SLICE_IDS.map((slice) => BODIES[slice]).join("\n\n---\n\n");
+  const system = `${preamble}\n\n---\n\n${bodies}\n\n---\n\n${buildAllRiskJsonContract()}`;
   return `${userContext}\n\n---\n\n${system}`;
 }
 

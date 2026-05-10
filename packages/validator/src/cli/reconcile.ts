@@ -3,11 +3,12 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 
 import { join, resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { SLICE_IDS } from "@defipunkd/prompts";
-import { parseSubmissionsFromFileContent, type Submission } from "../schema";
+import type { Submission } from "../schema";
 import type { Assessment } from "../quorum";
 import { buildDraftMaster, MasterSchema, type Master, type SubmissionBySlice } from "../master";
 import { buildReconcilerPrompt } from "../reconciler-prompt";
 import { findRepoRoot } from "../repo";
+import { loadSubmissionEntriesBySlice } from "../submission-files";
 
 type ReconcileOptions = {
   slug: string;
@@ -140,32 +141,7 @@ async function reconcileSlug(root: string, opts: ReconcileOptions): Promise<void
 }
 
 function loadSubmissions(root: string, slug: string): SubmissionBySlice {
-  const out: SubmissionBySlice = new Map();
-  const base = join(root, "data", "submissions", slug);
-  if (!existsSync(base)) return out;
-  for (const sliceId of SLICE_IDS) {
-    const dir = join(base, sliceId);
-    if (!existsSync(dir)) continue;
-    const entries: Array<{ submission: Submission; sourcePath: string }> = [];
-    for (const f of readdirSync(dir)) {
-      if (!f.endsWith(".json")) continue;
-      const full = join(dir, f);
-      let raw: unknown;
-      try {
-        raw = JSON.parse(readFileSync(full, "utf8"));
-      } catch {
-        continue;
-      }
-      const result = parseSubmissionsFromFileContent(raw);
-      if (!result.ok) continue;
-      for (const { submission, index } of result.items) {
-        const suffix = index === null ? "" : `#${index}`;
-        entries.push({ submission, sourcePath: `data/submissions/${slug}/${sliceId}/${f}${suffix}` });
-      }
-    }
-    if (entries.length > 0) out.set(sliceId, entries);
-  }
-  return out;
+  return loadSubmissionEntriesBySlice(join(root, "data", "submissions"), slug);
 }
 
 function loadAssessments(root: string, slug: string): Map<Submission["slice"], Assessment> {

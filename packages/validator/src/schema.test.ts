@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SubmissionSchema } from "./schema";
+import { RISK_SLICES, SubmissionSchema, validateAllSubmissionsFileShape } from "./schema";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const jsonSchemaPath = join(here, "..", "..", "..", "data", "schema", "slice-assessment.v2.json");
@@ -139,9 +139,32 @@ describe("SubmissionSchema", () => {
     expect(SubmissionSchema.safeParse(bad).success).toBe(false);
   });
 
-  it("rejects invalid schema_version (only 2 or 3 allowed)", () => {
+  it("rejects invalid schema_version (only 2, 3, or 4 allowed)", () => {
     const bad = { ...(VALID as object), schema_version: 1 };
     expect(SubmissionSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it("accepts the all-slices file shape when it has exactly the five risk slices", () => {
+    const all = RISK_SLICES.map((slice) => ({ ...(VALID as object), slice }));
+    expect(validateAllSubmissionsFileShape(all)).toEqual([]);
+  });
+
+  it("rejects malformed all-slices file shapes", () => {
+    expect(validateAllSubmissionsFileShape({ ...(VALID as object), slice: "control" })).toEqual(
+      expect.arrayContaining([expect.stringContaining("must contain a JSON array")]),
+    );
+    expect(validateAllSubmissionsFileShape([{ ...(VALID as object), slice: "control" }])).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("exactly 5 objects"),
+        expect.stringContaining('missing slice "ability-to-exit"'),
+      ]),
+    );
+    expect(validateAllSubmissionsFileShape([...RISK_SLICES.map((slice) => ({ ...(VALID as object), slice })), { ...(VALID as object), slice: "discovery" }])).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("exactly 5 objects"),
+        expect.stringContaining('non-risk slice "discovery"'),
+      ]),
+    );
   });
 
   it("committed JSON Schema declares the same required fields", () => {

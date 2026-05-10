@@ -239,7 +239,16 @@ function dedupeEvidence(ev: Submission["evidence"]): SliceConsensus["evidence"] 
   const seen = new Map<string, SliceConsensus["evidence"][number]>();
   for (const e of ev) {
     const key = e.url.toLowerCase();
-    if (!seen.has(key)) seen.set(key, { ...e });
+    if (!seen.has(key)) {
+      seen.set(key, {
+        url: e.url,
+        shows: e.shows,
+        ...(e.chain ? { chain: e.chain } : {}),
+        ...(e.address ? { address: e.address } : {}),
+        ...(e.commit ? { commit: e.commit } : {}),
+        ...(e.fetched_at ? { fetched_at: e.fetched_at } : {}),
+      });
+    }
   }
   return Array.from(seen.values());
 }

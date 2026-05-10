@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
-import { readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { findRepoRoot, loadSnapshot } from "../repo";
+import { loadSubmissionEntriesBySlice } from "../submission-files";
 
 type Task = {
   slug: string;
@@ -24,11 +24,9 @@ async function main(): Promise<number> {
   for (const [slug, p] of Object.entries(snapshot.protocols)) {
     if (p.delisted_at) continue;
     if (p.is_dead) continue;
+    const entriesBySlice = loadSubmissionEntriesBySlice(submissionsDir, slug);
     for (const sliceId of SLICE_IDS) {
-      const dir = join(submissionsDir, slug, sliceId);
-      const count = existsSync(dir)
-        ? readdirSync(dir).filter((f) => f.endsWith(".json")).length
-        : 0;
+      const count = entriesBySlice.get(sliceId)?.length ?? 0;
       if (count >= 3) continue; // already has consensus-capable set
       tasks.push({ slug, slice: sliceId, currentSubmissions: count, tvl: p.tvl });
     }

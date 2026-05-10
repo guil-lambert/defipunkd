@@ -1,5 +1,5 @@
 import type { Submission } from "./schema";
-import { SLICES } from "./schema";
+import { RISK_SLICES, SLICES } from "./schema";
 
 const PROVIDER_SHARE_HOSTS = [
   "chatgpt.com",
@@ -219,7 +219,13 @@ export function crossCheck(s: Submission, ctx: CrossCheckContext): CrossCheckIss
         message: `slug field "${s.slug}" does not match parent directory "${slugDir}"`,
       });
     }
-    if (sliceDir && sliceDir !== s.slice) {
+    if (sliceDir === "all" && !RISK_SLICES.includes(s.slice as (typeof RISK_SLICES)[number])) {
+      issues.push({
+        severity: "error",
+        field: "slice",
+        message: `slice field "${s.slice}" is not a risk slice allowed in the "all" directory`,
+      });
+    } else if (sliceDir && sliceDir !== "all" && sliceDir !== s.slice) {
       issues.push({
         severity: "error",
         field: "slice",

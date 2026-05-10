@@ -2,7 +2,7 @@
 import type { Protocol, LoadedAssessment, AssessmentSliceId, Finding, LoadedSubmission, ProtocolMetadata } from "@defipunkd/registry";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { assessProtocol, cexAssessment, isUncertain, type SliceAssessment } from "../lib/rationale";
-import { buildPrompt, PROMPT_VERSION, type SliceId } from "@defipunkd/prompts";
+import { buildAllRiskPrompt, buildPrompt, PROMPT_VERSION, RISK_SLICE_IDS, SCHEMA_VERSION, type SliceId } from "@defipunkd/prompts";
 
 interface Props {
   protocol: Protocol;
@@ -56,6 +56,23 @@ function promptFor(sliceId: SliceId): string {
   });
 }
 
+const promptInputs = {
+  slug: protocol.slug,
+  name: protocol.name,
+  chains: protocol.chains,
+  category: protocol.category || null,
+  website: protocol.website,
+  github: protocol.github ?? [],
+  auditLinks: protocol.audit_links ?? [],
+  snapshotGeneratedAt,
+  analysisDate: ANALYSIS_DATE,
+  addressBook,
+};
+
+function allRiskPrompt(): string {
+  return buildAllRiskPrompt(promptInputs);
+}
+
 /**
  * Build the prompt's address_book from prior LLM-curated metadata, NOT from
  * the TVL adapter surface. Sources:
@@ -107,7 +124,7 @@ function buildAddressBook(
 function stubFor(sliceId: SliceId): string {
   return JSON.stringify(
     {
-      schema_version: 2,
+      schema_version: SCHEMA_VERSION,
       slug: protocol.slug,
       slice: sliceId,
       snapshot_generated_at: snapshotGeneratedAt,
@@ -124,6 +141,24 @@ function stubFor(sliceId: SliceId): string {
     null,
     2,
   );
+}
+
+function stubObjectFor(sliceId: SliceId): unknown {
+  return {
+    schema_version: SCHEMA_VERSION,
+    slug: protocol.slug,
+    slice: sliceId,
+    snapshot_generated_at: snapshotGeneratedAt,
+    prompt_version: PROMPT_VERSION,
+    analysis_date: ANALYSIS_DATE,
+    model: "",
+    chat_url: null,
+    grade: "",
+    headline: "",
+    rationale: { findings: [], steelman: { red: "", orange: "", green: "" }, verdict: "" },
+    evidence: [],
+    unknowns: [],
+  };
 }
 
 function submitUrl(sliceId: SliceId): string {
@@ -148,6 +183,15 @@ const auditSlices = slices.map((s) => ({
   tentativeReasons: s.tentative_reasons ?? [],
   grade: s.grade,
 }));
+const allRiskSliceIds = RISK_SLICE_IDS;
+const allRiskSubmitUrl = (() => {
+  const params = new URLSearchParams({
+    filename: `data/submissions/${protocol.slug}/all/your-model-${ANALYSIS_DATE}.json`,
+    value: JSON.stringify(allRiskSliceIds.map((sliceId) => stubObjectFor(sliceId)), null, 2),
+  });
+  return `https://github.com/${REPO}/new/main?${params.toString()}`;
+})();
+const allRiskPromptText = allRiskPrompt();
 
 // Address discovery is a cataloguing slice that runs before the 5 risk
 // slices and seeds their addressBook via protocol_metadata.admin_addresses.
@@ -295,6 +339,15 @@ function partialFillGrade(s: SliceAssessment): string {
             <pre id={`prompt-${idp}${a.id}`} class="prompt-hidden" hidden>{a.prompt}</pre>
           </li>
         ))}
+        <li class="audit-all-row" title="Run all five risk dimensions in one LLM session and submit one JSON array.">
+          <span class="audit-list-label">
+            <span class="audit-all-label">Audit all</span>
+            <span class="audit-all-state">5 dimensions · one prompt</span>
+          </span>
+          <button type="button" class="copy-btn" data-copy-target={`#prompt-${idp}all`}>Copy prompt</button>
+          <a href={allRiskSubmitUrl} rel="noreferrer" target="_blank" class="submit-btn">Submit run ↗</a>
+          <pre id={`prompt-${idp}all`} class="prompt-hidden" hidden>{allRiskPromptText}</pre>
+        </li>
       </ul>
     </div>
   </details>
@@ -735,6 +788,29 @@ function partialFillGrade(s: SliceAssessment): string {
     color: var(--accent-link);
     border: 1px solid color-mix(in oklab, var(--accent-link) 40%, var(--surface-raised));
     background: color-mix(in oklab, var(--accent-link) 8%, transparent);
+    white-space: nowrap;
+  }
+
+  .audit-all-row {
+    border-top: 1px solid color-mix(in oklab, var(--text-muted) 25%, var(--surface-raised));
+    padding-top: 0.55rem;
+    margin-top: 0.15rem;
+  }
+  .audit-all-label {
+    color: var(--text);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+  }
+  .audit-all-state {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--accent-link);
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--accent-link) 35%, var(--surface-raised));
+    background: color-mix(in oklab, var(--accent-link) 7%, transparent);
     white-space: nowrap;
   }
 

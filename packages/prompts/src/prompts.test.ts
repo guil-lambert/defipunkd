@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildPrompt, SLICE_IDS, PROMPT_VERSION, type PromptInputs } from "./index";
+import { buildAllRiskPrompt, buildPrompt, RISK_SLICE_IDS, SLICE_IDS, PROMPT_VERSION, type PromptInputs } from "./index";
 
 const INPUTS: PromptInputs = {
   slug: "lido",
@@ -116,7 +116,7 @@ describe("buildPrompt", () => {
     const p = buildPrompt("control", INPUTS);
     expect(p).toContain("protocol.slug:              lido");
     expect(p).toContain("snapshot.generated_at:      2026-04-01T00:00:00Z");
-    expect(p).toContain("prompt_version:             28");
+    expect(p).toContain("prompt_version:             29");
     expect(p).not.toContain("{{"); // no unfilled placeholders
   });
 
@@ -296,5 +296,33 @@ describe("buildPrompt", () => {
     const bodies = SLICE_IDS.map((s) => buildPrompt(s, INPUTS));
     const uniq = new Set(bodies);
     expect(uniq.size).toBe(SLICE_IDS.length);
+  });
+});
+
+describe("buildAllRiskPrompt", () => {
+  it("emits the shared context and preamble once with all five risk slice bodies", () => {
+    const p = buildAllRiskPrompt(INPUTS);
+    expect((p.match(/protocol\.slug:/g) ?? [])).toHaveLength(1);
+    expect((p.match(/Anti-fabrication/g) ?? [])).toHaveLength(1);
+    expect(p).not.toContain("### Slice: DISCOVERY");
+    for (const slice of RISK_SLICE_IDS) {
+      expect(p).toContain(`"slice": "<one of: ${RISK_SLICE_IDS.join(" | ")}>"`);
+      expect(p).toContain(`"schema_version": 4`);
+      expect(p).toContain(slice);
+    }
+    expect(p).toContain("### Slice: CONTROL");
+    expect(p).toContain("### Slice: ABILITY-TO-EXIT");
+    expect(p).toContain("### Slice: AUTONOMY");
+    expect(p).toContain("### Slice: OPEN-ACCESS");
+    expect(p).toContain("### Slice: VERIFIABILITY");
+  });
+
+  it("requires one fenced JSON array with exactly five risk slice objects", () => {
+    const p = buildAllRiskPrompt(INPUTS);
+    expect(p).toContain("Return exactly one JSON array");
+    expect(p).toContain("exactly five objects");
+    expect(p).toContain("Do not include the discovery slice");
+    expect(p).toContain("control, ability-to-exit, autonomy, open-access, verifiability");
+    expect(p).toContain("Wrap the array in a single ```json fence");
   });
 });

@@ -20,8 +20,8 @@
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": 2 },
-    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$" },
+    "schema_version": { "enum": [2, 3, 4] },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*[a-z0-9]$" },
     "slice": {
       "type": "string",
       "enum": ["control", "ability-to-exit", "autonomy", "open-access", "verifiability"]
@@ -48,9 +48,12 @@
       "description": "Exact identifier of the LLM used, e.g. claude-opus-4-7, gpt-5, gemini-3-pro. Self-reported."
     },
     "chat_url": {
-      "type": "string",
-      "format": "uri",
+      "oneOf": [{ "type": "string", "format": "uri" }, { "type": "null" }],
       "description": "Optional shareable URL of the chat session that produced this assessment (claude.ai/share/..., chatgpt.com/share/..., g.co/gemini/share/..., etc.). Submissions with a verifiable chat_url are given extra weight by the quorum bot because the reasoning chain is independently re-readable."
+    },
+    "grading_basis": {
+      "type": "string",
+      "enum": ["on-chain", "off-chain-only", "mixed"]
     },
     "grade": {
       "type": "string",
@@ -60,6 +63,11 @@
       "type": "string",
       "minLength": 1,
       "description": "One-line human-readable summary shown on the protocol card."
+    },
+    "short_headline": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
     },
     "rationale": {
       "type": "object",
@@ -75,7 +83,7 @@
             "required": ["code", "text"],
             "additionalProperties": false,
             "properties": {
-              "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]{0,15}$" },
+              "code": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9-]{0,15}$" },
               "text": { "type": "string", "minLength": 1 }
             }
           }
@@ -114,7 +122,7 @@
           "shows": { "type": "string", "minLength": 1 },
           "chain": { "type": "string" },
           "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
-          "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+          "commit": { "type": "string", "pattern": "^[0-9a-fA-F]{7,40}$" },
           "fetched_at": { "type": "string", "format": "date-time" }
         }
       }
@@ -123,6 +131,79 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
       "description": "Things the contributor looked for but could not determine. Used by reviewers to direct follow-up runs."
+    },
+    "protocol_metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "github": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" }
+        },
+        "docs_url": {
+          "oneOf": [{ "type": "string", "format": "uri" }, { "type": "null" }]
+        },
+        "audits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["firm", "url"],
+            "additionalProperties": true,
+            "properties": {
+              "firm": { "type": "string", "minLength": 1 },
+              "url": { "type": "string", "format": "uri" },
+              "date": { "type": "string", "pattern": "^\\d{4}(-\\d{2}){0,2}$" }
+            }
+          }
+        },
+        "governance_forum": {
+          "oneOf": [{ "type": "string", "format": "uri" }, { "type": "null" }]
+        },
+        "voting_token": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["chain", "address"],
+              "additionalProperties": true,
+              "properties": {
+                "chain": { "type": "string", "minLength": 1 },
+                "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+                "symbol": { "type": "string", "minLength": 1, "maxLength": 32 }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "bug_bounty_url": {
+          "oneOf": [{ "type": "string", "format": "uri" }, { "type": "null" }]
+        },
+        "security_contact": {
+          "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "deployed_contracts_doc": {
+          "oneOf": [{ "type": "string", "format": "uri" }, { "type": "null" }]
+        },
+        "admin_addresses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["chain", "address", "role", "actor_class"],
+            "additionalProperties": true,
+            "properties": {
+              "chain": { "type": "string", "minLength": 1 },
+              "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+              "role": { "type": "string", "minLength": 1 },
+              "actor_class": { "enum": ["eoa", "multisig", "timelock", "governance", "unknown"] }
+            }
+          }
+        },
+        "upgradeability": {
+          "oneOf": [{ "enum": ["immutable", "upgradeable", "mixed", "unknown"] }, { "type": "null" }]
+        },
+        "about": {
+          "oneOf": [{ "type": "string" }, { "type": "null" }]
+        }
+      }
     }
   },
   "allOf": [

@@ -50,6 +50,22 @@ describe("crossCheck", () => {
     expect(issues.some((i) => i.field === "slug" && /does not match parent directory/.test(i.message))).toBe(true);
   });
 
+  it("accepts risk-slice submissions from the all directory", () => {
+    const issues = crossCheck(
+      sub({ slice: "control" }),
+      ctx({ filePath: "data/submissions/lido/all/models-2026-04-23.json" }),
+    );
+    expect(issues.some((i) => i.field === "slice" && i.severity === "error")).toBe(false);
+  });
+
+  it("rejects discovery submissions from the all directory", () => {
+    const issues = crossCheck(
+      sub({ slice: "discovery", grade: "unknown", evidence: [], unknowns: ["D1: x"], rationale: { findings: [], steelman: null, verdict: "x" } }),
+      ctx({ filePath: "data/submissions/lido/all/models-2026-04-23.json" }),
+    );
+    expect(issues.some((i) => i.field === "slice" && /not a risk slice/.test(i.message))).toBe(true);
+  });
+
   it("errors when prompt_version is from the future", () => {
     const issues = crossCheck(sub({ prompt_version: 99 }), ctx());
     expect(issues.some((i) => i.severity === "error" && i.field === "prompt_version")).toBe(true);

@@ -23,6 +23,8 @@ export const RISK_SLICES = [
   "verifiability",
 ] as const;
 
+export const ALL_SUBMISSIONS_DIR = "all";
+
 const EvidenceSchema = z
   .object({
     url: z.string().url(),
@@ -183,4 +185,33 @@ export function parseSubmissionsFromFileContent(raw: unknown): {
     items.push({ submission: parsed.data, index: Array.isArray(raw) ? i : null });
   }
   return { ok: true, items };
+}
+
+export function validateAllSubmissionsFileShape(raw: unknown): string[] {
+  const errors: string[] = [];
+  if (!Array.isArray(raw)) {
+    return [`data/submissions/<slug>/${ALL_SUBMISSIONS_DIR}/ files must contain a JSON array of exactly ${RISK_SLICES.length} risk-slice submissions`];
+  }
+  if (raw.length !== RISK_SLICES.length) {
+    errors.push(`all-slices submission array must contain exactly ${RISK_SLICES.length} objects`);
+  }
+  const slices = raw
+    .map((item) => (item && typeof item === "object" && "slice" in item ? (item as { slice?: unknown }).slice : null))
+    .filter((slice): slice is string => typeof slice === "string");
+  const expected = new Set<string>(RISK_SLICES);
+  for (const slice of slices) {
+    if (!expected.has(slice)) {
+      errors.push(`all-slices submission contains non-risk slice "${slice}"`);
+    }
+  }
+  const unique = new Set(slices);
+  for (const slice of RISK_SLICES) {
+    if (!unique.has(slice)) {
+      errors.push(`all-slices submission is missing slice "${slice}"`);
+    }
+  }
+  if (unique.size !== slices.length) {
+    errors.push("all-slices submission contains duplicate slice entries");
+  }
+  return errors;
 }

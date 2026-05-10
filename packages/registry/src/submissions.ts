@@ -2,6 +2,9 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ProtocolMetadata, Rationale, SliceId } from "./assessments";
 
+const ALL_SUBMISSIONS_DIR = "all";
+const RISK_SLICES = new Set<SliceId>(["control", "ability-to-exit", "autonomy", "open-access", "verifiability"]);
+
 export type SubmissionGrade = "green" | "orange" | "red" | "unknown";
 
 export type SubmissionEvidence = {
@@ -45,7 +48,8 @@ type RawSubmission = {
 };
 
 /**
- * Scan data/submissions/{slug}/{slice}/*.json and return all raw submissions.
+ * Scan data/submissions/{slug}/{slice}/*.json and data/submissions/{slug}/all/*.json
+ * and return all raw submissions grouped by their actual slice.
  * Independent of data/assessments/ — this surfaces partial work that has
  * not yet reached quorum.
  */
@@ -89,7 +93,9 @@ export function loadSubmissions(dataDir: string): Map<string, Map<SliceId, Loade
         continue;
       }
       if (!ss.isDirectory()) continue;
+      const isAllDir = sliceDirName === ALL_SUBMISSIONS_DIR;
       const sliceId = sliceDirName as SliceId;
+      if (!isAllDir && sliceId !== "discovery" && !RISK_SLICES.has(sliceId)) continue;
 
       let files: string[];
       try {
@@ -98,7 +104,6 @@ export function loadSubmissions(dataDir: string): Map<string, Map<SliceId, Loade
         continue;
       }
 
-      const arr: LoadedSubmission[] = [];
       for (const file of files) {
         if (!file.endsWith(".json")) continue;
         const path = join(slicePath, file);
@@ -110,8 +115,12 @@ export function loadSubmissions(dataDir: string): Map<string, Map<SliceId, Loade
           continue;
         }
         const items = Array.isArray(raw) ? raw : [raw];
-        for (const r of items) {
+        for (let index = 0; index < items.length; index++) {
+          const r = items[index]!;
           if (!r || !r.model || !r.slice) continue;
+          if (isAllDir && !RISK_SLICES.has(r.slice)) continue;
+          if (!isAllDir && r.slice !== sliceId) continue;
+          const arr = bySlice.get(r.slice) ?? [];
           arr.push({
             slug: r.slug,
             slice: r.slice,
@@ -125,16 +134,16 @@ export function loadSubmissions(dataDir: string): Map<string, Map<SliceId, Loade
             unknowns: r.unknowns,
             analysis_date: r.analysis_date,
             protocol_metadata: r.protocol_metadata,
-            source_path: path,
+            source_path: Array.isArray(raw) ? `${path}#${index}` : path,
           });
+          bySlice.set(r.slice, arr);
         }
       }
+    }
 
-      if (arr.length > 0) {
-        // Sort newest analysis_date first so the "latest" is index 0.
-        arr.sort((a, b) => (b.analysis_date ?? "").localeCompare(a.analysis_date ?? ""));
-        bySlice.set(sliceId, arr);
-      }
+    for (const arr of bySlice.values()) {
+      // Sort newest analysis_date first so the "latest" is index 0.
+      arr.sort((a, b) => (b.analysis_date ?? "").localeCompare(a.analysis_date ?? ""));
     }
 
     if (bySlice.size > 0) out.set(slug, bySlice);

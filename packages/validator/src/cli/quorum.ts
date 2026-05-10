@@ -3,10 +3,11 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 
 import { join, resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { PROMPT_VERSION, SLICE_IDS } from "@defipunkd/prompts";
-import { parseSubmissionsFromFileContent, type Submission } from "../schema";
+import type { Submission } from "../schema";
 import { computeQuorum, type Assessment, type Disagreement } from "../quorum";
 import { findRepoRoot, loadSnapshot } from "../repo";
 import { buildShortHeadlinePrompt } from "../short-headline-prompt";
+import { loadSubmissionEntriesBySlice } from "../submission-files";
 
 type Change = {
   slug: string;
@@ -51,36 +52,10 @@ async function main(): Promise<number> {
 
   for (const slugDir of slugDirs) {
     const slug = slugDir.name;
+    const entriesBySlice = loadSubmissionEntriesBySlice(submissionsDir, slug);
     for (const sliceId of SLICE_IDS) {
-      const sliceDir = join(submissionsDir, slug, sliceId);
-      if (!existsSync(sliceDir)) continue;
-
-      const files = readdirSync(sliceDir).filter((f) => f.endsWith(".json"));
-      if (files.length === 0) continue;
-
-      const entries: Array<{ submission: Submission; sourcePath: string }> = [];
-      for (const f of files) {
-        const fullPath = join(sliceDir, f);
-        let raw: unknown;
-        try {
-          raw = JSON.parse(readFileSync(fullPath, "utf8"));
-        } catch (err) {
-          console.error(`skipping unparseable submission ${slug}/${sliceId}/${f}: ${(err as Error).message}`);
-          continue;
-        }
-        const result = parseSubmissionsFromFileContent(raw);
-        if (!result.ok) {
-          console.error(`skipping invalid submission ${slug}/${sliceId}/${f}: ${result.error}`);
-          continue;
-        }
-        for (const { submission, index } of result.items) {
-          const suffix = index === null ? "" : `#${index}`;
-          entries.push({
-            submission,
-            sourcePath: `data/submissions/${slug}/${sliceId}/${f}${suffix}`,
-          });
-        }
-      }
+      const entries = entriesBySlice.get(sliceId) ?? [];
+      if (entries.length === 0) continue;
 
       const result = computeQuorum(entries, {
         currentPromptVersion: PROMPT_VERSION,
