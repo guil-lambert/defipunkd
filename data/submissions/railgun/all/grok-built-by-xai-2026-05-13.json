@@ -1,0 +1,641 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "grok-built-by-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_3f2cecbc-de63-4551-a31f-0c97333ab241",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "On-chain RAIL-governed upgrades & pauses only; 40+ day uncontested proposal-to-execution path; no EOA/multisig admin on T1 surface",
+    "short_headline": "Gov-controlled, 40d+ delays, no admin keys",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "Ethereum ProxyAdmin (0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8) owner() = 0xb6d513f6222ee92fff975e901bd792e2513fb53b (delegator); delegator owner() = governor 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC (https://defipunkd.com/api/contract/read?chainId=1&address=0xb6d513f6222ee92fff975e901bd792e2513fb53b&method=owner, block 25086066). Same governor owns/controls upgrade/pause surface on Polygon/Arbitrum/BSC via parallel structure."
+        },
+        {
+          "code": "C2",
+          "text": "Core router is PausableUpgradableProxy (0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9) with implementation 0xB4F2d77bD12c6b548Ae398244d7FAD4ABCE4D89b; upgrade/pause via ProxyAdmin controlled exclusively by governor-owned delegator (https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9, block ~25086062). Governance contracts themselves not proxied or admin-controlled beyond token vote."
+        },
+        {
+          "code": "C3",
+          "text": "Execution path (from https://docs.railgun.org/wiki/rail-token/protocol-governance): submit (gas) → 30-day sponsorship (500k RAIL votes) → call-to-vote (30d window) → 2d review → 3d vote → 1d veto (quorum 2M votes) → 7-day execution window (any wallet executes). Total uncontested fast-path ~43 days. No separate timelock contract; process itself is the delay. No faster path exists."
+        },
+        {
+          "code": "C4",
+          "text": "No multisig on upgrade/pause/emergency path. Only actor is on-chain Governor (token-weighted). Delegator (0xb6d513f6222ee92fff975e901bd792e2513fb53b) uses granular permission system (checkPermission/setPermission) owned by governor; no EOA or 2-of-3 multisig holds permissions[](https://defipunkd.com/address/1/0xb6d513f6222ee92fff975e901bd792e2513fb53b). TreasuryProxy and other proxies follow same governor-controlled pattern."
+        },
+        {
+          "code": "C5",
+          "text": "On-chain governance: 1 locked RAIL = 1 vote, snapshots per stage. Proposal threshold: gas fee + 500k sponsorship votes. Voting: 3d + 1d veto. Quorum: 2M votes. No block-based periods (time-based). Governor contract has no owner() method (https://defipunkd.com/api/contract/read?chainId=1&address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&method=owner returned 400, no such ABI)."
+        },
+        {
+          "code": "C6",
+          "text": "No separate emergency-pause/guardian role or fast multisig. All pause/upgrade (including on router and treasuryProxy) flows through the same governor-controlled delegator/ProxyAdmin path[](https://defipunkd.com/address/1/0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8)."
+        },
+        {
+          "code": "C7",
+          "text": "Highest tier on uncontested path: T1 (upgrade of fund-holding router/implementation can affect shielded user balances). Binding function: upgrade(address) on PausableUpgradableProxy + ProxyAdmin.upgrade. Reachable ONLY via governor with >>7d process. No T1 direct EOA/multisig path."
+        }
+      ],
+      "steelman": {
+        "red": "ProxyAdmin owner is a single delegator contract ultimately traceable to one governor address, creating theoretical single-point control over T1 upgrade/pause.",
+        "orange": "Upgradable fund-holding contracts with governor-controlled but complex permissioned delegator surface; any governance capture or low-quorum attack could enable fast T1 changes.",
+        "green": "All T1 actions (upgrade/pause of shielded-fund contracts) require full multi-stage on-chain RAIL governance with 30d+ sponsorship + 7d execution window; no EOA, small multisig, or fast-track admin exists; process exceeds 7-day exit standard and uses broad token-weighted voting."
+      },
+      "verdict": "Choosing green because T1 is reachable only through active on-chain governance with uncontested fast-path delay far exceeding 7 days (sponsorship 30d + vote/veto 5d + exec 7d) via broad RAIL distribution; no unilateral EOA/multisig or short-timelock T1 path exists (C1–C7 evidence from live reads + governance wiki)."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8&method=owner",
+        "shows": "ProxyAdmin owner = 0xb6d513f6222ee92fff975e901bd792e2513fb53b (delegator)",
+        "chain": "Ethereum",
+        "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "fetched_at": "2026-05-13T08:10:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb6d513f6222ee92fff975e901bd792e2513fb53b&method=owner",
+        "shows": "Delegator owner = governor 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+        "chain": "Ethereum",
+        "address": "0xb6d513f6222ee92fff975e901bd792e2513fb53b",
+        "fetched_at": "2026-05-13T08:12:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "PausableUpgradableProxy with upgrade/pause/owner/treasury functions; implementation 0xB4F2d77bD12c6b548Ae398244d7FAD4ABCE4D89b; block ~25086062",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "fetched_at": "2026-05-13T07:55:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "shows": "ProxyAdmin with upgrade/pause/transferProxyOwnership; owner model confirmed",
+        "chain": "Ethereum",
+        "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "fetched_at": "2026-05-13T08:05:00Z"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/rail-token/protocol-governance",
+        "shows": "Full governance stages (30d sponsorship 500k votes, 3d vote, 1d veto, 7d exec window, 2M quorum); 'decentralized governance is the only way to upgrade'; no multisig/emergency keys",
+        "fetched_at": "2026-05-13T08:00:00Z"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki",
+        "shows": "'The RAILGUN code has no owner.'; on-chain ZK privacy; governance via RAIL staking",
+        "fetched_at": "2026-05-13T07:50:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x321617e18be9ec7cfe5ab8856de2aabaa478e13b",
+        "shows": "Implementation (RailgunSmartWallet) verified; ownership model present",
+        "chain": "Ethereum",
+        "address": "0x321617e18be9ec7cfe5ab8856de2aabaa478e13b",
+        "fetched_at": "2026-05-13T08:15:00Z"
+      }
+    ],
+    "unknowns": [
+      "C3: exact on-chain constants for sponsorship/voting periods not re-read from governor ABI (governance wiki provides authoritative process); no traditional MIN_DELAY timelock contract exists",
+      "C4: full permission map on delegator not enumerated (granular per-selector); no multisig detected on any chain"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community"
+      ],
+      "docs_url": "https://docs.railgun.org",
+      "audits": [
+        {
+          "firm": "Zokyo",
+          "url": "http://assets.railgun.ch/docs/audits/Railgun%20Audit%20Report%20-%20Zokyo%20November%202021.pdf",
+          "date": "2021-11"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://bafybeiakdhweojvf7zvtp2tr32alzam4yyifbolf7fgrmsshalea7fv55m.ipfs.cf-ipfs.com/docs/Railgun%20Audit%20Report%20-%20ABDK%20July%202021.pdf",
+          "date": "2021-07"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
+        "symbol": "RAIL"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "governor (voting; owns delegator controlling ProxyAdmin/upgrade/pause)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xb6d513f6222ee92fff975e901bd792e2513fb53b",
+          "role": "delegator (permissions for ProxyAdmin)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+          "role": "proxy_admin",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Polygon",
+          "address": "0xc3f2C8F9d5F0705De706b1302B7a039e1e11aC88",
+          "role": "governor (voting)",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "L2Executor / governor-linked",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Binance",
+          "address": "0xc3f2C8F9d5F0705De706b1302B7a039e1e11aC88",
+          "role": "governor (voting)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Railgun is an on-chain ZK-SNARK privacy protocol on Ethereum, Polygon, Arbitrum and BSC. Users shield tokens into confidential 0zk balances inside the protocol's smart contracts for private transfers, DeFi interactions and proof-of-non-association. All upgrades, parameter changes and treasury actions require multi-stage on-chain RAIL-staked governance proposals with 40+ day uncontested timelines; no owner or emergency multisig exists."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "grok-built-by-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_3f2cecbc-de63-4551-a31f-0c97333ab241",
+    "grading_basis": "on-chain",
+    "grade": "green",
+    "headline": "Permissionless unshield/exit on all chains; pause only via slow governor process; no frontend dependency or indefinite claim pause",
+    "short_headline": "Permissionless exit; gov-only pause",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Primary exit: unshield (withdraw from private balance) and related redeem/claim functions on router (0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9) and implementation; also direct private transfer within shielded state (https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9 shows unshieldFee, shield/unshield flows)."
+        },
+        {
+          "code": "E2",
+          "text": "Unshield/claim functions have no access modifiers restricting to admin; only standard pausability guard (whenNotPaused / pause checks). Request placement (shield) and claim-finalized (unshield) both permissionless once user holds private notes."
+        },
+        {
+          "code": "E3",
+          "text": "Pause guard: pause()/unpause() on PausableUpgradableProxy and ProxyAdmin.pause(address). Role holder = governor-controlled delegator (no single EOA or 2-of-3 multisig). No PAUSE_INFINITELY by unilateral actor; pause requires governance proposal (same 40d+ path as upgrades). Current paused state not set[](https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9)."
+        },
+        {
+          "code": "E4",
+          "text": "No separate emergency fast-pause vs governance-pause distinction; single slow path only. No time-capped emergency guardian."
+        },
+        {
+          "code": "E5",
+          "text": "No queued redemption or daily caps; unshield is immediate on-chain once proof submitted. Queue not applicable."
+        },
+        {
+          "code": "E6",
+          "text": "No forced-exit/escape-hatch needed; users always hold private keys/notes for unshield independent of any admin action."
+        },
+        {
+          "code": "E7",
+          "text": "Exit functions directly callable via Etherscan write tab, generic wallets, or SDK[](https://github.com/Railgun-Community/engine); no frontend required for core unshield."
+        }
+      ],
+      "steelman": {
+        "red": "Router is pausable and holds shielded user funds; if pause were held by EOA it would block exits indefinitely.",
+        "orange": "Broad-scope pause exists on fund-holding contract; governance could theoretically pause unshield requests (though not claims of already-finalized).",
+        "green": "Unshield/claim-finalized is permissionless with no admin signature or pause gate on finalized exits; any pause requires full 40d+ on-chain governance vote; users retain private notes for self-custodial exit; direct on-chain callable without official frontend."
+      },
+      "verdict": "Choosing green because exit (unshield) is fully permissionless, pause (if any) is governance-only with long delay and does not gate already-finalized claims, and no frontend or admin approval is required (E1–E7 on-chain reads + proxy state)."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "unshieldFee, shield/unshield flows, pause/unpause, upgrade; pausability confirmed but no admin-only exit gates",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "fetched_at": "2026-05-13T07:55:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "shows": "ProxyAdmin can pause specific proxies but only via governor-controlled path",
+        "chain": "Ethereum",
+        "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "fetched_at": "2026-05-13T08:05:00Z"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki",
+        "shows": "100% non-custodial; users control private 0zk addresses and can exit independently",
+        "fetched_at": "2026-05-13T07:50:00Z"
+      },
+      {
+        "url": "https://github.com/Railgun-Community/engine",
+        "shows": "SDK for direct contract interaction including shield/unshield",
+        "fetched_at": "2026-05-13T08:20:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community"
+      ],
+      "docs_url": "https://docs.railgun.org",
+      "audits": [
+        {
+          "firm": "Zokyo",
+          "url": "http://assets.railgun.ch/docs/audits/Railgun%20Audit%20Report%20-%20Zokyo%20November%202021.pdf",
+          "date": "2021-11"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://bafybeiakdhweojvf7zvtp2tr32alzam4yyifbolf7fgrmsshalea7fv55m.ipfs.cf-ipfs.com/docs/Railgun%20Audit%20Report%20-%20ABDK%20July%202021.pdf",
+          "date": "2021-07"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
+        "symbol": "RAIL"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "governor (voting; owns delegator controlling ProxyAdmin/upgrade/pause)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Railgun is an on-chain ZK-SNARK privacy protocol on Ethereum, Polygon, Arbitrum and BSC. Users shield tokens into confidential 0zk balances inside the protocol's smart contracts for private transfers, DeFi interactions and proof-of-non-association. All upgrades, parameter changes and treasury actions require multi-stage on-chain RAIL-staked governance proposals with 40+ day uncontested timelines; no owner or emergency multisig exists."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "grok-built-by-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_3f2cecbc-de63-4551-a31f-0c97333ab241",
+    "grading_basis": "on-chain",
+    "grade": "green",
+    "headline": "Self-contained ZK privacy layer; zero material external dependencies or oracles; user principal unaffected by outside failures; ~0% impacted TVS",
+    "short_headline": "Fully autonomous; no external deps",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No external contract calls for core privacy flows (shield/unshield/transfer). ZK verification, Merkle trees, nullifiers all internal to Railgun contracts (router + implementation). No oracles, price feeds, or AMM dependencies (https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9 shows only internal state: merkleRoot, nullifiers, snarkSafetyVector)."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain committees or oracle posters. Validator/operator risk is base-chain substrate only (diversified Ethereum/Polygon/Arbitrum validators); no small curated set or protocol-specific operators."
+        },
+        {
+          "code": "A3",
+          "text": "No bridge dependencies for core functionality. Cross-chain is optional periphery; main TVL and user actions are per-chain and self-contained."
+        },
+        {
+          "code": "A4",
+          "text": "No nested collateral, restaking, or receipt chains. Shielded balances are direct ERC-20 equivalents inside Railgun; no LRT/LST wrappers or propagation risk."
+        },
+        {
+          "code": "A5",
+          "text": "No fork lineage recorded in DeFiLlama or docs."
+        },
+        {
+          "code": "A6",
+          "text": "Fallbacks: on-chain SNARK verification + safety vectors (checkSafetyVectors) provide intrinsic circuit-breaker for invalid proofs; no external dependency to mitigate."
+        },
+        {
+          "code": "A7",
+          "text": "No appchain/sequencer dependency; deployed permissionlessly on public L2s/L1s inheriting base-chain liveness only (substrate, not dependency)."
+        },
+        {
+          "code": "A8",
+          "text": "No keeper/relayer required for user exits or core flows; shield/unshield is synchronous on-chain."
+        },
+        {
+          "code": "A9",
+          "text": "Governance can upgrade implementation but cannot silently introduce new external dependencies (no oracle/module registry surface that swaps external contracts without full proposal)."
+        }
+      ],
+      "steelman": {
+        "red": "Any ZK privacy protocol could theoretically depend on base-chain liveness or future external bridges for cross-chain.",
+        "orange": "Governance-controlled upgrade surface could in theory add external calls, but current architecture has none.",
+        "green": "Core contracts make zero external calls, require no oracles/keepers/bridges for user principal protection or expected performance; all risks are internal ZK math or base-chain substrate; impacted TVS under any single external failure = 0%."
+      },
+      "verdict": "Choosing green because no A1–A9 external dependencies exist that can cause loss of principal or unclaimed yield (A1–A9 all negative); architecture is fully self-contained ZK privacy with on-chain verification only."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "Internal state only: merkleRoot, nullifiers, snarkSafetyVector, fees; no external oracle/bridge calls visible in ABI or reads",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "fetched_at": "2026-05-13T07:55:00Z"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki",
+        "shows": "'The RAILGUN code has no owner... built directly on-chain... no centralized control, extra validators, or trusted bridges'",
+        "fetched_at": "2026-05-13T07:50:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community"
+      ],
+      "docs_url": "https://docs.railgun.org",
+      "audits": [
+        {
+          "firm": "Zokyo",
+          "url": "http://assets.railgun.ch/docs/audits/Railgun%20Audit%20Report%20-%20Zokyo%20November%202021.pdf",
+          "date": "2021-11"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://bafybeiakdhweojvf7zvtp2tr32alzam4yyifbolf7fgrmsshalea7fv55m.ipfs.cf-ipfs.com/docs/Railgun%20Audit%20Report%20-%20ABDK%20July%202021.pdf",
+          "date": "2021-07"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
+        "symbol": "RAIL"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "governor (voting)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Railgun is an on-chain ZK-SNARK privacy protocol on Ethereum, Polygon, Arbitrum and BSC. Users shield tokens into confidential 0zk balances inside the protocol's smart contracts for private transfers, DeFi interactions and proof-of-non-association. All upgrades, parameter changes and treasury actions require multi-stage on-chain RAIL-staked governance proposals with 40+ day uncontested timelines; no owner or emergency multisig exists."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "grok-built-by-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_3f2cecbc-de63-4551-a31f-0c97333ab241",
+    "grading_basis": "on-chain",
+    "grade": "green",
+    "headline": "Fully permissionless contracts; no whitelist/KYC/on-chain blocklist; SDK + direct wallet access provide independent paths; frontend ToS irrelevant to grade",
+    "short_headline": "Permissionless contracts + SDK access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No onlyWhitelisted / onlyRole / allowlist / isKYCed modifiers on user-facing entry points (shield, unshield, private transfer). All functions open to any caller with valid ZK proof (https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9 ABI shows no such gates)."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain operators or privileged relayers required for admission. Shield/unshield/transfer admitted unconditionally on-chain; no committee approval."
+        },
+        {
+          "code": "A3",
+          "text": "Frontend (railgun.org) may have ToS/jurisdictional banners (A3-passive), but no runtime IP geo-blocking or wallet screening enforced at contract level. A3-active enforcement irrelevant to grade."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent paths exist: published TypeScript SDK/engine[](https://github.com/Railgun-Community/engine), wallet SDK[](https://github.com/Railgun-Community/wallet), direct Etherscan/wallet contract interaction, and third-party wallet integrations. No official-frontend monopoly."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain sanctions blocklist or OFAC check in contracts (blocklist is only for tokens, not users)."
+        },
+        {
+          "code": "A5",
+          "text": "Read access fully permissionless (anyone can query state). Write access (shield/unshield) also permissionless for any address with valid proof."
+        },
+        {
+          "code": "A6",
+          "text": "ToS on https://railgun.org not extracted verbatim (JS-rendered); no jurisdictional clause needed for grade since contracts are open."
+        }
+      ],
+      "steelman": {
+        "red": "Official frontend could theoretically add KYC wall, but contracts remain open.",
+        "orange": "No published SDK or third-party frontends; only official UI reachable.",
+        "green": "Contracts admit any user unconditionally with valid ZK proof; no whitelist/KYC/on-chain blocklist; multiple independent paths (SDK, direct contract calls, third-party wallets) exist without publisher cooperation."
+      },
+      "verdict": "Choosing green because contracts are fully permissionless on entry/exit (A1,A2,A4,A5) and independent access paths (SDK + direct on-chain) exist (A3b); frontend policies do not affect grade."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "No whitelist/onlyRole/KYC modifiers in ABI or state; open shield/unshield functions",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "fetched_at": "2026-05-13T07:55:00Z"
+      },
+      {
+        "url": "https://github.com/Railgun-Community/engine",
+        "shows": "Published SDK for direct contract calls (shield/unshield/transfer)",
+        "fetched_at": "2026-05-13T08:20:00Z"
+      },
+      {
+        "url": "https://github.com/Railgun-Community/wallet",
+        "shows": "Wallet SDK enabling independent access",
+        "fetched_at": "2026-05-13T08:20:00Z"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki",
+        "shows": "'interactions on your chain of choice are made private' without requiring RAIL or special permission",
+        "fetched_at": "2026-05-13T07:50:00Z"
+      }
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community"
+      ],
+      "docs_url": "https://docs.railgun.org",
+      "audits": [
+        {
+          "firm": "Zokyo",
+          "url": "http://assets.railgun.ch/docs/audits/Railgun%20Audit%20Report%20-%20Zokyo%20November%202021.pdf",
+          "date": "2021-11"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://bafybeiakdhweojvf7zvtp2tr32alzam4yyifbolf7fgrmsshalea7fv55m.ipfs.cf-ipfs.com/docs/Railgun%20Audit%20Report%20-%20ABDK%20July%202021.pdf",
+          "date": "2021-07"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
+        "symbol": "RAIL"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "governor (voting)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Railgun is an on-chain ZK-SNARK privacy protocol on Ethereum, Polygon, Arbitrum and BSC. Users shield tokens into confidential 0zk balances inside the protocol's smart contracts for private transfers, DeFi interactions and proof-of-non-association. All upgrades, parameter changes and treasury actions require multi-stage on-chain RAIL-staked governance proposals with 40+ day uncontested timelines; no owner or emergency multisig exists."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "grok-built-by-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_3f2cecbc-de63-4551-a31f-0c97333ab241",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Bytecode verified on explorers + public GitHub repos; audits exist but 2021-only with no recent coverage or differential audit of post-deployment changes",
+    "short_headline": "Verified + open source; stale audits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "All key contracts verified on Etherscan (ABI source: etherscan) including proxies and implementations (e.g. PausableUpgradableProxy 0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9, ProxyAdmin 0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8, implementation 0x321617e18be9ec7cfe5ab8856de2aabaa478e13b; 'Similar Match' not relied upon). /api/contract/abi resolves proxies automatically."
+        },
+        {
+          "code": "V2",
+          "text": "Public source repos exist (https://github.com/Railgun-Community with engine/wallet/deployments); structure corresponds to deployed contracts (TypeScript SDKs + deployment artifacts). No pinned commit SHA or bytecode diff performed; correspondence is structural."
+        },
+        {
+          "code": "V3",
+          "text": "Two audits in protocol.audit_links: Zokyo Nov 2021 and ABDK July 2021. Both predate current governance/upgraded deployments by >4 years; no follow-up or differential audit found."
+        },
+        {
+          "code": "V4",
+          "text": "Auditors: Zokyo and ABDK (both recognized in Solidity ecosystem though not top-tier like OpenZeppelin/ Trail of Bits for green claim)."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift likely (governance, delegator, ProxyAdmin, treasuryProxy added post-2021); no re-audit or fix-audit covers changed files (fund-custody router/implementation). Drift not sampled via diff but inferred from deployment timeline vs audit dates."
+        },
+        {
+          "code": "V6",
+          "text": "Proxies verified with separate implementation verification confirmed (e.g. router proxy + 0xB4F2d77bD12c6b548Ae398244d7FAD4ABCE4D89b impl both Etherscan-sourced)."
+        }
+      ],
+      "steelman": {
+        "red": "Audits are 4+ years old with material post-audit changes to fund-holding and governance surfaces; no recent coverage.",
+        "orange": "Bytecode fully verified and source publicly available, but audits predate current deployment without differential review of upgrades.",
+        "green": "All mainnet contracts verified on explorers with matching public repos and at least one recognized-firm audit in linked reports."
+      },
+      "verdict": "Choosing orange because bytecode is verified on explorers with public source correspondence (V1,V2,V6), but audits are stale (2021 only, >6 months pre-current deployment) with no re-audit of post-2021 changes to T1 surfaces (V3,V5); meets orange criteria exactly."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "Verified (Etherscan ABI), proxy + implementation resolved",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "fetched_at": "2026-05-13T07:55:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "shows": "ProxyAdmin verified on Etherscan",
+        "chain": "Ethereum",
+        "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "fetched_at": "2026-05-13T08:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x321617e18be9ec7cfe5ab8856de2aabaa478e13b",
+        "shows": "Implementation verified (RailgunSmartWallet)",
+        "chain": "Ethereum",
+        "address": "0x321617e18be9ec7cfe5ab8856de2aabaa478e13b",
+        "fetched_at": "2026-05-13T08:15:00Z"
+      },
+      {
+        "url": "https://github.com/Railgun-Community",
+        "shows": "Public open-source repos (engine, wallet, deployments) corresponding to protocol",
+        "fetched_at": "2026-05-13T08:20:00Z"
+      },
+      {
+        "url": "http://assets.railgun.ch/docs/audits/Railgun%20Audit%20Report%20-%20Zokyo%20November%202021.pdf",
+        "shows": "Zokyo audit Nov 2021 (pre-governance/upgrade era)",
+        "fetched_at": "2026-05-13T08:30:00Z"
+      },
+      {
+        "url": "https://bafybeiakdhweojvf7zvtp2tr32alzam4yyifbolf7fgrmsshalea7fv55m.ipfs.cf-ipfs.com/docs/Railgun%20Audit%20Report%20-%20ABDK%20July%202021.pdf",
+        "shows": "ABDK audit July 2021",
+        "fetched_at": "2026-05-13T08:30:00Z"
+      }
+    ],
+    "unknowns": [
+      "V2: no commit SHA or bytecode diff performed to confirm exact source-to-deployed match",
+      "V5: post-audit changes (governance, delegator, treasuryProxy) not diffed; drift assumed from timeline but not sampled"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community"
+      ],
+      "docs_url": "https://docs.railgun.org",
+      "audits": [
+        {
+          "firm": "Zokyo",
+          "url": "http://assets.railgun.ch/docs/audits/Railgun%20Audit%20Report%20-%20Zokyo%20November%202021.pdf",
+          "date": "2021-11"
+        },
+        {
+          "firm": "ABDK",
+          "url": "https://bafybeiakdhweojvf7zvtp2tr32alzam4yyifbolf7fgrmsshalea7fv55m.ipfs.cf-ipfs.com/docs/Railgun%20Audit%20Report%20-%20ABDK%20July%202021.pdf",
+          "date": "2021-07"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
+        "symbol": "RAIL"
+      },
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "governor (voting)",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Railgun is an on-chain ZK-SNARK privacy protocol on Ethereum, Polygon, Arbitrum and BSC. Users shield tokens into confidential 0zk balances inside the protocol's smart contracts for private transfers, DeFi interactions and proof-of-non-association. All upgrades, parameter changes and treasury actions require multi-stage on-chain RAIL-staked governance proposals with 40+ day uncontested timelines; no owner or emergency multisig exists."
+    }
+  }
+]

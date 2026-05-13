@@ -1,0 +1,718 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0466d7-06f0-8329-87b3-c14f78eedc2f",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Ethereum and Arbitrum show governance-controlled T1 upgrade/pause paths, but Polygon/BSC control reads and one Arbitrum admin surface remain incomplete.",
+    "short_headline": "Incomplete control map",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "On Ethereum, the Railgun proxy owner is 0xB6d513f6222Ee92Fff975E901bd792E2513fB53B; that Delegator owner is 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC; the Ethereum ProxyAdmin owner is also the Delegator."
+        },
+        {
+          "code": "C1",
+          "text": "On Arbitrum, the Railgun proxy owner is 0xbB7d93eF65F4131eD13aeE0497503d57ff74Ccfa; that Delegator owner is 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC, identified on the surfacer as an ArbitrumExecutor."
+        },
+        {
+          "code": "C2",
+          "text": "The Ethereum and Arbitrum main Railgun contracts are proxied upgradeable surfaces: the Ethereum surfacer identifies a PausableUpgradableProxy resolving to implementation 0xB4F2d77bD12c6b548Ae398244d7FAD4ABCE4D89b, while the Arbitrum surfacer identifies a RailgunSmartWallet proxy resolving to implementation 0xD05a653494f1530561e349F273D4Fb4301A3A1E0."
+        },
+        {
+          "code": "C2",
+          "text": "The Ethereum ProxyAdmin ABI exposes upgrade(address,address), pause(address), unpause(address), and transferProxyOwnership(address,address), so the upgrade/pause surface is admin-mediated rather than immutable."
+        },
+        {
+          "code": "C3",
+          "text": "The Ethereum Voting contract exposes execution and voting offsets: VOTING_START_OFFSET=172800 seconds, VOTING_YAY_END_OFFSET=432000 seconds, VOTING_NAY_END_OFFSET=518400 seconds, EXECUTION_START_OFFSET=604800 seconds, and EXECUTION_END_OFFSET=1209600 seconds."
+        },
+        {
+          "code": "C5",
+          "text": "The Ethereum Voting contract exposes PROPOSAL_SPONSOR_THRESHOLD=500000000000000000000000 and QUORUM=2000000000000000000000000; token decimals and voting-token distribution were not independently re-verified in this run."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency-like powers are present as pause()/unpause() on the Railgun proxy and pause(address)/unpause(address) on the Ethereum ProxyAdmin, but no separate guardian actor or time cap was surfaced."
+        },
+        {
+          "code": "C7",
+          "text": "The highest observed reachable tier is T1 on the fetched Ethereum and Arbitrum paths because upgrade and pause functions exist on user-facing Railgun proxy surfaces; however, the complete cross-chain authority map was not verified."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment remains unknown because the Ethereum and Arbitrum paths show a governance-mediated T1 control surface with a 604800-second execution-start offset, but Polygon live owner reads failed, BSC was not readable through the same API path, and the pinned Arbitrum ProxyAdmin had no verified ABI, leaving the complete highest-tier authority map unresolved."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9&block=25086004&chainId=1&method=owner",
+        "shows": "Ethereum Railgun proxy owner() returns 0xB6d513f6222Ee92Fff975E901bd792E2513fB53B.",
+        "chain": "Ethereum",
+        "address": "0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xB6d513f6222Ee92Fff975E901bd792E2513fB53B&block=25086005&chainId=1&method=owner",
+        "shows": "Ethereum Delegator owner() returns 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC.",
+        "chain": "Ethereum",
+        "address": "0xB6d513f6222Ee92Fff975E901bd792E2513fB53B"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0x4F8E20f55f879beE7Bc010Bd6bD2138B34aC65c8&block=25086006&chainId=1&method=owner",
+        "shows": "Ethereum ProxyAdmin owner() returns 0xB6d513f6222Ee92Fff975E901bd792E2513fB53B.",
+        "chain": "Ethereum",
+        "address": "0x4F8E20f55f879beE7Bc010Bd6bD2138B34aC65c8"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "shows": "Ethereum ProxyAdmin surfacer identifies ABI source etherscan and write methods including pause(address), unpause(address), transferProxyOwnership(address,address), and upgrade(address,address).",
+        "chain": "Ethereum",
+        "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "Ethereum Railgun proxy surfacer identifies PausableUpgradableProxy, proxy implementation 0xB4F2d77bD12c6b548Ae398244d7FAD4ABCE4D89b, and write methods including shield, transact, pause, unpause, upgrade, changeFee, changeTreasury, addToBlocklist, removeFromBlocklist, addVector, removeVector, and setVerificationKey.",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&block=25086006&chainId=1&method=EXECUTION_START_OFFSET",
+        "shows": "Ethereum Voting EXECUTION_START_OFFSET returns 604800 seconds.",
+        "chain": "Ethereum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&block=25086006&chainId=1&method=EXECUTION_END_OFFSET",
+        "shows": "Ethereum Voting EXECUTION_END_OFFSET returns 1209600 seconds.",
+        "chain": "Ethereum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&block=25086006&chainId=1&method=VOTING_START_OFFSET",
+        "shows": "Ethereum Voting VOTING_START_OFFSET returns 172800 seconds.",
+        "chain": "Ethereum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&block=25086006&chainId=1&method=VOTING_YAY_END_OFFSET",
+        "shows": "Ethereum Voting VOTING_YAY_END_OFFSET returns 432000 seconds.",
+        "chain": "Ethereum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&block=25086006&chainId=1&method=VOTING_NAY_END_OFFSET",
+        "shows": "Ethereum Voting VOTING_NAY_END_OFFSET returns 518400 seconds.",
+        "chain": "Ethereum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&block=25086006&chainId=1&method=PROPOSAL_SPONSOR_THRESHOLD",
+        "shows": "Ethereum Voting PROPOSAL_SPONSOR_THRESHOLD returns 500000000000000000000000.",
+        "chain": "Ethereum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC&block=25086006&chainId=1&method=QUORUM",
+        "shows": "Ethereum Voting QUORUM returns 2000000000000000000000000.",
+        "chain": "Ethereum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9&block=462384350&chainId=42161&method=owner",
+        "shows": "Arbitrum Railgun proxy owner() returns 0xbB7d93eF65F4131eD13aeE0497503d57ff74Ccfa.",
+        "chain": "Arbitrum",
+        "address": "0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xbB7d93eF65F4131eD13aeE0497503d57ff74Ccfa&block=462384349&chainId=42161&method=owner",
+        "shows": "Arbitrum Delegator owner() returns 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC.",
+        "chain": "Arbitrum",
+        "address": "0xbB7d93eF65F4131eD13aeE0497503d57ff74Ccfa"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+        "shows": "Arbitrum surfacer identifies 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC as ArbitrumExecutor and surfaces DELEGATOR, SENDER_L1, ARB_RETRYABLE_TX, EXPIRY_TIME, newTicketTimeout, readyTask, and executeTask.",
+        "chain": "Arbitrum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x19b620929f97b7b990801496c3b361ca5def8c71",
+        "shows": "Polygon Railgun proxy surfacer loads ABI from sourcify but reports RPC read failure, so owner/admin state was not read in this run.",
+        "chain": "Polygon",
+        "address": "0x19b620929f97b7b990801496c3b361ca5def8c71"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xb00a75949806158a90A86f70B4d4393619A4D527",
+        "shows": "Pinned Arbitrum ProxyAdmin surfacer reports no verified ABI found.",
+        "chain": "Arbitrum",
+        "address": "0xb00a75949806158a90A86f70B4d4393619A4D527"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/helpful-links",
+        "shows": "Official Railgun docs list deployed privacy system, treasury, governance, rewards, and staking contract links across Ethereum, Polygon, BSC, and Arbitrum, plus official website and GitHub links."
+      },
+      {
+        "url": "https://github.com/Railgun-Privacy/contract",
+        "shows": "Public Railgun contract source repository exists."
+      }
+    ],
+    "unknowns": [
+      "C1: Polygon owner/admin/governor live reads failed because the DefiPunkd surfacer returned an RPC 401 read failure.",
+      "C1: BSC/Binance owner/admin/governor live reads were not completed through DefiPunkd in this run.",
+      "C2: The pinned Arbitrum ProxyAdmin 0xb00a75949806158a90A86f70B4d4393619A4D527 had no verified ABI on the DefiPunkd surfacer, so its owner and callable upgrade surface were not verified.",
+      "C3: The complete cross-chain execution path from Ethereum governance to Polygon and BSC deployments was not reconstructed from on-chain reads.",
+      "C4: No Safe/multisig threshold and owner set was identified on the fetched Ethereum/Arbitrum owner path; if any multisig is reachable through unverified or unread Polygon/BSC/admin surfaces, it was not enumerated.",
+      "C5: RAIL token decimals, delegated voting supply, token distribution, and effective quorum percentage were not re-verified.",
+      "C6: No maximum pause duration was surfaced for pause/unpause paths.",
+      "C7: Highest tier is clearly T1 on fetched Ethereum/Arbitrum upgrade/pause surfaces, but complete classification across all listed chains remains unresolved."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Privacy/contract"
+      ],
+      "docs_url": "https://docs.railgun.org/wiki/learn/privacy-system",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.railgun.org/wiki/learn/helpful-links",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "Voting contract owning Ethereum Delegator",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xB6d513f6222Ee92Fff975E901bd792E2513fB53B",
+          "role": "Delegator owning Ethereum Railgun proxy and ProxyAdmin",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x4F8E20f55f879beE7Bc010Bd6bD2138B34aC65c8",
+          "role": "ProxyAdmin exposing upgrade and pause controls",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "ArbitrumExecutor owning Arbitrum Delegator",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0xbB7d93eF65F4131eD13aeE0497503d57ff74Ccfa",
+          "role": "Delegator owning Arbitrum Railgun proxy",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Railgun is an on-chain privacy system built around shielded balances. Users shield tokens into Railgun smart contracts, transact privately using zero-knowledge proofs, and unshield back to public addresses or interact with other contracts from a private 0zk address."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0466d7-06f0-8329-87b3-c14f78eedc2f",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "The observed exit path is transact/unshield on a pausable proxy, with no separate finalized-claim path, no escape hatch, and no pause cap surfaced.",
+    "short_headline": "Pausable exit path",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The main Railgun proxy ABI exposes shield(...) and transact(...); its event surface includes Shield, Transact, Unshield, and Nullified, so the observed user-facing exit path is transact/unshield rather than a separate redeem/claim function."
+        },
+        {
+          "code": "E2",
+          "text": "The same fetched Railgun proxy surface is identified as PausableUpgradableProxy and exposes pause(), unpause(), shield(...), and transact(...); the ABI did not surface a separate claim-finalized function exempt from pause."
+        },
+        {
+          "code": "E3",
+          "text": "On Ethereum, the pause/exit-relevant proxy owner path is proxy owner 0xB6d513f6222Ee92Fff975E901bd792E2513fB53B to Delegator owner 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC; no on-chain max pause duration was surfaced."
+        },
+        {
+          "code": "E4",
+          "text": "No separate emergency-only pause actor with a different time cap was found; the fetched surfaces show pause/unpause controlled by the same owner/governance path observed for upgrades."
+        },
+        {
+          "code": "E5",
+          "text": "No queued redemption request/claim functions, queue duration, or daily withdrawal cap were surfaced in the main proxy ABI."
+        },
+        {
+          "code": "E6",
+          "text": "No forced-exit or escape-hatch function was surfaced in the main proxy ABI or SDK/docs evidence fetched in this run."
+        },
+        {
+          "code": "E7",
+          "text": "Exit-related contract functions are directly callable on-chain and via open-source SDK tooling: DefiPunkd lists write methods on the deployed proxy, and Railgun docs state that the Wallet SDK generates deposits, scans balances, generates ZK proofs, and supports withdrawals/sends/interactions."
+        }
+      ],
+      "steelman": {
+        "red": "The only observed unshield path is transact on a pausable proxy, with no finalized-claim exemption, no escape hatch, and no maximum pause duration surfaced.",
+        "orange": "Pause appears to be governance-mediated rather than held by a single EOA, and no separate admin-signature withdrawal requirement was found.",
+        "green": "Users can interact directly with on-chain contracts and SDKs without relying on the official frontend, and no redemption queue was found."
+      },
+      "verdict": "Choosing red because the decisive issue is not frontend access but the on-chain exit surface: transact/unshield is on the same pausable proxy as pause/unpause, no capped pause duration was evidenced, no finalized-claim carveout exists in the fetched ABI, and no forced-exit escape hatch was found."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "Ethereum Railgun proxy surfacer identifies PausableUpgradableProxy and lists write methods including shield, transact, pause, unpause, upgrade, changeFee, changeTreasury, addToBlocklist, removeFromBlocklist, addVector, removeVector, and setVerificationKey; it also lists events including Shield, Transact, Unshield, Nullified, ProxyPause, and ProxyUnpause.",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9&block=25086004&chainId=1&method=owner",
+        "shows": "Ethereum Railgun proxy owner() returns 0xB6d513f6222Ee92Fff975E901bd792E2513fB53B.",
+        "chain": "Ethereum",
+        "address": "0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xB6d513f6222Ee92Fff975E901bd792E2513fB53B&block=25086005&chainId=1&method=owner",
+        "shows": "Ethereum Delegator owner() returns 0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC.",
+        "chain": "Ethereum",
+        "address": "0xB6d513f6222Ee92Fff975E901bd792E2513fB53B"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "shows": "Ethereum ProxyAdmin surfacer lists pause(address), unpause(address), transferProxyOwnership(address,address), and upgrade(address,address).",
+        "chain": "Ethereum",
+        "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9",
+        "shows": "Arbitrum Railgun proxy surfacer lists shield, transact, pause, unpause, upgrade, tokenBlocklist, fee/treasury methods, and events including Shield, Transact, and Unshield.",
+        "chain": "Arbitrum",
+        "address": "0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/integrating-railgun/railgun-sdks",
+        "shows": "Official SDK docs say the Wallet SDK lets dApps generate deposits, scan, generate ZK proofs for withdrawals/sends/interactions, and that generateDeposit() and transact() are callable by integrated dApps."
+      },
+      {
+        "url": "https://github.com/Railgun-Community/wallet",
+        "shows": "Open-source Wallet SDK README describes shielding ERC20/NFT tokens, managing shielded balances, private transfers, and private interaction with any smart contract."
+      }
+    ],
+    "unknowns": [
+      "E2: Exact Solidity modifiers for shield/transact were not source-diffed in this run; pause exposure is derived from the merged deployed proxy ABI and PausableUpgradableProxy surfacer label.",
+      "E3: Polygon pause role/current paused state could not be read because Polygon surfacer reads failed with RPC 401.",
+      "E3: BSC pause role/current paused state was not read through DefiPunkd in this run.",
+      "E4: No separate emergency actor was found, but a full source-level role search across every chain deployment was not completed.",
+      "E5: No queue was surfaced in the main ABI; full source search for any off-proxy withdrawal queue was not completed.",
+      "E6: No escape hatch was surfaced; full source-level confirmation across all deployed chains was not completed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community/wallet"
+      ],
+      "docs_url": "https://docs.railgun.org/wiki/learn/integrating-railgun/railgun-sdks",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+          "role": "Voting contract owning Ethereum Delegator",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xB6d513f6222Ee92Fff975E901bd792E2513fB53B",
+          "role": "Delegator owning Ethereum Railgun proxy",
+          "actor_class": "governance"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Railgun users shield assets into privacy-system contracts and spend shielded notes through transact calls. Unshielding is represented by the deployed contract's Unshield event and the SDK's withdrawal/proof-generation flow."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0466d7-06f0-8329-87b3-c14f78eedc2f",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Impacted TVS ~0% from a single Railgun-specific external dependency: core privacy functions do not surface oracle/bridge dependence, and broadcaster failure is a liveness/privacy degradation rather than principal loss.",
+    "short_headline": "No critical oracle",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The fetched main Railgun proxy ABI surfaces shield, transact, tokenBlocklist, verification-key, fee, treasury, pause, and upgrade methods, but no oracle, price-feed, AMM-pool, lending-pool, or external price-read method."
+        },
+        {
+          "code": "A2",
+          "text": "Official privacy-system docs describe Broadcasters as wallets that pass transaction information to the chain and pay gas so transactions appear from the broadcaster; this is a relayer/liveness/privacy layer, not a committee reporting prices, balances, or finality into the protocol."
+        },
+        {
+          "code": "A3",
+          "text": "Official helpful-links docs list separate Privacy System Contract deployments for Ethereum, Polygon, BSC, and Arbitrum; no bridge contract is identified as required for the core shield/transact/unshield user flow."
+        },
+        {
+          "code": "A4",
+          "text": "The core mechanism is shielded balances of user-selected ERC20/NFT assets; any underlying token contract risk is opt-in per asset and was not evidenced as a Railgun-wide nested collateral or restaking dependency."
+        },
+        {
+          "code": "A5",
+          "text": "No fork lineage evidence was surfaced from the fetched docs or contract surfacers."
+        },
+        {
+          "code": "A6",
+          "text": "Pause and tokenBlocklist functions exist as governance/control circuit breakers, but no oracle-fallback mechanism is required by the fetched core ABI because no oracle dependency was surfaced."
+        },
+        {
+          "code": "A7",
+          "text": "Railgun is deployed on third-party chains/L2s rather than a protocol-owned rollup or appchain, so sequencer/liveness risk is substrate risk for those deployments rather than a Railgun-specific autonomy dependency."
+        },
+        {
+          "code": "A8",
+          "text": "Broadcasters are off-chain relayers; if they disappear, users lose the privacy/liveness convenience of sponsored relay, but the deployed contract and SDK surfaces still expose direct transaction construction and submission paths."
+        },
+        {
+          "code": "A9",
+          "text": "Governance can mutate control surfaces such as verification keys, blocklists, fees, treasury, pause, and implementation upgrade, but no specific governance-mutable oracle, bridge, or external-price dependency was identified in the fetched core ABI."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that governance-controlled verification keys and upgrades are powerful enough to affect protocol validity and user assets, but that is a control-slice risk rather than a verified external dependency failure.",
+        "orange": "The orange case is that Broadcasters and supported chains materially affect UX and liveness, but their failure was not shown to cause loss of user principal.",
+        "green": "The green case is strongest because the core fetched ABI has no oracle/bridge/keeper dependency that can misprice or steal funds, while relayers are optional liveness/privacy helpers and per-token risk is opt-in."
+      },
+      "verdict": "Choosing green because the worst Railgun-specific external dependency identified is the Broadcaster relay layer, and the docs describe it as a transaction relay/gas payer rather than a state reporter; the main on-chain ABI did not surface oracle, bridge, or AMM dependencies, so a single external dependency failure has effectively ~0% Railgun-wide TVS impact."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "Ethereum Railgun proxy surfacer lists core methods including shield, transact, tokenBlocklist, changeFee, changeTreasury, addToBlocklist, removeFromBlocklist, addVector, removeVector, setVerificationKey, pause, unpause, and upgrade; no oracle/price-feed read method is surfaced.",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9",
+        "shows": "Arbitrum Railgun proxy surfacer lists analogous shield/transact, tokenBlocklist, fee, treasury, verification-key, pause, unpause, and upgrade functions without surfacing oracle/price-feed reads.",
+        "chain": "Arbitrum",
+        "address": "0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/privacy-system",
+        "shows": "Official docs describe Railgun as smart contracts that privatize sender, recipient, token type, and amount, using shielded UTXOs/Merkle trees; they also describe Broadcasters as wallets that pass information to the chain and pay gas."
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/helpful-links",
+        "shows": "Official docs list separate Privacy System Contract deployments on Ethereum, Polygon, BSC, and Arbitrum."
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/integrating-railgun/railgun-sdks",
+        "shows": "Official SDK docs describe TypeScript SDKs for generating deposits, scanning, generating ZK proofs for withdrawals/sends/interactions, and using public smart contracts from a private 0zk address."
+      },
+      {
+        "url": "https://github.com/Railgun-Community/wallet",
+        "shows": "Open-source Wallet SDK README describes shielding tokens, managing shielded balances, private transfers, and private interaction with any smart contract."
+      }
+    ],
+    "unknowns": [
+      "A1: Exhaustive source grep for every external call in the contract repository was not completed; grade is based on fetched deployed ABI surfaces and docs.",
+      "A2: No committee size/quorum was identified because no oracle or protocol reporter committee was surfaced; if private proof-of-innocence or wallet-layer committees affect specific clients, that was not established as an on-chain protocol reporter dependency.",
+      "A3: Material TVS split by chain was not fetched, so the cross-chain deployment weighting is approximate; no bridge dependency was found in the fetched core user flow.",
+      "A4: Exhaustive census of all token contracts users may shield was not attempted; per-token contract failure is treated as opt-in underlying-asset risk.",
+      "A6: No live fallback mechanism was needed for a missing oracle dependency, but full source confirmation of all circuit breakers was not completed.",
+      "A8: Broadcaster permissioning/replacement procedure was not fully enumerated because the fetched docs describe the role functionally rather than as an on-chain committee.",
+      "A9: Governance can upgrade the implementation, but no specific external dependency address swap such as oracle or bridge was identified; full source-level registry search was not completed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community/wallet"
+      ],
+      "docs_url": "https://docs.railgun.org/wiki/learn/privacy-system",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.railgun.org/wiki/learn/helpful-links",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Railgun is a privacy protocol where users shield ERC20/NFT assets into smart contracts, maintain private balances, and generate zero-knowledge proofs to transfer, unshield, or interact with external contracts. The distinctive mechanism is a shielded UTXO/Merkle-tree privacy system, with optional Broadcasters relaying transactions for gas and privacy."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0466d7-06f0-8329-87b3-c14f78eedc2f",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "No user whitelist/KYC surfaced in the contract ABI, and independent SDK access exists; token blocklisting and frontend/legal unknowns are context, not admission capture.",
+    "short_headline": "SDK-accessible contracts",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The fetched main proxy ABI surfaces public user-facing shield(...) and transact(...) methods and does not surface user allowlist, KYC, accreditation, or onlyWhitelisted entry-point methods."
+        },
+        {
+          "code": "A2",
+          "text": "Broadcasters appear in the docs as relayers that pass transaction information to chain and pay gas; the fetched contract/SDK evidence does not show broadcaster approval as required to admit shield/transact actions."
+        },
+        {
+          "code": "A3",
+          "text": "Frontend ToS/runtime access restrictions were not extracted; no official ToS/legal clause was found in the fetched docs/search results."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths exist: official SDK docs describe TypeScript SDKs, the Wallet SDK supports generateDeposit() and transact(), and open-source Wallet/Engine repositories provide direct integration tooling."
+        },
+        {
+          "code": "A4",
+          "text": "The contract-level blocklist surfaced is tokenBlocklist(address), with addToBlocklist/removeFromBlocklist methods; this is an asset/token blocklist surface, not evidence of user-address sanctions/KYC screening at the contract level."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public via contract surfacers and SDK scanning paths; write access to core user actions is exposed as shield/transact on deployed contracts and SDK tooling."
+        },
+        {
+          "code": "A6",
+          "text": "No verbatim jurisdictional, sanctions, or eligibility clause was extracted from an official Railgun ToS/legal page in this run."
+        }
+      ],
+      "steelman": {
+        "red": "The red case would require contract-level user KYC/whitelist or single-operator admission approval, but the fetched ABI and SDK evidence did not show that.",
+        "orange": "The orange case would be operational capture by the official UI, but the published SDKs and open-source integration repos provide independent contract access.",
+        "green": "The green case is strongest because contract admission appears permissionless for shield/transact and independent SDK paths exist outside the official frontend."
+      },
+      "verdict": "Choosing green because the fetched deployed ABI surfaces shield/transact without user whitelist/KYC methods, Broadcasters are documented as relayers rather than admission approvers, and independent SDK/library paths exist through Railgun Wallet and Engine."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "Ethereum Railgun proxy surfacer lists user-facing shield and transact write methods, plus tokenBlocklist/addToBlocklist/removeFromBlocklist; no user allowlist/KYC method is surfaced.",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9",
+        "shows": "Arbitrum Railgun proxy surfacer lists shield and transact write methods plus tokenBlocklist/addToBlocklist/removeFromBlocklist, without surfacing user allowlist/KYC methods.",
+        "chain": "Arbitrum",
+        "address": "0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9"
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/privacy-system",
+        "shows": "Official docs explain Broadcasters as wallets that pass information to the chain and pay gas so transactions appear from the broadcaster."
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/integrating-railgun/railgun-sdks",
+        "shows": "Official SDK docs describe TypeScript SDKs, a Cookbook for calling public smart contracts from private 0zk addresses, and Wallet SDK functions including generateDeposit() and transact()."
+      },
+      {
+        "url": "https://github.com/Railgun-Community/wallet",
+        "shows": "Open-source Wallet SDK README describes shielding ERC20/NFT tokens, managing shielded balances, private transfers, and private interaction with any smart contract."
+      },
+      {
+        "url": "https://github.com/Railgun-Community/engine",
+        "shows": "Open-source Engine README describes a JavaScript library and APIs for interacting with Railgun smart contracts."
+      }
+    ],
+    "unknowns": [
+      "A1: Full source grep for onlyWhitelisted/onlyRole/allowlist/isKYCed across every repository was not completed; no such method surfaced in the fetched deployed ABI.",
+      "A2: Broadcaster set size, operator permissioning, and replacement procedure were not fully enumerated; fetched docs do not show broadcaster approval as an admission prerequisite.",
+      "A3: Official frontend runtime geo-blocking or wallet-screening behavior was not tested.",
+      "A4: No address-level sanctions oracle or compliance blocklist was surfaced, but full source-level search was not completed.",
+      "A6: A verbatim ToS/legal sanctions or jurisdiction clause was not extracted from an official page; no extractable official ToS/legal page was found in the fetched docs/search results."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Community/wallet",
+        "https://github.com/Railgun-Community/engine"
+      ],
+      "docs_url": "https://docs.railgun.org/wiki/learn/integrating-railgun/railgun-sdks",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Railgun provides SDK-accessible smart contracts for shielding assets, sending shielded transfers, unshielding, and interacting with public smart contracts from private 0zk addresses. Users and integrators can use TypeScript SDKs rather than relying solely on one official frontend."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "railgun",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0466d7-06f0-8329-87b3-c14f78eedc2f",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Core proxy/implementation ABIs are mostly visible, but audit coverage could not be fetched and a pinned Arbitrum ProxyAdmin had no verified ABI.",
+    "short_headline": "Partial verification gaps",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "The Ethereum Railgun proxy surfacer reports ABI source etherscan and resolves the proxy implementation to 0xB4F2d77bD12c6b548Ae398244d7FAD4ABCE4D89b."
+        },
+        {
+          "code": "V1",
+          "text": "The Arbitrum Railgun proxy surfacer reports ABI source etherscan and resolves the proxy implementation to 0xD05a653494f1530561e349F273D4Fb4301A3A1E0."
+        },
+        {
+          "code": "V1",
+          "text": "Polygon Railgun proxy and ProxyAdmin surfacers loaded ABIs from sourcify, but live reads failed with an RPC 401 error."
+        },
+        {
+          "code": "V1",
+          "text": "The pinned Arbitrum ProxyAdmin address 0xb00a75949806158a90A86f70B4d4393619A4D527 had no verified ABI found by the DefiPunkd surfacer."
+        },
+        {
+          "code": "V2",
+          "text": "A public Railgun contract repository exists, but a source-to-deployed commit or bytecode correspondence was not pinned in this run."
+        },
+        {
+          "code": "V3",
+          "text": "The linked audit PDFs could not be opened successfully in this run, so auditor, date, commit, and contract scope were not verified from the audit bodies."
+        },
+        {
+          "code": "V4",
+          "text": "Auditor recognition could not be assessed from the audit bodies because the linked PDFs were not successfully fetched/opened."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift could not be evaluated because the most recent in-scope audit commit/scope was not fetched from the audit PDFs and no deployed-source diff was pinned."
+        },
+        {
+          "code": "V6",
+          "text": "The main Ethereum and Arbitrum proxy surfacers resolve current implementations, but the unverified pinned Arbitrum ProxyAdmin remains a verification gap for the broader admin surface."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that a pinned Arbitrum ProxyAdmin has no verified ABI and the linked audit PDFs could not be verified, leaving important admin/audit evidence missing.",
+        "orange": "The orange case is strongest because the main core proxies and implementations are surfaced through verified ABI sources, but audit scope and one admin surface remain incomplete.",
+        "green": "The green case would require verified deployed bytecode, public repo correspondence, and recognized audit coverage for current deployments, but audit and drift evidence were not obtained."
+      },
+      "verdict": "Choosing orange because the core Ethereum/Arbitrum Railgun proxy surfaces are verifiable enough to inspect their merged ABI and implementations, but the run did not verify audit coverage or source-to-deploy correspondence and found an unverified pinned Arbitrum ProxyAdmin surface."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+        "shows": "Ethereum Railgun proxy surfacer reports ABI source etherscan and proxy implementation 0xB4F2d77bD12c6b548Ae398244d7FAD4ABCE4D89b.",
+        "chain": "Ethereum",
+        "address": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+        "shows": "Ethereum ProxyAdmin surfacer reports ABI source etherscan and exposes owner, pause, unpause, transferProxyOwnership, and upgrade methods.",
+        "chain": "Ethereum",
+        "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9",
+        "shows": "Arbitrum Railgun proxy surfacer reports ABI source etherscan and proxy implementation 0xD05a653494f1530561e349F273D4Fb4301A3A1E0.",
+        "chain": "Arbitrum",
+        "address": "0xFA7093CDD9EE6932B4eb2c9e1cde7CE00B1FA4b9"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC",
+        "shows": "ArbitrumExecutor surfacer reports ABI source sourcify and exposes read/write methods including DELEGATOR, SENDER_L1, readyTask, and executeTask.",
+        "chain": "Arbitrum",
+        "address": "0xc480F68A3dcC3EdD82134FAB45C14A0FcF1dA3CC"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x19b620929f97b7b990801496c3b361ca5def8c71",
+        "shows": "Polygon Railgun proxy surfacer loads ABI source sourcify but reports RPC read failure for zero-arg reads.",
+        "chain": "Polygon",
+        "address": "0x19b620929f97b7b990801496c3b361ca5def8c71"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x3c53C163C2EcE58470ee219E647f18D133885C3A",
+        "shows": "Polygon ProxyAdmin surfacer loads ABI source sourcify but reports RPC read failure for zero-arg reads.",
+        "chain": "Polygon",
+        "address": "0x3c53C163C2EcE58470ee219E647f18D133885C3A"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xb00a75949806158a90A86f70B4d4393619A4D527",
+        "shows": "Pinned Arbitrum ProxyAdmin surfacer reports no verified ABI found.",
+        "chain": "Arbitrum",
+        "address": "0xb00a75949806158a90A86f70B4d4393619A4D527"
+      },
+      {
+        "url": "https://github.com/Railgun-Privacy/contract",
+        "shows": "Public Railgun contract source repository exists."
+      },
+      {
+        "url": "https://docs.railgun.org/wiki/learn/helpful-links",
+        "shows": "Official docs list deployed contract links across Ethereum, Polygon, BSC, and Arbitrum."
+      }
+    ],
+    "unknowns": [
+      "V1: BSC deployed contracts were listed in docs but not independently verified through a successful ABI/read fetch in this run.",
+      "V2: No deployed-address JSON or explorer artifact was fetched that pins a deployed source file set to a specific Git commit.",
+      "V3: The linked 2021 Zokyo audit URL returned a failed fetch/open result, so auditor/date/scope were not verified from the PDF body.",
+      "V3: The linked 2021 ABDK IPFS-gateway audit URL failed to open, so auditor/date/scope were not verified from the PDF body.",
+      "V4: Auditor recognition was not used as a grading support because the audit reports were not successfully fetched.",
+      "V5: Post-audit drift could not be assessed without an audit commit/scope and deployed-source correspondence.",
+      "V6: Current implementation verification status was inferred from the DefiPunkd merged proxy surfacer, but no separate explorer implementation page was fetched for each implementation address."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Railgun-Privacy/contract"
+      ],
+      "docs_url": "https://docs.railgun.org/wiki/learn/helpful-links",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.railgun.org/wiki/learn/helpful-links",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8",
+          "role": "Verified ProxyAdmin ABI exposing upgrade and pause methods",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0xb00a75949806158a90A86f70B4d4393619A4D527",
+          "role": "Pinned ProxyAdmin with no verified ABI found",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Railgun is an upgradeable on-chain privacy system with proxied contracts on multiple chains. Users shield assets, maintain private balances, and submit zero-knowledge transactions for transfers, unshielding, or private contract interactions."
+    }
+  }
+]
