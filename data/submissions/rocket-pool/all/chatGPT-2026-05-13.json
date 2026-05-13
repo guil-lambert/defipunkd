@@ -1,0 +1,695 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0468d1-e6a0-8325-9398-fc056027d848",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "RocketStorage exposes fund-critical mutable registry writes, but the live authority chain, DAO delays, and guardian actor class could not be fully reconstructed in this run.",
+    "short_headline": "Control path unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "RocketStorage at 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46 reports guardian 0x0cCF14983364A7735d369879603930Afe10df21e via getGuardian() at block 25064306."
+        },
+        {
+          "code": "C2",
+          "text": "RocketStorage's surfaced write surface includes setAddress, setBool, setUint, setGuardian, deleteAddress, and related registry mutation methods; no proxy implementation was surfaced for RocketStorage in the read response."
+        },
+        {
+          "code": "C7",
+          "text": "Because RocketBase resolves live network contracts through RocketStorage getAddress('contract.address', name), changing stored contract addresses appears fund-critical in blast radius, but the callable authorization path for those writes was not fully verified."
+        }
+      ],
+      "steelman": null,
+      "verdict": "The run verified the RocketStorage guardian and mutable registry surface, but did not verify the full current governance/proposal/timelock execution path or every multisig/operator authority; grading would require guessing."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "shows": "RocketStorage is verified through etherscan on the surfacer, read at block 25064306, exposes getGuardian(), and lists registry mutation write methods including setAddress, setBool, setUint, setGuardian, deleteAddress, deleteBool, and related setters/deleters.",
+        "chain": "Ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46&method=getGuardian&block=25064306",
+        "shows": "On-chain getGuardian() returned 0x0cCF14983364A7735d369879603930Afe10df21e at block 25064306.",
+        "chain": "Ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0cCF14983364A7735d369879603930Afe10df21e",
+        "shows": "The guardian address had no verified ABI on the surfacer; generic owner/admin/Safe/read URLs were offered but the Safe owners call returned 404 in this run.",
+        "chain": "Ethereum",
+        "address": "0x0cCF14983364A7735d369879603930Afe10df21e"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/RocketBase.sol",
+        "shows": "RocketBase defines onlyLatestContract using RocketStorage getAddress('contract.address', _contractName), defines onlyGuardian as msg.sender == rocketStorage.getGuardian(), and exposes helpers for RocketStorage-backed getAddress/getBool/getUint reads.",
+        "chain": "Ethereum"
+      }
+    ],
+    "unknowns": [
+      "C1: owner/admin/pendingOwner/governor reads for all currently active Rocket Pool core contracts were not completed; only RocketStorage and rETH were inspected.",
+      "C2: current upgrade mechanism across the full Rocket Pool core was not fully reconstructed; RocketStorage itself did not surface a proxy implementation, but other modules were not exhaustively checked.",
+      "C3: the full uncontested governance execution path, including voting, scheduler, timelock, and executor delays, was not verified on-chain.",
+      "C4: guardian 0x0cCF14983364A7735d369879603930Afe10df21e could not be classified as EOA/multisig/Safe from a successful Safe owners read in this run.",
+      "C5: proposal threshold, voting period, quorum, and timelock constants for current Rocket Pool governance were not read on-chain.",
+      "C6: emergency powers beyond the RocketStorage guardian path were not fully enumerated.",
+      "C7: highest reachable tier could not be conclusively classified because the authorization checks on RocketStorage mutation methods and the current DAO path were not fully traversed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/rocket-pool/rocketpool",
+        "https://github.com/rocket-pool/smartnode"
+      ],
+      "docs_url": "https://docs.rocketpool.net/protocol/contracts-usage",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.io/diligence/audits/2023/12/rocket-pool-houston/",
+          "date": "2023-11-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit-houston.pdf",
+          "date": "2024-02-29"
+        },
+        {
+          "firm": "ChainSafe",
+          "url": "https://rocketpool.net/files/audits/chainsafe-audit-houston.pdf",
+          "date": "2024-03-31"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf",
+          "date": "2024-08-31"
+        }
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xb4efd85c19999d84251304bda99e90b92300bd93",
+        "symbol": "RPL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/rocketpool/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+          "role": "RocketStorage guardian",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Rocket Pool is a non-custodial Ethereum staking protocol serving users who want tokenized liquid staking and node operators who want to run validators with less than 32 ETH. ETH stakers receive rETH, an ERC-20 receipt token whose exchange rate reflects pooled ETH and staking rewards. Node operators use Rocket Pool smart node software and protocol contracts to operate minipools and earn ETH/RPL-linked rewards."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0468d1-e6a0-8325-9398-fc056027d848",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "rETH exposes a direct burn(uint256) exit with no surfaced pause or role modifier, but redemption is liquidity-limited by available ETH collateral.",
+    "short_headline": "Direct rETH burn exit",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The user-facing rETH exit function identified in the inspected main token contract is burn(uint256); the same ABI also exposes transfer and transferFrom for secondary exits through token markets."
+        },
+        {
+          "code": "E2",
+          "text": "burn(uint256) is external and checks amount > 0, sender balance, and available ETH collateral; it does not show an onlyRole/onlyOwner/onlyLatestContract/guardian modifier in the inspected source."
+        },
+        {
+          "code": "E3",
+          "text": "No paused()/isPaused() view or pause-gated exit modifier was surfaced in the rETH ABI; the rETH surfacer lists burn(uint256) as a write method and no pause view among pre-executed methods."
+        },
+        {
+          "code": "E5",
+          "text": "rETH redemption is not a queued claim flow in the inspected token: burn computes ETH value, requires available collateral, burns rETH, withdraws deposit-pool collateral if needed, and transfers ETH to msg.sender."
+        },
+        {
+          "code": "E7",
+          "text": "Because burn(uint256) is present in the public ABI/write surface, the exit path is directly callable on-chain without relying on the Rocket Pool frontend."
+        }
+      ],
+      "steelman": {
+        "red": "A red argument would require showing that a privileged actor can indefinitely pause already-finalized rETH claims or that redemption requires admin approval, neither of which appeared in the inspected rETH ABI/source.",
+        "orange": "An orange argument is that rETH redemption is liquidity-limited by available collateral and the wider deposit-pool/module system was not exhaustively inspected for pause controls.",
+        "green": "The strongest green argument is that the inspected main rETH exit is a direct, permissionless burn(uint256) with no pause or role modifier and no queued finalized-claim dependency."
+      },
+      "verdict": "Choosing green because the concrete user-facing rETH exit path inspected in this run is direct burn(uint256), lacks an access modifier or pause guard in the verified source, and only fails when available collateral is insufficient rather than when an admin denies admission."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393",
+        "shows": "rETH surfacer identifies Rocket Pool ETH/rETH, totalSupply, getExchangeRate, getTotalCollateral, and write methods burn(uint256), depositExcess, depositExcessCollateral, and mint(uint256,address).",
+        "chain": "Ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/token/RocketTokenRETH.sol",
+        "shows": "RocketTokenRETH burn(uint256) is external, checks positive amount and sender balance, computes ETH value, requires getTotalCollateral() >= ethAmount, burns rETH, withdraws deposit collateral if required, and transfers ETH to msg.sender.",
+        "chain": "Ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/RocketBase.sol",
+        "shows": "RocketBase shows the access modifiers used elsewhere, including onlyLatestContract and onlyGuardian; these are not attached to rETH burn(uint256) in the inspected token source.",
+        "chain": "Ethereum"
+      }
+    ],
+    "unknowns": [
+      "E3: no maximum pause duration was found because no rETH pause role was surfaced; broader protocol pause/emergency controls outside rETH were not fully enumerated.",
+      "E4: emergency vs governance pause distinction for non-rETH contracts was not fully reconstructed.",
+      "E6: no separate forced-exit or escape-hatch beyond direct rETH burn and ERC-20 transfer was identified in this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/rocket-pool/rocketpool",
+        "https://github.com/rocket-pool/smartnode"
+      ],
+      "docs_url": "https://docs.rocketpool.net/protocol/contracts-usage",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.io/diligence/audits/2023/12/rocket-pool-houston/",
+          "date": "2023-11-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit-houston.pdf",
+          "date": "2024-02-29"
+        },
+        {
+          "firm": "ChainSafe",
+          "url": "https://rocketpool.net/files/audits/chainsafe-audit-houston.pdf",
+          "date": "2024-03-31"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf",
+          "date": "2024-08-31"
+        }
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xb4efd85c19999d84251304bda99e90b92300bd93",
+        "symbol": "RPL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/rocketpool/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+          "role": "RocketStorage guardian",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Rocket Pool is a non-custodial Ethereum staking protocol serving users who want tokenized liquid staking and node operators who want to run validators with less than 32 ETH. ETH stakers receive rETH, an ERC-20 receipt token whose exchange rate reflects pooled ETH and staking rewards. Node operators use Rocket Pool smart node software and protocol contracts to operate minipools and earn ETH/RPL-linked rewards."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0468d1-e6a0-8325-9398-fc056027d848",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Impacted TVS unclear: rETH depends on Rocket Pool internal network balances and deposit-pool collateral, but oracle committees, module registry, and governance-mutable dependency surfaces were not fully reconstructed.",
+    "short_headline": "Autonomy unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "rETH getEthValue reads RocketNetworkBalances via RocketStorage-resolved getContractAddress('rocketNetworkBalances'); getTotalCollateral reads RocketDepositPool via getContractAddress('rocketDepositPool')."
+        },
+        {
+          "code": "A2",
+          "text": "The inspected source and audit context indicate Rocket Pool has oracle functionality and off-chain/smart-node components, but the current on-chain oracle committee size, quorum, and reporter powers were not verified in this run."
+        },
+        {
+          "code": "A6",
+          "text": "The inspected rETH burn path has a collateral availability guard, requiring getTotalCollateral() >= ethAmount before burning and transferring ETH, but broader fallback/circuit-breaker activation status was not verified."
+        },
+        {
+          "code": "A8",
+          "text": "Rocket Pool includes a Smart Node service/CLI repository for node operators, but this run did not verify which off-chain actors are liveness-critical versus merely operational for yield and validator management."
+        },
+        {
+          "code": "A9",
+          "text": "RocketBase resolves dependency addresses through RocketStorage, so dependency address mutability is structurally important; however, the live authority and delay for changing those addresses were not verified."
+        }
+      ],
+      "steelman": null,
+      "verdict": "The autonomy-relevant architecture clearly routes rETH accounting through RocketNetworkBalances, RocketDepositPool, and RocketStorage-resolved modules, but the run did not verify the reporter committee, module registry controls, bridge footprint, or fallback activation status well enough to assign a non-unknown grade."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/token/RocketTokenRETH.sol",
+        "shows": "rETH getEthValue reads RocketNetworkBalances total ETH balance and total rETH supply; getTotalCollateral reads RocketDepositPool excess balance plus the rETH contract balance; burn requires available collateral before redemption.",
+        "chain": "Ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/RocketBase.sol",
+        "shows": "RocketBase resolves named network contracts from RocketStorage using getAddress(keccak256('contract.address', name)), making dependency addresses storage-driven.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://github.com/rocket-pool/smartnode",
+        "shows": "Smart Node repository contains the Rocket Pool CLI and Smart Node service; the README says the service provides an API for client communication and performs background node tasks.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+        "shows": "Consensys Diligence reviewed the smart contract system, Go bindings, and Smart Node implementation, and explicitly lists oracle functionality, node management, minipools/staking, rewards, DAO proposals, and off-chain elements as important components.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "shows": "RocketStorage exposes the registry read/write surface and getGuardian(), which is relevant to dependency address resolution.",
+        "chain": "Ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46"
+      }
+    ],
+    "unknowns": [
+      "A1: complete census of external contracts called/read by current Rocket Pool core modules was not completed.",
+      "A2: oracle/reporter committee size, quorum, selection mechanism, and exact misreporting powers were not verified on-chain.",
+      "A3: current material TVL on non-mainnet or bridged rETH deployments was not verified.",
+      "A4: nested collateral/restaking chains beyond ETH staking and rETH receipt mechanics were not fully assessed.",
+      "A5: fork lineage from DeFiLlama was not checked in this run.",
+      "A6: fallback/circuit-breaker inventory and activation status for oracle/balance reporting failures were not fully verified.",
+      "A7: no Rocket Pool-owned appchain/sequencer dependency was identified, but the L2 deployment surface was not fully checked.",
+      "A8: keeper/relayer/off-chain bot liveness requirements were not fully classified for all user-facing functions.",
+      "A9: governance-mutable external dependency surface and exit window for changing module addresses were not verified."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/rocket-pool/rocketpool",
+        "https://github.com/rocket-pool/smartnode"
+      ],
+      "docs_url": "https://docs.rocketpool.net/protocol/contracts-usage",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.io/diligence/audits/2023/12/rocket-pool-houston/",
+          "date": "2023-11-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit-houston.pdf",
+          "date": "2024-02-29"
+        },
+        {
+          "firm": "ChainSafe",
+          "url": "https://rocketpool.net/files/audits/chainsafe-audit-houston.pdf",
+          "date": "2024-03-31"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf",
+          "date": "2024-08-31"
+        }
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xb4efd85c19999d84251304bda99e90b92300bd93",
+        "symbol": "RPL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/rocketpool/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+          "role": "RocketStorage guardian",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Rocket Pool is a non-custodial Ethereum staking protocol serving users who want tokenized liquid staking and node operators who want to run validators with less than 32 ETH. ETH stakers receive rETH, an ERC-20 receipt token whose exchange rate reflects pooled ETH and staking rewards. Node operators use Rocket Pool smart node software and protocol contracts to operate minipools and earn ETH/RPL-linked rewards."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0468d1-e6a0-8325-9398-fc056027d848",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "rETH write access is contract-level permissionless for burn/transfer, minting is routed through the deposit pool, and independent access exists through public contracts and Smart Node tooling.",
+    "short_headline": "Permissionless core access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The inspected rETH burn(uint256), transfer, and transferFrom surfaces do not show whitelist/KYC/allowlist modifiers; mint(uint256,address) is gated to the latest rocketDepositPool contract rather than arbitrary users."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain operator approval is visible in the rETH burn or ERC-20 transfer admission path; node-operation workflows use Smart Node tooling, but that is not required to admit a token-holder burn."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths exist: the verified public ABI exposes burn/transfer methods and the Rocket Pool smartnode GitHub repository publishes CLI/service tooling for node operators."
+        },
+        {
+          "code": "A4",
+          "text": "No contract-level sanctions/blocklist check was visible in the inspected rETH ABI/source."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through view methods such as getExchangeRate, totalSupply, getTotalCollateral, balanceOf, and write access includes public burn/transfer while protocol minting is restricted to rocketDepositPool."
+        }
+      ],
+      "steelman": {
+        "red": "The red case would require a contract-level whitelist/KYC/blocklist or a privileged operator admitting rETH exits, which was not found in the inspected token path.",
+        "orange": "The orange case is that full official frontend and every independent integrator path were not exhaustively assessed, and user minting routes through a protocol deposit-pool contract rather than directly through rETH mint.",
+        "green": "The green case is that token-holder exits and transfers are directly admitted by the contract without whitelist/KYC/operator approval, and public ABI/source plus Smart Node tooling provide independent access."
+      },
+      "verdict": "Choosing green because the inspected core rETH holder actions burn/transfer are permissionless at the contract level, no on-chain blocklist appeared in the ABI/source, and users can interact with the verified public contract surface without official frontend cooperation."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393",
+        "shows": "rETH surfacer lists public view methods and write methods including burn(uint256), mint(uint256,address), transfer, and transferFrom inherited through the ABI.",
+        "chain": "Ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/token/RocketTokenRETH.sol",
+        "shows": "rETH burn(uint256) is external and not decorated with whitelist/KYC/operator modifiers; mint is restricted to onlyLatestContract('rocketDepositPool', msg.sender).",
+        "chain": "Ethereum",
+        "address": "0xae78736cd615f374d3085123a210448E74Fc6393"
+      },
+      {
+        "url": "https://github.com/rocket-pool/smartnode",
+        "shows": "Public Rocket Pool Smart Node package contains CLI and service code for managing smart nodes.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/rocketpool/information/",
+        "shows": "Immunefi describes Rocket Pool as decentralised, non-custodial, and community-owned, with liquid staking and node-operator user groups; this supports protocol metadata but is not used as the grade lever.",
+        "chain": "Ethereum"
+      }
+    ],
+    "unknowns": [
+      "A3: official frontend runtime restrictions, if any, were not extracted because the website rendered only a JavaScript fallback in this run.",
+      "A3b: third-party frontend, wallet-integrated, and aggregator access paths were not exhaustively enumerated beyond public ABI/source and Smart Node tooling.",
+      "A6: ToS/legal jurisdictional clause text was not extracted verbatim from the official website in this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/rocket-pool/rocketpool",
+        "https://github.com/rocket-pool/smartnode"
+      ],
+      "docs_url": "https://docs.rocketpool.net/protocol/contracts-usage",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.io/diligence/audits/2023/12/rocket-pool-houston/",
+          "date": "2023-11-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit-houston.pdf",
+          "date": "2024-02-29"
+        },
+        {
+          "firm": "ChainSafe",
+          "url": "https://rocketpool.net/files/audits/chainsafe-audit-houston.pdf",
+          "date": "2024-03-31"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf",
+          "date": "2024-08-31"
+        }
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xb4efd85c19999d84251304bda99e90b92300bd93",
+        "symbol": "RPL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/rocketpool/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+          "role": "RocketStorage guardian",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Rocket Pool is a non-custodial Ethereum staking protocol serving users who want tokenized liquid staking and node operators who want to run validators with less than 32 ETH. ETH stakers receive rETH, an ERC-20 receipt token whose exchange rate reflects pooled ETH and staking rewards. Node operators use Rocket Pool smart node software and protocol contracts to operate minipools and earn ETH/RPL-linked rewards."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0468d1-e6a0-8325-9398-fc056027d848",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Core rETH and RocketStorage source/ABI are publicly inspectable and audited by recognized firms, but the guardian address is unverified and no deploy-commit/source-to-bytecode correspondence was pinned.",
+    "short_headline": "Verified, with gaps",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "rETH and RocketStorage surfaced with ABI source etherscan/sourcify, but guardian 0x0cCF14983364A7735d369879603930Afe10df21e had no verified ABI on the surfacer."
+        },
+        {
+          "code": "V2",
+          "text": "A public Rocket Pool source repository exists and contains RocketTokenRETH.sol and RocketBase.sol corresponding structurally to the surfaced ABI, but no deployment commit SHA or bytecode match was pinned."
+        },
+        {
+          "code": "V3",
+          "text": "The Immunefi page lists multiple recognized-firm audits from Trail of Bits, Consensys Diligence, Sigma Prime, ChainSafe, and later Houston/hotfix reviews through 2024."
+        },
+        {
+          "code": "V4",
+          "text": "Trail of Bits, Consensys Diligence, Sigma Prime, and ChainSafe are recognized audit firms for Solidity/security review purposes."
+        },
+        {
+          "code": "V6",
+          "text": "The inspected rETH and RocketStorage surfacers did not indicate an unresolved proxy implementation; the guardian address was not verified and not classifiable from ABI."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that a control-relevant guardian address is unverified and a reviewer cannot inspect its code through the surfacer.",
+        "orange": "The orange case is that major token/storage contracts are verified and audited, but source-to-deploy commit correspondence and a control-relevant guardian classification remain unresolved.",
+        "green": "The green case is that key contracts are publicly verified, open-source Rocket Pool repos exist, and the protocol has several recognized-firm audits including Houston-era reviews."
+      },
+      "verdict": "Choosing orange because the main inspected rETH/RocketStorage surfaces are verifiable and the audit history is strong, but the run did not pin a deploy commit or bytecode match and the RocketStorage guardian address had no verified ABI."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393",
+        "shows": "rETH surfacer reports ABI source etherscan and exposes the full ABI including token views and burn/mint methods.",
+        "chain": "Ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "shows": "RocketStorage surfacer reports ABI source etherscan and pre-executed getGuardian/getDeployedStatus views.",
+        "chain": "Ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0cCF14983364A7735d369879603930Afe10df21e",
+        "shows": "Guardian surfacer reports no verified ABI for the address.",
+        "chain": "Ethereum",
+        "address": "0x0cCF14983364A7735d369879603930Afe10df21e"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/token/RocketTokenRETH.sol",
+        "shows": "Public Rocket Pool repository includes RocketTokenRETH source with the same functions surfaced in the ABI, including getExchangeRate, getTotalCollateral, burn, mint, transfer-related ERC-20 methods.",
+        "chain": "Ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/RocketBase.sol",
+        "shows": "Public Rocket Pool repository includes RocketBase source with RocketStorage-backed registry helpers and access modifiers.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/rocketpool/information/",
+        "shows": "Immunefi lists Rocket Pool audits by Trail of Bits, Consensys Diligence, Sigma Prime, ChainSafe, including Houston and hotfix reviews completed through 2024-08-31.",
+        "chain": "Ethereum"
+      },
+      {
+        "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+        "shows": "Consensys Diligence audit dated April 2021 reviewed Rocket Pool smart contracts, Go bindings, and Smart Node implementation over five weeks.",
+        "chain": "Ethereum"
+      }
+    ],
+    "unknowns": [
+      "V1: proxy and implementation verification for every current Rocket Pool core contract was not exhaustively checked.",
+      "V2: no exact deployment commit SHA or bytecode correspondence proof was pinned in this run.",
+      "V3: exact contract/commit scope for every linked audit report was not extracted; Sigma Prime PDF fetch returned an internal fetch error for one URL.",
+      "V5: post-audit drift was not sampled through a deploy-commit compare; no material-drift conclusion is made."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/rocket-pool/rocketpool",
+        "https://github.com/rocket-pool/smartnode"
+      ],
+      "docs_url": "https://docs.rocketpool.net/protocol/contracts-usage",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit.pdf",
+          "date": "2021-04-30"
+        },
+        {
+          "firm": "Consensys Diligence",
+          "url": "https://consensys.io/diligence/audits/2023/12/rocket-pool-houston/",
+          "date": "2023-11-30"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-audit-houston.pdf",
+          "date": "2024-02-29"
+        },
+        {
+          "firm": "ChainSafe",
+          "url": "https://rocketpool.net/files/audits/chainsafe-audit-houston.pdf",
+          "date": "2024-03-31"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf",
+          "date": "2024-08-31"
+        }
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xb4efd85c19999d84251304bda99e90b92300bd93",
+        "symbol": "RPL"
+      },
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/rocketpool/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+          "role": "RocketStorage guardian",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Rocket Pool is a non-custodial Ethereum staking protocol serving users who want tokenized liquid staking and node operators who want to run validators with less than 32 ETH. ETH stakers receive rETH, an ERC-20 receipt token whose exchange rate reflects pooled ETH and staking rewards. Node operators use Rocket Pool smart node software and protocol contracts to operate minipools and earn ETH/RPL-linked rewards."
+    }
+  }
+]
