@@ -1,0 +1,239 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/20151622-6025-457a-bee9-0b4ca3e24c50",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Guardian EOA still set on-chain; team claims bootstrap mode permanently disabled Oct 2025 but unverified this run",
+    "short_headline": "Guardian status unverified",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "RocketStorage.getGuardian() returns 0x0cCF14983364A7735d369879603930Afe10df21e at block 25083057 — a deployer EOA, not a multisig (no Safe found at that address; defipunkd /api/safe/owners returned 404)."},
+        {"code": "C1", "text": "RocketStorage.getDeployedStatus() returns true, so direct storage writes are gated by onlyLatestRocketNetworkContract — only registered network contracts (not the guardian alone) can write storage post-deployment."},
+        {"code": "C2", "text": "Architecture is upgradeable via the RocketStorage contract registry pattern (not OZ proxy): pDAO/oDAO proposals can re-register contract addresses against name keys. RocketStorage and RocketVault are themselves immutable (no upgrade path)."},
+        {"code": "C3", "text": "Documented (Saturn 1, live Feb 2026) governance path is: pDAO proposal → ~1 week challenge → 2×1 week voting → mandatory upgrade delay → oDAO executes; Security Council may veto during the delay. None of these delay constants were re-read on-chain this run."},
+        {"code": "C4", "text": "Per October 2025 team roadmap post, the Security Council currently 'initially comprises the core team' — i.e. insider-dominated, fails the Security Council rubric standard regardless of headcount. Membership and threshold not verified on-chain this run."},
+        {"code": "C5", "text": "On-chain pDAO governance exists post-Houston (June 2024) using node-operator effective-RPL with sqrt(stake)/2 weighting, optimistic fraud-proof voting; specific quorum/period values not re-read on-chain this run."},
+        {"code": "C6", "text": "Security Council holds emergency-scoped parameter-change powers (subset of settings marked * in RPIP-33) without delay; can veto upgrades during the Saturn 1 mandatory delay."},
+        {"code": "C7", "text": "Highest tier reachable depends on whether RocketDAOProtocol.getBootstrapModeDisabled() is true. If false (bootstrap active), the deployer-EOA guardian retains T1 powers via onlyGuardian onlyBootstrapMode functions (bootstrapUpgrade can replace any registered contract; bootstrapSetting can change deposit fees, RPL inflation, etc.). If true, the highest fast-path tier is governance-bounded T1/T2 with multi-week delay."}
+      ],
+      "steelman": null,
+      "verdict": "Cannot finalize a non-unknown grade this run because RocketDAOProtocol.getBootstrapModeDisabled() was not read on-chain (RocketDAOProtocol address 0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1 found via etherscan search but is not in the pinned address_book, so the surfacer rejected it). The on-chain guardian address is still the deployer EOA at block 25083057, while a team forum post from October 2025 claims they 'permanently disabled the protocol DAO guardian' — a worse-case (bootstrap still active) reading is red (T1 by single EOA, no delay), and the documented reading is orange-to-green (governance with delay, insider-only Security Council). The rubric instructs unknown when the highest tier reachable cannot be classified, which is the case here."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "shows": "RocketStorage at block 25083057: getDeployedStatus()=true, getGuardian()=0x0cCF14983364A7735d369879603930Afe10df21e; ABI lists setGuardian/confirmGuardian and bytes32-keyed setter/getter battery", "chain": "Ethereum", "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x0cCF14983364A7735d369879603930Afe10df21e", "shows": "Guardian address has no verified ABI on Etherscan + Sourcify; /api/safe/owners returns 404 — i.e. it is not a contract, consistent with an EOA", "chain": "Ethereum", "address": "0x0cCF14983364A7735d369879603930Afe10df21e", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/RocketStorage.sol", "shows": "RocketStorage source: setX/deleteX are gated by onlyLatestRocketNetworkContract after storageInit; setGuardian is callable only by current guardian; the contract has no upgrade path — RocketStorage itself is immutable", "chain": "Ethereum"},
+      {"url": "https://dao.rocketpool.net/t/protocol-development-roadmap-update-aug-sept-oct/3810", "shows": "Rocket Pool team post (24 Oct 2025): 'we permanently disabled the protocol DAO guardian, completing the transition to full decentralised governance'; states the Security Council 'initially comprises the core team' — derived: insider-dominated Security Council"},
+      {"url": "https://saturn.rocketpool.net/", "shows": "Saturn 1 live on Ethereum mainnet; 'A mandatory delay period will be enforced before protocol upgrades go live, during which the security council can veto changes'; pDAO authorizes, oDAO executes after delay"},
+      {"url": "https://rpips.rocketpool.net/RPIPs/RPIP-33", "shows": "On-chain pDAO design: Security Council membership controlled by pDAO proposals; subset of parameters marked * are modifiable by Security Council without delay; other parameter changes go through pDAO voting with bond + challenge + two voting phases"},
+      {"url": "https://etherscan.io/address/0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1", "shows": "RocketDAOProtocol contract verified on Etherscan; source contains onlyBootstrapMode modifier gated on getBootstrapModeDisabled(); bootstrapDisable() is one-way and requires on-chain governance to have been enabled first", "chain": "Ethereum", "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1"}
+    ],
+    "unknowns": [
+      "C1: RocketDAOProtocol.getBootstrapModeDisabled() not read on-chain this run (RocketDAOProtocol at 0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1 found via etherscan but not in pinned address_book; defipunkd /address/ surfacer rejected the URL). This is the single most important fact for grading.",
+      "C3: Saturn 1 mandatory upgrade delay value (seconds) not read on-chain.",
+      "C4: Security Council on-chain membership, threshold, and signer identities not enumerated this run; RocketDAONodeTrustedSettingsMembers and any RocketDAOSecurity contract addresses not in address_book.",
+      "C4: oDAO membership (currently 18 per a 2023 third-party report) not re-read on-chain this run — oDAO executes upgrades and reports balance/price oracle data, so its composition matters for control as well as autonomy.",
+      "C5: pDAO proposal-bond, challenge window, voting periods, and quorum values not read on-chain.",
+      "C5-offchain: pDAO voting parameters are documented in RPIP-33 prose but the live on-chain values were not re-verified this run."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/rocket-pool/rocketpool"],
+      "docs_url": "https://docs.rocketpool.net",
+      "audits": [
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/sigma-prime-audit.pdf", "date": "2021"},
+        {"firm": "ConsenSys Diligence", "url": "https://consensys.net/diligence/audits/2021/04/rocketpool", "date": "2021-04"},
+        {"firm": "Trail of Bits", "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf", "date": "2021"}
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/rocketpool/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/overview/contracts-integrations/",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x0cCF14983364A7735d369879603930Afe10df21e", "role": "RocketStorage guardian (deployer EOA; team states this role was permanently disabled by setting bootstrap mode disabled on RocketDAOProtocol — unverified on-chain this run)", "actor_class": "eoa"},
+        {"chain": "Ethereum", "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1", "role": "RocketDAOProtocol (holds bootstrap mode flag; onlyGuardian+onlyBootstrapMode entrypoints for parameter changes and contract upgrades)", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "role": "RocketStorage (immutable contract registry + bytes32 EternalStorage; root of upgrade indirection)", "actor_class": "unknown"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Rocket Pool is a decentralised Ethereum liquid-staking protocol on Ethereum mainnet. Users deposit ETH and receive rETH, an ERC-20 receipt that accrues consensus and execution rewards; redemption is via burn() of rETH for ETH up to the protocol's rETH-side collateral buffer, or via secondary markets. Validators are operated by a permissionless set of node operators who post ETH bonds (4 ETH after Saturn 1, previously 8 ETH) and may stake RPL for additional rewards. Protocol parameters are controlled by an on-chain pDAO of node operators (RPL-weighted, sqrt-scaled) with a Security Council, executed by the oDAO oracle committee."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/20151622-6025-457a-bee9-0b4ca3e24c50",
+    "grade": "green",
+    "headline": "rETH burn() is permissionless with no pause guard; exit subject only to in-contract collateral buffer and secondary-market depth",
+    "short_headline": "Permissionless on-chain rETH burn",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "Main user-facing exit functions on rETH (0xae78736C…): burn(uint256) redeems rETH for ETH from the protocol's collateral buffer; transfer/transferFrom move rETH to secondary markets. mint() and depositExcess() are gated to RocketDepositPool and are not user-exits."},
+        {"code": "E2", "text": "burn() source has no whenNotPaused / onlyRole / pause-guard modifier — requirements are (a) amount > 0, (b) caller balance ≥ amount, (c) rETH-contract-side ethBalance via getTotalCollateral() ≥ ethAmount required, (d) _beforeTokenTransfer enforces a per-user 'network.reth.deposit.delay' between the depositor's last mint and any transfer/burn (anti-MEV, not a pause)."},
+        {"code": "E3", "text": "No role-gated pause role on the burn path. No 'paused' or PAUSE_ROLE indicator on the rETH contract (no method-not-found for paused under defipunkd surfacer fallback list because the ABI does not declare one)."},
+        {"code": "E4", "text": "No separate emergency vs governance pause path on rETH burn(). Saturn 1 added 'constraints on oDAO-submitted balance data' to protect the exchange rate, but these are sanity bands, not pause guards."},
+        {"code": "E5", "text": "No queued redemption with a documented max queue duration is implemented for rETH today. RPIP-71 (rETH withdrawal liquidity via EIP-7002 forced exits) is planned for Saturn 2 (not yet live as of analysis_date). At block 25046092 the rETH contract reported getCollateralRate=~0.71% and getTotalCollateral≈2,744 ETH against totalSupply≈334,224 rETH (~388k ETH-equivalent), so direct burn for large positions reverts until the buffer refills via new minipool deposits / validator exits — independent secondary markets (Uniswap V3, Balancer, CowSwap) are the unconditional alternative."},
+        {"code": "E6", "text": "No on-chain forced-exit / escape hatch from the validator layer to user rETH today; this is the explicit purpose of the planned EIP-7002-based mechanism in Saturn 2 and is recorded as a future protection, not a present one."},
+        {"code": "E7", "text": "burn() is callable directly via Etherscan's Write Contract, raw eth_sendTransaction, or any generic wallet; the rocketpool.net frontend is not required."}
+      ],
+      "steelman": {
+        "red": "The protocol cannot honour large redemptions directly: with collateral ratio ~0.71%, anyone holding more than ~2,744 ETH-equivalent in rETH cannot exit via burn() in a single call and must rely on third-party AMM liquidity, which is not a protocol guarantee.",
+        "orange": "Although burn() itself is unpausable, exit is materially throttled by the on-chain collateral buffer until Saturn 2's forced-exit mechanism ships, and the pDAO can adjust network.reth.deposit.delay and other parameters that affect new redemption flow.",
+        "green": "The exit primitive is permissionless, unpausable, and directly callable on-chain without any frontend or admin signature; the constraint is liquidity, not permission, and secondary-market routes remain available unconditionally."
+      },
+      "verdict": "Choosing green because the rETH burn() function in deployed bytecode has no pause guard, no role gate, and no admin signature requirement (only collateral availability and an anti-MEV per-user deposit delay); when collateral is insufficient, holders still have unconditional access via permissionless secondary markets (Uniswap V3, Balancer, CowSwap). The buffer-limit concern is a liquidity story, not a permission story, and the rubric grades the permission side here."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393", "shows": "rETH RocketTokenRETH ABI: burn(uint256) declared, no paused()/setPaused()/whenNotPaused modifier in the ABI; at block 25046092 getCollateralRate=7059566505674014 (~0.71%), getTotalCollateral=2743949801890586003022 (~2,744 ETH), totalSupply=334223507127869182545552 (~334k rETH); contract verified on Etherscan", "chain": "Ethereum", "address": "0xae78736Cd615f374D3085123A210448E74Fc6393", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/token/RocketTokenRETH.sol", "shows": "burn() source: requires _rethAmount > 0, sender balance ≥ _rethAmount, getTotalCollateral() ≥ ethAmount; _beforeTokenTransfer enforces network.reth.deposit.delay between the user's own last deposit and any subsequent transfer/burn; no pause modifier"},
+      {"url": "https://dao.rocketpool.net/t/protocol-development-roadmap-update-aug-sept-oct/3810", "shows": "Roadmap places 'rETH redemptions and protections' (RPIP-71, EIP-7002 forced exits) ahead of remaining Saturn 2 features but not yet implemented as of October 2025"}
+    ],
+    "unknowns": [
+      "E2: network.reth.deposit.delay live value not re-read on-chain this run (the per-user post-deposit cooldown).",
+      "E5: Realized secondary-market depth (Curve/Balancer/Uniswap V3) for rETH→ETH at analysis_date not quantified in this run."
+    ],
+    "protocol_metadata": {}
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/20151622-6025-457a-bee9-0b4ca3e24c50",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "oDAO oracle committee is the only material external dependency; Saturn 1 added on-chain sanity bands; impacted TVS bounded to a fraction of ~$900M rETH",
+    "short_headline": "oDAO oracle, sanity-bounded",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "rETH exchange rate is derived from RocketNetworkBalances, which is updated by oDAO-submitted total-ETH-staked reports. Saturn 1 introduced 'constraints on oDAO-submitted balance data, protecting the rETH protocol rate from manipulation or faulty reporting' — i.e. an on-chain sanity band over the oracle update."},
+        {"code": "A2", "text": "oDAO is a node-operator committee that votes on contract upgrades and reports oracle data with 51% on-chain quorum; per third-party reporting the set was 18 members in 2023. Members can add/remove members. Saturn 1 specifically caps how much can be penalised over time by the oDAO."},
+        {"code": "A2-staking", "text": "Validator/operator risk: ~3,200–4,000 independent node operators globally per protocol bi-weekly updates, each bonded with 8 ETH (pre-Saturn 1) or 4 ETH (post-Saturn 1) plus optional RPL — diversified far beyond the small-operator-set bar that would force this into A2-red."},
+        {"code": "A3", "text": "rETH exists on multiple L2s (Optimism, Arbitrum, Base, Polygon, etc.) primarily via canonical bridges; material TVL sits on Ethereum L1. Cross-chain deployments are not required for L1 deposit/burn paths."},
+        {"code": "A4", "text": "No nested receipt-of-receipt collateral chain — rETH is backed directly by ETH-denominated validator deposits + buffer; not a restaking / LRT design."},
+        {"code": "A5", "text": "No fork lineage flagged."},
+        {"code": "A6", "text": "Fallback / circuit breakers verified LIVE post-Saturn 1: on-chain constraints on oDAO balance reports per saturn.rocketpool.net; bond + slashing of validator operator collateral; non-pauseable rETH burn() lets users exit independent of oracle quality (price may drift, principal does not vanish)."},
+        {"code": "A7", "text": "N/A — Rocket Pool deploys to Ethereum L1; L1 consensus is substrate, not an A7 dependency."},
+        {"code": "A8", "text": "No mission-critical permissionless keeper / liquidator with catastrophic failure mode — oDAO members are the off-chain actors and are governed by A2."},
+        {"code": "A9", "text": "Governance-mutable dependency surface: pDAO + oDAO can register new contracts against name keys in RocketStorage (e.g. swap rocketNetworkBalances implementation, change deposit-pool routing). Pre-Saturn-1 there was no mandatory delay; post-Saturn-1 a mandatory delay applies with Security Council veto. Specific delay value not re-read on-chain this run."}
+      ],
+      "steelman": {
+        "red": "Governance can re-point any name key in RocketStorage (e.g. rocketNetworkBalances) to a new implementation, silently introducing or replacing the on-chain oracle; if bootstrap mode is still active the deployer-EOA guardian can do this immediately without delay (control-slice concern bleeds in here).",
+        "orange": "oDAO is a committee oracle with majority quorum and known historical incidents in the LST sector; even with Saturn 1 sanity bands, sustained mis-reports can degrade rETH NAV quality and delay accurate redemptions, materially changing expected performance though not destroying principal.",
+        "green": "User principal sits in immutable RocketVault + ETH-denominated validator deposits; oracle failure changes the exchange-rate quality, not the underlying ETH, and the operator set is broadly diversified (~3,200+ independent nodes) — single-dependency failures are bounded and recoverable."
+      },
+      "verdict": "Choosing orange because the protocol has one material external dependency that cross-cuts every rETH holder — the oDAO balance/price oracle — and a failure of that committee can materially change expected performance (rETH price degradation, mis-priced burns) even though it cannot directly drain principal (validator deposits are on-chain ETH with the canonical Beacon Chain Deposit Contract). Saturn 1's on-chain constraints on oDAO submissions and oDAO penalty cap are a real A6 mitigation but they bound rather than eliminate the dependency, which matches the orange anchor ('failure can materially change expected performance but cannot cause loss of principal'). Impacted TVS under a successful oDAO mis-report is bounded by the sanity band — qualitatively a small fraction of the ~$900M rETH supply rather than the full TVS, but not de minimis."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393", "shows": "rETH ABI has no oracle-feed reference at the token level (no latestAnswer / getPrice methods); exchange rate is derived from on-chain RocketNetworkBalances state set by the oDAO via RocketStorage keys — i.e. oracle is internal-to-protocol, not a third-party feed", "chain": "Ethereum", "address": "0xae78736Cd615f374D3085123A210448E74Fc6393", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://saturn.rocketpool.net/", "shows": "Saturn 1 introduces 'constraints on oDAO-submitted balance data, protecting the rETH protocol rate from manipulation or faulty reporting' and 'guardrails for the oDAO to cap how much can be penalized over time' — live as of Feb 2026"},
+      {"url": "https://hackmd.io/@PrismaRisk/rETH", "shows": "Third-party risk assessment: oDAO contract upgrades require 51% on-chain quorum and the committee had 18 members in 2023; members can be added or removed by existing members"},
+      {"url": "https://medium.com/rocket-pool/bi-weekly-update-09-september-2025-ab14cb261771", "shows": "Operator-set scale at September 2025: node operator count ~4,011 and ~19,618 active minipools — diversified far beyond a small-operator LST"}
+    ],
+    "unknowns": [
+      "A2: Current oDAO member count, identities, and 51% quorum value not re-read on-chain this run (RocketDAONodeTrusted / RocketDAONodeTrustedSettingsMembers addresses not in address_book).",
+      "A6: Specific Saturn 1 sanity-band parameters (max rate-change per submission, penalty cap) not read on-chain this run.",
+      "A9: Saturn 1 mandatory upgrade delay value (seconds) not read on-chain — its size determines whether A9 governance-mutable dependency surface is orange or green-leaning."
+    ],
+    "protocol_metadata": {}
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/20151622-6025-457a-bee9-0b4ca3e24c50",
+    "grade": "green",
+    "headline": "rETH mint/burn and node-operator entry are permissionless at the contract level; multiple independent access paths exist (CowSwap, aggregators, third-party SDKs)",
+    "short_headline": "Permissionless contracts, many paths",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "rETH ABI shows no onlyWhitelisted / isAccredited / onlyRole modifier on user-facing token methods (transfer, approve, burn). burn() has no allowlist; the upstream RocketDepositPool.deposit (via rocketpool.net or direct call) is also not address-gated by docs/audit."},
+        {"code": "A2", "text": "No off-chain operator approval is required to admit a user deposit or burn — deposits flow into a permissionless pool and minipools are matched by the protocol; oDAO submits balance reports but does not approve individual user actions."},
+        {"code": "A3-passive", "text": "rocketpool.net is a single-page app and the ToS text could not be extracted verbatim from search/fetch (the public page is JS-only); recorded in unknowns as a verbatim-quote failure, not a finding."},
+        {"code": "A3-active", "text": "No evidence in fetched search-result bodies of IP geo-blocking or sanctions-oracle wallet screening on the official rocketpool.net frontend; absence of evidence is not evidence of absence (recorded as unknown)."},
+        {"code": "A3b", "text": "Independent access paths verified in fetched evidence: CowSwap integration (per October 2025 team roadmap post: 'we were excited to launch the CowSwap integration, providing rETH stakers with flexibility, the best price, and MEV-protection'); third-party aggregator routing (Uniswap V3 and Balancer V2 documented exit paths by Cyfrin defi-reth tutorial); RockSolid vault integration; rETH burn() callable directly from any wallet."},
+        {"code": "A4", "text": "No on-chain OFAC / sanctions blocklist embedded in rETH or RocketDepositPool contracts per the source files inspected."},
+        {"code": "A5", "text": "Read access is fully public via Etherscan and the defipunkd read API; write access (deposit, burn, transfer) is permissionless at the contract level."},
+        {"code": "A6", "text": "ToS verbatim text could not be extracted (rocketpool.net is SPA-rendered)."}
+      ],
+      "steelman": {
+        "red": "If the official frontend turns out to enforce active sanctions/geo screening and no other path were practically usable, the protocol could be operationally captured — neither could be confirmed nor refuted from the SPA frontend in this run.",
+        "orange": "Even without contract-level whitelisting, the protocol could be operationally captured if all independent paths are gated by the same publisher; this would matter most for non-technical users.",
+        "green": "Contract-level access is unconditional; independent UI paths (CowSwap integration confirmed in team's own roadmap post, plus AMM exits on Uniswap V3 and Balancer V2 documented in third-party tutorials) exist and are not gated by Rocket Pool Pty Ltd, satisfying the A3b independent-path test."
+      },
+      "verdict": "Choosing green because (a) the on-chain rETH and deposit contracts impose no whitelist/KYC/operator-approval on entry or exit, (b) the team's own October 2025 update lists CowSwap as a launched integration distinct from the official UI, and (c) third-party AMM routing (Uniswap V3, Balancer V2) is documented and live. The frontend ToS posture on rocketpool.net could not be quoted verbatim this run, but per the rubric ToS posture on one client cannot move the grade when contracts are permissionless and an independent A3b path exists."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393", "shows": "Verified rETH ABI lists no onlyRole / onlyWhitelisted / KYC / blocklist functions on user-facing methods (transfer, approve, burn)", "chain": "Ethereum", "address": "0xae78736Cd615f374D3085123A210448E74Fc6393", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://dao.rocketpool.net/t/protocol-development-roadmap-update-aug-sept-oct/3810", "shows": "Team confirms a CowSwap integration is live for rETH stakers — an independent A3b access path operated by a separate legal entity"},
+      {"url": "https://github.com/Cyfrin/defi-reth", "shows": "Third-party developer tutorial documents live rETH access paths: Rocket Pool (ETH↔rETH direct), Uniswap V3 (WETH↔rETH), Balancer V2 (WETH↔rETH) — multiple independent routes"}
+    ],
+    "unknowns": [
+      "A6: ToS text on rocketpool.net not extracted verbatim (the page is a JavaScript SPA returning only a 'JavaScript enabled' notice on raw fetch).",
+      "A3-active: Whether rocketpool.net runs runtime IP geo-blocking or a sanctions oracle wallet-screen on the staking widget was not directly observed in any fetched search-result body."
+    ],
+    "protocol_metadata": {}
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/20151622-6025-457a-bee9-0b4ca3e24c50",
+    "grade": "green",
+    "headline": "All core contracts verified on Etherscan; public source repo with named authors; multiple recognized-firm audits and active Immunefi bounty",
+    "short_headline": "Verified, audited, public source",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "RocketStorage (0x1d8f8f00…), rETH RocketTokenRETH (0xae78736C…), legacy RPL RocketPoolToken (0xB4EFd85c…), and RocketDAOProtocol (0x0429Cdd8…) all returned ABI source = etherscan via the defipunkd /api/contract/abi crawler — i.e. verified bytecode + source on the explorer. Architecture is not proxy-based (RocketStorage registry pattern), so there is no implementation-vs-proxy verification split to worry about."},
+        {"code": "V2", "text": "All four contracts above match the public source in github.com/rocket-pool/rocketpool (the same NatSpec author-block 'David Rugendyke, Jake Pospischil, Kane Wallmann, Darren Langley, Joe Clapis, Nick Doherty' appears in both the Etherscan-verified File 1 and the GitHub master branch). No bytecode-diff was run in this slice — recorded in unknowns rather than as a finding."},
+        {"code": "V3", "text": "Pinned audit links in the per-protocol context: Sigma Prime audit PDF (rocketpool.net), ConsenSys Diligence (consensys.net/diligence/audits/2021/04/rocketpool), Trail of Bits (trailofbits/publications/reviews/RocketPool.pdf). Newer audits for Saturn 1 in 2025: Sigma Prime (completed), Spearbit/Cantina (fix verification), Bailsec (interim), per team's October 2025 roadmap post."},
+        {"code": "V4", "text": "Recognized firms named explicitly in fetched evidence: Sigma Prime, ConsenSys Diligence, Trail of Bits, Spearbit (Cantina), ChainSafe — all on the rubric's recognized-firm list except ChainSafe and Bailsec (Bailsec is an emerging firm)."},
+        {"code": "V5", "text": "Saturn 1 launched on Ethereum mainnet around 11–18 February 2026, with all three Saturn audit engagements (Sigma Prime, Spearbit/Cantina, Bailsec) completed pre-launch per the team's own roadmap; this is post-audit deployment with fix verification, not unaudited drift."},
+        {"code": "V6", "text": "Not applicable — Rocket Pool's upgrade indirection is registry-based (RocketStorage stores name→address mappings for each network contract), so there is no proxy/implementation pair to verify separately."}
+      ],
+      "steelman": {
+        "red": "If any post-Saturn-1 contract were deployed but unverified on Etherscan, or if the new Megapool delegate contracts were unaudited, the verifiability story would collapse — but no fetched evidence shows that.",
+        "orange": "Bailsec is not on the recognized-firm list and ChainSafe's prior coverage of Rocket Pool isn't directly verifiable from the rubric's listed firms — relying partially on emerging-firm coverage for Saturn 1 weakens the green-grade case.",
+        "green": "Three of the Saturn 1 reviewers (Sigma Prime, Spearbit/Cantina, Trail-of-Bits-lineage publications) are unambiguously on the recognized-firm list; all core deployed contracts examined this run are verified on Etherscan; the public repo is canonical and named, and an active Immunefi bounty incentivizes ongoing review."
+      },
+      "verdict": "Choosing green because every core deployed contract examined on-chain this run is verified on Etherscan (RocketStorage, rETH, RocketDAOProtocol, legacy RPL), the public github.com/rocket-pool/rocketpool repository contains source matching the verified Etherscan source, and the most recent in-scope work (Saturn 1, live February 2026) was reviewed by at least two recognized firms (Sigma Prime and Spearbit/Cantina) prior to mainnet deployment, with an active Immunefi bounty in place. The remaining caveats — no bytecode-diff run by this analyst, Bailsec not yet on the recognized-firm list — belong in unknowns, not the grade."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "shows": "RocketStorage: ABI source = etherscan (verified), full ABI returned; matches the rocket-pool/rocketpool master RocketStorage.sol", "chain": "Ethereum", "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393", "shows": "rETH RocketTokenRETH: ABI source = etherscan (verified), full ABI returned at block 25046092", "chain": "Ethereum", "address": "0xae78736Cd615f374D3085123A210448E74Fc6393", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://defipunkd.com/address/1/0xb4efd85c19999d84251304bda99e90b92300bd93", "shows": "Legacy RPL RocketPoolToken: ABI source = etherscan (verified), getRemainingTokens()=0 and totalSupply==totalSupplyCap (18,000,000)", "chain": "Ethereum", "address": "0xB4EFd85c19999D84251304bDA99E90B92300Bd93", "fetched_at": "2026-05-13T00:00:00Z"},
+      {"url": "https://etherscan.io/address/0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1", "shows": "RocketDAOProtocol contract verified on Etherscan (Compiler v0.7.6, optimizer 15000 runs), source contains onlyBootstrapMode modifier and bootstrapDisable()", "chain": "Ethereum", "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1"},
+      {"url": "https://github.com/rocket-pool/rocketpool/blob/master/contracts/contract/RocketStorage.sol", "shows": "Public source repo contains RocketStorage.sol matching the Etherscan-verified source (same author block, same modifier shape)"},
+      {"url": "https://dao.rocketpool.net/t/protocol-development-roadmap-update-aug-sept-oct/3810", "shows": "Saturn 1 audits: Sigma Prime (completed), Spearbit/Cantina (fix verification in progress), Bailsec (interim) — all pre-mainnet"},
+      {"url": "https://immunefi.com/bug-bounty/rocketpool/", "shows": "Active Immunefi bug bounty for Rocket Pool smart contracts, payouts in RPL denominated in USD"}
+    ],
+    "unknowns": [
+      "V2: No local bytecode-vs-repo diff run by this analyst — match was established by NatSpec/author-block and modifier-shape correspondence only.",
+      "V3: Saturn 1 audit reports (Sigma Prime / Cantina / Bailsec) — direct URLs to the published final reports not located in fetched evidence this run; team forum post references completion but PDF/HTML report URLs not pinned.",
+      "V5: New Saturn 1 contracts (Megapool, MegapoolDelegate, commission controller, balance-submission guardrail) deployed addresses not pinned in this run's address_book; explorer-verification of each post-Saturn-1 address therefore not individually confirmed."
+    ],
+    "protocol_metadata": {}
+  }
+]
