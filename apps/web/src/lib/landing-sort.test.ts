@@ -81,6 +81,31 @@ describe("sortable columns", () => {
     expect(asc.map((n) => n.slug)).toEqual(["a", "b", "c"]);
   });
 
+  it("sort by risks asc puts all-red rows before one-red rows", () => {
+    const riskRows = [
+      row({ slug: "one-red", tvl: 500, pizza_grades: { control: "red" } }),
+      row({
+        slug: "all-red",
+        tvl: 100,
+        pizza_grades: {
+          control: "red",
+          "ability-to-exit": "red",
+          autonomy: "red",
+          "open-access": "red",
+          verifiability: "red",
+        },
+      }),
+      row({ slug: "all-gray", tvl: 900 }),
+    ];
+    const asc = filterAndSortNodes(buildNodes(riskRows), {
+      tab: "All",
+      query: "",
+      showInactive: false,
+      sort: { field: "risks", dir: "asc" },
+    });
+    expect(asc.map((n) => n.slug)).toEqual(["all-red", "one-red", "all-gray"]);
+  });
+
   it("default (no sort opt) stays tvl desc", () => {
     const out = filterAndSortNodes(buildNodes(rows), { tab: "All", query: "", showInactive: false });
     expect(out.map((n) => n.slug)).toEqual(["b", "a", "c"]);
