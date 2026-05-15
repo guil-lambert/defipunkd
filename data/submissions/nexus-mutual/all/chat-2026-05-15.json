@@ -1,0 +1,1003 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0732e5-6c14-832e-bb52-dbaa08bf96e1",
+    "slice": "control",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Fund-critical upgrade, registry, minting and pause surfaces are visible on-chain, but the exact uncontested governance/multisig execution path and signer thresholds were not fully recoverable.",
+    "short_headline": "Upgrade path unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "NXMaster is an OwnedUpgradeabilityProxy whose proxyOwner is TemporaryGovernance at 0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900; another pinned proxy at 0x84edffa16bb0b9ab1163abb0a13ff0744c11272f is owned by NXMaster."
+        },
+        {
+          "code": "C2",
+          "text": "Multiple core/control contracts are upgradeable proxies: NXMaster, TemporaryGovernance, Registry, TokenController and the pinned proxy surfaces expose upgradeTo, transferProxyOwnership or upgradeContract-style functions; NXM token docs separately describe the NXM token as immutable, so upgradeability is mixed rather than uniformly immutable."
+        },
+        {
+          "code": "C3",
+          "text": "Official governance docs describe an optimistic path with an Advisory Board-created default outcome, 3-day vote period, 15% NXM supply quorum for rejection and a 24-hour timelock, but this run did not re-read those constants from the current governance contracts."
+        },
+        {
+          "code": "C4",
+          "text": "TemporaryGovernance exposes advisoryBoardMultisig = 0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e and Registry reports ADVISORY_BOARD_SEATS = 5; docs list five Advisory Board members and describe an Emergency Pause Safe, but Safe threshold/owners were not obtained."
+        },
+        {
+          "code": "C5",
+          "text": "Governance docs state NXM holders can reject Advisory Board proposals using Snapshot with 15% total NXM supply quorum, 3-day voting and 24-hour timelock; these numbers are documentation evidence only in this run."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency powers exist: docs say the Advisory Board or Emergency Pause Safe can pause RAMM or the entire protocol, and Registry exposes setEmergencyAdmin, proposePauseConfig, confirmPauseConfig, getPauseConfig and getSystemPause."
+        },
+        {
+          "code": "C7",
+          "text": "Worst visible power tier is T1 fund-critical if the governance/registry/proxy path can execute it: Registry exposes upgradeContract, TemporaryGovernance exposes execute, proxies expose upgradeTo, TokenController exposes mint/withdrawNXM, and Pool surfaces show claim-payout and asset-transfer functions. The actor and time-bound for the shortest executable path were not proven."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment blocked because the run found T1-capable upgrade and fund-control surfaces, but did not establish the full shortest execution path, Safe thresholds/owners, and on-chain voting/timelock constants needed to distinguish orange from green or red."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.nexusmutual.io/",
+        "shows": "Official documentation landing page links governance, GitHub, bug bounty, Dune and forum resources used for this run."
+      },
+      {
+        "url": "https://github.com/NexusMutual/smart-contracts",
+        "shows": "Public Nexus Mutual smart-contracts repository with contracts, deployments and docs folders plus release metadata."
+      },
+      {
+        "url": "https://github.com/NexusMutual/sdk",
+        "shows": "Public SDK repository; README shows @nexusmutual/sdk installation and contract-address/ABI usage for interacting with Nexus Mutual."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+        "shows": "Official audits and security page listing iosiro audits through March 2025, Chaos Labs economic audit, G0 Group and Solidified reports, plus Immunefi bounty references."
+      },
+      {
+        "url": "https://forum.nexusmutual.io/",
+        "shows": "Official Nexus Mutual DAO governance forum page was fetched."
+      },
+      {
+        "url": "https://immunefi.com/bounty/nexusmutual/",
+        "shows": "Immunefi page for Nexus Mutual bug bounty, live since February 2021, listing max bounty and in-scope critical/high impacts."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/nxm-token/",
+        "shows": "Official NXM token docs state NXM token contract 0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B, NXM governance/staking/claims roles, and capital-pool backing."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/capital-pool/",
+        "shows": "Capital Pool docs state the pool holds assets backing NXM, receives premiums, pays claims, handles NXM mint/sell flows and is controlled by members through on-chain governance."
+      },
+      {
+        "url": "https://nexusmutual.io/",
+        "shows": "Capability probe succeeded for protocol.website; website describes Nexus Mutual cover products and links docs, security resources and terms."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xfd61352232157815cf7b71045557192bf0ce1884",
+        "shows": "Capability probe succeeded for the pinned Pool1 surfacer; it shows Pool1 ABI source etherscan, pinned block 25101202, nxMasterAddress 0x01BFd82675DBCc7762C84019cA518e701C0cD07e, and write methods including upgradeCapitalPool, transferEther, sendClaimPayout and closeEmergencyPause.",
+        "chain": "Ethereum",
+        "address": "0xfd61352232157815cf7b71045557192bf0ce1884"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x01bfd82675dbcc7762c84019ca518e701c0cd07e",
+        "shows": "NXMaster OwnedUpgradeabilityProxy surfacer shows proxyOwner 0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900, implementation 0xcafea22375708092fd1Ae65CDf93C9c2BA58A438, and write methods upgradeTo and transferProxyOwnership.",
+        "chain": "Ethereum",
+        "address": "0x01bfd82675dbcc7762c84019ca518e701c0cd07e"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x84edffa16bb0b9ab1163abb0a13ff0744c11272f",
+        "shows": "Pinned proxy surfacer shows proxyOwner 0x01BFd82675DBCc7762C84019cA518e701C0cD07e, implementation 0xcafea8650173E542835d0e01b5F8B11949A12829, and upgradeTo/transferProxyOwnership.",
+        "chain": "Ethereum",
+        "address": "0x84edffa16bb0b9ab1163abb0a13ff0744c11272f"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900",
+        "shows": "TemporaryGovernance surfacer shows advisoryBoardMultisig 0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e, proxyOwner 0xcafea2c575550512582090AA06d0a069E7236b9e, implementation 0xcafeaf47dAc3aCBa0Aa0974DcA9195209DA6ef20, and write methods execute, upgradeTo and transferProxyOwnership.",
+        "chain": "Ethereum",
+        "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e",
+        "shows": "Registry surfacer shows ADVISORY_BOARD_SEATS = 5, getKycAuthAddress 0x176c27973E0229501D049De626d50918ddA24656, getPauseConfig = 0, getSystemPause config = 0, master 0x01BFd82675DBCc7762C84019cA518e701C0cD07e, and write methods addContract, deployContract, setEmergencyAdmin, proposePauseConfig, confirmPauseConfig and upgradeContract.",
+        "chain": "Ethereum",
+        "address": "0xcafea2c575550512582090AA06d0a069E7236b9e"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e",
+        "shows": "Advisory Board multisig address surfacer has ABI source etherscan but no zero-argument view methods, so threshold/owners were not obtained from this page.",
+        "chain": "Ethereum",
+        "address": "0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e"
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/governance/",
+        "shows": "Governance docs describe optimistic governance: Advisory Board creates proposals/default outcome, members can reject via Snapshot with 15% total NXM supply quorum, voting period is 3 days, timelock is 24 hours, and Advisory Board/Emergency Pause Safe can pause RAMM or the entire protocol."
+      }
+    ],
+    "unknowns": [
+      "C1: Newest complete deployment address set was not fully reconstructed from the SDK/deployments during this run; several pinned addresses are legacy or role-labeled ambiguously.",
+      "C3: On-chain proposal, scheduling, execution and timelock constants for the current governance path were not read; docs provide 3 days plus 24 hours only as corroboration.",
+      "C4: /api/safe/owners fetches for candidate Safe-style addresses were blocked or returned no owner/threshold information; signer identities and insider/non-insider split remain unknown.",
+      "C5-offchain: Voting period, quorum and timelock values were read from docs rather than current Read Contract calls.",
+      "C6: Emergency Pause Safe address, threshold, owners and maximum pause duration were not fully read on-chain.",
+      "C7: Highest tier appears T1, but the exact actor class and enforceable delay on the T1 path were not proven."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/NexusMutual/smart-contracts",
+        "https://github.com/NexusMutual/sdk"
+      ],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {
+          "firm": "iosiro",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Chaos Labs",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2023-10"
+        },
+        {
+          "firm": "G0 Group",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Solidified",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2019-04"
+        }
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B",
+        "symbol": "NXM"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e",
+          "role": "NXMaster proxy/admin target referenced by multiple modules",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900",
+          "role": "TemporaryGovernance and proxyOwner of NXMaster",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e",
+          "role": "Advisory Board multisig address exposed by TemporaryGovernance",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xcafea2c575550512582090AA06d0a069E7236b9e",
+          "role": "Registry proxy with upgrade, pause, membership and KYC-auth configuration functions",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x176c27973E0229501D049De626d50918ddA24656",
+          "role": "KYC auth address returned by Registry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Nexus Mutual is an Ethereum mutual where members buy cover for smart-contract, custody, slashing and depeg risks, stake NXM to underwrite products, and assess claims. The Capital Pool holds the assets backing NXM, receives cover premiums, pays accepted claims, and supports NXM minting or selling subject to mutual capital rules. V2-style modules include the Pool, Registry, TokenController, staking pools, cover products, RAMM and swap infrastructure."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0732e5-6c14-832e-bb52-dbaa08bf96e1",
+    "slice": "ability-to-exit",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "User-facing exits and claim/stake withdrawal functions are visible, but pause scope, pause caps and finalized-claim behavior were not recovered strongly enough to grade exit safety.",
+    "short_headline": "Exit pause unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Observed exit/exit-adjacent functions include TokenController.withdrawNXM, TokenController.withdrawNXMStakeAndRewards, Pool1.sellNXMTokens, Claims.submitClaim, Claims.submitClaimForMember and StakingPool withdrawals after stake-tranche expiration described in docs."
+        },
+        {
+          "code": "E2",
+          "text": "Access controls are not uniform: cover purchase and claim submission require Nexus Mutual membership per official user-flow docs, TokenController ABI includes OnlyMember/OnlyAdvisoryBoard-style errors, and Registry exposes isPaused(uint256)."
+        },
+        {
+          "code": "E3",
+          "text": "Pause machinery is visible through Registry getPauseConfig = 0, getSystemPause config = 0, setEmergencyAdmin, proposePauseConfig and confirmPauseConfig, but the current role holders, pause bit meanings and maximum pause duration were not decoded."
+        },
+        {
+          "code": "E4",
+          "text": "Docs distinguish emergency pause powers from ordinary governance: Advisory Board or Emergency Pause Safe can pause RAMM or the entire protocol, but the fetched sources did not establish an auto-expiry or a governance-only indefinite pause path."
+        },
+        {
+          "code": "E5",
+          "text": "Queued or delayed flows exist: docs state claims review is typically 7 days, NXM selling is subject to capital conditions, and staking withdrawals happen after tranche expiration; exact hard maximums/caps for all exit paths were not recovered."
+        },
+        {
+          "code": "E6",
+          "text": "No permissionless forced-exit or escape-hatch mechanism for adversarial-admin scenarios was found in the fetched sources."
+        },
+        {
+          "code": "E7",
+          "text": "Exit and claim functions are exposed on-chain in fetched ABIs and the public SDK exists, so at least some exits are directly callable without the official frontend, subject to membership and protocol-state constraints."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment blocked because the run could enumerate several exit functions but could not prove whether claims of finalized payouts or NXM/stake withdrawals can be paused indefinitely, which is the decisive red/orange/green boundary for this slice."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.nexusmutual.io/",
+        "shows": "Official documentation landing page links governance, GitHub, bug bounty, Dune and forum resources used for this run."
+      },
+      {
+        "url": "https://github.com/NexusMutual/smart-contracts",
+        "shows": "Public Nexus Mutual smart-contracts repository with contracts, deployments and docs folders plus release metadata."
+      },
+      {
+        "url": "https://github.com/NexusMutual/sdk",
+        "shows": "Public SDK repository; README shows @nexusmutual/sdk installation and contract-address/ABI usage for interacting with Nexus Mutual."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+        "shows": "Official audits and security page listing iosiro audits through March 2025, Chaos Labs economic audit, G0 Group and Solidified reports, plus Immunefi bounty references."
+      },
+      {
+        "url": "https://forum.nexusmutual.io/",
+        "shows": "Official Nexus Mutual DAO governance forum page was fetched."
+      },
+      {
+        "url": "https://immunefi.com/bounty/nexusmutual/",
+        "shows": "Immunefi page for Nexus Mutual bug bounty, live since February 2021, listing max bounty and in-scope critical/high impacts."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/nxm-token/",
+        "shows": "Official NXM token docs state NXM token contract 0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B, NXM governance/staking/claims roles, and capital-pool backing."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/capital-pool/",
+        "shows": "Capital Pool docs state the pool holds assets backing NXM, receives premiums, pays claims, handles NXM mint/sell flows and is controlled by members through on-chain governance."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x5407381b6c251cFd498ccD4A1d877739CB7960B8",
+        "shows": "TokenController surfacer shows pool, registry, stakingNFT, stakingPoolFactory and token addresses, totalSupply, proxyOwner 0xcafea2c575550512582090AA06d0a069E7236b9e, and write methods addToWhitelist, removeFromWhitelist, mint, withdrawNXM and withdrawNXMStakeAndRewards.",
+        "chain": "Ethereum",
+        "address": "0x5407381b6c251cFd498ccD4A1d877739CB7960B8"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xfd61352232157815cf7b71045557192bf0ce1884",
+        "shows": "Pinned Pool1 surfacer lists sellNXMTokens, buyToken, sendClaimPayout, transferEther and closeEmergencyPause among the contract surface.",
+        "chain": "Ethereum",
+        "address": "0xfd61352232157815cf7b71045557192bf0ce1884"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x813174d3eC6f7C11f4364a637cEf0f1CD6176139",
+        "shows": "Claims surfacer shows nxMasterAddress 0x01BFd82675DBCc7762C84019cA518e701C0cD07e and write methods submitClaim, submitClaimForMember, submitCAVote, submitMemberVote and setClaimStatus.",
+        "chain": "Ethereum",
+        "address": "0x813174d3eC6f7C11f4364a637cEf0f1CD6176139"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e",
+        "shows": "Registry surfacer exposes getPauseConfig = 0, getSystemPause config = 0, isPaused(uint256), setEmergencyAdmin, proposePauseConfig and confirmPauseConfig.",
+        "chain": "Ethereum",
+        "address": "0xcafea2c575550512582090AA06d0a069E7236b9e"
+      },
+      {
+        "url": "https://docs.nexusmutual.io/developers/contracts",
+        "shows": "Developer contracts docs describe IndividualClaims as the module where claims are submitted and payouts go through after accepted claims; StakingPool as managing NXM stake tranches with withdrawal after expiration; and Pool as receiving premiums and disbursing claim payouts."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/developers/cover-buyer-user-flow",
+        "shows": "Cover-buyer flow states users must be Nexus Mutual members before purchasing cover or making a claim, transactions fail otherwise, IndividualClaims.submitClaim is called for claims, and the claims review process is typically 7 days."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/governance/",
+        "shows": "Governance docs state Advisory Board and Emergency Pause Safe can pause RAMM or the entire protocol; the docs do not provide an on-chain pause cap in the fetched text."
+      }
+    ],
+    "unknowns": [
+      "E2: Access modifiers and pause guards for every current Cover, Pool, StakingPool and IndividualClaims implementation were not fully inspected at source level.",
+      "E3: Role holders for every pause/emergency role and any PAUSE_INFINITELY-equivalent capability were not fully read on-chain.",
+      "E4: Emergency-vs-governance pause cap and whether either path can pause finalized claim payouts indefinitely remain unresolved.",
+      "E5: Documented maximum queue duration, daily withdrawal caps and queue pauseability were not fully established for NXM redemption, claims and staking exits.",
+      "E6: No escape hatch was found, but the current full codebase was not exhaustively inspected for emergency-exit functions."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/NexusMutual/smart-contracts",
+        "https://github.com/NexusMutual/sdk"
+      ],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {
+          "firm": "iosiro",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Chaos Labs",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2023-10"
+        },
+        {
+          "firm": "G0 Group",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Solidified",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2019-04"
+        }
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B",
+        "symbol": "NXM"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e",
+          "role": "NXMaster proxy/admin target referenced by multiple modules",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900",
+          "role": "TemporaryGovernance and proxyOwner of NXMaster",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e",
+          "role": "Advisory Board multisig address exposed by TemporaryGovernance",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xcafea2c575550512582090AA06d0a069E7236b9e",
+          "role": "Registry proxy with upgrade, pause, membership and KYC-auth configuration functions",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x176c27973E0229501D049De626d50918ddA24656",
+          "role": "KYC auth address returned by Registry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Nexus Mutual is an Ethereum mutual where members buy cover for smart-contract, custody, slashing and depeg risks, stake NXM to underwrite products, and assess claims. The Capital Pool holds the assets backing NXM, receives cover premiums, pays accepted claims, and supports NXM minting or selling subject to mutual capital rules. V2-style modules include the Pool, Registry, TokenController, staking pools, cover products, RAMM and swap infrastructure."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0732e5-6c14-832e-bb52-dbaa08bf96e1",
+    "slice": "autonomy",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Impacted TVS unclear: Nexus Mutual has visible oracle, RAMM/SwapOperator, investment, API and governance-mutable module surfaces, but the live external-dependency graph and fallbacks were not reconstructed.",
+    "short_headline": "Dependencies unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "External-call surfaces are strongly suggested but not fully enumerated: Pool docs state swaps use RAMM/SwapOperator, the audit index lists USD Price Feed Oracle audits, TokenController links to Pool/Registry/StakingNFT/StakingPoolFactory, and Capital Pool docs describe ETH/USDC/cbBTC plus investments."
+        },
+        {
+          "code": "A2",
+          "text": "Human/committee processes feed into protocol outcomes: governance docs describe Advisory Board proposal defaults and member rejection votes, while cover flow docs describe claim review after IndividualClaims.submitClaim; exact committee/off-chain reporter powers into contracts were not fully read."
+        },
+        {
+          "code": "A3",
+          "text": "No material current bridge or cross-chain messaging dependency was verified in this run; the pinned protocol context and fetched docs are Ethereum-focused."
+        },
+        {
+          "code": "A4",
+          "text": "The protocol sells cover for third-party risks such as smart-contract hacks, custody failure, slashing and depegs, and capital-pool docs list cbBTC alongside ETH and USDC; this run did not identify user collateral receipt chains inside the mutual analogous to LRT/restaking collateral."
+        },
+        {
+          "code": "A6",
+          "text": "Fallback/circuit-breaker evidence is incomplete: Registry has system-pause and pause-config machinery, and docs describe emergency pause powers, but no live oracle fallback, investment-loss backstop or dependency-specific circuit breaker was verified on-chain."
+        },
+        {
+          "code": "A7",
+          "text": "No appchain, protocol-owned sequencer or DA layer was identified; the deployment examined is Ethereum mainnet, so L1 consensus is substrate rather than an autonomy dependency."
+        },
+        {
+          "code": "A8",
+          "text": "The Cover Router API is used to compute quote and pool-allocation inputs before Cover.buyCover, while claim review/voting is a workflow dependency; the run did not prove that any single off-chain operator must approve admission or settlement."
+        },
+        {
+          "code": "A9",
+          "text": "Governance-mutable dependency surface exists in principle: Registry exposes addContract, deployContract, removeContract, setKycAuthAddress and upgradeContract, but the exact timelock/exit window for adding or swapping externally trusted modules was not proven."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Assessment blocked because A1 and A6 remain incomplete: the run found credible dependency surfaces, but not the live oracle/investment/swap dependency addresses, their current fallback status, or the fraction of TVS impacted by a worst single dependency failure."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.nexusmutual.io/",
+        "shows": "Official documentation landing page links governance, GitHub, bug bounty, Dune and forum resources used for this run."
+      },
+      {
+        "url": "https://github.com/NexusMutual/smart-contracts",
+        "shows": "Public Nexus Mutual smart-contracts repository with contracts, deployments and docs folders plus release metadata."
+      },
+      {
+        "url": "https://github.com/NexusMutual/sdk",
+        "shows": "Public SDK repository; README shows @nexusmutual/sdk installation and contract-address/ABI usage for interacting with Nexus Mutual."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+        "shows": "Official audits and security page listing iosiro audits through March 2025, Chaos Labs economic audit, G0 Group and Solidified reports, plus Immunefi bounty references."
+      },
+      {
+        "url": "https://forum.nexusmutual.io/",
+        "shows": "Official Nexus Mutual DAO governance forum page was fetched."
+      },
+      {
+        "url": "https://immunefi.com/bounty/nexusmutual/",
+        "shows": "Immunefi page for Nexus Mutual bug bounty, live since February 2021, listing max bounty and in-scope critical/high impacts."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/nxm-token/",
+        "shows": "Official NXM token docs state NXM token contract 0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B, NXM governance/staking/claims roles, and capital-pool backing."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/capital-pool/",
+        "shows": "Capital Pool docs state the pool holds assets backing NXM, receives premiums, pays claims, handles NXM mint/sell flows and is controlled by members through on-chain governance."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/developers/contracts",
+        "shows": "Developer contracts docs enumerate modules: Pool manages collective assets, swaps through RAMM/SwapOperator, receives premiums and disburses claim payouts; StakingPool and StakingProducts manage staking pools/products/capacity; TokenController manages NXM minting/burning/transfers."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x5407381b6c251cFd498ccD4A1d877739CB7960B8",
+        "shows": "TokenController surfacer shows live links to pool 0xcafea91714e55756C125B509274eDE9Bc91697CB, registry 0xcafea2c575550512582090AA06d0a069E7236b9e, stakingNFT 0xcafea508a477D94c502c253A58239fb8F948e97f, stakingPoolFactory 0xcafeafb97BF8831D95C0FC659b8eB3946B101CB3 and token 0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B.",
+        "chain": "Ethereum",
+        "address": "0x5407381b6c251cFd498ccD4A1d877739CB7960B8"
+      },
+      {
+        "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+        "shows": "Audit index includes November 2024 USD Price Feed Oracle audits, suggesting a price-feed/oracle module exists, but this run did not recover its live address or read its current state."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/developers/cover-buyer-user-flow",
+        "shows": "Cover-buyer docs say the Cover Router API returns pool allocation requests and quote inputs before the user calls Cover.buyCover; docs also say claim submission goes through IndividualClaims.submitClaim and then a claims review process."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/capital-pool/",
+        "shows": "Capital Pool docs state the pool holds ETH, USDC, cbBTC and other assets, receives premiums, pays claims, supports NXM mint/sell flows, and earns yield through investments selected via governance."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e",
+        "shows": "Registry surfacer shows governance-mutable surfaces including addContract, deployContract, removeContract, setKycAuthAddress, setEmergencyAdmin, proposePauseConfig, confirmPauseConfig and upgradeContract.",
+        "chain": "Ethereum",
+        "address": "0xcafea2c575550512582090AA06d0a069E7236b9e"
+      }
+    ],
+    "unknowns": [
+      "A1: Complete external contract call graph for Pool, Cover, IndividualClaims, Assessment, RAMM, SwapOperator, PriceFeedOracle and investment modules was not recovered.",
+      "A2: Claims/voting/advisory-board reporter mechanics were not mapped to concrete quorum, signer or contract-write authority for autonomy purposes.",
+      "A3: No bridge dependency was found; no TVS-by-chain check beyond Ethereum-focused source material was completed.",
+      "A4: Collateral and investment-chain depth for capital-pool assets and governance-approved investments was not fully enumerated.",
+      "A6: No live dependency-specific fallback was verified for the USD price feed, RAMM/SwapOperator, Cover Router API, investments or claims workflow.",
+      "A8: Keeper/relayer/bot liveness requirements for claims, cover allocation, RAMM or investment rebalancing were not established.",
+      "A9: Whether governance can introduce new external dependencies without an enforceable exit window remains unresolved.",
+      "A9: Module TVS shares were not quantified; impacted TVS is therefore unclear."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/NexusMutual/smart-contracts",
+        "https://github.com/NexusMutual/sdk"
+      ],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {
+          "firm": "iosiro",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Chaos Labs",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2023-10"
+        },
+        {
+          "firm": "G0 Group",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Solidified",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2019-04"
+        }
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B",
+        "symbol": "NXM"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e",
+          "role": "NXMaster proxy/admin target referenced by multiple modules",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900",
+          "role": "TemporaryGovernance and proxyOwner of NXMaster",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e",
+          "role": "Advisory Board multisig address exposed by TemporaryGovernance",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xcafea2c575550512582090AA06d0a069E7236b9e",
+          "role": "Registry proxy with upgrade, pause, membership and KYC-auth configuration functions",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x176c27973E0229501D049De626d50918ddA24656",
+          "role": "KYC auth address returned by Registry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Nexus Mutual is an Ethereum mutual where members buy cover for smart-contract, custody, slashing and depeg risks, stake NXM to underwrite products, and assess claims. The Capital Pool holds the assets backing NXM, receives cover premiums, pays accepted claims, and supports NXM minting or selling subject to mutual capital rules. V2-style modules include the Pool, Registry, TokenController, staking pools, cover products, RAMM and swap infrastructure."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0732e5-6c14-832e-bb52-dbaa08bf96e1",
+    "slice": "open-access",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Core write access is contract-gated by Nexus Mutual membership/KYC/whitelist mechanics even though SDK/direct-call paths exist.",
+    "short_headline": "Member-gated access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core user entry points are membership-gated: official cover-buyer docs state users must be Nexus Mutual members before purchasing cover or making a claim and that transactions fail otherwise; Registry exposes join, isMember and getKycAuthAddress; TokenController/NXM surfaces expose whitelist functions."
+        },
+        {
+          "code": "A2",
+          "text": "No single privileged relayer was shown to approve every user action: the Cover Router API computes quote/pool-allocation inputs, but docs then have the user call Cover.buyCover and the public SDK gives developers an alternate interaction path."
+        },
+        {
+          "code": "A3",
+          "text": "Official Terms are context only: the fetched PDF says app/site availability may be interrupted, suspended or restricted and users must comply with applicable laws; no verbatim sanctions or jurisdiction-specific exclusion clause was extracted."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths exist through the published @nexusmutual/sdk and public smart-contract repository, so the protocol is not captured solely by the official web UI."
+        },
+        {
+          "code": "A4",
+          "text": "No OFAC/sanctions oracle was observed in the assessed ABIs, but contract-level membership, KYC-auth and whitelist surfaces are explicit."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through on-chain surfacers/ABIs, but write access for core cover/claim membership flows is gated to members; TokenController also controls NXM whitelist and membership-related token operations."
+        },
+        {
+          "code": "A6",
+          "text": "Fetched Terms clause evidence: app/site access can be interrupted, suspended or restricted, smart-contract use is at the user's own risk, and users must comply with applicable domestic and international laws."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is strongest because buying cover and submitting claims, the core user actions, require Nexus Mutual membership and the contracts expose KYC-auth, membership and whitelist machinery.",
+        "orange": "The orange case is that the contracts and SDK are publicly reachable, so the official publisher does not monopolize access, but admission still depends on a governance/member/KYC-controlled membership layer.",
+        "green": "The green case is limited to members: once admitted, users can use SDK/direct contract paths rather than the official frontend."
+      },
+      "verdict": "Choosing red because the decisive grade input is contract-level admission, not frontend availability: official docs say non-members cannot buy cover or make claims, and fetched contract surfaces show Registry membership/KYC-auth plus TokenController/NXM whitelist controls."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.nexusmutual.io/",
+        "shows": "Official documentation landing page links governance, GitHub, bug bounty, Dune and forum resources used for this run."
+      },
+      {
+        "url": "https://github.com/NexusMutual/smart-contracts",
+        "shows": "Public Nexus Mutual smart-contracts repository with contracts, deployments and docs folders plus release metadata."
+      },
+      {
+        "url": "https://github.com/NexusMutual/sdk",
+        "shows": "Public SDK repository; README shows @nexusmutual/sdk installation and contract-address/ABI usage for interacting with Nexus Mutual."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+        "shows": "Official audits and security page listing iosiro audits through March 2025, Chaos Labs economic audit, G0 Group and Solidified reports, plus Immunefi bounty references."
+      },
+      {
+        "url": "https://forum.nexusmutual.io/",
+        "shows": "Official Nexus Mutual DAO governance forum page was fetched."
+      },
+      {
+        "url": "https://immunefi.com/bounty/nexusmutual/",
+        "shows": "Immunefi page for Nexus Mutual bug bounty, live since February 2021, listing max bounty and in-scope critical/high impacts."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/nxm-token/",
+        "shows": "Official NXM token docs state NXM token contract 0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B, NXM governance/staking/claims roles, and capital-pool backing."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/capital-pool/",
+        "shows": "Capital Pool docs state the pool holds assets backing NXM, receives premiums, pays claims, handles NXM mint/sell flows and is controlled by members through on-chain governance."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/developers/cover-buyer-user-flow",
+        "shows": "Developer user flow says a user must be a Nexus Mutual member before purchasing cover or making a claim; transactions fail if the caller is not a member, and checks use MemberRoles.checkRole."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e",
+        "shows": "Registry surfacer shows getKycAuthAddress, join(address,bytes), leave, isMember(address), isEmergencyAdmin(address), setKycAuthAddress and membership-changing functions.",
+        "chain": "Ethereum",
+        "address": "0xcafea2c575550512582090AA06d0a069E7236b9e"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x5407381b6c251cFd498ccD4A1d877739CB7960B8",
+        "shows": "TokenController surfacer shows addToWhitelist, removeFromWhitelist, switchMembership, withdrawNXM, withdrawNXMStakeAndRewards, OnlyMember error and staking-pool manager functions.",
+        "chain": "Ethereum",
+        "address": "0x5407381b6c251cFd498ccD4A1d877739CB7960B8"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b",
+        "shows": "NXM token surfacer shows operator 0x5407381b6c251cFd498ccD4A1d877739CB7960B8 and view/write surface around whiteListed, addToWhiteList, removeFromWhiteList, transfer and operatorTransfer.",
+        "chain": "Ethereum",
+        "address": "0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b"
+      },
+      {
+        "url": "https://github.com/NexusMutual/sdk",
+        "shows": "SDK README shows installation of @nexusmutual/sdk and quote SDK usage, giving an independent contract-interaction path outside the official web UI for developers."
+      },
+      {
+        "url": "https://nexusmutual.io/terms-of-use.pdf",
+        "shows": "Terms PDF says the app/site may be interrupted, suspended or restricted, users assume all smart-contract risks, and users must comply with all applicable domestic and international laws; no verbatim sanctions or jurisdiction-specific exclusion clause was extracted."
+      }
+    ],
+    "unknowns": [
+      "A2: Full admission path for every current Cover and staking function was not reconstructed from the latest deployed addresses because the SDK address page failed to render current addresses in this run.",
+      "A4: The run did not exhaustively grep every current implementation for sanctions-list integrations; no such blocklist appeared in the assessed Registry, TokenController or NXM token surfaces."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/NexusMutual/smart-contracts",
+        "https://github.com/NexusMutual/sdk"
+      ],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {
+          "firm": "iosiro",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Chaos Labs",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2023-10"
+        },
+        {
+          "firm": "G0 Group",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Solidified",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2019-04"
+        }
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B",
+        "symbol": "NXM"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e",
+          "role": "NXMaster proxy/admin target referenced by multiple modules",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900",
+          "role": "TemporaryGovernance and proxyOwner of NXMaster",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e",
+          "role": "Advisory Board multisig address exposed by TemporaryGovernance",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xcafea2c575550512582090AA06d0a069E7236b9e",
+          "role": "Registry proxy with upgrade, pause, membership and KYC-auth configuration functions",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x176c27973E0229501D049De626d50918ddA24656",
+          "role": "KYC auth address returned by Registry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Nexus Mutual is an Ethereum mutual where members buy cover for smart-contract, custody, slashing and depeg risks, stake NXM to underwrite products, and assess claims. The Capital Pool holds the assets backing NXM, receives cover premiums, pays accepted claims, and supports NXM minting or selling subject to mutual capital rules. V2-style modules include the Pool, Registry, TokenController, staking pools, cover products, RAMM and swap infrastructure."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "GPT-5.5 Thinking",
+    "chat_url": "https://chatgpt.com/share/6a0732e5-6c14-832e-bb52-dbaa08bf96e1",
+    "slice": "verifiability",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Major assessed contracts are explorer-verified and public repos/audits exist, but deployed-source-to-audited-commit correspondence and post-audit drift were not pinned.",
+    "short_headline": "Verified, drift unpinned",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Representative pinned contracts and crawled current modules report ABI source etherscan or sourcify, including Pool1, NXMaster proxy, a pinned proxy, LegacyMemberRoles, TemporaryGovernance, Registry and TokenController."
+        },
+        {
+          "code": "V2",
+          "text": "A public NexusMutual/smart-contracts repository exists with contracts/deployments/docs folders and a public SDK repository exists, but this run did not pin a commit SHA or independently match deployed bytecode to repo source."
+        },
+        {
+          "code": "V3",
+          "text": "The official audits page lists a long audit history, including iosiro reports through March 2025, November 2024 USD Price Feed Oracle audits, 2022-2023 V2 module audits, a Chaos Labs economic audit, G0 Group reports and Solidified 2019 reports."
+        },
+        {
+          "code": "V4",
+          "text": "The firms fetched from the audit index are iosiro, Chaos Labs, G0 Group and Solidified; no fetched report from the commonly recognized Solidity-audit firm list was identified for a green-grade claim in this run."
+        },
+        {
+          "code": "V5",
+          "text": "Visible release metadata on the smart-contracts repo shows v3.4.0 on April 16, 2026, while the latest audit index entry fetched is March 2025; this run did not sample diffs to determine whether drift is material or re-audited."
+        },
+        {
+          "code": "V6",
+          "text": "Several proxies expose implementation addresses on the surfacers, including NXMaster, TemporaryGovernance, Registry and TokenController; implementation verification for every current fund-custody/settlement implementation was not fully checked separately."
+        }
+      ],
+      "steelman": {
+        "red": "The red case would require unverified bytecode, no repo or no audits, but the fetched surfacers show verified ABI sources and the official repo/audit pages exist.",
+        "orange": "The orange case is strongest because verification and audits exist, but current deployment-to-repo/audited-commit correspondence and material post-audit drift were not established.",
+        "green": "The green case is that the main assessed contracts are explorer-verified, the source repository is public, and there is a long audit history including recent 2024-2025 entries."
+      },
+      "verdict": "Choosing orange because the evidence is comfortably above red but below green: explorer/source verification, public repo and audits are present, yet no commit-pinned source match or material-drift review was completed for the current deployed implementations."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.nexusmutual.io/",
+        "shows": "Official documentation landing page links governance, GitHub, bug bounty, Dune and forum resources used for this run."
+      },
+      {
+        "url": "https://github.com/NexusMutual/smart-contracts",
+        "shows": "Public Nexus Mutual smart-contracts repository with contracts, deployments and docs folders plus release metadata."
+      },
+      {
+        "url": "https://github.com/NexusMutual/sdk",
+        "shows": "Public SDK repository; README shows @nexusmutual/sdk installation and contract-address/ABI usage for interacting with Nexus Mutual."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+        "shows": "Official audits and security page listing iosiro audits through March 2025, Chaos Labs economic audit, G0 Group and Solidified reports, plus Immunefi bounty references."
+      },
+      {
+        "url": "https://forum.nexusmutual.io/",
+        "shows": "Official Nexus Mutual DAO governance forum page was fetched."
+      },
+      {
+        "url": "https://immunefi.com/bounty/nexusmutual/",
+        "shows": "Immunefi page for Nexus Mutual bug bounty, live since February 2021, listing max bounty and in-scope critical/high impacts."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/nxm-token/",
+        "shows": "Official NXM token docs state NXM token contract 0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B, NXM governance/staking/claims roles, and capital-pool backing."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/protocol/capital-pool/",
+        "shows": "Capital Pool docs state the pool holds assets backing NXM, receives premiums, pays claims, handles NXM mint/sell flows and is controlled by members through on-chain governance."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xfd61352232157815cf7b71045557192bf0ce1884",
+        "shows": "Pool1 surfacer reports ABI source etherscan and lists readable/writable ABI surfaces at pinned block 25101202.",
+        "chain": "Ethereum",
+        "address": "0xfd61352232157815cf7b71045557192bf0ce1884"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x01bfd82675dbcc7762c84019ca518e701c0cd07e",
+        "shows": "NXMaster proxy surfacer reports ABI source sourcify, OwnedUpgradeabilityProxy, implementation 0xcafea22375708092fd1Ae65CDf93C9c2BA58A438 and upgradeTo/transferProxyOwnership.",
+        "chain": "Ethereum",
+        "address": "0x01bfd82675dbcc7762c84019ca518e701c0cd07e"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x84edffa16bb0b9ab1163abb0a13ff0744c11272f",
+        "shows": "Pinned proxy surfacer reports ABI source sourcify, implementation 0xcafea8650173E542835d0e01b5F8B11949A12829 and proxyOwner 0x01BFd82675DBCc7762C84019cA518e701C0cD07e.",
+        "chain": "Ethereum",
+        "address": "0x84edffa16bb0b9ab1163abb0a13ff0744c11272f"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x055cc48f7968fd8640ef140610dd4038e1b03926",
+        "shows": "LegacyMemberRoles proxy surfacer reports ABI source etherscan, proxy implementation 0xcafea01C7Ca7c05c056A030e5Af7AE28a588d2B1 and proxyOwner 0xcafea2c575550512582090AA06d0a069E7236b9e.",
+        "chain": "Ethereum",
+        "address": "0x055cc48f7968fd8640ef140610dd4038e1b03926"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900",
+        "shows": "TemporaryGovernance surfacer reports ABI source etherscan, proxy implementation 0xcafeaf47dAc3aCBa0Aa0974DcA9195209DA6ef20, proxyOwner 0xcafea2c575550512582090AA06d0a069E7236b9e and executable ABI surface.",
+        "chain": "Ethereum",
+        "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e",
+        "shows": "Registry surfacer reports ABI source etherscan, UpgradeableProxy, implementation 0xcafeaC64cBE73e6e8973b52cDAE8982DE6Fb500E and upgrade/registry ABI surface.",
+        "chain": "Ethereum",
+        "address": "0xcafea2c575550512582090AA06d0a069E7236b9e"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x5407381b6c251cFd498ccD4A1d877739CB7960B8",
+        "shows": "TokenController surfacer reports ABI source etherscan, proxy implementation 0xcafea535C1613d3f3339d2cC85F758095D754f80 and token-controller ABI surface.",
+        "chain": "Ethereum",
+        "address": "0x5407381b6c251cFd498ccD4A1d877739CB7960B8"
+      },
+      {
+        "url": "https://github.com/NexusMutual/smart-contracts",
+        "shows": "Public smart-contract repository has contracts, deployments and docs folders; README says audits and bug-bounty links exist and the repo release panel showed v3.4.0 on April 16, 2026."
+      },
+      {
+        "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+        "shows": "Audit index lists many reports; newest fetched entries include iosiro March 2025, January 2025, November 2024, September 2024 and August 2024 reports, plus older V2 and economic audits."
+      }
+    ],
+    "unknowns": [
+      "V2: No repository commit SHA was pinned and no bytecode/source correspondence check was performed.",
+      "V3: Individual audit PDFs were not opened in this run, so exact audited commits/contracts were not extracted beyond the official audit index descriptions.",
+      "V5: Post-audit drift was not sampled with GitHub compare/diff content, so no claim is made that drift is material or immaterial.",
+      "V6: Implementation verification was inferred from representative DeFiPunkd proxy/ABI pages but not exhaustively checked for every current core proxy implementation."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/NexusMutual/smart-contracts",
+        "https://github.com/NexusMutual/sdk"
+      ],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {
+          "firm": "iosiro",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Chaos Labs",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2023-10"
+        },
+        {
+          "firm": "G0 Group",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2021-03"
+        },
+        {
+          "firm": "Solidified",
+          "url": "https://docs.nexusmutual.io/resources/audits-and-security/",
+          "date": "2019-04"
+        }
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B",
+        "symbol": "NXM"
+      },
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e",
+          "role": "NXMaster proxy/admin target referenced by multiple modules",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900",
+          "role": "TemporaryGovernance and proxyOwner of NXMaster",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x51ad1265C8702c9e96Ea61Fe4088C2e22eD4418e",
+          "role": "Advisory Board multisig address exposed by TemporaryGovernance",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xcafea2c575550512582090AA06d0a069E7236b9e",
+          "role": "Registry proxy with upgrade, pause, membership and KYC-auth configuration functions",
+          "actor_class": "governance"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x176c27973E0229501D049De626d50918ddA24656",
+          "role": "KYC auth address returned by Registry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Nexus Mutual is an Ethereum mutual where members buy cover for smart-contract, custody, slashing and depeg risks, stake NXM to underwrite products, and assess claims. The Capital Pool holds the assets backing NXM, receives cover premiums, pays accepted claims, and supports NXM minting or selling subject to mutual capital rules. V2-style modules include the Pool, Registry, TokenController, staking pools, cover products, RAMM and swap infrastructure."
+    }
+  }
+]

@@ -1,0 +1,244 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/44d28e37-2443-4390-bb4c-dc17a3991400",
+    "grade": "orange",
+    "headline": "On-chain Governor with 4-day uncontested fast path can upgrade fund-holding Pool (T1); 2-of-6 emergency Safe holds pause role",
+    "short_headline": "Governor T1, 4-day delay; 2-of-6 pause",
+    "rationale": {
+      "findings": [
+        { "code": "C1", "text": "Pinned 'proxy_admin' 0x01BFd826...0cD07e is the NXMaster proxy; its proxyOwner is 0x4A5C68...87900 and its registry() points to the new Registry at 0xcafea2c5...236b9e, which holds proxyOwner=0xcafea606...82Ca32 (Governor). The Governor is the upgrade authority for the active v3 architecture; the legacy NXMaster has an emergencyAdmin field set to 0x422D71...2995D." },
+        { "code": "C2", "text": "All major contracts use OwnedUpgradeabilityProxy with upgradeTo()/transferProxyOwnership() — upgradeable architecture. Registry's implementation is 0xcafeaC64...500E and Governor's implementation is 0xcafea466...A830; both contracts expose upgradeContract/upgradeTo paths controlled by the Governor." },
+        { "code": "C3", "text": "Uncontested fast path on Governor (0xcafea606...82Ca32): propose → VOTING_PERIOD = 259200s (3 days) → TIMELOCK_PERIOD = 86400s (1 day) → execute. Total uncontested delay = 4 days = 345600 seconds. Both constants read on-chain at block 25083310." },
+        { "code": "C4", "text": "Emergency Admin is a 2-of-6 Gnosis Safe v1.3.0 at 0x422D71fb...2995D (threshold=2, 6 owners read at block 25083311). Per docs, its only role is to enact emergency pause on RAMM or the entire protocol. 2-of-6 = 33% threshold fails Security Council criteria (≥51% threshold + ≥7 signers + ≥50% non-insider)." },
+        { "code": "C5", "text": "Governor on-chain constants (block 25083310): PROPOSAL_THRESHOLD=100 NXM (100e18), MEMBER_VOTE_QUORUM_PERCENTAGE=15 (rejection quorum — optimistic governance, AB proposes default-accept), VOTE_WEIGHT_CAP_PERCENTAGE=5, ADVISORY_BOARD_SEATS=5, ADVISORY_BOARD_THRESHOLD=3. Optimistic model: AB-proposed default outcomes pass unless members meet 15% rejection quorum." },
+        { "code": "C6", "text": "Yes — emergency-pause role is distinct from upgrade authority. The Registry has separate proposePauseConfig/confirmPauseConfig functions with a ProposerCannotConfirmPause error, requiring two distinct actors (emergencyAdmin proposes, separate confirmer required). isEmergencyAdmin role is grantable by Governor via setEmergencyAdmin." },
+        { "code": "C7", "text": "Highest tier on the fast path is T1 (FUND-CRITICAL): the Governor can call upgradeContract on the Registry to replace the Capital Pool implementation that holds ~$61M of user funds. Per rubric, T1 reachable with uncontested-fast-path delay >0 but <7 days = orange. Optimistic governance (default-accept) means proposals pass without active member opposition." }
+      ],
+      "steelman": {
+        "red": "Optimistic governance with 4-day fast path means an AB-proposed upgrade reaches T1 (replacing the Capital Pool implementation that holds ~$61M) unless ≥15% of NXM supply organizes to reject within 3 days — a meaningful coordination burden — and a 2-of-6 emergency Safe with 33% threshold can pause the protocol indefinitely.",
+        "orange": "T1 is reachable but only through a multi-stage public process: 3-day voting period plus 1-day timelock gives users 4 days of advance notice to react, the pause role is split between proposer and confirmer roles (no unilateral pause), and the AB has 5 publicly-named members serving at member discretion.",
+        "green": "Pause requires two distinct actors per ProposerCannotConfirmPause; AB members are publicly named (Roxana Danila, Hugh Karp, Rei Melbardis, Lee McClelland, Graeme Thurgood); members can replace AB seats permissionlessly; no single EOA controls the upgrade path."
+      },
+      "verdict": "Choosing orange because the uncontested fast path is 4 days (3-day voting period + 1-day timelock, both read on-chain), which is below the 7-day bar required for green when T1 is reachable. The Governor's upgradeContract reaches a tier-1 outcome (replacing the Capital Pool implementation that holds member funds), and the optimistic-governance default-accept model means proposals pass unless 15% of NXM supply actively rejects. The 2-of-6 emergency-pause Safe fails Security Council criteria. The orange steel-man best fits because the 4-day delay does provide meaningful advance notice but is short of the 7-day standard and combined with low pause-multisig threshold."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x01bfd82675dbcc7762c84019ca518e701c0cd07e", "shows": "NXMaster proxy reads: emergencyAdmin=0x422D71fb...2995D, registry=0xcafea2c5...236b9e, proxyOwner=0x4A5C681d...87900, implementation=0xcafea223...A438, isPause=false (block 25083309)", "chain": "Ethereum", "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e", "shows": "Registry contract: proxyOwner=0xcafea606...82Ca32 (Governor), has setEmergencyAdmin/proposePauseConfig/confirmPauseConfig + ProposerCannotConfirmPause error, ADVISORY_BOARD_SEATS=5, getMemberCount=9543, getKycAuthAddress=0x176c2797...4656", "chain": "Ethereum", "address": "0xcafea2c575550512582090AA06d0a069E7236b9e", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xcafea6063d4Ec6b045d9676e58897C1f0882Ca32", "shows": "Governor contract on-chain reads at block 25083310: VOTING_PERIOD=259200s (3d), TIMELOCK_PERIOD=86400s (1d), PROPOSAL_THRESHOLD=100e18 NXM, MEMBER_VOTE_QUORUM_PERCENTAGE=15, VOTE_WEIGHT_CAP_PERCENTAGE=5, ADVISORY_BOARD_THRESHOLD=3", "chain": "Ethereum", "address": "0xcafea6063d4Ec6b045d9676e58897C1f0882Ca32", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x422D71fb8040aBEF53f3a05d21A9B85eebB2995D", "shows": "Gnosis Safe v1.3.0 with getThreshold=2 and 6 owners (0x23E1B127..., 0x8D38C81B..., 0x43f4cd7d..., 0x9063a2C7..., 0x87B2a755..., 0x6FE2C264...) — 2-of-6 emergency-admin multisig, read at block 25083311", "chain": "Ethereum", "address": "0x422D71fb8040aBEF53f3a05d21A9B85eebB2995D", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://docs.nexusmutual.io/governance/", "shows": "Governance docs confirm: optimistic governance model, 5-member Advisory Board (Roxana Danila, Hugh Karp, Rei Melbardis, Lee McClelland, Graeme Thurgood), 3-day voting period + 24-hour timelock, 100 NXM proposal threshold, 15% rejection quorum, and 'Emergency Pause Safe multisig's only power is to pause either the RAMM contract or the entire protocol'", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x84edffa16bb0b9ab1163abb0a13ff0744c11272f", "shows": "Pinned 'proxy' is legacy PooledStaking v1: implementation=0xcafea865...2829, master=0x01BFd826...0cD07e, contractStaked ~52,317 NXM remaining, hasPendingUnstakeRequests=true (block 25083308). Mostly migrated to v2 pools via migrateToNewV2Pool/migrateToExistingV2Pool.", "chain": "Ethereum", "address": "0x84EdfFA16bb0b9Ab1163abb0a13Ff0744c11272f", "fetched_at": "2026-05-13T10:00:00Z" }
+    ],
+    "unknowns": [
+      "C4: Identities of the 6 emergency-admin Safe signers not classified as insider vs non-insider in this run; the docs name 5 AB members but do not enumerate the Emergency Pause Safe signers — likely overlapping with AB plus Foundation operators but not verifiable from pinned sources.",
+      "C5: Did not independently verify whether the Governor can self-upgrade to bypass the timelock (Governor's proxyOwner=Registry whose proxyOwner=Governor — circular reference suggests self-upgrade is possible via the 4-day path, which is the operative fast path)."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/NexusMutual/smart-contracts"],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        { "firm": "iosiro", "url": "https://docs.nexusmutual.io/resources/audits-and-security", "date": "2025-03" },
+        { "firm": "iosiro", "url": "https://docs.nexusmutual.io/resources/audits-and-security", "date": "2025-01" },
+        { "firm": "iosiro", "url": "https://docs.nexusmutual.io/resources/audits-and-security", "date": "2024-11" },
+        { "firm": "Chaos Labs", "url": "https://docs.nexusmutual.io/resources/audits-and-security", "date": "2023-10" }
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": { "chain": "Ethereum", "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B", "symbol": "NXM" },
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "deployed_contracts_doc": "https://sdk.nexusmutual.io",
+      "admin_addresses": [
+        { "chain": "Ethereum", "address": "0xcafea6063d4Ec6b045d9676e58897C1f0882Ca32", "role": "Governor (proxy admin of Registry; 3d voting + 1d timelock)", "actor_class": "governance" },
+        { "chain": "Ethereum", "address": "0xcafea2c575550512582090AA06d0a069E7236b9e", "role": "Registry (proxy admin of all v3 contracts; owned by Governor)", "actor_class": "governance" },
+        { "chain": "Ethereum", "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e", "role": "Legacy NXMaster proxy (delegates to Registry/Governor in v3)", "actor_class": "governance" },
+        { "chain": "Ethereum", "address": "0x422D71fb8040aBEF53f3a05d21A9B85eebB2995D", "role": "Emergency Pause Safe (2-of-6, can pause RAMM / protocol)", "actor_class": "multisig" },
+        { "chain": "Ethereum", "address": "0x176c27973E0229501D049De626d50918ddA24656", "role": "KYC Authority (signs Registry.join)", "actor_class": "eoa" }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Nexus Mutual is a discretionary mutual on Ethereum where KYC'd members pay an ETH membership fee to mint NXM, then buy cover for smart-contract failures, custody risks, slashing, and depegs, and stake NXM to underwrite covers and assess claims. The Capital Pool holds ETH/USDC/cbBTC plus diversified yield positions (Lido stETH, Rocket Pool rETH, Stakewise V3, EtherFi weETH, Kiln via Enzyme), with NXM-to-ETH redemption available when MCR > 100%. Governance is optimistic: a 5-seat Advisory Board proposes default outcomes that pass unless members meet a 15% rejection quorum within a 3-day voting period followed by a 1-day timelock."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/44d28e37-2443-4390-bb4c-dc17a3991400",
+    "grade": "orange",
+    "headline": "NXM redemption requires MCR > 100% and is pausable via 2-of-6 emergency Safe + governance; pause has no on-chain time cap",
+    "short_headline": "MCR-gated; pausable; no time cap",
+    "rationale": {
+      "findings": [
+        { "code": "E1", "text": "User-facing exit functions: (a) Pool.sellNXMTokens to redeem NXM for ETH (via RAMM); (b) MemberRoles.switchMembership(address) to migrate membership; (c) MemberRoles.recoverETH; (d) legacy PooledStaking.withdraw / withdrawForUser / withdrawReward / requestUnstake (30-day UNSTAKE_LOCK_TIME read on-chain = 2592000s); (e) v2 staking pool withdraw functions accessed via the StakingNFT. NXM transfer/sell is mediated by NXMToken whose transfers are gated by whiteListed(address)." },
+        { "code": "E2", "text": "Exit functions are gated by isMember() + pause checks. The Registry encodes a Paused(uint256 currentState, uint256 checks) error and isPaused(uint256 mask) view, and contracts implementing IRegistry-aware logic call isPaused with module-specific masks. NXMToken transfers require both sender and recipient to be in the whiteListed set (managed by the TokenController = 0x540738...0B8)." },
+        { "code": "E3", "text": "Pause role is held by addresses for which isEmergencyAdmin(address) returns true (managed via setEmergencyAdmin onlyGovernor) plus the legacy emergencyAdmin field on NXMaster, currently set to the 2-of-6 Safe 0x422D71fb...2995D. PauseConfig is a uint48 bitmap with proposePauseConfig (proposer) and confirmPauseConfig (must be a different actor per ProposerCannotConfirmPause). At block 25083310 getPauseConfig=0, getSystemPause.config=0 (not paused). No on-chain MAX_PAUSE_DURATION constant was found in the Registry/NXMaster ABIs read this run." },
+        { "code": "E4", "text": "Per docs, AB and Emergency Pause Safe both have pause powers; the on-chain split is between emergencyAdmin role (Safe) proposing and the Advisory Board / Governor confirming (or vice-versa) — two-actor confirmation prevents unilateral pause. The fast emergency pause is therefore at multisig speed (2-of-6) but requires a separate confirmer." },
+        { "code": "E5", "text": "Structural exit constraint: NXM-to-ETH redemption is only available when MCR (Minimum Capital Requirement) ratio > 100%. Per docs: 'Members can redeem NXM for ETH directly from the Mutual, but only when the minimum capital requirement ratio (MCR%) is above 100%.' This is an autonomous, contract-level exit gate that fires under adverse capitalization. Legacy PooledStaking exit has a fixed UNSTAKE_LOCK_TIME of 30 days (2592000s) read on-chain." },
+        { "code": "E6", "text": "No documented forced-exit / escape-hatch mechanism for adversarial-admin scenarios. The closest is MemberRoles.recoverETH (purpose unclear, governance-restricted) and the 30-day unstake lock that auto-expires. There is no permissionless emergency-exit independent of MCR/pause state." },
+        { "code": "E7", "text": "Exit functions are directly callable on the contract write tabs (sellNXMTokens, withdraw, requestUnstake) without the official frontend, but membership status is enforced on-chain via isMember(msg.sender) and NXM whitelisting, so a non-member EOA cannot acquire NXM in the first place. For an existing member, exit is frontend-independent." }
+      ],
+      "steelman": {
+        "red": "NXMToken transfers are gated by an on-chain whitelist managed by a governance-controlled TokenController, redemption is contractually conditional on MCR > 100%, the Capital Pool can be paused indefinitely by a 2-of-6 emergency Safe + confirmer, and no time cap on pause is encoded in the contracts read this run — under adverse conditions a member could be unable to convert NXM back to ETH for an undefined period.",
+        "orange": "Pause requires two distinct actors (ProposerCannotConfirmPause prevents the multisig from acting alone), the MCR>100% constraint is a structural mutual-insurance feature (not an admin discretion), NXM transfers within the whitelisted member set are not pause-gated, and the legacy 30-day unstake lock auto-expires without admin involvement.",
+        "green": "Holders of NXM can transfer to other members and call sellNXMTokens directly on-chain without the frontend; staking withdraw functions auto-finalize after the 30-day lock without admin signature; no admin can seize a member's NXM balance."
+      },
+      "verdict": "Choosing orange because (a) the pause path can prevent NXM-to-ETH redemption with no documented on-chain time cap, (b) the redemption is structurally gated by MCR > 100% which is a contract-enforced condition that can prevent exit under stress, and (c) the pause requires governance-vote confirmation rather than unilateral multisig action (consistent with orange's 'pausable through governance vote, not unilateral admin'). It does not meet red because the pause is split between proposer and confirmer roles, the MCR gate is a mutual-insurance feature rather than admin discretion, and finalized stake withdrawals can be claimed by the staker permissionlessly after the on-chain 30-day lock. It does not meet green because there is no time cap on pause and the MCR-conditional redemption falls short of unconditional permissionless exit."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e", "shows": "Registry exposes getPauseConfig (currently 0), getSystemPause (currently {config:0, proposedConfig:0, proposer:0x0}), isPaused(uint256 mask), proposePauseConfig+confirmPauseConfig with ProposerCannotConfirmPause error, plus isEmergencyAdmin view and setEmergencyAdmin (onlyGovernor) write — no MAX_PAUSE_DURATION in ABI", "chain": "Ethereum", "address": "0xcafea2c575550512582090AA06d0a069E7236b9e", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x84edffa16bb0b9ab1163abb0a13ff0744c11272f", "shows": "Legacy PooledStaking UNSTAKE_LOCK_TIME = 2592000s (30 days), withdraw/withdrawForUser/withdrawReward/requestUnstake functions exposed, MIN_UNSTAKE=20 NXM. Stakers can claim after the 30-day lock without admin intervention.", "chain": "Ethereum", "address": "0x84EdfFA16bb0b9Ab1163abb0a13Ff0744c11272f", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "shows": "NXMToken (immutable, deployed 2019): operator=0x540738...0B8 (TokenController) holds mint/lockForMemberVote/addToWhiteList/removeFromWhiteList. Transfer/transferFrom check whiteListed(address) — non-whitelisted (non-member) addresses cannot send or receive NXM.", "chain": "Ethereum", "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://docs.nexusmutual.io/protocol/capital-pool/", "shows": "Capital Pool docs: 'Members can redeem NXM for ETH directly from the Mutual, but only when the minimum capital requirement ratio (MCR%) is above 100%.' — structural exit gate.", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://docs.nexusmutual.io/governance/", "shows": "Emergency Pause Powers: 'In extreme situations where a vulnerability is discovered, the Advisory Board has the power to enact an emergency pause of the Ratcheting AMM (RAMM) contract or of the entire protocol... an Emergency Pause Safe multisig was created. The Emergency Pause Safe multisig's only power is to pause either the RAMM contract or the entire protocol.' No time cap documented.", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x422D71fb8040aBEF53f3a05d21A9B85eebB2995D", "shows": "Emergency Pause Safe: 2-of-6 Gnosis Safe v1.3.0 (threshold=2, 6 owners) — the actor empowered to initiate emergency pause; per ProposerCannotConfirmPause it cannot both propose and confirm.", "chain": "Ethereum", "address": "0x422D71fb8040aBEF53f3a05d21A9B85eebB2995D", "fetched_at": "2026-05-13T10:00:00Z" }
+    ],
+    "unknowns": [
+      "E3: No on-chain MAX_PAUSE_DURATION constant was found in the Registry/NXMaster ABIs surfaced this run — could not confirm whether pause is time-capped at the contract level or relies entirely on governance unpause; the bitmap-based pauseConfig allows partial / module-scoped pause that may have different time semantics than legacy NXMaster's binary isPause.",
+      "E5: Could not read the live MCR ratio on-chain this run — the MCR contract is part of the v3 Registry-managed set but not exposed in the pinned address_book; cannot confirm whether MCR > 100% currently holds.",
+      "E6: Did not enumerate the v3 staking-pool exit paths (StakingPool at factory 0xcafea508...e97f) — newer pool exit semantics may differ from legacy PooledStaking; not surfaced in the pinned address book."
+    ],
+    "protocol_metadata": {
+      "upgradeability": "upgradeable"
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/44d28e37-2443-4390-bb4c-dc17a3991400",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Capital Pool holds large LST/LRT positions (Lido stETH, rETH, Stakewise, EtherFi, Enzyme-Kiln); governance can add new external dependencies via 4-day timelock",
+    "short_headline": "Diversified LST/LRT exposure",
+    "rationale": {
+      "findings": [
+        { "code": "A1", "text": "Capital Pool (current address 0xcafea917...697cb per docs, ~$61.5M balance) holds and reads from multiple external positions per the governance-approved investment allocations: Lido stETH (peak ~30,000 stETH), Rocket Pool rETH (~13,358 rETH from NMPIP 197), Stakewise V3 via Chorus One (4,989 ETH allocation under NMPIP 228), EtherFi weETH (1,586 ETH), and Kiln via Enzyme vault (6,624 WETH). USD Price Feed Oracle support (Chainlink-style) was audited in November 2024 — the protocol uses external price feeds for cover pricing in USD-denominated covers." },
+        { "code": "A2", "text": "Off-chain reporter critical to admission (not asset accounting): kycAuthAddress = 0x176c2797...4656 signs Registry.join(member, signature). A KYC-authority compromise would let unauthorized addresses join but does not directly enable theft of existing user principal. Advisory Board (5 named members) participates in optimistic governance default-outcome setting and pause confirmation." },
+        { "code": "A3", "text": "No bridge / cross-chain dependency for the core mutual — Nexus Mutual is Ethereum-mainnet only. The protocol issues USD-denominated covers but settles claims in ETH/USDC/cbBTC on Ethereum; cross-chain risk is limited to whatever bridge-risk products are covered (which is a customer-facing risk, not an autonomy risk of THIS protocol)." },
+        { "code": "A4", "text": "Nested-collateral chains present via LRT (EtherFi weETH = ETH staked → restaked via EigenLayer). Depth: ETH → Lido/Rocket Pool/Stakewise validator → (for weETH) → EigenLayer AVS slashing surface. A coordinated slashing or LRT depeg could impair the Capital Pool's ETH-denominated value. Per investments page, allocations span at least 4 distinct LST/LRT providers, giving some diversification." },
+        { "code": "A5", "text": "Not forked — Nexus Mutual is an original protocol launched 2019 (Solidified audit). Not flagged in DeFiLlama's forkedFrom." },
+        { "code": "A6", "text": "Fallback mechanisms: (i) DOCUMENTED but not separately verified on-chain this run — RAMM (Ratcheting AMM) provides bounded price discovery for NXM/ETH swaps with audited tokenomics (iosiro Oct 2023, Chaos Labs economic audit Oct 2023). (ii) DOCUMENTED — MCR > 100% gate prevents NXM-to-ETH redemption when capital is insufficient (this is a fallback against bank-run scenarios). (iii) DOCUMENTED — claims must pass member-staked claims-assessment before payout. Live on-chain enforcement of MCR gate could not be confirmed in this run." },
+        { "code": "A7", "text": "No sequencer / L2-liveness dependency beyond the Ethereum L1 substrate. Nexus Mutual deploys on Ethereum L1 only." },
+        { "code": "A8", "text": "Limited keeper liveness dependency: legacy PooledStaking has processPendingActions (permissionless, anyone can call to settle pending burns/rewards/unstakes) with hasPendingActions=true at block 25083308. Withdrawal claims do not depend on keepers running — stakers can call withdraw directly. Cover claim payouts are governance-mediated (claims assessment + AB), not keeper-mediated." },
+        { "code": "A9", "text": "Governance-mutable external dependency surface is broad: Registry.addContract / Registry.upgradeContract (onlyGovernor) can register new SwapOperator / StakingPool / oracle implementations that touch user funds. The investment-allocation process is members-voted through the standard 4-day path (3-day voting + 1-day timelock), so new LST/LRT/yield-source dependencies can be added — but only after the public timelocked vote. There is no faster admin-only path to swap an external dependency without governance. This means dependency-surface changes inherit the same 4-day delay graded under the control slice." }
+      ],
+      "steelman": {
+        "red": "If the Capital Pool's stETH peg breaks materially, or EigenLayer slashes weETH, or the Chainlink price feed mis-reports USD/ETH at the moment of a claim, the resulting NAV drop could push MCR below 100% and freeze member exits while crystallizing principal losses across all NXM holders — and governance can register a new SwapOperator that routes through an untrusted vault after the standard 4-day vote.",
+        "orange": "External dependencies are diversified across at least four independent LST/LRT providers, each addition requires a public 4-day governance vote with members able to reject, the MCR gate is a recoverable mechanism (capital recovers, MCR returns above 100%, exits reopen) rather than a permanent loss event, and there is no admin-only fast path to introduce new dependencies.",
+        "green": "No bridge dependency, no sequencer dependency, dependency additions are governance-controlled with a 4-day timelock, and no single external party can unilaterally redirect Capital Pool funds."
+      },
+      "verdict": "Choosing orange because the Capital Pool's documented exposure to multiple LST/LRT providers (Lido stETH at peak ~30,000 stETH plus rETH, weETH, Stakewise positions) is material — a major LST/LRT failure could materially change expected performance and trigger the MCR<100% exit gate, even though principal loss is bounded by diversification. Impacted TVS estimate: a worst-case single-LST failure (e.g., total stETH peg loss to 80%) would impair on the order of 10–30% of Capital Pool NAV (~$6M–$18M out of ~$61M reported on Etherscan), recoverable over time but materially affecting unclaimed yield and exit liquidity. Governance can introduce new dependencies via the same 4-day path used for control changes, so the dependency surface is mutable but not silently mutable. Module-level note: the legacy v1 pool (pinned 0xfd61352232157815cf7b71045557192bf0ce1884) has balance 0 and is decommissioned, so its share of TVS is ~0%; all current TVS sits in the v3 Capital Pool, weighted overall = orange."
+    },
+    "evidence": [
+      { "url": "https://docs.nexusmutual.io/protocol/capital-pool/investments", "shows": "Enumeration of governance-approved Capital Pool investments: Lido stETH (Proposal 140 + Proposal 157 totaling ~30,000 stETH), Rocket Pool rETH (NMPIP 197 — 14,400 ETH staked → 13,358 rETH), Chorus One via Stakewise V3 (NMPIP 228 — 4,989 ETH), EtherFi weETH (NMPIP 228 — 1,586 ETH), Kiln via Enzyme vault (NMPIP 196 — 6,624 WETH). Capital Pool current address 0xcafea917...697cb.", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://docs.nexusmutual.io/resources/audits-and-security", "shows": "USD Price Feed Oracle audit by iosiro November 2024; RAMM tokenomics audit by iosiro October 2023; Chaos Labs RAMM economic audit October 2023 — establishing external price-feed and AMM-based fallback for NXM/ETH price discovery.", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xfd61352232157815cf7b71045557192bf0ce1884", "shows": "Legacy Pool1 contract — getInvestmentAssetBalance=0, ms (master) = 0x01BFd826...0cD07e. This pool is decommissioned; current TVS sits in the newer Capital Pool at 0xcafea917...697cb per docs.", "chain": "Ethereum", "address": "0xfD61352232157815cF7B71045557192Bf0CE1884", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e", "shows": "Registry has addContract / upgradeContract / deployContract write functions (onlyGovernor per OnlyGovernor error) — governance can introduce new module implementations, including SwapOperator and StakingPool. Migration constants in Registry.migrate signature include swapOperatorSalt, assessmentSalt, poolSalt, governorSalt indicating modular pool/governance/swap architecture.", "chain": "Ethereum", "address": "0xcafea2c575550512582090AA06d0a069E7236b9e", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://docs.nexusmutual.io/protocol/capital-pool/", "shows": "Capital Pool holds ETH, USDC and cbBTC plus invested positions; NXM redemption is gated on MCR > 100% — a built-in fallback that prevents bank-run drains under adverse capitalization.", "fetched_at": "2026-05-13T10:00:00Z" }
+    ],
+    "unknowns": [
+      "A1: Did not read the current Capital Pool (0xcafea917...697cb) on-chain — its asset breakdown by token at block 25083308 was not surfaced; impacted-TVS estimate above is based on documented investment allocations rather than live balances.",
+      "A1: Did not read which specific Chainlink (or alternative) price feed addresses are used by the USD Price Feed Oracle for cover pricing — only that an oracle exists and was audited Nov 2024.",
+      "A6-offchain: RAMM ratcheting + MCR>100% redemption gate are documented as fallbacks but their live on-chain activation status (LIVE/DEPLOYED/PROPOSED) was not separately confirmed in this run; treated as documented-only for the steel-man."
+    ],
+    "protocol_metadata": {}
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/44d28e37-2443-4390-bb4c-dc17a3991400",
+    "grade": "red",
+    "headline": "Contract-level KYC whitelist on NXM transfers; Registry.join requires KYC-authority signature; 27+ jurisdictions blocked",
+    "short_headline": "On-chain KYC whitelist (RED)",
+    "rationale": {
+      "findings": [
+        { "code": "A1", "text": "NXMToken (immutable, 0xd7c49CEE...4Cf3B) enforces an on-chain whitelist via whiteListed(address) and addToWhiteList/removeFromWhiteList functions controlled by the operator (TokenController = 0x540738...0B8). Token transfers between non-whitelisted addresses are blocked at the contract level. Registry contract enforces onlyMember and NotMember errors on all member-only entry points." },
+        { "code": "A2", "text": "Registry.join(address member, bytes signature) requires a valid signature from kycAuthAddress = 0x176c27973E0229501D049De626d50918ddA24656 (an off-chain KYC authority, EOA). Without this signature, an address cannot become a member and therefore cannot hold NXM, buy cover, stake, or vote. This is admission-gated by a single off-chain operator." },
+        { "code": "A3-active", "text": "Frontend enforces KYC verification: per the membership page, prospective members must 'submit a photo of your government-issued identification, which will be used in the verification process' and pay a 0.0020 ETH JOIN_FEE (read on-chain in Registry.JOIN_FEE = 2000000000000000)." },
+        { "code": "A3", "text": "Geographic restrictions enumerated explicitly: Nexus Mutual cannot accept members from 27 listed jurisdictions including Algeria, Angola, Bolivia, Bulgaria, Cameroon, China, Cote d'Ivoire, DRC, Haiti, India, Iran, Japan, Kenya, Laos, Lebanon, Mexico, Monaco, Myanmar, Namibia, Nepal, North Korea, Russia, South Sudan, Syria, Venezuela, Vietnam, and Yemen. This restriction is enforced via the KYC step." },
+        { "code": "A3b", "text": "Independent access paths exist for already-KYC'd members: an SDK is published at https://sdk.nexusmutual.io (linked from the GitHub repo README) and the contracts are directly callable on Etherscan for any whitelisted address. However, these paths do NOT bypass the contract-level whitelist — they only let an existing member interact without the frontend. There is no path by which a non-KYC'd address can hold NXM or buy cover." },
+        { "code": "A4", "text": "No explicit on-chain OFAC blocklist contract was identified in the surfaced ABIs. Sanctions enforcement is done off-chain via the KYC process; the KYC authority's signature is the on-chain enforcement point." },
+        { "code": "A5", "text": "Read access is fully permissionless — all view methods (member counts, proposal state, contract addresses) are openly readable. Write access (joining, buying cover, staking, voting, redeeming NXM) is gated to whitelisted members only." },
+        { "code": "A6", "text": "ToS / Member Agreement is linked from the membership page at https://uploads-ssl.webflow.com/62d8193ce9880895261daf4a/63d0f45aacb2752b543ddcaf_Nexus-Mutual-DAO-Member-Agreement-FIN.pdf — the membership-page summary confirms KYC/AML requirement: 'To become a member, you will need to verify your identity through the Know-Your-Customer / Anti-Money-Laundering process. If this fails, you won't be able to join the Mutual.' Verbatim quote captured from the docs page; the full PDF was not separately fetched this run." }
+      ],
+      "steelman": {
+        "red": "NXMToken has a contract-level whitelist on transfers (whiteListed modifier), Registry.join requires a signature from a single off-chain KYC authority (0x176c27...4656, an EOA), and 27 jurisdictions are explicitly excluded — this is contract-enforced KYC gating user entry, which the rubric explicitly designates as red.",
+        "orange": "Once a member is KYC'd, all subsequent on-chain interactions are permissionless and not dependent on the official frontend; an SDK is published and contracts can be called directly on Etherscan; the KYC operator is a designated authority replaceable by Governor via setKycAuthAddress.",
+        "green": "Read access is fully permissionless and the SDK/Etherscan paths exist independently — but this only applies to information access, not user write access."
+      },
+      "verdict": "Choosing red because the rubric's red bar is met unambiguously: 'contract-level whitelist / KYC on user entry/exit' — NXMToken has whiteListed(address) gating transfers and Registry.join requires KYC-authority signature. This is not frontend-only ToS posture; it is enforced in immutable token bytecode (NXMToken is immutable per docs) and in the upgradeable Registry. Existence of an SDK / direct Etherscan access does not change this because no independent path allows non-KYC'd addresses to participate. The geographical restriction list (27 jurisdictions) is operationally enforced at the KYC step. This is a fundamental property of the discretionary-mutual model and is disclosed clearly to users."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "shows": "NXMToken ABI includes whiteListed(address) view, addToWhiteList(address) and removeFromWhiteList(address) functions, and operator() returning the TokenController address. Token transfers are conditional on whitelist status — gating which addresses can hold/transfer NXM.", "chain": "Ethereum", "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e", "shows": "Registry.join(address member, bytes signature) is the on-chain admission function; getKycAuthAddress = 0x176c27973E0229501D049De626d50918ddA24656 is the signature verifier; setKycAuthAddress is governor-only. JOIN_FEE = 2000000000000000 wei (0.002 ETH) read on-chain.", "chain": "Ethereum", "address": "0xcafea2c575550512582090AA06d0a069E7236b9e", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://docs.nexusmutual.io/overview/membership", "shows": "Membership requires KYC ('submit a photo of your government-issued identification') plus 0.002 ETH fee, with a 27-jurisdiction exclusion list including 'North Korea', 'Iran', 'China', 'Russia', 'India', 'Japan' — quoted: 'To become a member, you will need to verify your identity through the Know-Your-Customer / Anti-Money-Laundering process. If this fails, you won't be able to join the Mutual.'", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x055cc48f7968fd8640ef140610dd4038e1b03926", "shows": "MemberRoles contract (mislabeled 'multisig' in pinned address_book) — actually an OwnedUpgradeabilityProxy implementing checkRole / isMember / numberOfMembers / switchMembership. nextMemberStorageIndex = 10036, hasFinishedMigrating = true. Membership state is on-chain and gated.", "chain": "Ethereum", "address": "0x055CC48f7968FD8640EF140610dd4038e1b03926", "fetched_at": "2026-05-13T10:00:00Z" }
+    ],
+    "unknowns": [
+      "A6: The full Member Agreement PDF (Webflow-hosted) was linked from the membership page but not separately fetched this run; the verbatim KYC clause quoted above comes from the membership docs page itself, not the PDF. Sanctions/jurisdictional terms in the PDF could not be quoted verbatim.",
+      "A2: KYC authority key 0x176c27973E0229501D049De626d50918ddA24656 not classified as EOA-vs-multisig in this run (would need a separate /address/1/... fetch); treated as a single-party operator with no documented replacement procedure beyond governor.setKycAuthAddress."
+    ],
+    "protocol_metadata": {}
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-13",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/44d28e37-2443-4390-bb4c-dc17a3991400",
+    "grade": "orange",
+    "headline": "All major contracts verified; public repo exists; primary auditor (iosiro) not in broadly-recognized list; v3 Registry/Governor architecture may post-date last in-scope audit",
+    "short_headline": "Verified; iosiro audits only",
+    "rationale": {
+      "findings": [
+        { "code": "V1", "text": "Etherscan / DeFiPunkd ABI-source reads confirm all surfaced contracts are verified: NXMaster (0x01BFd826...0cD07e) abiSource=etherscan; Registry (0xcafea2c5...236b9e) abiSource=etherscan; Governor (0xcafea606...82Ca32) abiSource=etherscan; Pool1 legacy (0xfD61352...E1884) abiSource=etherscan; MemberRoles (0x055CC48f...3926) abiSource=etherscan; NXMToken (0xd7c49CEE...4Cf3B) abiSource=etherscan; Emergency Pause Safe (0x422D71fb...2995D) abiSource=etherscan. Additional verified contracts cited via Etherscan: Capital Pool (0xcafea917...697cb), Pool V2 (0xcafea112...0627), Claims (0x813174d3...176139), Community Fund (0x586b9b2f...6e9), Legacy Claim Proofs (0xcafea81b...0B6775)." },
+        { "code": "V2", "text": "Public source repository: https://github.com/NexusMutual/smart-contracts (181 stars, 6,863 commits, GPL-3.0). Latest release v3.3.0 published 2026-02-24; 32 total releases. The repo organization mirrors the on-chain contract structure (contracts/ directory with modules for cover/staking/governance/pool/oracle). Independent compile/bytecode-match not attempted this run — recorded in unknowns rather than treated as a downgrade signal." },
+        { "code": "V3", "text": "Audit timeline from official docs (newest to oldest): iosiro March 2025 (Cover Edit + Limit Orders + Staking Pool Fix), iosiro January 2025 (Product Pricing Changes), iosiro November 2024 (USD Price Feed Oracle), iosiro September 2024 (Long Term Limit Order), iosiro August 2024 (Staking Pool Fixes + NXM Batch Withdrawal), iosiro July 2024 (CoverProducts Refactor + Total Active Cover Fix), iosiro March 2024 (Swap Operator Asset to Asset), iosiro January 2024 (Safe Tracker), iosiro October 2023 (RAMM), Chaos Labs October 2023 (RAMM economic audit), iosiro November 2022 – March 2023 (V2 Audit of contracts/modules), iosiro May 2021 + June 2021 (multiple), G0 Group June 2020 / November 2020 / March 2021, Solidified April 2019." },
+        { "code": "V4", "text": "Auditor recognition: iosiro (the dominant auditor across 10+ Nexus Mutual audits since 2021) is NOT in the prompt's broadly-recognized list (Trail of Bits, Zellic, Spearbit, OpenZeppelin, ConsenSys Diligence, Certora, Quantstamp, Halborn, Peckshield, Sigma Prime, ChainSecurity, Ackee Blockchain, MixBytes, Statemind). Chaos Labs (economic audit, October 2023) is reputable for economic modeling but did not audit the smart-contract bytecode. Solidified (April 2019) and G0 Group are also outside the broadly-recognized list. No audit from a broadly-recognized firm on the currently-deployed contracts was found." },
+        { "code": "V5", "text": "Post-audit drift: The most recent in-scope audit is iosiro March 2025 (Cover Edit, Limit Orders, Staking Pool Fix). The GitHub repo's latest release v3.3.0 was published 2026-02-24 — approximately 11 months after the last audit. The v3 Registry / Governor / Pool architecture (Registry at 0xcafea2c5...236b9e, Governor at 0xcafea606...82Ca32) introduces materially new fund-control surfaces (Registry.upgradeContract, Registry.addContract, Governor.execute) whose audit coverage by a recognized firm is not visible from the public audits page. Specific drifted contracts (Registry, Governor) hold fund-custody upgrade authority, so this is material drift per the V5 SCOPE rule. Diff content not sampled this run — flagging in unknowns rather than treating as confirmed material drift, but the audit-staleness vector alone supports orange." },
+        { "code": "V6", "text": "Proxy + implementation both verified: NXMaster proxy 0x01BFd826...0cD07e → implementation 0xcafea223...A438 (etherscan); Registry proxy 0xcafea2c5...236b9e → implementation 0xcafeaC64...500E (etherscan); Governor proxy 0xcafea606...82Ca32 → implementation 0xcafea466...A830 (etherscan); MemberRoles proxy 0x055CC48f...3926 → implementation 0xcafea01C...d2B1 (etherscan); PooledStaking proxy 0x84EdfFA1...272f → implementation 0xcafea865...2829 (etherscan)." }
+      ],
+      "steelman": {
+        "red": "No audit from a broadly-recognized firm has been performed on the currently-deployed Registry / Governor / Pool architecture; iosiro is the sole repeat auditor and is not on the recognized list; the v3 architectural change (Registry-based module registry, new Governor with optimistic voting) post-dates the most recent in-scope audit (Mar 2025) by ~11 months as of analysis_date.",
+        "orange": "Every major contract is verified on Etherscan (both proxy and implementation), the GitHub repo is public and active with 32 releases and a v3.3.0 release in Feb 2026, iosiro has been the consistent auditor since 2021 with deep familiarity, and Chaos Labs provided an economic audit of the RAMM tokenomics — but iosiro is not on the prompt's broadly-recognized list, which the rubric explicitly designates as orange-at-best, and the v3 Registry/Governor architecture has not been visibly audited by a recognized firm.",
+        "green": "All contracts verified bytecode, public source repo, ≥1 audit covering currently-deployed contracts (iosiro Mar 2025 ≤ 12 months drift if counted as in-scope) — but this fails the V4 'recognized firm' requirement for green."
+      },
+      "verdict": "Choosing orange because (a) all main contracts are verified on Etherscan including their implementations (V1, V6 satisfied), (b) a public source repo exists at NexusMutual/smart-contracts (V2 satisfied), but (c) the dominant auditor (iosiro) is not on the prompt's broadly-recognized list — per V4 the rubric explicitly caps such cases at orange, and (d) the v3 Registry/Governor architecture providing fund-custody upgrade authority appears to post-date the last public audit by a meaningful interval. Green is unreachable under V4 without a recognized-firm audit on the current deployment; red is not warranted because verification, repo, and multiple audits (including iosiro's specialized history) all exist."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x01bfd82675dbcc7762c84019ca518e701c0cd07e", "shows": "NXMaster proxy verified on etherscan (abiSource=etherscan), proxy → implementation 0xcafea22375708092fd1Ae65CDf93C9c2BA58A438; both have verified ABIs", "chain": "Ethereum", "address": "0x01BFd82675DBCc7762C84019cA518e701C0cD07e", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xcafea2c575550512582090AA06d0a069E7236b9e", "shows": "Registry proxy verified on etherscan, proxy → implementation 0xcafeaC64cBE73e6e8973b52cDAE8982DE6Fb500E (also verified)", "chain": "Ethereum", "address": "0xcafea2c575550512582090AA06d0a069E7236b9e", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xcafea6063d4Ec6b045d9676e58897C1f0882Ca32", "shows": "Governor proxy verified on etherscan, proxy → implementation 0xcafea466bF6dEFe480cdd54056C020c63b7DA830 (verified)", "chain": "Ethereum", "address": "0xcafea6063d4Ec6b045d9676e58897C1f0882Ca32", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "shows": "NXMToken verified on etherscan (abiSource=etherscan) — immutable non-proxy", "chain": "Ethereum", "address": "0xd7c49CEE7E9188cCa6AD8FF264C1DA2e69D4Cf3B", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://docs.nexusmutual.io/resources/audits-and-security", "shows": "Full audit ledger: iosiro audits 2021–2025 (10+ engagements covering staking pool, MCR, swap operator, RAMM, cover products, USD oracle, etc.), Chaos Labs economic audit Oct 2023, G0 Group 2020–2021, Solidified Apr 2019. Most recent: iosiro March 2025 covering Cover Edit, Limit Orders, Staking Pool Fix. No audit from Trail of Bits / Zellic / Spearbit / OpenZeppelin / ConsenSys / Certora / Quantstamp / Halborn / ChainSecurity listed.", "fetched_at": "2026-05-13T10:00:00Z" },
+      { "url": "https://github.com/NexusMutual/smart-contracts", "shows": "Public source repository on GitHub: 181 stars, 6,863 commits on release-candidate branch, 32 releases, latest v3.3.0 published 2026-02-24, GPL-3.0 license, Solidity 27.8% / JavaScript 72.2%. README links to audits-and-security docs page.", "fetched_at": "2026-05-13T10:00:00Z" }
+    ],
+    "unknowns": [
+      "V2: Did not pin a specific commit SHA matching the deployed implementations to a GitHub tag/commit this run — scope limit, not a downgrade signal. Bytecode-equivalence check (deployed runtime vs. compiled artifact) not attempted.",
+      "V3: Did not open the individual iosiro audit report URLs (e.g. iosiro.com/audits/...) to confirm scope contracts and pinned commit SHAs; relied on the official docs page's summary descriptions.",
+      "V5: Did not sample the diff between the GitHub release-candidate branch (current) and the commit pinned by the March 2025 iosiro audit; commit-count / LOC change was not measured. Material drift claim above is based on the architectural mismatch (Registry/Governor present on-chain but not named in any audit description) rather than a confirmed diff."
+    ],
+    "protocol_metadata": {}
+  }
+]

@@ -1,0 +1,299 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_915fd519-65db-4c41-b2fe-4213147192aa",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "T1 upgrades via optimistic Snapshot + AB multisig execution with ~4-day uncontested path; no 7d+ timelock or Security Council",
+    "short_headline": "Short-path T1 via AB multisig",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "proxyOwner() of OwnedUpgradeabilityProxy at 0x01bfd82675dbcc7762c84019ca518e701c0cd07e returns 0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900 (another proxy with OnlyAdvisoryBoardMultisig); implementation at 0xcafea22375708092fd1Ae65CDf93C9c2BA58A438 (defipunkd surfacer + read at block ~25101207)."},
+        {"code": "C2", "text": "Core contracts use OwnedUpgradeabilityProxy pattern; upgradeTo/transferProxyOwnership controlled ultimately by Advisory Board multisig path. Upgradeability is 'upgradeable'."},
+        {"code": "C3", "text": "Execution path: AB/member creates NMPIP/NMDP on Snapshot (community.nexusmutual.eth) -> 3-day vote -> 24h post-vote timelock -> AB executes technical upgrades/authorizations if not vetoed (quorum 15% NXM supply to deny). No on-chain Governor or long timelock contract found. Uncontested fast path ~4 days (3d+24h)."},
+        {"code": "C4", "text": "Multisigs enumerated: DAO Treasury Safe 0x586b9b2F8010b284A0197f392156f1A7Eb5e86e9 (and others: 0x8e53D04644E9ab0412a8c6bd228C84da7664cFE3, 0x09ABbe423feDEE2332CAEa4117093D7d9B017cF5, 0xFA7E852Ceb3F7d0f1AC02F3b8AFCa95e6DcBdb3C); DAO teams 3/5 Safe 0x57d2D86d32497bC4AEd3b603A391db50c10D7fA1; Emergency Pause Safe (limited to pause RAMM/protocol); AB multisig path at 0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900 proxy. Treasury/operational scope; Emergency Pause scoped to pause only."},
+        {"code": "C5", "text": "No on-chain Governor contract detected for proposals; primarily Snapshot optimistic governance with NXM-weighted voting + 1-member-1-vote. Quorum/votingPeriod from docs (3 days vote, 15% supply deny quorum). No numeric on-chain constants read for Governor params."},
+        {"code": "C6", "text": "Emergency pause: AB + Emergency Pause Safe multisig can pause RAMM contract or entire protocol (indefinite until unpaused). Separate from main upgrade path; used only for vulnerabilities per docs."},
+        {"code": "C7", "text": "Highest tier on fast path: T1 (upgradeTo on core proxies holding user funds/capital pool; change protocol logic/parameters). Function: upgradeTo/authorized technical upgrades by AB after Snapshot. No bound checks preventing T1 blast radius."}
+      ],
+      "steelman": {
+        "red": "T1 upgrade authority ultimately held by small AB expert group (via multisig proxy) after short ~4-day Snapshot path with no long timelock or on-chain execution delay; single multisig path reachable for core changes.",
+        "orange": "Optimistic governance gives members veto power (15% quorum to deny default); AB limited to authorized upgrades + scoped emergency pause; multiple treasury/operational multisigs with Snapshot oversight provide checks short of full on-chain timelock or Security Council.",
+        "green": "Member-driven Snapshot process with veto quorum and replaceable AB; emergency powers narrowly scoped to pause only; no EOA/single-multisig hot upgrade path without governance step."
+      },
+      "verdict": "Choosing orange because T1 (core upgrade) is reachable on uncontested fast path (~4 days via Snapshot + AB multisig) without >=7d timelock, broad on-chain governance, or Security Council multisig, while still having member veto and scoped emergency powers."
+    },
+    "evidence": [
+      {"url": "https://docs.nexusmutual.io/governance/", "shows": "Optimistic governance details: AB default outcomes, 3-day Snapshot vote, 24h timelock, 15% quorum to deny, AB executes technical upgrades when authorized, Emergency Pause Safe limited to pause RAMM/protocol."},
+      {"url": "https://docs.nexusmutual.io/governance/dao/", "shows": "DAO treasury multisigs listed with addresses including 0x586b9b2F8010b284A0197f392156f1A7Eb5e86e9; 3/5 DAO teams multisig; AB role in legal/operational structure."},
+      {"url": "https://defipunkd.com/address/1/0x01bfd82675dbcc7762c84019ca518e701c0cd07e", "shows": "OwnedUpgradeabilityProxy details, proxyOwner() and upgradeTo capability."},
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x01bfd82675dbcc7762c84019ca518e701c0cd07e&method=proxyOwner", "shows": "proxyOwner returns 0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900 at block ~25101207; linked proxy has OnlyAdvisoryBoardMultisig."},
+      {"url": "https://defipunkd.com/address/1/0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900", "shows": "Proxy with OnlyAdvisoryBoardMultisig modifier and upgrade controls."},
+      {"url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "shows": "NXMToken with whitelist/operator features (governance token context)."},
+      {"url": "https://defisafety.com/app/pqrs/572", "shows": "Historical context on DAO vote execution, no timelock, AB/multisig signers."}
+    ],
+    "unknowns": [
+      "C3: Exact on-chain execution call flow after Snapshot authorization (AB multisig direct call vs queued contract) not fully traced on-chain in this run.",
+      "C4: Exact current signers/threshold of Advisory Board multisig and Emergency Pause Safe not read on-chain (recent NMDP proposals to rotate treasury signers to AB/Security Team).",
+      "C5: No on-chain Governor contract found; numeric params (quorum etc.) from docs only."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/NexusMutual"],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-cover-edit-limit-orders-and-staking-pool-fix-smart-contract-audit", "date": "2025-03"},
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-product-pricing-changes-smart-contract-audit", "date": "2025-01"},
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-usd-price-feed-oracle-support-audit", "date": "2024-11"}
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {"chain": "Ethereum", "address": "0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "symbol": "NXM"},
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x01bfd82675dbcc7762c84019ca518e701c0cd07e", "role": "proxy (OwnedUpgradeabilityProxy)", "actor_class": "unknown"},
+        {"chain": "Ethereum", "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900", "role": "advisory board multisig proxy path", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x586b9b2f8010b284a0197f392156f1a7eb5e86e9", "role": "DAO treasury Safe", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x57d2D86d32497bC4AEd3b603A391db50c10D7fA1", "role": "DAO teams 3/5 multisig", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Nexus Mutual is a decentralized mutual insurance protocol on Ethereum. Users buy cover protection against smart contract hacks and other risks by paying premiums into the capital pool. NXM token holders stake into staking pools (with lock periods and NFT positions) to underwrite risk and earn fees. Claims are assessed decentrally by staked members. Tokenomics use a Ratcheting AMM (RAMM). Governance is optimistic Snapshot-based with Advisory Board execution."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_915fd519-65db-4c41-b2fe-4213147192aa",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Staking locked per tranche (sellable NFT); emergency pause by AB/Safe multisig; decentralized claim assessment; no confirmed indefinite claim pause",
+    "short_headline": "Locked stakes + emergency pause",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "User-facing exit functions: withdraw staked NXM after staking period/tranche end; sell/transfer staking NFT position; submit claims via IndividualClaims; redeem payouts if claim accepted."},
+        {"code": "E2", "text": "Staking withdrawals gated by fixed staking periods (91-728 days); rewards withdrawable anytime by member NFT holders. Claims: submit (request) vs redeem finalized payouts (separate)."},
+        {"code": "E3", "text": "Emergency pause by AB + Emergency Pause Safe multisig can pause RAMM or entire protocol (indefinite until unpaused). Old emergencyAdmin role allowed pause/unpause at will via NXMaster. Pause scope on claims/exits not explicitly confirmed as exempt in docs."},
+        {"code": "E4", "text": "Emergency pause path (AB/Safe multisig, indefinite) separate from governance. No governance pause path detailed."},
+        {"code": "E5", "text": "No queued redemption with daily caps documented for core exits; staking has tranche-based locks but NFT secondary market provides liquidity."},
+        {"code": "E6", "text": "No explicit permissionless emergency-exit/escape-hatch beyond selling NFT or waiting tranche end. Decentralized claim assessment provides some resilience."},
+        {"code": "E7", "text": "Exit functions (claim submit/redeem, NFT transfer) callable directly on-chain via wallet/Etherscan write; no frontend dependency required for core exits."}
+      ],
+      "steelman": {
+        "red": "Emergency pause (indefinite) held by AB/Safe multisig can broadly affect protocol including potential claim processing; long staking locks without on-chain early exit.",
+        "orange": "Staking principal locked but positions sellable via transferable NFT; claims use decentralized member assessment (not single admin); pause scoped to emergencies/vulnerabilities and claims of finalized exits likely exempt or resilient.",
+        "green": "No contract-level requirement for admin signature on exits; decentralized claim assessment; NFT liquidity path; pause narrowly intended and not shown to gate finalized claims indefinitely."
+      },
+      "verdict": "Choosing orange because emergency pause path exists with indefinite scope held by AB/multisig (broad potential impact) while staking has meaningful locks (mitigated by NFT sales) and claim assessment is decentralized; finalized exits appear resilient but pause breadth prevents green."
+    },
+    "evidence": [
+      {"url": "https://docs.nexusmutual.io/governance/", "shows": "Emergency Pause Safe multisig powers limited to pausing RAMM or protocol on vulnerability; AB emergency action role."},
+      {"url": "https://docs.nexusmutual.io/protocol/staking/", "shows": "Staking periods/tranches with locks; cannot withdraw staked NXM early but can sell staking NFT position; rewards withdrawable."},
+      {"url": "https://docs.nexusmutual.io/resources/faq", "shows": "NXM locked in staking pools; redeem NXM for ETH in app; transfer only to members."},
+      {"url": "https://docs.nexusmutual.io/developers/contracts/", "shows": "IndividualClaims for submit/redeem; Assessment by staked members; tranches for staking."},
+      {"url": "https://iosiro.com/audits/nexus-mutual-emergency-response-smart-contract-audit", "shows": "Historical emergencyAdmin role for pause/unpause via NXMaster.setEmergencyPause."}
+    ],
+    "unknowns": [
+      "E3: Exact current effect of emergency pause on claim submission vs finalized payout redemption not read on-chain or explicitly documented in this run.",
+      "E3: Current holder of emergencyAdmin or pause role (AB multisig vs contract) and whether pause is pausable itself not fully confirmed on-chain."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/NexusMutual"],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-cover-edit-limit-orders-and-staking-pool-fix-smart-contract-audit", "date": "2025-03"},
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/staking-pool-fixes-and-nxm-batch-withdrawal-changes-smart-contract-audit", "date": "2024-08"}
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {"chain": "Ethereum", "address": "0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "symbol": "NXM"},
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x4A5C681dDC32acC6ccA51ac17e9d461e6be87900", "role": "advisory board multisig proxy", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Nexus Mutual is a decentralized mutual insurance protocol on Ethereum. Users buy cover protection against smart contract hacks and other risks by paying premiums into the capital pool. NXM token holders stake into staking pools (with lock periods and NFT positions) to underwrite risk and earn fees. Claims are assessed decentrally by staked members. Tokenomics use a Ratcheting AMM (RAMM). Governance is optimistic Snapshot-based with Advisory Board execution."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_915fd519-65db-4c41-b2fe-4213147192aa",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Oracle (USD price feed) + external capital pool investments introduce recoverable yield/ performance risk; core claim assessment on-chain by members; no major unmitigated bridges",
+    "short_headline": "Oracle + external investments",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "External calls/dependencies: USD Price Feed Oracle (recently audited); capital pool investments managed externally (e.g. via Karpatkey per forum/Dune links). Core staking/claims use on-chain member votes. If oracle mis-reports, pricing/claims could be affected."},
+        {"code": "A2", "text": "No small oracle committee; claim assessment by staked NXM members (decentralized). No off-chain reporter committees for core logic."},
+        {"code": "A3", "text": "No material bridge dependencies for core TVS; primary on Ethereum. Staking pools and covers on main chain."},
+        {"code": "A4", "text": "No deep nested restaking/LRT collateral chains in core design."},
+        {"code": "A5", "text": "No forkedFrom signal in available data."},
+        {"code": "A6", "text": "Fallbacks: decentralized member-based claim assessment provides resilience vs pure oracle; no explicit sanity-check contracts or second-oracle detailed as live. Capital pool diversification via external managers noted but external risk remains."},
+        {"code": "A7", "text": "Not an appchain; inherits Ethereum L1 liveness (substrate, not dependency)."},
+        {"code": "A8", "text": "No critical keeper/relayer liveness for core user flows (claims assessed by members; staking rewards accrue)."},
+        {"code": "A9", "text": "Governance (Snapshot/AB) can authorize changes including potential new modules/investments, but with proposal process and veto. No hot-swap of critical oracles without governance step shown."}
+      ],
+      "steelman": {
+        "red": "USD price feed oracle and external capital pool investments (Karpatkey-style) create path for mis-pricing or investment loss affecting capital pool principal/yield for all users.",
+        "orange": "Core claim assessment is decentralized member vote (resilient); oracle risk bounded to pricing/claims quality rather than direct theft; external investments are governance-authorized with oversight; no unmitigated single points for principal theft.",
+        "green": "No critical external dependency whose failure causes principal loss; claim assessment fully on-chain by staked members; investments diversified and proposal-gated."
+      },
+      "verdict": "Choosing orange because oracle dependency and external capital pool management can materially affect expected performance/yield (and potentially claims quality) with impacted TVS material to capital pool, but core assessment decentralized and no direct principal theft vector from single failure; mitigated but not zero-risk."
+    },
+    "evidence": [
+      {"url": "https://docs.nexusmutual.io/resources/audits-and-security/", "shows": "Recent iosiro audit of USD Price Feed Oracle; multiple staking/RAMM audits."},
+      {"url": "https://docs.nexusmutual.io/governance/dao/", "shows": "DAO treasury and investments context; external management references via forum links."},
+      {"url": "https://forum.nexusmutual.io/", "shows": "Treasury/investment updates and Karpatkey-related discussions (context for external management)."},
+      {"url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "shows": "NXM token context for staking/voting."}
+    ],
+    "unknowns": [
+      "A1: Exact current oracle address and whether core contracts call it directly (vs reference only) not read on-chain in this run.",
+      "A6: Specific live fallback contracts (sanity checks, bounds) for oracle reports not confirmed as deployed/activated."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/NexusMutual"],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-usd-price-feed-oracle-support-audit", "date": "2024-11"},
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-tokenomics-smart-contract-audit", "date": "2023-10"}
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {"chain": "Ethereum", "address": "0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "symbol": "NXM"},
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "Nexus Mutual is a decentralized mutual insurance protocol on Ethereum. Users buy cover protection against smart contract hacks and other risks by paying premiums into the capital pool. NXM token holders stake into staking pools (with lock periods and NFT positions) to underwrite risk and earn fees. Claims are assessed decentrally by staked members. Tokenomics use a Ratcheting AMM (RAMM). Governance is optimistic Snapshot-based with Advisory Board execution."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-xai",
+    "chat_url": null,
+    "grading_basis": "off-chain-only",
+    "grade": "orange",
+    "headline": "NXM transfers and staking require whitelisted/member addresses; cover purchase more open via wallet; membership gate exists; independent paths limited",
+    "short_headline": "Membership whitelist gate on NXM",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "NXMToken has whiteListed(address), addToWhiteList/removeFromWhiteList, operator role. Transfers fail unless to whitelisted/member address per FAQ."},
+        {"code": "A2", "text": "No off-chain operator approval required for core admission (buy cover, stake via contracts). Membership/whitelist gate is on-chain for transfers and full staking participation."},
+        {"code": "A3", "text": "Frontend (app.nexusmutual.io) has standard ToS/sanctions language (A3-passive); no confirmed active IP geo-blocking or runtime sanctions screening in docs. Context only."},
+        {"code": "A3b", "text": "Independent paths: wallet direct interaction possible for verified contracts; no published SDK or prominent third-party frontends/aggregators documented. App is primary but contracts reachable via Etherscan/wallet."},
+        {"code": "A4", "text": "No on-chain blocklist (OFAC-style) enforced in contracts; whitelist is membership-based."},
+        {"code": "A5", "text": "Read access permissionless on explorers; write access (transfers, staking) gated by whitelist/membership for NXM-related actions. Cover purchase appears more open."},
+        {"code": "A6", "text": "ToS on nexusmutual.io and docs reference compliance with applicable law; specific sanctions/jurisdictional clauses not verbatim-extracted in this run (standard language assumed)."}
+      ],
+      "steelman": {
+        "red": "Core NXM transfers and staking explicitly gated to whitelisted/member addresses only; membership acts as on-chain allowlist controlled via operator/AB path.",
+        "orange": "Cover purchase and basic interaction open via wallet connect; whitelist is membership mechanism (not KYC wall per se) with governance oversight; contracts permissionless for many reads/writes once member.",
+        "green": "No broad contract-level KYC/whitelist on all entry points; anyone can interact with core insurance logic via wallet; membership primarily for NXM governance/staking transfers."
+      },
+      "verdict": "Choosing orange because NXM transfers/staking require whitelist/membership (on-chain gate) creating practical membership barrier for full participation, while cover purchase is more open and no single-operator approval for admission; operational capture via primary app but contracts reachable."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "shows": "NXMToken with whiteListed, addToWhiteList, removeFromWhiteList, operator, isLockedForMV."},
+      {"url": "https://docs.nexusmutual.io/resources/faq", "shows": "NXM transfer only to Nexus Mutual member addresses; staking locks and membership requirements."},
+      {"url": "https://docs.nexusmutual.io/protocol/staking/", "shows": "Staking requires member address for rewards; NFT transferable to non-members in some cases."},
+      {"url": "https://nexusmutual.io/", "shows": "Wallet connect for app access; standard eligibility language."}
+    ],
+    "unknowns": [
+      "A3b: Specific published SDK or third-party frontend/aggregator routing examples not found in docs or searches this run.",
+      "A6: Verbatim ToS sanctions/jurisdictional clause extraction failed (no direct quote from live page in this run)."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/NexusMutual"],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {"chain": "Ethereum", "address": "0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "symbol": "NXM"},
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "Nexus Mutual is a decentralized mutual insurance protocol on Ethereum. Users buy cover protection against smart contract hacks and other risks by paying premiums into the capital pool. NXM token holders stake into staking pools (with lock periods and NFT positions) to underwrite risk and earn fees. Claims are assessed decentrally by staked members. Tokenomics use a Ratcheting AMM (RAMM). Governance is optimistic Snapshot-based with Advisory Board execution."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "nexus-mutual",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_915fd519-65db-4c41-b2fe-4213147192aa",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Contracts verified on Etherscan/Sourcify; active GitHub repo; multiple recent iosiro audits covering core modules and recent changes",
+    "short_headline": "Verified + recent audits",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "Key contracts (NXMToken, proxies) verified via Etherscan/Sourcify per defipunkd surfacers. Proxy + implementation pattern confirmed for admin addresses."},
+        {"code": "V2", "text": "Source corresponds to GitHub.com/NexusMutual repo (public, active). No pinned commit SHA matched in this run but structure/files align with deployed verified source."},
+        {"code": "V3", "text": "Multiple iosiro audits 2024-2025 covering staking pool fixes, cover products, pricing, oracle, RAMM, limit orders, etc. Older audits (G0, Solidified) exist. Audit links in protocol docs."},
+        {"code": "V4", "text": "iosiro is active in Solidity audits (recognized firm level for orange/green claims)."},
+        {"code": "V5", "text": "Recent audits (2024-2025) cover recent changes (staking fixes, pricing, cover edit); no material un-audited drift flagged in scope. Post-audit drift low risk due to frequency."},
+        {"code": "V6", "text": "Proxies verified with implementation resolved in surfacers (e.g. proxy at 0x01bfd82675dbcc7762c84019ca518e701c0cd07e links to impl)."}
+      ],
+      "steelman": {
+        "red": "No public repo or zero audits would make unverifiable.",
+        "orange": "Only older audits or partial verification; visible drift without re-audit.",
+        "green": "Verified bytecode on explorer for proxies/impls; public GitHub source correspondence; recent recognized-firm audits covering deployed contracts and changes."
+      },
+      "verdict": "Choosing green because deployed contracts are verified (proxy + impl), public GitHub repo exists with corresponding source, and multiple recent iosiro audits cover core and recent modules with no material unaudited drift."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "shows": "NXMToken verified via Etherscan ABI source."},
+      {"url": "https://defipunkd.com/address/1/0x01bfd82675dbcc7762c84019ca518e701c0cd07e", "shows": "OwnedUpgradeabilityProxy verified via Sourcify."},
+      {"url": "https://docs.nexusmutual.io/resources/audits-and-security/", "shows": "List of iosiro audits 2024-2025 with scopes (staking, pricing, oracle, cover products, RAMM) and links."},
+      {"url": "https://github.com/NexusMutual", "shows": "Public source repo for smart-contracts (context from multiple references)."}
+    ],
+    "unknowns": [
+      "V2: Exact commit SHA match between deployed bytecode and specific GitHub commit not performed (bytecode diff scope limit)."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/NexusMutual"],
+      "docs_url": "https://docs.nexusmutual.io/",
+      "audits": [
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-cover-edit-limit-orders-and-staking-pool-fix-smart-contract-audit", "date": "2025-03"},
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-product-pricing-changes-smart-contract-audit", "date": "2025-01"},
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/nexus-mutual-usd-price-feed-oracle-support-audit", "date": "2024-11"},
+        {"firm": "iosiro", "url": "https://iosiro.com/audits/staking-pool-fixes-and-nxm-batch-withdrawal-changes-smart-contract-audit", "date": "2024-08"}
+      ],
+      "governance_forum": "https://forum.nexusmutual.io/",
+      "voting_token": {"chain": "Ethereum", "address": "0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b", "symbol": "NXM"},
+      "bug_bounty_url": "https://immunefi.com/bounty/nexusmutual/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "Nexus Mutual is a decentralized mutual insurance protocol on Ethereum. Users buy cover protection against smart contract hacks and other risks by paying premiums into the capital pool. NXM token holders stake into staking pools (with lock periods and NFT positions) to underwrite risk and earn fees. Claims are assessed decentrally by staked members. Tokenomics use a Ratcheting AMM (RAMM). Governance is optimistic Snapshot-based with Advisory Board execution."
+    }
+  }
+]
