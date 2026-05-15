@@ -1,0 +1,283 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a55f9a31-3875-4f85-af94-22c7e13e3639",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "4/6 multisig owns RolesAuthority controlling weETHs BoringVault (T1 actions, 0-delay fast path)",
+    "short_headline": "4/6 multisig, T1, no timelock",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "weETHs BoringVault (0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88) owner()=0x000...0000 (renounced/zero). authority()=0x402DFF43b4f24b006BBD6520a11C169f81085039 (RolesAuthority). https://defipunkd.com/api/contract/read?chainId=1&address=0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88&method=owner and &method=authority (block ~25101271)."},
+        {"code": "C1", "text": "RolesAuthority (0x402DFF...) owner()=0xCEA8039076E35a825854c5C2f85659430b06ec96 (4/6 Gnosis Safe). https://defipunkd.com/api/contract/read?chainId=1&address=0x402DFF43b4f24b006BBD6520a11C169f81085039&method=owner and /api/safe/owners?chainId=1&address=0xCEA8039076E35a825854c5C2f85659430b06ec96 (threshold=4, 6 owners, v1.3.0, block 25101274)."},
+        {"code": "C2", "text": "BoringVault is minimal (~100 LOC), not standard proxy (no implementation()/admin() surfaced). Control delegated to external modules (Teller, Manager, Accountant) via RolesAuthority capabilities and manage() on vault. https://defipunkd.com/address/1/0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88 and GitHub Veda-Labs/boring-vault."},
+        {"code": "C3", "text": "No timelock evidenced on fast path. Execution: 4/6 multisig (via RolesAuthority role capabilities) → setAuthority/manage/set params on vault/Teller/Manager or update Merkle whitelist. Delay sum on uncontested path = 0s. Docs mention role-based/timelock in some deployments but none read on-chain for this weETHs instance."},
+        {"code": "C4", "text": "Primary multisig: 0xCEA8039076E35a825854c5C2f85659430b06ec96 (4/6, owners surfaced, threshold 4). Controls RolesAuthority (thus vault roles, manage(), pause on Teller). Fails Security Council criteria (<7 signers). BeforeTransferHook/Teller (0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861) also under same authority. https://defipunkd.com/api/safe/owners and architecture docs."},
+        {"code": "C7", "text": "Highest tier on fast path: T1 (fund-critical). manage() on BoringVault enables arbitrary calls (potential drain/upgrade logic); RolesAuthority can set roles/params affecting withdrawals, rates, strategies. Multisig on T1 path with 0 delay and fails SC criteria. https://defipunkd.com/address/1/0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88 (manage functions in ABI)."}
+      ],
+      "steelman": {
+        "red": "T1 reachable with no timelock by 4/6 multisig (<7 signers, fails Security Council) via RolesAuthority → manage()/role updates on fund-holding BoringVault.",
+        "orange": "T1 actions possible but through documented role-based system on audited BoringVault; multisig threshold provides some friction vs EOA/2-of-3; no evidence of unilateral EOA control or instant drain without on-chain checks.",
+        "green": "Core BoringVault minimal and owner-renounced; strategies strictly Merkle-restricted; control surface is role-gated rather than broad proxy admin; many similar institutional vaults use comparable 4/6 setups without immediate loss."
+      },
+      "verdict": "Choosing orange because T1 reachable on 0-delay fast path by 4/6 multisig (fails Security Council criteria per rubric) via RolesAuthority owning capabilities on weETHs BoringVault; no timelock evidenced on-chain for this deployment despite mentions in broader docs. Steelman for orange stronger than red (no EOA/2-of-3) or green (no >=7d delay or SC)."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88&method=owner", "shows": "vault owner() returns 0x000...0000 at block 25101271", "chain": "Ethereum", "address": "0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88&method=authority", "shows": "authority() returns 0x402DFF43b4f24b006BBD6520a11C169f81085039 (RolesAuthority)", "chain": "Ethereum", "address": "0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x402DFF43b4f24b006BBD6520a11C169f81085039&method=owner", "shows": "RolesAuthority owner() returns 0xCEA8039076E35a825854c5C2f85659430b06ec96", "chain": "Ethereum", "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://defipunkd.com/api/safe/owners?chainId=1&address=0xCEA8039076E35a825854c5C2f85659430b06ec96", "shows": "4-of-6 Gnosis Safe v1.3.0 with explicit 6 owners and threshold 4 at block 25101274", "chain": "Ethereum", "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "shows": "BoringVault ABI with manage(), setAuthority(), owner(), enter/exit; verified on Etherscan; authority and hook surfaced", "chain": "Ethereum", "address": "0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://docs.veda.tech/architecture-and-flow-of-funds", "shows": "BoringVault minimal; delegates to Teller/Manager/Accountant/Hook; Curator uses Merkle proofs; optional compliance Hook; BoringQueue for queued exits", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://github.com/Veda-Labs/boring-vault", "shows": "Official repo for BoringVault, ManagerWithMerkleVerification, TellerWithMultiAssetSupport; audits in /audit; minimal core with role/Merkle controls", "commit": "main", "fetched_at": "2026-05-15T10:52:00Z"}
+    ],
+    "unknowns": [
+      "C3: exact timelock delay (if any) on RolesAuthority capabilities or manage() for this weETHs deployment not read on-chain; broader docs mention role-based timelocks in some vaults but none confirmed here",
+      "C4/C7: precise role-to-function mappings (which addresses/roles can call manage(), pause, or update Accountant) on this specific RolesAuthority not enumerated; inferred T1 from ABI presence and ownership"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Veda-Labs/boring-vault"],
+      "docs_url": "https://docs.veda.tech",
+      "audits": [
+        {"firm": "Certora", "url": "https://veda.tech/blog/how-veda-and-certora-are-raising-the-bar-for-vault-security", "date": "2026-05"},
+        {"firm": "Multiple (Se7en-Seas/boring-vault audits)", "url": "https://github.com/Se7en-Seas/boring-vault/tree/main/audit", "date": "various"}
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96", "role": "owner of RolesAuthority for weETHs BoringVault (4/6 Safe)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039", "role": "RolesAuthority controlling weETHs BoringVault permissions", "actor_class": "unknown"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Veda provides onchain BoringVaults for institutional yield products. Users deposit assets (e.g. into weETHs Super Symbiotic LRT vault) via Teller; funds custodied in minimal BoringVault and allocated by Curator via Merkle-verified Manager strategies. weETHs vault uses RolesAuthority + 4/6 multisig for admin control over roles, manage(), and modules."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a55f9a31-3875-4f85-af94-22c7e13e3639",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Exit via Teller bulkWithdraw or BoringQueue (maturity ~1h); Teller pausable by multisig with no time cap; deny lists present",
+    "short_headline": "Pausable exit, queued ~1h, deny lists",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "Exit functions: bulkWithdraw/bulkDeposit on TellerWithMultiAssetSupport (0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861); also BoringQueue requestOnChainWithdraw + cancelOnChainWithdraw. Vault has enter/exit but primary via Teller/Queue. https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861 and docs.veda.tech."},
+        {"code": "E2", "text": "bulkWithdraw and deposits gated by isPaused(), fromDenyList/toDenyList/operatorDenyList on Teller. Queue request is permissionless (approve + call) but fulfillment after maturity by solvers; cancel always available pre-fulfillment."},
+        {"code": "E3", "text": "Teller has pause()/unpause()/isPaused() (currently false). Pause role held via RolesAuthority (owned by 4/6 multisig); no max duration or auto-expiry evidenced — can remain paused indefinitely until unpaused. https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861 (isPaused read)."},
+        {"code": "E4", "text": "Emergency-style pause on Teller reachable unilaterally via multisig/roles (no governance vote or time cap required). No separate governance pause distinguished."},
+        {"code": "E5", "text": "BoringQueue: request → ~1h maturity (configurable per asset) → solver fulfillment or cancel. Queue itself not explicitly pausable in evidence but tied to overall system pause/deny."},
+        {"code": "E7", "text": "Functions directly callable on-chain (Etherscan write or wallet). Queue fulfillment relies on third-party solvers (off-chain liveness) but request/cancel permissionless."}
+      ],
+      "steelman": {
+        "red": "Teller pause held by 4/6 multisig with no time cap can block bulkWithdraw/exits indefinitely; deny lists add gating; queued path has external solver dependency for final claims.",
+        "orange": "Core exit paths (queue request + cancel) permissionless and always available pre-fulfillment; pause is on Teller (broad but reversible); maturity short (~1h) and user can cancel; no evidence of indefinite claim-locking on finalized requests.",
+        "green": "No frontend dependency for core actions; users retain cancel rights; pause not shown as infinite in practice and contracts verified/audited; short maturity + Merkle/rate safeguards limit blast."
+      },
+      "verdict": "Choosing orange because exit is pausable broadly by multisig (no time cap) and uses queued path with solver dependency, but request/cancel remain permissionless and maturity short; steelman for orange outweighs red (no permanent claim lock) and green (pause scope too broad for green)."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "shows": "TellerWithMultiAssetSupport ABI: bulkWithdraw, pause/unpause/isPaused (false), fromDenyList/toDenyList, allow/deny functions, authority(), shareLockPeriod=0", "chain": "Ethereum", "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://docs.veda.tech/architecture-and-flow-of-funds", "shows": "BoringQueue for time-delayed solver-based withdrawals (~1h maturity); users request then solvers fulfill or cancel reclaims shares", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://docs.veda.tech/integrations/deposits-and-withdrawals-overview", "shows": "BoringQueue two-step: requestOnChainWithdraw (approve shares) → maturity → fulfill or cancel; permissionless request/cancel", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "shows": "BoringVault has enter/exit; delegates to Teller/Queue modules", "chain": "Ethereum", "address": "0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "fetched_at": "2026-05-15T10:52:00Z"}
+    ],
+    "unknowns": [
+      "E3/E4: whether pause on Teller affects BoringQueue claims/finalized exits or only Teller bulkWithdraw; exact role holder for pause() not read",
+      "E5: exact configurable maturity duration and per-asset caps for weETHs BoringQueue not read on-chain",
+      "E2: whether bulkWithdraw is actively used vs always queued for this vault; permissioned withdraws noted in similar Teller versions"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Veda-Labs/boring-vault"],
+      "docs_url": "https://docs.veda.tech",
+      "audits": [{"firm": "Certora", "url": "https://veda.tech/blog/how-veda-and-certora-are-raising-the-bar-for-vault-security", "date": "2026-05"}],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [{"chain": "Ethereum", "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96", "role": "4/6 Safe owner of RolesAuthority controlling Teller pause/deny lists", "actor_class": "multisig"}],
+      "upgradeability": "mixed",
+      "about": "Veda weETHs vault uses TellerWithMultiAssetSupport for deposits/withdraws (with deny lists and pause) and BoringQueue for delayed solver-based exits (~1h maturity, cancellable)."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a55f9a31-3875-4f85-af94-22c7e13e3639",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Depends on Accountant rate providers (off-chain), Merkle-restricted external strategies, BoringQueue solvers; mitigations (bounds, verification) limit to yield/performance impact (~unclear TVS share)",
+    "short_headline": "Oracle/rate + solver deps, mitigations present",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "Core external calls: ManagerWithMerkleVerification to whitelisted DeFi protocols (Aave, Morpho etc.); AccountantWithRateProviders for exchange rate (off-chain oracles/rate providers). BoringVault minimal; no direct unverified oracle calls in core. https://docs.veda.tech/architecture-and-flow-of-funds and GitHub."},
+        {"code": "A2", "text": "Off-chain: rate providers/oracles feeding Accountant; third-party solvers for BoringQueue fulfillment. Rate providers not on-chain committee; solvers permissionless but liveness-dependent."},
+        {"code": "A3", "text": "No material non-canonical bridge dependency for primary weETHs vault (Ethereum L1 core). Cross-chain deployments exist but not assessed as primary for this slice."},
+        {"code": "A4", "text": "weETHs is LRT (Symbiotic/EigenLayer-linked restaking receipt). Depth 1-2; slashing/freeze risk on underlying operators but user-opted per-vault; does not cross-cut other Veda vaults."},
+        {"code": "A6", "text": "Fallbacks: Accountant rate bounds + update frequency limits + sanity checks (LIVE); Manager Merkle verification of all strategy calls (LIVE); share lock (0 in this deployment). No evidence of second-oracle or circuit-breaker beyond bounds."},
+        {"code": "A8", "text": "BoringQueue solvers: permissionless role; failure delays fulfillment (users can cancel and reclaim shares) — graceful degradation, not catastrophic principal loss."},
+        {"code": "A9", "text": "Multisig via RolesAuthority can update modules (Accountant, Manager, Hook) — potential to introduce/swap rate providers or strategies, but within existing Merkle/role framework; no exit window evidenced."}
+      ],
+      "steelman": {
+        "red": "Accountant relies on off-chain rate providers (single point of manipulation risk); solvers liveness can freeze exits; multisig can swap dependencies without long timelock; LRT underlying adds restaking risk.",
+        "orange": "All strategy calls Merkle-verified and restricted; Accountant has on-chain rate/frequency bounds that catch bad reports; queue failure is cancellable (no principal loss); underlying LRT risk is user-opted and isolated per vault.",
+        "green": "No unmitigated path to principal loss from external deps; Merkle + rate bounds are live and enforceable; solver dependency only delays (cancellable); core vault minimal and self-contained for custody."
+      },
+      "verdict": "Choosing orange because external rate providers and queue solvers can materially affect yield/performance and delay exits (Stage 1 equivalent), but live Merkle verification, rate bounds, and cancellable queue prevent principal loss. Impacted TVS unclear without exact vault TVL share but bounded by mitigations and isolation. Steelman for orange strongest."
+    },
+    "evidence": [
+      {"url": "https://docs.veda.tech/architecture-and-flow-of-funds", "shows": "Accountant provides rate with on-chain safety checks/limits; Manager uses Merkle tree for strategy whitelist; BoringQueue solver-based", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://github.com/Veda-Labs/boring-vault", "shows": "ManagerWithMerkleVerification, AccountantWithRateProviders, TellerWithMultiAssetSupport; rate limiting and Merkle enforcement", "commit": "main", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "shows": "Teller integrates Accountant; shareLockPeriod=0; multi-asset support", "chain": "Ethereum", "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "fetched_at": "2026-05-15T10:52:00Z"}
+    ],
+    "unknowns": [
+      "A1/A6: specific rate provider addresses or oracle contracts used by weETHs Accountant not enumerated; activation status of all bounds confirmed only via docs",
+      "A9: whether module updates via RolesAuthority require timelock or exit window for users (not read on-chain)",
+      "IMPACTED TVS: exact % of protocol TVS in weETHs vault or affected by rate/solver failure not available; estimated material for this slice but < protocol total"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Veda-Labs/boring-vault"],
+      "docs_url": "https://docs.veda.tech",
+      "audits": [{"firm": "Certora", "url": "https://veda.tech/blog/how-veda-and-certora-are-raising-the-bar-for-vault-security", "date": "2026-05"}],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [{"chain": "Ethereum", "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96", "role": "4/6 Safe controlling RolesAuthority (can affect modules)", "actor_class": "multisig"}],
+      "upgradeability": "mixed",
+      "about": "Veda weETHs is an LRT-backed onchain vault. Deposits via Teller; rate from Accountant (off-chain providers + bounds); strategies via Merkle-verified Manager; exits via BoringQueue (solver fulfilled). Isolated per-vault risk with live mitigations."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a55f9a31-3875-4f85-af94-22c7e13e3639",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Teller has deny lists + pause for deposits/transfers; contracts support permissioned mode but core actions callable on-chain; independent paths likely exist",
+    "short_headline": "Deny lists + pause gating; on-chain callable",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "TellerWithMultiAssetSupport has fromDenyList/toDenyList/operatorDenyList and allowFrom/denyFrom/allowTo/denyTo/allowOperator functions. Deposits and transfers can be gated by deny lists. beforeTransfer hook enforces compliance. https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861."},
+        {"code": "A2", "text": "No mandatory off-chain operator approval for deposit request or queue withdrawal request (permissionless). Solver fulfillment for queue is off-chain but not admission gate. Pause on Teller affects some paths."},
+        {"code": "A3", "text": "Configurable compliance via Hook/deny lists for institutional products (address whitelisting, transfer restrictions). Frontend ToS/context not assessed as grade driver."},
+        {"code": "A3b", "text": "As DeFi primitive (BoringVault standard), direct contract calls via Etherscan/wallets/aggregators possible. Published SDKs, third-party frontends, and wallet integrations expected for such vault infra; not fully captured by official UI."},
+        {"code": "A4", "text": "On-chain deny lists (blocklist-style) updatable via roles on Teller. Not full KYC wall but compliance tooling at contract level."},
+        {"code": "A5", "text": "Read access permissionless (anyone can view state/balances). Write (deposit/withdraw) gated by deny lists, pause, and asset support on Teller."},
+        {"code": "A6", "text": "ToS/compliance clauses exist for institutional focus but verbatim extraction from docs limited; deny lists provide on-chain enforcement mechanism."}
+      ],
+      "steelman": {
+        "red": "Deny lists and pause on Teller allow privileged roles (via 4/6 multisig) to gate deposits, transfers, and some exits at contract level; permissioned withdraws in Teller variants.",
+        "orange": "Core request paths (deposit/queue) permissionless unless explicitly denied; deny lists are explicit blocklist (not default-deny whitelist); independent on-chain and aggregator paths exist; operational capture low for primitive.",
+        "green": "No hard contract whitelist/KYC required for all users; deny/pause are configurable tools, not blanket ban; direct on-chain access and third-party routing available; aligns with permissionless DeFi vault standard."
+      },
+      "verdict": "Choosing orange because contracts include deny-list gating and pause on entry/exit paths (contract-level compliance controls) while supporting permissionless requests when not denied; independent access paths exist but practical use for institutional products may route through curated interfaces. Steelman for orange best matches evidence of configurable (not absolute) gating."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "shows": "Teller deny lists (fromDenyList etc.), allow/deny functions, pause(), beforeTransfer hook for compliance; deposits/withdraws gated", "chain": "Ethereum", "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://docs.veda.tech/architecture-and-flow-of-funds", "shows": "Optional Hook for address whitelisting and transfer restrictions; compliance tooling configurable", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://veda.tech", "shows": "Configurable compliance controls including address whitelists, deposit permissions, curator roles for institutional products", "fetched_at": "2026-05-15T10:52:00Z"}
+    ],
+    "unknowns": [
+      "A1/A3: whether deny lists are empty by default or actively used to gate weETHs deposits/transfers; exact default permission model not read",
+      "A3b: concrete list of third-party frontends/aggregators routing weETHs specifically not enumerated (inferred from primitive nature)",
+      "A6: verbatim ToS jurisdictional/sanctions clause not extracted from site/docs"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Veda-Labs/boring-vault"],
+      "docs_url": "https://docs.veda.tech",
+      "audits": [{"firm": "Certora", "url": "https://veda.tech/blog/how-veda-and-certora-are-raising-the-bar-for-vault-security", "date": "2026-05"}],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [{"chain": "Ethereum", "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96", "role": "4/6 Safe controlling RolesAuthority (deny lists/pause)", "actor_class": "multisig"}],
+      "upgradeability": "mixed",
+      "about": "Veda enables configurable compliance via Teller deny lists and Hooks for weETHs vault. Deposits/exits permissionless unless denied or paused; on-chain callable with independent access paths available."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a55f9a31-3875-4f85-af94-22c7e13e3639",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "BoringVault + Teller verified on Etherscan; source on Veda-Labs/boring-vault GitHub; multiple audits including Certora; minimal core, no major proxy drift",
+    "short_headline": "Verified + audited + public source",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "weETHs BoringVault and Teller verified (ABI from Etherscan/Sourcify). Not standard proxy (minimal BoringVault; modules external). https://defipunkd.com/address/1/0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88 and Teller address page."},
+        {"code": "V2", "text": "Source corresponds to https://github.com/Veda-Labs/boring-vault (fork of Se7en-Seas/boring-vault) — BoringVault, ManagerWithMerkleVerification, TellerWithMultiAssetSupport match architecture. Commit not pinned but structure/files align with deployed ABIs."},
+        {"code": "V3", "text": "Audits: multiple in boring-vault/audit folder; Certora collaboration for vault security (2026 blog). Protocol.audit_links point to Se7en-Seas audits. Covers core contracts."},
+        {"code": "V4", "text": "Certora (formal verification) is recognized firm. Multiple audits noted on site and GitHub."},
+        {"code": "V5", "text": "No post-audit drift evidenced in sampled sources; core minimal and stable. Modules (Teller etc.) match repo descriptions."},
+        {"code": "V6", "text": "No proxy implementation gap; BoringVault is direct minimal contract; authority/hook are separate verified or role contracts."}
+      ],
+      "steelman": {
+        "red": "Some peripheral modules or exact deployment commit not diffed; reliance on Etherscan ABI without full local compile match in this run.",
+        "orange": "Audit scope may predate some module updates; GitHub is fork (Veda-Labs) of original; no explicit bytecode equivalence proof.",
+        "green": "Main contracts verified on explorer with public matching source repo; recognized auditor (Certora) coverage; minimal immutable-style core reduces drift surface; consistent with audited BoringVault standard."
+      },
+      "verdict": "Choosing green because deployed bytecode verified (Etherscan), public source repo (Veda-Labs/boring-vault) corresponds to architecture, and audits from recognized firm (Certora) cover core. No proxy implementation gap or evidenced material drift. Steelman for green strongest; unknowns are scope limits not blockers."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "shows": "BoringVault verified on Etherscan; ABI matches minimal vault with manage/enter/exit", "chain": "Ethereum", "address": "0x917cee801a67f933f2e6b33fc0cd1ed2d5909d88", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "shows": "TellerWithMultiAssetSupport verified; ABI from Etherscan/Sourcify", "chain": "Ethereum", "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://github.com/Veda-Labs/boring-vault", "shows": "Public repo with BoringVault, TellerWithMultiAssetSupport, ManagerWithMerkleVerification, Accountant; audits folder; matches deployed architecture", "commit": "main", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://veda.tech", "shows": "Multiple completed audits; Certora collaboration for vault security", "fetched_at": "2026-05-15T10:52:00Z"},
+      {"url": "https://github.com/Se7en-Seas/boring-vault/tree/main/audit", "shows": "Audit reports linked for BoringVault components", "fetched_at": "2026-05-15T10:52:00Z"}
+    ],
+    "unknowns": [
+      "V2: exact commit SHA matching deployed bytecode not pinned or diffed in this run (scope limit)",
+      "V5: full post-audit diff vs latest repo not performed; assumed low drift from minimal core and audit coverage"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Veda-Labs/boring-vault"],
+      "docs_url": "https://docs.veda.tech",
+      "audits": [
+        {"firm": "Certora", "url": "https://veda.tech/blog/how-veda-and-certora-are-raising-the-bar-for-vault-security", "date": "2026-05"},
+        {"firm": "Multiple", "url": "https://github.com/Se7en-Seas/boring-vault/tree/main/audit", "date": "various"}
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [{"chain": "Ethereum", "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96", "role": "4/6 Safe owner of RolesAuthority", "actor_class": "multisig"}],
+      "upgradeability": "mixed",
+      "about": "Veda implements BoringVault primitive (minimal core) with Teller, Manager (Merkle), Accountant. weETHs deployment verified on Etherscan, source public on GitHub, audited by Certora and others."
+    }
+  }
+]
