@@ -1,0 +1,959 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0736e8-0658-8326-96e1-4b5eb8dc1a41",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "The assessed weETHs vault has T1 fund-control functions behind a Safe-owned RolesAuthority, but no verified 7-day timelock or Security Council threshold.",
+    "short_headline": "Safe-controlled T1 roles",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "For the assessed weETHs deployment, the RolesAuthority owner is 0xCEA8039076E35a825854c5C2f85659430b06ec96; the BoringVault, Teller, and Accountant each report owner() as zero and authority() as the RolesAuthority. The authority owner is surfaced as a GnosisSafeProxy, but owners and threshold were not readable in this run."
+        },
+        {
+          "code": "C2",
+          "text": "The assessed BoringVault, Teller, RolesAuthority, and Accountant surfacers show named implementation contracts and no proxy implementation metadata for those core contracts; upgradeability by proxy was not observed for the assessed core, but rule changes remain possible through the RolesAuthority, hook changes, rate-provider changes, and Merkle-root changes."
+        },
+        {
+          "code": "C3",
+          "text": "The observed fast path is Safe owner -> RolesAuthority setUserRole or setRoleCapability -> authorized calls on BoringVault/Teller/Accountant/Manager. No onchain timelock or delay constant was found on the assessed path, and no Governor/Timelock execution chain was verified."
+        },
+        {
+          "code": "C4",
+          "text": "The multisig-like actor with reachable control is 0xCEA8039076E35a825854c5C2f85659430b06ec96, identified as a GnosisSafeProxy and owner of the RolesAuthority. Threshold, total signers, signer identities, and insider/non-insider classification were not determined."
+        },
+        {
+          "code": "C5",
+          "text": "No token-governor path was found for the assessed deployment. Numeric governance constants such as proposal threshold, voting period, quorum, and queue-to-execute timelock were not available from the fetched onchain sources."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency-style powers exist through pause functions on Teller and Accountant and through Manager pause patterns in the source architecture; the fetched source shows requiresAuth pause/unpause functions but no maximum pause duration or auto-expiry."
+        },
+        {
+          "code": "C7",
+          "text": "Highest observed tier is T1 fund-critical. The BoringVault manage function can make arbitrary calls from the vault, enter can mint shares, exit can transfer assets, Teller bulkWithdraw calls vault.exit, and Accountant setRateProviderData/updateExchangeRate can affect pricing used for deposits/withdrawals."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that the RolesAuthority owner can immediately grant roles enabling BoringVault manage, enter, and exit powers, with no verified timelock and an unknown Safe threshold that could be weak.",
+        "orange": "The orange case is that T1 powers are controlled by a smart-contract Safe and role authority, but the threshold, signer independence, and any exit-window timelock were not verified, so it cannot satisfy the Security Council or 7-day path standard.",
+        "green": "The green case is that the core BoringVault-style contracts are verified non-proxy contracts and strategy calls are intended to be constrained by Merkle roots and decoder/sanitizer checks."
+      },
+      "verdict": "Choosing orange because the highest reachable tier on the assessed path is T1 through BoringVault manage/enter/exit and Accountant pricing powers, and the controlling actor is a Safe-owned RolesAuthority with no verified timelock or Security Council signer set. Red is not assigned because the T1 owner was verified as a GnosisSafeProxy rather than a single EOA or proven 2-of-3 multisig; green is not supportable without a verified 7-day uncontested path plus qualifying governance or Security Council."
+    },
+    "evidence": [
+      {
+        "url": "https://veda.tech/",
+        "shows": "Capability probe via web.run returned Veda's public website; the page links docs, terms, and Immunefi bug bounty, describes Veda as an onchain vault provider, and states BoringVault secures over $3.5B TVL."
+      },
+      {
+        "url": "https://docs.veda.tech/",
+        "shows": "Veda docs describe Veda as a DeFi vault primitive for non-custodial, trust-minimized, composable products; docs state BoringVault anchors pricing, accounting, security, and optimization."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault",
+        "shows": "Public Veda-Labs boring-vault repository; README describes BoringVault, Manager, Teller, and Accountant, including offchain exchange-rate calculation and bounds/rate limiting."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+        "shows": "Public deployments directory for the Veda-Labs boring-vault repository."
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+        "shows": "0xMacro Seven Seas A-4 audit; report date March 20, 2024; audit scope includes BoringVault, AccountantWithRateProviders, ManagerWithMerkleVerification, TellerWithMultiAssetSupport, and related contracts at commit 939c77e25473dff3ed18fa104f004f7afd13452e.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+        "shows": "0xMacro Seven Seas A-36 audit dated March 28, 2025; scope was Teller legacy beforeTransfer support from PR 212 at commit f472abafb22f7a45e81df2814ae4bdf6f56dd74a.",
+        "commit": "f472abafb22f7a45e81df2814ae4bdf6f56dd74a"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+        "shows": "0xMacro Seven Seas A-45 audit dated May 28, 2025; scope was Teller deposit caps from PR 296 at commit c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/veda/information/",
+        "shows": "Immunefi Veda bug bounty page; Veda maximum bounty is $1,000,000, live since January 21, 2026, last updated May 14, 2026."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x402DFF43b4f24b006BBD6520a11C169f81085039",
+        "shows": "Onchain surfacer for Ethereum RolesAuthority: authority() is zero, owner() is 0xCEA8039076E35a825854c5C2f85659430b06ec96; write methods include setAuthority, setPublicCapability, setRoleCapability, setUserRole, and transferOwnership; reads pinned to block 25101269.",
+        "chain": "Ethereum",
+        "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
+        "shows": "Onchain surfacer for assessed BoringVault: authority() is 0x402DFF43b4f24b006BBD6520a11C169f81085039, hook() is 0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861, owner() is zero, name is Super Symbiotic LRT, symbol is weETHs, and write methods include enter, exit, manage, setAuthority, and setBeforeTransferHook; reads pinned to block 25101269.",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861",
+        "shows": "Onchain surfacer for assessed TellerWithMultiAssetSupport: authority() is the RolesAuthority, accountant() is 0xbe16605B22a7faCEf247363312121670DFe5afBE, vault() is the assessed BoringVault, isPaused is false, owner() is zero, shareLockPeriod is zero, and write methods include pause, unpause, update/allow/deny-style functions, deposit, bulkDeposit, bulkWithdraw, refundDeposit, and setAuthority.",
+        "chain": "Ethereum",
+        "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xbe16605B22a7faCEf247363312121670DFe5afBE",
+        "shows": "Onchain surfacer for assessed AccountantWithRateProviders: authority() is the RolesAuthority, base is WETH, owner() is zero, vault() is the assessed BoringVault, state includes exchange-rate bounds 10050 and 9950, minimumUpdateDelayInSeconds 21600, managementFee 0, performanceFee 0, isPaused false, and write methods include pause, unpause, updateExchangeRate, updateDelay, updateUpper, updateLower, updateManagementFee, updatePayoutAddress, and setRateProviderData.",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xCEA8039076E35a825854c5C2f85659430b06ec96",
+        "shows": "Onchain surfacer for the RolesAuthority owner address identifies it as a GnosisSafeProxy on Ethereum; zero-arg reads are not exposed on the surfacer.",
+        "chain": "Ethereum",
+        "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/BoringVault.sol",
+        "shows": "Audited BoringVault source at commit 939c77e...: manage(address,bytes,uint256), batched manage, enter, exit, and setBeforeTransferHook are external requiresAuth functions; manage makes arbitrary calls, enter mints shares, and exit burns shares and transfers assets.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/Roles/AccountantWithRateProviders.sol",
+        "shows": "Audited Accountant source at commit 939c77e...: pause, unpause, updateDelay, updateUpper, updateLower, updateManagementFee, updatePayoutAddress, setRateProviderData, updateExchangeRate, and claimFees are external requiresAuth functions; updateManagementFee enforces a 20% cap.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/Roles/ManagerWithMerkleVerification.sol",
+        "shows": "Audited Manager source at commit 939c77e...: setManageRoot is external requiresAuth, manageVaultWithMerkleVerification verifies Merkle proofs for target, decoder, selector, value flag, and address arguments before calling vault.manage.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      }
+    ],
+    "unknowns": [
+      "C3: no MIN_DELAY, delay constant, Governor, TimelockController, or queue/execute contract was discovered for the assessed weETHs RolesAuthority path; if one exists outside the pinned address graph, it was not verified in this run.",
+      "C4: /api/safe/owners and getOwners/getThreshold reads for 0xCEA8039076E35a825854c5C2f85659430b06ec96 failed or were rejected, so Safe threshold, owners, version, and signer independence remain unknown.",
+      "C5: no onchain governance contract or voting token was found in the fetched address graph; proposal threshold, voting period, quorum, and timelock delay are unknown.",
+      "C2: protocol-wide upgradeability across all Veda deployments and chains was not exhaustively assessed; only the pinned Ethereum weETHs contracts and directly surfaced contracts were checked."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Veda-Labs/boring-vault"
+      ],
+      "docs_url": "https://docs.veda.tech/",
+      "audits": [
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+          "date": "2024-03-20"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+          "date": "2025-03-28"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+          "date": "2025-05-28"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96",
+          "role": "Owner of the assessed weETHs RolesAuthority",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039",
+          "role": "RolesAuthority for the assessed weETHs BoringVault, Teller, and Accountant",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Veda provides BoringVault-based onchain vault infrastructure. Users deposit supported assets through a Teller and receive vault shares representing a claim on assets custodied in the BoringVault or deployed into DeFi positions. Curators and strategists allocate capital through Manager Merkle roots and DecoderAndSanitizer constraints, while the Accountant publishes exchange rates with onchain rate-limit and bounds checks. Exits use instant-withdrawal variants when available or a solver-based withdrawal queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0736e8-0658-8326-96e1-4b5eb8dc1a41",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Users do not have a verified unilateral forced-exit path from the assessed vault: direct BoringVault/Teller exits are role-gated and pauseable, while queued exits depend on solver fulfillment.",
+    "short_headline": "Exits are permissioned",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Enumerated exit-related functions for the assessed flow: BoringVault.exit; Teller.bulkWithdraw and refundDeposit; Teller instant-withdraw/withdraw is described in docs but was not visible as a deployed write method on the pinned Teller surfacer; queue-style exit is represented by AtomicQueue.updateAtomicRequest/solve in audited source and by BoringQueue requestOnChainWithdraw, withdrawAssets, and cancelOnChainWithdraw in Veda docs."
+        },
+        {
+          "code": "E2",
+          "text": "BoringVault.exit is external requiresAuth. Teller.bulkWithdraw is external requiresAuth, reverts when isPaused, checks per-asset allowWithdraws, prices through Accountant.getRateInQuoteSafe, and then calls vault.exit. Teller deposit/depositWithPermit are also requiresAuth and pause-gated."
+        },
+        {
+          "code": "E3",
+          "text": "Pause guards exist on Teller and Accountant. Teller.pause is requiresAuth and prevents deposits and the fetched Teller source shows bulkWithdraw also reverts when isPaused; Accountant.pause is requiresAuth and makes safe rate reads revert, which blocks Teller pricing. No maximum pause duration or auto-expiry was found in the fetched source."
+        },
+        {
+          "code": "E4",
+          "text": "No distinct slow governance-pause path was verified. The observed emergency/governance distinction collapses into RolesAuthority-controlled requiresAuth roles; the RolesAuthority owner is a Safe proxy with unknown threshold and signer set."
+        },
+        {
+          "code": "E5",
+          "text": "Queued redemption is documented as a two-step solver flow: users submit a withdrawal request, wait a configurable maturity that is typically about one hour, and third-party solvers fulfill; if the deadline expires, users can cancel and reclaim shares. A protocol-wide hard maximum queue duration was not verified onchain."
+        },
+        {
+          "code": "E6",
+          "text": "No permissionless forced-exit or escape hatch that unilaterally converts shares into underlying vault assets was found for the assessed contracts. Cancellation of an unfilled queued request, as documented, returns the user to holding shares rather than forcing asset redemption."
+        },
+        {
+          "code": "E7",
+          "text": "The docs state deposits and withdrawals are onchain smart-contract interactions using standard ERC20 approve/transfer flows and are compatible with generic wallets and libraries, so the official frontend is not the only technical path to submit transactions."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that direct asset redemption is mediated by requiresAuth exit/bulkWithdraw functions and pauseable Accountant/Teller pricing, with no verified onchain forced-exit path if solvers or privileged roles do not cooperate.",
+        "orange": "The orange case is that exits are onchain and queue-based, users can cancel unfilled requests back into shares, and a typical maturity is documented, so the design may be operationally delayed rather than purely custodial.",
+        "green": "The green case is that generic wallet access exists and the documented queue lets users submit requests onchain without relying on the official frontend."
+      },
+      "verdict": "Choosing red because the assessed contracts do not show a permissionless asset redemption path: BoringVault.exit and Teller.bulkWithdraw are requiresAuth, Teller and Accountant pause states can block pricing/redemption flows without a verified time cap, and the documented queue depends on solver fulfillment rather than giving users unilateral exit into assets. The orange argument is real for UX/liveness, but it does not satisfy permissionless exit under adversarial-admin conditions."
+    },
+    "evidence": [
+      {
+        "url": "https://veda.tech/",
+        "shows": "Capability probe via web.run returned Veda's public website; the page links docs, terms, and Immunefi bug bounty, describes Veda as an onchain vault provider, and states BoringVault secures over $3.5B TVL."
+      },
+      {
+        "url": "https://docs.veda.tech/",
+        "shows": "Veda docs describe Veda as a DeFi vault primitive for non-custodial, trust-minimized, composable products; docs state BoringVault anchors pricing, accounting, security, and optimization."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault",
+        "shows": "Public Veda-Labs boring-vault repository; README describes BoringVault, Manager, Teller, and Accountant, including offchain exchange-rate calculation and bounds/rate limiting."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+        "shows": "Public deployments directory for the Veda-Labs boring-vault repository."
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+        "shows": "0xMacro Seven Seas A-4 audit; report date March 20, 2024; audit scope includes BoringVault, AccountantWithRateProviders, ManagerWithMerkleVerification, TellerWithMultiAssetSupport, and related contracts at commit 939c77e25473dff3ed18fa104f004f7afd13452e.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+        "shows": "0xMacro Seven Seas A-36 audit dated March 28, 2025; scope was Teller legacy beforeTransfer support from PR 212 at commit f472abafb22f7a45e81df2814ae4bdf6f56dd74a.",
+        "commit": "f472abafb22f7a45e81df2814ae4bdf6f56dd74a"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+        "shows": "0xMacro Seven Seas A-45 audit dated May 28, 2025; scope was Teller deposit caps from PR 296 at commit c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/veda/information/",
+        "shows": "Immunefi Veda bug bounty page; Veda maximum bounty is $1,000,000, live since January 21, 2026, last updated May 14, 2026."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
+        "shows": "Onchain BoringVault surfacer for weETHs: authority is RolesAuthority, hook is Teller, owner is zero, write methods include enter and exit; reads pinned to block 25101269.",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861",
+        "shows": "Onchain Teller surfacer: vault is the assessed BoringVault, accountant is the assessed Accountant, authority is RolesAuthority, isPaused false at the read block, shareLockPeriod is zero, and write methods include bulkWithdraw, refundDeposit, deposit, depositWithPermit, pause, unpause, deny/allow functions, and setAuthority.",
+        "chain": "Ethereum",
+        "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xbe16605B22a7faCEf247363312121670DFe5afBE",
+        "shows": "Onchain Accountant surfacer: authority is RolesAuthority, vault is the assessed BoringVault, isPaused is false at the read block, minimumUpdateDelayInSeconds is 21600, and safe rate methods plus pause/unpause/updateExchangeRate/setRateProviderData are present.",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/BoringVault.sol",
+        "shows": "Audited BoringVault source at commit 939c77e...: exit is external requiresAuth, burns shares, and transfers assets; enter and manage are also external requiresAuth.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2/src/base/Roles/TellerWithMultiAssetSupport.sol",
+        "shows": "Audited Teller source at commit c3dde...: pause/unpause are requiresAuth, updateAssetData can allow or disallow withdrawals per asset, deny/allow functions and permissionedTransfers affect share transfers, bulkWithdraw is requiresAuth and reverts when paused or when withdrawAsset is not allowed, and deposit/depositWithPermit are requiresAuth and pause-gated.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2",
+        "chain": "Ethereum",
+        "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/Roles/AccountantWithRateProviders.sol",
+        "shows": "Audited Accountant source at commit 939c77e...: pause causes updateExchangeRate and safe rate calls to revert; getRateInQuoteSafe reverts if paused; setRateProviderData and updateExchangeRate are requiresAuth.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/atomic-queue/AtomicQueue.sol",
+        "shows": "Audited AtomicQueue source at commit 939c77e...: users can update AtomicRequests, and solve transfers offered shares from users to the solver then transfers desired assets back to users; the source does not provide a unilateral forced asset redemption path.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://docs.veda.tech/integrations/deposits-and-withdrawals-overview",
+        "shows": "Veda integration docs state deposits and withdrawals are onchain; instant withdrawal uses teller.withdraw when enabled and buffer liquidity is sufficient; BoringQueue is the standard/fallback path, with requestOnChainWithdraw, typical configurable one-hour maturity, third-party solver fulfillment, and cancellation if the deadline expires; compatible wallets include MetaMask, WalletConnect, Coinbase Wallet, Safe, wagmi, and viem."
+      }
+    ],
+    "unknowns": [
+      "E1: the deployed BoringQueue or AtomicQueue address for the assessed weETHs vault was not pinned or discovered, so queue-specific current bytecode and live parameters were not verified onchain.",
+      "E2: the current RolesAuthority public-capability bits for deposit, depositWithPermit, bulkWithdraw, and any instant-withdraw selector were not successfully read, so public-vs-role admission for each selector is inferred from fetched source comments and architecture, not from per-selector canCall reads.",
+      "E3: pause-role holders for Teller and Accountant were not enumerated via hasRole/getUserRoles, and no maximum pause duration was found.",
+      "E5: docs state a typical about-one-hour maturity but configurable; the onchain maximum queue duration, if any, was not verified.",
+      "E6: no escape hatch was found in the fetched contracts or docs, but protocol-wide deployments outside the pinned weETHs graph were not exhaustively searched."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Veda-Labs/boring-vault"
+      ],
+      "docs_url": "https://docs.veda.tech/",
+      "audits": [
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+          "date": "2024-03-20"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+          "date": "2025-03-28"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+          "date": "2025-05-28"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96",
+          "role": "Owner of the assessed weETHs RolesAuthority",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039",
+          "role": "RolesAuthority for the assessed weETHs BoringVault, Teller, and Accountant",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Veda provides BoringVault-based onchain vault infrastructure. Users deposit supported assets through a Teller and receive vault shares representing a claim on assets custodied in the BoringVault or deployed into DeFi positions. Curators and strategists allocate capital through Manager Merkle roots and DecoderAndSanitizer constraints, while the Accountant publishes exchange rates with onchain rate-limit and bounds checks. Exits use instant-withdrawal variants when available or a solver-based withdrawal queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0736e8-0658-8326-96e1-4b5eb8dc1a41",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Worst unmitigated dependency exposure is ~100% of the assessed weETHs vault: offchain pricing and role-mutable rate-provider/strategy dependencies can affect principal-relevant accounting without a verified exit window.",
+    "short_headline": "Mutable offchain dependencies",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "External contract calls are core to the assessed architecture: Accountant can read external rate providers for quote assets, Manager-approved Merkle leaves can route BoringVault calls into external DeFi targets, and docs describe assets being deployed into DeFi positions. If a rate provider or external strategy target fails, deposit/withdraw pricing or vault asset value can be affected."
+        },
+        {
+          "code": "A2",
+          "text": "The Accountant exchange rate is an offchain-reported value written onchain by an authorized role. Misreporting within the live upper/lower bounds can change share pricing, while updates outside bounds or before the 21600-second delay pause safe rate reads and can halt Teller flows."
+        },
+        {
+          "code": "A3",
+          "text": "Bridge and cross-chain adapter risk is documented as an architectural capability through audited Hyperlane, LayerZero, CCIP, and bridge-related decoder coverage, but no material TVS by bridge or chain was verified for this run."
+        },
+        {
+          "code": "A4",
+          "text": "Nested collateral/restaking exposure is plausible for the assessed vault because the onchain vault name is Super Symbiotic LRT and Veda docs describe vault assets being deployed into DeFi strategies, but the exact collateral chain and per-underlying actor powers were not enumerated from fetched evidence."
+        },
+        {
+          "code": "A5",
+          "text": "The public repository is forked from Se7en-Seas/boring-vault; DeFiLlama fork-lineage fields were not fetched separately, so no DeFiLlama forkedFrom finding is asserted."
+        },
+        {
+          "code": "A6",
+          "text": "Live mitigations exist but are not full fallbacks: the Accountant has current bounds 10050/9950 and a 21600-second minimum update delay, out-of-bound or too-fast exchange-rate updates pause safe rate reads, and Manager Merkle proofs constrain target/selector/argument calls. These controls limit abrupt changes but do not make users whole if an approved dependency fails or if an authorized actor changes the dependency surface."
+        },
+        {
+          "code": "A7",
+          "text": "No evidence was found that the assessed Veda module is its own L2, L3, appchain, or app-rollup; the assessed contracts are Ethereum contracts, so third-party chain sequencer/liveness risk was not treated as a protocol A7 dependency."
+        },
+        {
+          "code": "A8",
+          "text": "Withdrawal execution has a solver-liveness dependency in the documented queue path: third-party solvers fulfill matured requests, and if a request is not fulfilled by its deadline, users can cancel rather than receive the desired asset."
+        },
+        {
+          "code": "A9",
+          "text": "The external dependency surface is governance/role mutable: Accountant.setRateProviderData can change an asset's rate provider, and Manager.setManageRoot can authorize new external targets/functions/arguments for strategist calls. No verified timelock or exit window was found on these specific dependency-surface changes."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that the Accountant relies on authorized offchain exchange-rate updates and mutable rate providers, while Manager roots can authorize new external strategy targets, so a bad dependency or hot-swapped dependency can affect principal-relevant accounting for roughly 100% of the assessed vault.",
+        "orange": "The orange case is that exchange-rate bounds, minimum update delay, pause-on-bad-update behavior, Merkle proofs, decoder/sanitizer constraints, and opt-in vault-specific strategies materially reduce sudden dependency failure blast radius.",
+        "green": "The green case is that Veda's architecture tries to isolate vault strategies and constrain external calls, and absent a bad authorized update, external dependency failures may pause or degrade performance rather than automatically steal funds."
+      },
+      "verdict": "Choosing red because the assessed architecture has principal-relevant external dependencies and mutable dependency surfaces: authorized roles can update rate providers and exchange rates, and can update Manager Merkle roots that determine which external protocols the vault may call, with no verified timelock or exit window on those changes. The live Accountant bounds and Merkle constraints are real mitigations, but they do not make users whole or prevent dependency hot-swaps; impacted TVS is estimated at ~100% of the assessed weETHs vault, while the exact share of total Veda TVS remains unknown."
+    },
+    "evidence": [
+      {
+        "url": "https://veda.tech/",
+        "shows": "Capability probe via web.run returned Veda's public website; the page links docs, terms, and Immunefi bug bounty, describes Veda as an onchain vault provider, and states BoringVault secures over $3.5B TVL."
+      },
+      {
+        "url": "https://docs.veda.tech/",
+        "shows": "Veda docs describe Veda as a DeFi vault primitive for non-custodial, trust-minimized, composable products; docs state BoringVault anchors pricing, accounting, security, and optimization."
+      },
+      {
+        "url": "https://docs.veda.tech/architecture-and-flow-of-funds",
+        "shows": "Docs enumerate the BoringVault, Teller, Accountant, Manager, DecoderAndSanitizer, optional Hook, and BoringQueue flow-of-funds architecture."
+      },
+      {
+        "url": "https://docs.veda.tech/architecture-and-flow-of-funds/core-components",
+        "shows": "Core-components docs state BoringVault holds custody, Teller handles user deposits/withdrawals, Accountant publishes exchange rates with offchain updates and onchain safety checks, Manager controls strategies via Merkle tree target/function/parameter permissions, Hooks can enforce compliance, and BoringQueue uses time-delayed solver withdrawals with cancellation."
+      },
+      {
+        "url": "https://docs.veda.tech/security-and-risk-controls/audits",
+        "shows": "Veda audit page lists audited coverage for full architecture components and also lists decoders/bridging-related coverage including Hyperlane, LayerZero, CCIP, EtherFi, Morpho, Aave, Euler, PancakeSwapV3, ITBPosition, and Karak; this shows the architecture can integrate external protocols and bridge adapters, but not live material TVS per adapter."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault",
+        "shows": "Public Veda-Labs boring-vault repository; README describes BoringVault, Manager, Teller, and Accountant, including offchain exchange-rate calculation and bounds/rate limiting."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+        "shows": "Public deployments directory for the Veda-Labs boring-vault repository."
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+        "shows": "0xMacro Seven Seas A-4 audit; report date March 20, 2024; audit scope includes BoringVault, AccountantWithRateProviders, ManagerWithMerkleVerification, TellerWithMultiAssetSupport, and related contracts at commit 939c77e25473dff3ed18fa104f004f7afd13452e.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+        "shows": "0xMacro Seven Seas A-36 audit dated March 28, 2025; scope was Teller legacy beforeTransfer support from PR 212 at commit f472abafb22f7a45e81df2814ae4bdf6f56dd74a.",
+        "commit": "f472abafb22f7a45e81df2814ae4bdf6f56dd74a"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+        "shows": "0xMacro Seven Seas A-45 audit dated May 28, 2025; scope was Teller deposit caps from PR 296 at commit c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/veda/information/",
+        "shows": "Immunefi Veda bug bounty page; Veda maximum bounty is $1,000,000, live since January 21, 2026, last updated May 14, 2026."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
+        "shows": "Onchain BoringVault surfacer: name is Super Symbiotic LRT, symbol weETHs, authority is RolesAuthority, hook is Teller, totalSupply is 22376648033743865650716 at the read block, and write methods include manage, enter, and exit.",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xbe16605B22a7faCEf247363312121670DFe5afBE",
+        "shows": "Onchain Accountant surfacer: accountantState includes exchangeRate 1052190915208330071, allowedExchangeRateChangeUpper 10050, allowedExchangeRateChangeLower 9950, minimumUpdateDelayInSeconds 21600, isPaused false, and write methods include setRateProviderData and updateExchangeRate.",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/Roles/AccountantWithRateProviders.sol",
+        "shows": "Audited Accountant source at commit 939c77e...: rateProviderData maps assets to rate providers; setRateProviderData is requiresAuth; updateExchangeRate is requiresAuth and pauses when the update is too soon or outside upper/lower bounds; getRateInQuote calls an external rateProvider.getRate for non-pegged quote assets.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/Roles/ManagerWithMerkleVerification.sol",
+        "shows": "Audited Manager source at commit 939c77e...: setManageRoot is requiresAuth and can update a strategist's Merkle root; manageVaultWithMerkleVerification checks proofs over decoder, target, value flag, selector, and argument addresses before invoking vault.manage on external targets.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/BoringVault.sol",
+        "shows": "Audited BoringVault source at commit 939c77e...: manage makes arbitrary function calls from the vault and can transfer ETH value; enter and exit move assets and shares.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/atomic-queue/AtomicQueue.sol",
+        "shows": "Audited AtomicQueue source at commit 939c77e...: solver fulfillment is needed to exchange offered shares for wanted assets; failed or absent solver fulfillment leaves requests unfilled rather than forcibly redeeming vault assets.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://docs.veda.tech/integrations/deposits-and-withdrawals-overview",
+        "shows": "Withdrawal docs state BoringQueue requests mature after a configurable period, typically around one hour, and are fulfilled by third-party solvers; users can cancel if the deadline expires."
+      }
+    ],
+    "unknowns": [
+      "A1: the live Manager address, deployed Merkle roots, DecoderAndSanitizer addresses, and complete external target list for the assessed weETHs vault were not discovered from the pinned address graph.",
+      "A2: the specific address or committee holding the exchange-rate updater role was not enumerated with getUserRoles/hasRole reads.",
+      "A3: material TVS routed through Hyperlane, LayerZero, CCIP, or any bridge adapter was not verified, so bridge risk was not used as the primary grade driver.",
+      "A4: the complete nested collateral chain for the Super Symbiotic LRT/weETHs vault, including any LST/LRT/restaking operators and freezing/slashing powers, was not reconstructed.",
+      "A5: DeFiLlama forkedFrom fields were not fetched in this run.",
+      "A6: activation status of every per-strategy decoder/sanitizer and every per-vault fallback was not determined; only the assessed Accountant state and generic Manager proof mechanism were verified.",
+      "A9: no timelock was found for setRateProviderData or setManageRoot, but an exhaustive search for off-path timelock wrappers around role execution was not completed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Veda-Labs/boring-vault"
+      ],
+      "docs_url": "https://docs.veda.tech/",
+      "audits": [
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+          "date": "2024-03-20"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+          "date": "2025-03-28"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+          "date": "2025-05-28"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96",
+          "role": "Owner of the assessed weETHs RolesAuthority",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039",
+          "role": "RolesAuthority for the assessed weETHs BoringVault, Teller, and Accountant",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Veda provides BoringVault-based onchain vault infrastructure. Users deposit supported assets through a Teller and receive vault shares representing a claim on assets custodied in the BoringVault or deployed into DeFi positions. Curators and strategists allocate capital through Manager Merkle roots and DecoderAndSanitizer constraints, while the Accountant publishes exchange rates with onchain rate-limit and bounds checks. Exits use instant-withdrawal variants when available or a solver-based withdrawal queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0736e8-0658-8326-96e1-4b5eb8dc1a41",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "The assessed vault is technically reachable outside the official UI, but the Teller hook includes onchain deny lists and permissioned-transfer controls.",
+    "short_headline": "Onchain blocklists exist",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Contract-level allow/deny controls exist on user-facing flows. Teller deposit and depositWithPermit are requiresAuth and depend on assetData.allowDeposits; bulkWithdraw is requiresAuth and depends on assetData.allowWithdraws; the hook can deny senders, recipients, or operators and can require permissioned transfer operators."
+        },
+        {
+          "code": "A2",
+          "text": "For admission, deposits appear intended to be public once the RolesAuthority makes the selector public and the asset is enabled, but live per-selector capability bits were not read. Withdraw fulfillment uses privileged or solver-mediated paths rather than an unconditional user-only write path; solver liveness is mainly an ability-to-exit/dependency issue, not an admission-grade driver."
+        },
+        {
+          "code": "A3",
+          "text": "Official terms impose passive eligibility restrictions on the interface, including a U.S./restricted-territory representation. Active runtime enforcement such as IP blocking or wallet screening was not verified from fetched evidence."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent technical paths exist: Veda documents direct smart-contract deposit/withdraw flows compatible with generic wallets and viem/wagmi, and the website advertises SDKs and APIs. These paths reduce frontend capture but do not override contract-level blocklist/permissioned-transfer controls."
+        },
+        {
+          "code": "A4",
+          "text": "Onchain sanctions/compliance-style tooling exists at the contract layer as address-level deny lists and permissioned-transfer controls in the Teller hook. The functions are requiresAuth and the deployed Teller surfacer exposes deny/allow functions and deny-list views."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through block explorers/DefiPunkd surfacers. Write access is not purely open because relevant writes are mediated by RolesAuthority capabilities, per-asset allow flags, pause states, and the before-transfer hook's deny/permissioned-operator checks."
+        },
+        {
+          "code": "A6",
+          "text": "The ToS/legal page was fetched and contains a verbatim jurisdictional eligibility clause; sanctions and VPN-circumvention restrictions also appear in the same section but were not used as grade levers because the decisive issue is onchain gating."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that admission and transferability can be restricted at the contract layer through requiresAuth-controlled deny lists, per-asset allow flags, deposit caps, and permissioned-transfer operator controls.",
+        "orange": "The orange case is that deposits may be public when capabilities are enabled, and independent wallet/SDK access exists, but the official publisher and role holders retain operational control over enabled assets and blocked addresses.",
+        "green": "The green case is that users can interact directly with contracts through standard wallets and libraries, and frontend terms alone should not determine access grading."
+      },
+      "verdict": "Choosing red because the grade turns on the contracts, not the frontend: the deployed Teller exposes deny/allow functions and deny-list views, the audited Teller hook can block from/to/operator transfers and can require permissioned transfer operators, and entry/exit selectors are mediated by RolesAuthority and per-asset flags. Independent wallet and SDK paths exist, but they cannot bypass the onchain blocklist and permissioned-transfer surface."
+    },
+    "evidence": [
+      {
+        "url": "https://veda.tech/",
+        "shows": "Capability probe via web.run returned Veda's public website; the page links docs, terms, and Immunefi bug bounty, describes Veda as an onchain vault provider, and states BoringVault secures over $3.5B TVL."
+      },
+      {
+        "url": "https://docs.veda.tech/",
+        "shows": "Veda docs describe Veda as a DeFi vault primitive for non-custodial, trust-minimized, composable products; docs state BoringVault anchors pricing, accounting, security, and optimization."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault",
+        "shows": "Public Veda-Labs boring-vault repository; README describes BoringVault, Manager, Teller, and Accountant, including offchain exchange-rate calculation and bounds/rate limiting."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+        "shows": "Public deployments directory for the Veda-Labs boring-vault repository."
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+        "shows": "0xMacro Seven Seas A-4 audit; report date March 20, 2024; audit scope includes BoringVault, AccountantWithRateProviders, ManagerWithMerkleVerification, TellerWithMultiAssetSupport, and related contracts at commit 939c77e25473dff3ed18fa104f004f7afd13452e.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+        "shows": "0xMacro Seven Seas A-36 audit dated March 28, 2025; scope was Teller legacy beforeTransfer support from PR 212 at commit f472abafb22f7a45e81df2814ae4bdf6f56dd74a.",
+        "commit": "f472abafb22f7a45e81df2814ae4bdf6f56dd74a"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+        "shows": "0xMacro Seven Seas A-45 audit dated May 28, 2025; scope was Teller deposit caps from PR 296 at commit c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/veda/information/",
+        "shows": "Immunefi Veda bug bounty page; Veda maximum bounty is $1,000,000, live since January 21, 2026, last updated May 14, 2026."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861",
+        "shows": "Onchain Teller surfacer: write methods include denyAll, denyFrom, denyTo, denyOperator, allowAll, allowFrom, allowTo, allowOperator, deposit, depositWithPermit, bulkDeposit, bulkWithdraw, pause, unpause, and setAuthority; view methods include fromDenyList, toDenyList, operatorDenyList, and isSupported.",
+        "chain": "Ethereum",
+        "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
+        "shows": "Onchain BoringVault surfacer: hook is the Teller address and transfer/transferFrom are public ERC20 methods that call the configured hook in the fetched BoringVault source.",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2/src/base/Roles/TellerWithMultiAssetSupport.sol",
+        "shows": "Audited Teller source at commit c3dde...: beforeTransferData tracks denyFrom, denyTo, denyOperator, permissionedOperator, and shareUnlockTime; admin functions denyAll, denyFrom, denyTo, denyOperator, setPermissionedTransfers, allowPermissionedOperator, and denyPermissionedOperator are requiresAuth; beforeTransfer reverts if addresses are denied or if permissionedTransfers is true and the operator is not permissioned.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2",
+        "chain": "Ethereum",
+        "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861"
+      },
+      {
+        "url": "https://docs.veda.tech/integrations/deposits-and-withdrawals-overview",
+        "shows": "Veda docs state all deposits and withdrawals are onchain through Veda smart contracts, use ERC20 approve/transfer patterns, and are compatible with Privy, MetaMask, WalletConnect, Coinbase Wallet, Safe, RainbowKit, wagmi, and viem."
+      },
+      {
+        "url": "https://veda.tech/",
+        "shows": "Veda website says the platform includes SDKs and APIs for integration, supporting a non-official-frontend access path in addition to the official app."
+      },
+      {
+        "url": "https://veda.tech/terms",
+        "shows": "Terms include the access representation: \"You are not a U.S. Person, and are not accessing the Interface from within the United States or a Restricted Territory\"."
+      }
+    ],
+    "unknowns": [
+      "A2: current RolesAuthority isCapabilityPublic/canCall values for the deployed Teller deposit, depositWithPermit, bulkDeposit, and bulkWithdraw selectors were not read.",
+      "A3: active frontend enforcement such as IP geo-blocking, wallet screening, KYC wall, or runtime jurisdiction banner was not tested or verified.",
+      "A3b: no third-party frontend or aggregator route was verified beyond generic wallet/library/SDK access paths.",
+      "A4: current deny-list contents for specific addresses were not enumerated, and no OFAC oracle integration was found.",
+      "A6: only the public terms page was extracted; app-specific banner copy, if any, was not captured."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Veda-Labs/boring-vault"
+      ],
+      "docs_url": "https://docs.veda.tech/",
+      "audits": [
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+          "date": "2024-03-20"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+          "date": "2025-03-28"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+          "date": "2025-05-28"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96",
+          "role": "Owner of the assessed weETHs RolesAuthority",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039",
+          "role": "RolesAuthority for the assessed weETHs BoringVault, Teller, and Accountant",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Veda provides BoringVault-based onchain vault infrastructure. Users deposit supported assets through a Teller and receive vault shares representing a claim on assets custodied in the BoringVault or deployed into DeFi positions. Curators and strategists allocate capital through Manager Merkle roots and DecoderAndSanitizer constraints, while the Accountant publishes exchange rates with onchain rate-limit and bounds checks. Exits use instant-withdrawal variants when available or a solver-based withdrawal queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "veda",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-15",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0736e8-0658-8326-96e1-4b5eb8dc1a41",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "The assessed contracts are verified and have public source plus audit coverage, but exact deployed-source correspondence and post-audit drift are not fully pinned.",
+    "short_headline": "Verified, drift unclear",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "The assessed BoringVault ABI endpoint reports verified true, abiSource sourcify, and proxy null; the assessed Teller ABI endpoint reports verified true, abiSource etherscan, and proxy null. RolesAuthority, Accountant, and the Safe owner also had surfacers with ABI sources, but not every ABI JSON body was expanded enough in the transcript to rely on the verified boolean for each."
+        },
+        {
+          "code": "V2",
+          "text": "A public source repo exists at Veda-Labs/boring-vault, and fetched pinned source files for BoringVault, TellerWithMultiAssetSupport, and AccountantWithRateProviders correspond by contract family and function set to the deployed ABI/surfacers. A deploy-commit or independent bytecode diff tying these exact source files to the live bytecode was not performed."
+        },
+        {
+          "code": "V3",
+          "text": "Audit evidence exists. The 0xMacro A-4 report scopes BoringVault, AccountantWithRateProviders, ManagerWithMerkleVerification, TellerWithMultiAssetSupport, and related contracts at commit 939c77e25473dff3ed18fa104f004f7afd13452e; A-36 covers Teller legacy beforeTransfer support at commit f472abafb22f7a45e81df2814ae4bdf6f56dd74a; A-45 covers Teller deposit caps at commit c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2. The pinned A-1/A-2/A-3 audit links are mostly Cellar/Pendle/weETH-extension scope rather than the assessed BoringVault core."
+        },
+        {
+          "code": "V4",
+          "text": "The fetched audit docs include 0xMacro and a Spearbit/Cantina full-architecture review entry. Spearbit is on the rubric's recognized-firm list, but the Spearbit PDF was not parsed in this run; 0xMacro is not in the provided recognized-firm list, so 0xMacro-only coverage would be orange-at-best for a green claim."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift is not ruled out. The public repo currently shows thousands of commits on main, while the most detailed fetched core audit pin is a 2024 commit and later fetched 2025 audits cover specific Teller changes. No current deployed-address manifest or bytecode-match proof was fetched tying the assessed deployment to a fully re-audited current commit."
+        },
+        {
+          "code": "V6",
+          "text": "For the assessed core contracts, BoringVault and Teller ABI endpoints report proxy null. The RolesAuthority owner is a GnosisSafeProxy; that is a governance/control actor rather than the vault implementation itself. Protocol-wide proxy use outside the pinned address graph was not exhaustively checked."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that without a deployed commit or bytecode diff, a reviewer cannot prove the live implementation exactly equals the audited source, and protocol-wide deployments remain unchecked.",
+        "orange": "The orange case is that the main assessed contracts are verified with public ABI/source paths and have relevant audits, but current deployed-source correspondence, recognized-firm detailed scope, and post-audit drift remain unresolved.",
+        "green": "The green case is that BoringVault and Teller report verified true with proxy null, the repository is public, and multiple BoringVault/Teller audits and pinned source files were fetched."
+      },
+      "verdict": "Choosing orange because the assessed BoringVault and Teller are verified and non-proxy by ABI endpoint, public source exists, and relevant audits cover the contract families, but the run did not establish exact live bytecode-to-commit correspondence or fully clear post-audit drift. Red is too harsh because verified bytecode, public source, and audits exist; green is not supportable without a pinned deployed commit or equivalent correspondence and clearer current audit coverage."
+    },
+    "evidence": [
+      {
+        "url": "https://veda.tech/",
+        "shows": "Capability probe via web.run returned Veda's public website; the page links docs, terms, and Immunefi bug bounty, describes Veda as an onchain vault provider, and states BoringVault secures over $3.5B TVL."
+      },
+      {
+        "url": "https://docs.veda.tech/",
+        "shows": "Veda docs describe Veda as a DeFi vault primitive for non-custodial, trust-minimized, composable products; docs state BoringVault anchors pricing, accounting, security, and optimization."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault",
+        "shows": "Public Veda-Labs boring-vault repository; README describes BoringVault, Manager, Teller, and Accountant, including offchain exchange-rate calculation and bounds/rate limiting."
+      },
+      {
+        "url": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+        "shows": "Public deployments directory for the Veda-Labs boring-vault repository."
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+        "shows": "0xMacro Seven Seas A-4 audit; report date March 20, 2024; audit scope includes BoringVault, AccountantWithRateProviders, ManagerWithMerkleVerification, TellerWithMultiAssetSupport, and related contracts at commit 939c77e25473dff3ed18fa104f004f7afd13452e.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+        "shows": "0xMacro Seven Seas A-36 audit dated March 28, 2025; scope was Teller legacy beforeTransfer support from PR 212 at commit f472abafb22f7a45e81df2814ae4bdf6f56dd74a.",
+        "commit": "f472abafb22f7a45e81df2814ae4bdf6f56dd74a"
+      },
+      {
+        "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+        "shows": "0xMacro Seven Seas A-45 audit dated May 28, 2025; scope was Teller deposit caps from PR 296 at commit c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/veda/information/",
+        "shows": "Immunefi Veda bug bounty page; Veda maximum bounty is $1,000,000, live since January 21, 2026, last updated May 14, 2026."
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
+        "shows": "ABI endpoint for assessed BoringVault returned contractName BoringVault, abiSource sourcify, verified true, proxy null, 26 functions, and 6 events.",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861",
+        "shows": "ABI endpoint for assessed Teller returned abiSource etherscan, verified true, proxy null, and ABI entries including deposit, depositWithPermit, bulkDeposit, bulkWithdraw, deny/allow functions, pause, unpause, and beforeTransfer.",
+        "chain": "Ethereum",
+        "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x402DFF43b4f24b006BBD6520a11C169f81085039",
+        "shows": "RolesAuthority surfacer identifies the contract as RolesAuthority with ABI source sourcify and exposes owner, authority, canCall, setRoleCapability, setUserRole, and related functions.",
+        "chain": "Ethereum",
+        "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xbe16605B22a7faCEf247363312121670DFe5afBE",
+        "shows": "Accountant surfacer identifies the contract as AccountantWithRateProviders with ABI source etherscan and exposes accountantState, rate-provider and exchange-rate methods, and pause/unpause/update methods.",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xCEA8039076E35a825854c5C2f85659430b06ec96",
+        "shows": "Surfacer for the RolesAuthority owner identifies it as a GnosisSafeProxy with ABI source sourcify.",
+        "chain": "Ethereum",
+        "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/BoringVault.sol",
+        "shows": "Pinned source for BoringVault at the A-4 audited commit, matching the deployed contract family and function set including manage, enter, exit, setBeforeTransferHook, transfer, and transferFrom.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0x917ceE801a67f933F2e6b33fc0cd1ed2d5909d88"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2/src/base/Roles/TellerWithMultiAssetSupport.sol",
+        "shows": "Pinned source for TellerWithMultiAssetSupport at the A-45 audited commit, matching the deployed Teller family and function set including deposit, depositWithPermit, bulkDeposit, bulkWithdraw, deny/allow functions, permissionedTransfers, and depositCap.",
+        "commit": "c3dde9653a59ffbb52fd0d3493c5ceaa5850dab2",
+        "chain": "Ethereum",
+        "address": "0x99dE9e5a3eC2750a6983C8732E6e795A35e7B861"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Se7en-Seas/boring-vault/939c77e25473dff3ed18fa104f004f7afd13452e/src/base/Roles/AccountantWithRateProviders.sol",
+        "shows": "Pinned source for AccountantWithRateProviders at the A-4 audited commit, matching the deployed Accountant family and function set including accountantState, rateProviderData, updateExchangeRate, setRateProviderData, and safe rate reads.",
+        "commit": "939c77e25473dff3ed18fa104f004f7afd13452e",
+        "chain": "Ethereum",
+        "address": "0xbe16605B22a7faCEf247363312121670DFe5afBE"
+      },
+      {
+        "url": "https://docs.veda.tech/security-and-risk-controls/audits",
+        "shows": "Veda audit docs list full-architecture and component reviews, including Full Architecture by 0xMacro, Full Architecture Arctic version by Spearbit/Cantina, and multiple Accountant/Teller and decoder-specific reviews."
+      },
+      {
+        "url": "https://github.com/Se7en-Seas/boring-vault/tree/main/audit",
+        "shows": "Pinned audit folder in the Se7en-Seas boring-vault repo contains 0xMacro and Spearbit PDF audit artifacts for BoringVault/Arctic architecture."
+      },
+      {
+        "url": "https://0xmacro.com/library/audits/sevenSeas-1.html",
+        "shows": "Pinned Seven Seas A-1 audit by 0xMacro dated March 10, 2024; scope was cellar-contracts at commit 0a7d659064c9070bd369d5c511ba94c6b01bbab2, not the assessed BoringVault core.",
+        "commit": "0a7d659064c9070bd369d5c511ba94c6b01bbab2"
+      },
+      {
+        "url": "https://0xmacro.com/library/audits/sevenSeas-2.html",
+        "shows": "Pinned Seven Seas A-2 audit by 0xMacro dated March 15, 2024; scope was PendleAdaptor/PendleExtension and related cellar-contracts commits, not the assessed BoringVault core."
+      },
+      {
+        "url": "https://0xmacro.com/library/audits/sevenSeas-3.html",
+        "shows": "Pinned Seven Seas A-3 audit by 0xMacro dated March 20, 2024; scope was a weETH extension in cellar-contracts, not the assessed BoringVault core."
+      }
+    ],
+    "unknowns": [
+      "V1: ABI JSON verified booleans for RolesAuthority, Accountant, and Safe owner were not all visible in expanded transcript output, although surfacers with ABI sources were fetched.",
+      "V2: no local compile, bytecode diff, or deployed-address manifest tying the exact live bytecode to a specific Veda-Labs commit was performed.",
+      "V3: the Spearbit/Cantina PDF was not parsed with a PDF screenshot workflow, so its exact contracts, commit, and date are not cited beyond Veda's audit index.",
+      "V5: materiality of post-audit drift was not sampled across all current source changes; drift is treated as an unresolved scope limit rather than a proven exploitable change.",
+      "V6: proxy/implementation posture for non-pinned Veda deployments across other chains was not assessed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Veda-Labs/boring-vault"
+      ],
+      "docs_url": "https://docs.veda.tech/",
+      "audits": [
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-4",
+          "date": "2024-03-20"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-36",
+          "date": "2025-03-28"
+        },
+        {
+          "firm": "0xMacro",
+          "url": "https://macroaudits.com/library/audits/sevenSeas-45",
+          "date": "2025-05-28"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/veda/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Veda-Labs/boring-vault/tree/main/deployments",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xCEA8039076E35a825854c5C2f85659430b06ec96",
+          "role": "Owner of the assessed weETHs RolesAuthority",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x402DFF43b4f24b006BBD6520a11C169f81085039",
+          "role": "RolesAuthority for the assessed weETHs BoringVault, Teller, and Accountant",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "unknown",
+      "about": "Veda provides BoringVault-based onchain vault infrastructure. Users deposit supported assets through a Teller and receive vault shares representing a claim on assets custodied in the BoringVault or deployed into DeFi positions. Curators and strategists allocate capital through Manager Merkle roots and DecoderAndSanitizer constraints, while the Accountant publishes exchange rates with onchain rate-limit and bounds checks. Exits use instant-withdrawal variants when available or a solver-based withdrawal queue."
+    }
+  }
+]
