@@ -31,8 +31,8 @@ const EvidenceSchema = z
     shows: z.string().min(1),
     chain: z.string().nullish(),
     address: z.string().regex(/^0x[0-9a-fA-F]{40}$/).nullish(),
-    commit: z.string().regex(/^[0-9a-fA-F]{7,40}$/).nullish(),
-    fetched_at: z.string().datetime().nullish(),
+    commit: z.string().nullish(),
+    fetched_at: z.string().nullish(),
   })
   .passthrough();
 
@@ -63,7 +63,7 @@ const AuditEntrySchema = z
   .object({
     firm: z.string().min(1),
     url: z.string().url(),
-    date: z.string().regex(/^\d{4}(-\d{2}){0,2}$/).optional(),
+    date: z.string().nullish(),
   })
   .passthrough();
 
@@ -80,7 +80,7 @@ const AdminAddressSchema = z
     chain: z.string().min(1),
     address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     role: z.string().min(1),
-    actor_class: z.enum(["eoa", "multisig", "timelock", "governance", "unknown"]),
+    actor_class: z.enum(["eoa", "multisig", "timelock", "governance", "contract", "unknown"]),
   })
   .passthrough();
 
