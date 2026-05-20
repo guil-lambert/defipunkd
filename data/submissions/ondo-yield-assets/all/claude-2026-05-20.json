@@ -1,0 +1,257 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/f337e962-85ed-4e42-bdf6-b0ed89e7e834",
+    "grade": "red",
+    "headline": "Ondo team holds unilateral upgrade/mint/oracle-swap/sweep keys on user-fund contracts with no timelock; USDY freeze is a 1-of-2 Safe",
+    "short_headline": "Centralized admin, no timelock",
+    "rationale": {
+      "findings": [
+        { "code": "C1", "text": "OUSG_InstantManager (0x9335…2643a) is an AccessControlEnumerable contract with DEFAULT_ADMIN_ROLE (set oracle/compliance/IDRegistry/router/fees, accept tokens, unpause, retrieveTokens, grantRole), PAUSER_ROLE (pause subscribe/redeem with no time cap), CONFIGURER_ROLE (min deposit/redemption/RWA price), and ADMIN_SUBSCRIPTION_ROLE (mint OUSG to KYC'd recipients). DEFAULT_ADMIN_ROLE was granted in the constructor to a `_defaultAdmin` address passed by the deployer; the contract creator is 0x094Bee6b…0482882 (Ondo Finance EOA-style deployer)." },
+        { "code": "C1", "text": "OUSG token (0x1B19…ee92) is a TransparentUpgradeableProxy → implementation 0x1CEB…f3Ff. Live state at block 25045915 shows MINTER_ROLE, BURNER_ROLE, PAUSER_ROLE, KYC_CONFIGURER_ROLE all defined and paused()=false. MINTER_ROLE holders can mint unbacked supply; PAUSER_ROLE holders can pause every transfer; KYC_CONFIGURER_ROLE can swap the kycRegistry (currently 0x56A5…463e7) to a registry under their control." },
+        { "code": "C2", "text": "OUSG token, USDY token (0x96F6…985C), OUSG_InstantManager, OndoIDRegistry (0xcf69…D97df) are all TransparentUpgradeableProxy. The EIP-1967 proxy admin slot on the OUSG token's constructor bytecode contains an address (concrete value masked behind admin-only `admin()` getter), and the proxy exposes `changeAdmin`, `upgradeTo`, `upgradeToAndCall` — proxy admin can replace any of these implementations with arbitrary bytecode. This is upgradeable in the strict sense; not 'mixed'." },
+        { "code": "C3", "text": "No timelock contract is present on any privileged path. Admin / pauser / configurer functions on OUSG_InstantManager, on the OUSG token, on OndoOracle, on USDY Blocklist execute immediately on the next block. The grading delay on the uncontested fast path is 0 seconds." },
+        { "code": "C4", "text": "USDY Blocklist (0xd8c8…B0a8) is Ownable2Step; owner is 0x99ca4f54…FD1173 — a Gnosis Safe v1.4.1 with threshold=1 and 2 owners (0xae82…5416, 0x72BB…9aFD). Any single signer of those two EOAs can call addToBlocklist(address[]) to freeze any USDY holder (USDY's transfer hook reverts when isBlocked returns true). This is a single-signature freeze key on a T1 path. Identity classification of the two signer EOAs is not on-chain — treated as insider by default for an Ondo-operated key." },
+        { "code": "C5", "text": "No on-chain Governor / GovernorBravo / OZ Governor / Aragon Voting contract was discovered for OUSG or USDY administration. The ONDO ERC-20 token (0xfABA…BE3) exists but Ondo's docs at /trust-and-security describe a traditional GP/LP fund structure (Ondo I LP, GP = Ondo I GP LLC, Investment Manager = Ondo Capital Management LLC) with no on-chain DAO vote in the upgrade path." },
+        { "code": "C6", "text": "Pause is split across PAUSER_ROLE on the InstantManager (gates subscribe / redeem) and PAUSER_ROLE on the OUSG token itself (gates ALL transfers including secondary). No documented time cap on either pause and no separate guardian role with a different actor than the main admin." },
+        { "code": "C7", "text": "Highest reachable T1 functions on the uncontested fast path: (a) the proxy admin can call upgradeToAndCall on the OUSG token / OUSG_InstantManager / USDY / OndoIDRegistry, replacing fund-handling logic with arbitrary code; (b) DEFAULT_ADMIN_ROLE on OUSG_InstantManager can call setOndoOracle to point at an attacker-controlled oracle and reprice subscriptions/redemptions; (c) MINTER_ROLE on the OUSG token can mint unbacked supply; (d) DEFAULT_ADMIN_ROLE on OUSG_InstantManager can call retrieveTokens(address,address,uint256) to sweep any ERC-20 balance the contract is currently holding; (e) the 1-of-2 Safe owning the USDY Blocklist can freeze any USDY address. All execute with 0-second delay. Ondo's own 2024-03 Code4rena scope acknowledged exactly this centralization." }
+      ],
+      "steelman": {
+        "red": "The most senior admin key (proxy admin) can replace user-fund contracts with arbitrary code in one transaction with no warning, the oracle can be swapped immediately by DEFAULT_ADMIN_ROLE, retrieveTokens lets the admin sweep ERC-20 balances, and USDY can be frozen by a 1-of-2 Safe — all T1 powers reachable on a 0-delay path.",
+        "orange": "OUSG / USDY are regulated tokenized securities under Reg D 506(c) / Reg S whose investor base is contractually KYC'd and where the off-chain GP/LP wrapper limits realistic adversarial misuse, so the practical risk of admin abuse may be lower than the on-chain surface suggests.",
+        "green": "There is no plausible reading where this protocol meets green: no timelock, no Security Council, no broad token-vote governance, and a single-signature freeze key on USDY are all binding against a green grade."
+      },
+      "verdict": "Choosing red because the OUSG token and OUSG_InstantManager are TransparentUpgradeableProxy contracts whose admin can upgradeToAndCall arbitrary bytecode with 0-second delay, DEFAULT_ADMIN_ROLE on the InstantManager can call setOndoOracle / retrieveTokens immediately, and the USDY Blocklist is owned by a Safe v1.4.1 with threshold=1 (per the on-chain getThreshold / getOwners reads at block 25138758). All T1 functions are reachable on the uncontested fast path with no timelock and without a Security Council multisig — the rubric's red trigger 'T1 reachable with no timelock' is met directly. The orange steel-man rests on legal / off-chain mitigants that are not on-chain enforceable, so it cannot lift the verdict."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "shows": "OUSG_InstantManager merged ABI + live view-method reads at block 25138750: DEFAULT_ADMIN_ROLE, PAUSER_ROLE, CONFIGURER_ROLE, ADMIN_SUBSCRIPTION_ROLE are defined; subscribePaused=false, redeemPaused=false; ondoOracle, ondoCompliance, ondoIDRegistry, ondoTokenRouter, ondoRateLimiter, ondoSubscriptionFees, ondoRedemptionFees, adminSubscriptionChecker addresses; write surface includes setOndoOracle/setOndoCompliance/setOndoIDRegistry/setOndoRateLimiter/setOndoSubscriptionFees/setOndoRedemptionFees/setAdminSubscriptionChecker (DEFAULT_ADMIN_ROLE), pauseSubscribe/pauseRedeem (PAUSER_ROLE), and retrieveTokens (DEFAULT_ADMIN_ROLE).", "chain": "Ethereum", "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://etherscan.io/address/0x93358db73b6cd4b98d89c8f5f230e81a95c2643a", "shows": "OUSG_InstantManager verified source (Exact Match): BaseRWAManager.sol defines onlyRole modifiers — DEFAULT_ADMIN_ROLE on setOndoOracle/setOndoCompliance/setOndoIDRegistry/setOndoRateLimiter/setOndoSubscriptionFees/setOndoRedemptionFees/setAcceptedSubscriptionToken/setAcceptedRedemptionToken/retrieveTokens/unpauseSubscribe/unpauseRedeem; PAUSER_ROLE on pauseSubscribe/pauseRedeem; CONFIGURER_ROLE on setMinimumDepositAmount/setMinimumRedemptionAmount/setMinimumRwaPrice; ADMIN_SUBSCRIPTION_ROLE on adminSubscribe/adminSubscribeRebasingOUSG. Constructor grants DEFAULT_ADMIN_ROLE to `_defaultAdmin` parameter. Contract creator was 0x094Bee6b74Ec29d32869ae3140a659cAc0482882, deployed ~364 days before fetch.", "chain": "Ethereum", "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92", "shows": "OUSG token is a TokenProxy (TransparentUpgradeableProxy) at block 25045915 → implementation 0x1CEB44b6E515aBf009E0CCb6ddaFD723886cf3Ff; merged ABI exposes proxy admin functions changeAdmin/upgradeTo/upgradeToAndCall (callable only by the EIP-1967 admin slot) and role-gated functions mint, burn, pause, unpause, setKYCRegistry, setKYCRequirementGroup; MINTER_ROLE, BURNER_ROLE, PAUSER_ROLE, KYC_CONFIGURER_ROLE, DEFAULT_ADMIN_ROLE all defined; paused()=false, kycRegistry=0x56A5D911052323D688C731d516530878557463e7, kycRequirementGroup=1.", "chain": "Ethereum", "address": "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xd8c8174691d936E2C80114EC449037b13421B0a8", "shows": "USDY Blocklist (Ondo Finance Blocklist Oracle) is Ownable2Step; owner()=0x99ca4f54F6Bb1c36C662e7C404f517D150FD1173 at block 25138757; write functions addToBlocklist(address[]) and removeFromBlocklist(address[]) are owner-only with no time cap.", "chain": "Ethereum", "address": "0xd8c8174691d936E2C80114EC449037b13421B0a8", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x99ca4f54F6Bb1c36C662e7C404f517D150FD1173", "shows": "Gnosis Safe v1.4.1 at block 25138758: getThreshold()=1, getOwners()=[0xae8224d6439b7bdcC97B97190183ACD23C895416, 0x72BB40789689fD27C9eDc6B2BA6FFcdB2a509aFD], nonce=7. A single owner's signature is sufficient to execute any transaction including addToBlocklist on the USDY Blocklist it owns.", "chain": "Ethereum", "address": "0x99ca4f54F6Bb1c36C662e7C404f517D150FD1173", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094", "shows": "OndoOracle merged ABI at block 25138753: DEFAULT_ADMIN_ROLE, AGGREGATOR_V3_ORACLE_SETTER_ROLE, HARDCODED_SETTER_ROLE, RWA_ORACLE_SETTER_ROLE; write surface setHardcodedPrice(token,price), setTokenToAggregatorV3Oracle(token,oracle,delay), setTokenToOracleType(token,uint8), setTokenToRWAOracle(token,rwaOracle) — i.e., admin roles can replace the price source for any token with no on-chain timelock or bounding check.", "chain": "Ethereum", "address": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://docs.ondo.finance/trust-and-security", "shows": "Ondo's published governance: Ondo I LP (OUSG) is managed by Ondo I GP LLC; Ondo Capital Management LLC is the Investment Manager; USDY is issued by Ondo USDY LLC, a FinCEN-registered MSB. No mention of an on-chain Governor, timelock, or token-vote in the administration of OUSG or USDY contracts." }
+    ],
+    "unknowns": [
+      "C1: getRoleMember / getRoleMemberCount calls against the AccessControlEnumerable contracts returned HTTP 400 from the defipunkd /api/contract/read endpoint when bytes32 args were passed, so the concrete addresses holding DEFAULT_ADMIN_ROLE, PAUSER_ROLE, CONFIGURER_ROLE, ADMIN_SUBSCRIPTION_ROLE, MINTER_ROLE, BURNER_ROLE, KYC_CONFIGURER_ROLE, HARDCODED_SETTER_ROLE on OUSG_InstantManager / OUSG token / OndoOracle were not re-read on-chain this run. The role definitions and modifier gates are confirmed; the holder identities (single EOA vs multisig vs role-admin chain) are not.",
+      "C2: The EIP-1967 admin slot for the OUSG token (0x1B19…ee92), USDY token (0x96F6…985C) and OndoIDRegistry (0xcf69…D97df) proxies reverts on the public `admin()` getter because it is gated by the TransparentUpgradeableProxy `ifAdmin` modifier; the concrete proxy admin address was not pulled via eth_getStorageAt(slot=0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103) this run.",
+      "C4: The two USDY-Blocklist Safe owners 0xae82…5416 and 0x72BB…9aFD are EOAs whose real-world identity (Ondo team member vs independent signer) was not verified.",
+      "C7: Polygon CashManager (0x6B7…ee945) and Polygon OUSG Registry (0x7cD…59AC1) were not separately read this run; the control surface on the Polygon deployment is assumed similar but not confirmed."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/ondoprotocol", "https://github.com/ondoprotocol/usdy", "https://github.com/ondoprotocol/tokenized-funds"],
+      "docs_url": "https://docs.ondo.finance",
+      "audits": [
+        { "firm": "Spearbit", "url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Ondo-Spearbit-Security-Review-March-2025.pdf", "date": "2025-03" },
+        { "firm": "Spearbit", "url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Ondo-Spearbit-Security-Review-May-2025.pdf", "date": "2025-05" },
+        { "firm": "Code4rena", "url": "https://code4rena.com/reports/2024-03-ondo-finance", "date": "2024-04" },
+        { "firm": "Code4rena", "url": "https://code4rena.com/reports/2023-09-ondo", "date": "2023-09" },
+        { "firm": "Code4rena", "url": "https://code4rena.com/reports/2023-01-ondo", "date": "2023-01" }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.ondo.finance/addresses",
+      "admin_addresses": [
+        { "chain": "Ethereum", "address": "0x99ca4f54F6Bb1c36C662e7C404f517D150FD1173", "role": "USDY Blocklist owner (can freeze USDY addresses)", "actor_class": "multisig" },
+        { "chain": "Ethereum", "address": "0x094Bee6b74Ec29d32869ae3140a659cAc0482882", "role": "Deployer of OUSG_InstantManager (0x93358db7…) and OndoIDRegistry (0xcf6958D6…)", "actor_class": "unknown" },
+        { "chain": "Ethereum", "address": "0xe2d0f9dcc81267c36a47d9e26adf479501124bbe", "role": "Ondo Finance Deployer EOA (per address_book)", "actor_class": "eoa" },
+        { "chain": "Ethereum", "address": "0x059bC3Dbe522Da79B346643D420e927ba1eB61a9", "role": "Operator EOA observed calling `setUserID` on OndoIDRegistry repeatedly", "actor_class": "eoa" }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Ondo Yield Assets is a permissioned, KYC-gated tokenized real-world-asset protocol that issues OUSG (Reg D 506(c) qualified-purchasers fund backed by short-term US Treasuries / BUIDL) and USDY (Reg S non-US tokenized bank-deposit instrument). KYC'd investors call subscribe/redeem on OUSG_InstantManager and USDY_InstantManager, which deposit USDC/PYUSD into off-chain Coinbase Prime custody, mint the ERC-20 receipt token, and burn it on redemption against the OndoOracle price."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/f337e962-85ed-4e42-bdf6-b0ed89e7e834",
+    "grade": "red",
+    "headline": "Redeem is permissioned, indefinitely pausable, and Ondo can revoke a user's KYC at any time to lock their balance",
+    "short_headline": "Exit pausable, KYC-revocable",
+    "rationale": {
+      "findings": [
+        { "code": "E1", "text": "User-facing exit functions on OUSG_InstantManager (0x9335…2643a): redeem(uint256,address,uint256) and redeemRebasingOUSG(uint256,address,uint256). No on-chain 'claim already-finalized exit' function — every redeem is a new request that pulls from the OndoTokenRouter at call time. USDY/rUSDY redeem flows go through USDY_InstantManager (0xa42613C2…). OUSG and USDY ERC-20 tokens additionally have their own pausable transfer surface — pause() / unpause() on the token contracts." },
+        { "code": "E2", "text": "redeem and redeemRebasingOUSG both run through BaseRWAManager._processRedemption, which is guarded by `whenRedeemNotPaused` (reverts if redeemPaused=true) AND requires `ondoCompliance.checkIsCompliant(rwaToken, _msgSender())` to succeed AND requires `ondoIDRegistry.getRegisteredID(rwaToken, _msgSender()) != bytes32(0)`. If a user is removed from the ID registry or marked non-compliant between subscribing and redeeming, their redeem will revert — their balance is locked on-chain." },
+        { "code": "E3", "text": "PAUSER_ROLE on OUSG_InstantManager calls pauseRedeem() with no on-chain time cap; only DEFAULT_ADMIN_ROLE can unpause via unpauseRedeem(). PAUSER_ROLE on the OUSG token (0x1B19…ee92) can pause() the token itself, blocking all transfers and effectively freezing redemption claims. State at block 25138750: redeemPaused=false; state at block 25045915: token paused=false." },
+        { "code": "E4", "text": "There is no separate fast-acting emergency-pause with a time cap distinct from the indefinite governance pause. The same PAUSER_ROLE can pause and stay paused until DEFAULT_ADMIN_ROLE chooses to unpause." },
+        { "code": "E5", "text": "Redemption queue mechanics: instant redemptions happen at call time, but if the OndoTokenRouter does not hold sufficient USDC/PYUSD at withdrawal time (since the underlying assets are off-chain at Coinbase Prime), the call reverts via OndoTokenRouter.withdrawToken. Minimum redemption is $4,999.99 USD (minimumRedemptionUSD=4999990000000000000000 / 1e18). An on-chain rate limiter (ondoRateLimiter at 0x98Db…003c) caps per-user and global redemption USD value per window — discovered as a sibling contract on the InstantManager surfacer but its limit values were not re-read this run." },
+        { "code": "E6", "text": "No permissionless escape-hatch / forced-exit / on-chain redemption guarantee in the deployed code. There is no function callable by an arbitrary user (or by the holder unconditionally) that bypasses the pause guard, the KYC check, or the rate limiter to claim against off-chain collateral. USDY additionally enforces an isBlocked check via the Blocklist (0xd8c81…B0a8) on every transfer; the Blocklist is owned by a 1-of-2 Safe (see control slice)." },
+        { "code": "E7", "text": "Exit functions are directly callable on-chain via Etherscan write tab or any wallet — the redeem method is permissionless from a frontend perspective (no Ondo-domain frontend required). Etherscan history at the InstantManager shows repeated direct `Redeem` and `Subscribe` calls from many different EOAs, confirming users can interact without the official app. However, the on-chain ACL gates above (E2, E3) still apply." }
+      ],
+      "steelman": {
+        "red": "Three independent on-chain levers permanently lock a user's exit: (a) PAUSER_ROLE pauses redeem with no time cap; (b) DEFAULT_ADMIN_ROLE on the InstantManager can swap the OndoCompliance / OndoIDRegistry contracts; (c) the USDY Blocklist owner (a 1-of-2 Safe) can add the holder. Ondo's own 2024-03 Code4rena scope acknowledged 'If someone gets sanctioned … or removed from Ondo Finance's KYC Registry their funds are locked.'",
+        "orange": "The minimumRedemptionUSD ($4,999.99) and rate limiter are bounded, redeem is currently unpaused, and direct on-chain redemption succeeds (transaction history shows recent direct-from-EOA `Redeem` calls within the last day) — for a compliant KYC'd holder the exit is open in the steady state.",
+        "green": "There is no plausible green: the design intentionally couples exit to off-chain KYC continuity, and the rubric treats indefinite pause without time cap as a red trigger when PAUSER_ROLE is not held by a Security Council."
+      },
+      "verdict": "Choosing red because the rubric's red criteria 'ANY actor (including governance) can pause CLAIMS of finalized exits indefinitely' and 'exit requires admin signature' are both satisfied directly: PAUSER_ROLE can pauseRedeem() with no time cap, and `_processRedemption` reverts when `ondoCompliance.checkIsCompliant` or `ondoIDRegistry.getRegisteredID` fails — both of which are admin-controlled and observed being written by an operator EOA (0x059bC3Db…ba1eB61a9) hourly. The protocol's own acknowledged behaviour is that a de-listed user's balance is locked, which is materially custodial."
+    },
+    "evidence": [
+      { "url": "https://etherscan.io/address/0x93358db73b6cd4b98d89c8f5f230e81a95c2643a", "shows": "Verified source for OUSG_InstantManager: BaseRWAManager._processRedemption guards with `whenRedeemNotPaused`, calls `ondoCompliance.checkIsCompliant(rwaToken, _msgSender())` (reverts on non-compliance), checks `ondoIDRegistry.getRegisteredID(rwaToken, _msgSender()) != bytes32(0)` (reverts on UserNotRegistered), and minimumRedemptionUSD enforcement. pauseRedeem is `onlyRole(PAUSER_ROLE)` with no timestamp / expiry; unpauseRedeem is `onlyRole(DEFAULT_ADMIN_ROLE)`. retrieveTokens(address,address,uint256) is `onlyRole(DEFAULT_ADMIN_ROLE)` and can sweep any ERC-20 the contract is holding.", "chain": "Ethereum", "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "shows": "Live read at block 25138750: redeemPaused=false, subscribePaused=false; minimumRedemptionUSD = 4999990000000000000000 (= $4,999.99 in 18-decimal USD); minimumDepositUSD = 5000000000000000000000 (= $5,000); the InstantManager exposes pauseRedeem / unpauseRedeem in its write surface (role-gated).", "chain": "Ethereum", "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92", "shows": "OUSG token's write surface includes pause() and unpause() (PAUSER_ROLE), confirmed in merged ABI; paused()=false at block 25045915 — i.e., the token is currently unfrozen but the pause primitive that would block ALL transfers (including any 'finalized claim' transfer) is live and unbounded.", "chain": "Ethereum", "address": "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://etherscan.io/address/0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "shows": "OndoIDRegistry transaction tab: an operator EOA (0x059bC3Dbe522Da79B346643D420e927ba1eB61a9) repeatedly calls `Set User ID` against this contract — 521 historical txs, with 20+ in the last 36 hours of the fetch. This is the live on-chain mechanism through which Ondo registers and de-registers users for OUSG access; deregistration → getRegisteredID returns bytes32(0) → redeem reverts UserNotRegistered.", "chain": "Ethereum", "address": "0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xd8c8174691d936E2C80114EC449037b13421B0a8", "shows": "USDY Blocklist (Ondo Finance Blocklist Oracle): a single owner can addToBlocklist a USDY holder; USDY's transfer hook is documented (per the linked 2023-09 Code4rena scope) to call isBlocked(address) on this contract for every transfer, so a blocklisted user cannot transfer USDY out, which functionally is an exit denial." }
+    ],
+    "unknowns": [
+      "E5: The OndoRateLimiter (0x98Db…003c) cap values (per-user, global, window) were not re-read on-chain this run; the redeem path's worst-case throughput under normal conditions is therefore not pinned to a number.",
+      "E2: USDY_InstantManager (0xa4261…1f15) source / live state was not separately read; behaviour is inferred to be the same xManager pattern as the OUSG_InstantManager but its accepted-tokens / pause state / KYC registry are not confirmed for this slice."
+    ],
+    "protocol_metadata": {
+      "upgradeability": "upgradeable"
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/f337e962-85ed-4e42-bdf6-b0ed89e7e834",
+    "grade": "red",
+    "headline": "Principal sits with off-chain Coinbase Prime custodian and the OndoOracle price is admin-settable with no on-chain fallback — ~100% TVS at risk under those dependencies",
+    "short_headline": "Off-chain custody is the protocol",
+    "rationale": {
+      "findings": [
+        { "code": "A1", "text": "Critical external on-chain reads from OUSG_InstantManager: (i) OndoOracle (0x9Cad…b4094) for the RWA price via getAssetPrice(rwaToken) and for accepted deposit-token prices; (ii) OndoTokenRouter (0x99B8…D7bC) for moving USDC/PYUSD in and out; (iii) OndoCompliance (0x156F…1002) and OndoIDRegistry (0xcf69…D97df) for permissioning. The OndoOracle itself contains write functions setHardcodedPrice / setTokenToAggregatorV3Oracle / setTokenToRWAOracle that allow admin roles to replace the price source for any token instantly." },
+        { "code": "A1", "text": "Critical OFF-chain dependency (documented at /trust-and-security): all OUSG user principal flows to the Coinbase Prime custodian account at 0xF67416a2…cf8856c, and the majority of the OUSG fund's assets are held off-chain at BlackRock (BUIDL), Fidelity, Franklin Templeton, WisdomTree — i.e., the on-chain ERC-20 is a receipt for an off-chain pool. USDY's USDC deposits flow to Coinbase Prime at 0xbDa73A0F…Edae28. If the custodian disappears or refuses to honour redemptions, the on-chain redeem path reverts at OndoTokenRouter.withdrawToken (no USDC to send) and the holder has no on-chain recourse." },
+        { "code": "A2", "text": "Off-chain reporter: the OndoOracle's RWA-oracle path for OUSG (legacy RateCheck oracle 0x0502…6abe was bounded to ±74 bps relative to BlackRock SHV ETF price moves, per the 2024-03 Code4rena scope). The CURRENT RWA oracle tied to the InstantManager was not re-read on-chain this run, but the architecture (admin can swap via setTokenToRWAOracle) makes the price source itself a privileged committee, not an independent feed." },
+        { "code": "A3", "text": "Cross-chain dependency: OUSG and USDY are bridged via Ondo Bridge LayerZero OFT Adapters (Ethereum 0xa6275…307D, Arbitrum/Mantle 0x0bE393DC…fbB41, Solana 7YNR…J2S3). Material TVL on Arbitrum/Mantle/Polygon/Plume/Sei/Sui/Aptos/Noble/Stellar copies of USDY rides on LayerZero's DVN+executor trust model. The Ethereum copy is the canonical mint/burn surface; the non-mainnet copies inherit LayerZero security on top of the off-chain custody risk." },
+        { "code": "A4", "text": "No nested-collateral / restaking chain — OUSG is a single-step receipt over off-chain treasuries; depth = 1 (USDC → receipt). rUSDY/rOUSG are rebasing wrappers but they don't add a new external trust party." },
+        { "code": "A5", "text": "Fork lineage: no notable fork — the xManager pattern is Ondo-authored. Skipped per A5 silent-check guidance." },
+        { "code": "A6", "text": "On-chain fallbacks present: (i) minimumRwaPrice (live value 110000000000000000000 = $110 with 18 decimals) — _getRwaPrice() reverts with RWAPriceTooLow if the oracle returns below this floor (a one-sided sanity check); (ii) OndoRateLimiter caps redemption throughput per window; (iii) accepted-tokens whitelist limits which ERC-20s can be deposited/redeemed. NOT PRESENT: a backup oracle, a circuit breaker that pauses on stale prices, an on-chain assertion that the off-chain custodian's balance is solvent, or a permissionless emergency exit against on-chain reserves only." },
+        { "code": "A7", "text": "Ondo Yield Assets is not its own L2/L3 — it deploys permissionlessly on third-party chains. Sequencer / DA risk on each chain (Arbitrum, Mantle, Polygon, Plume, Sei) is substrate per the rubric and not counted here." },
+        { "code": "A8", "text": "Off-chain operators in the steady-state path: (i) the OndoIDRegistry-writer EOA (0x059bC3Db…1eB61a9) must keep registering new KYC'd users for any new investor to onboard; (ii) the Ondo Capital Management team must keep posting RWA NAV updates to the oracle for the redemption price to stay current. Liveness failure of (i) blocks new subscriptions only (not existing exits); liveness failure of (ii) causes the redemption price to stagnate / go stale (impact is yield freeze, not principal loss, until the minimumRwaPrice floor or staleness check triggers)." },
+        { "code": "A9", "text": "Governance-mutable external-dependency surface: DEFAULT_ADMIN_ROLE on OUSG_InstantManager can call setOndoOracle to swap the oracle wholesale, setOndoCompliance to swap the KYC checker, setOndoIDRegistry to swap the registry. The proxy admin can upgradeToAndCall the OUSG token to a malicious mint() implementation. All execute with 0 timelock — there is no exit window for users between the action and the effect." }
+      ],
+      "steelman": {
+        "red": "Failure of the off-chain Coinbase Prime custodian, of BlackRock BUIDL, or of the Ondo legal entity directly results in loss of OUSG/USDY principal — the on-chain contracts cannot recover funds that sit in TradFi accounts they don't control — and the admin can hot-swap the price oracle to mis-redeem holders with no delay, so impacted TVS under the worst single-dependency failure is effectively ~100%.",
+        "orange": "The off-chain assets are held at top-tier institutional partners (Coinbase, BlackRock, Fidelity), regulated under Reg D / Reg S, audited annually, and the on-chain minimumRwaPrice + rate-limiter provide bounded sanity checks; principal loss would require failure of a globally significant TradFi counterparty.",
+        "green": "There is no plausible green: the entire investment thesis of the protocol is to wrap off-chain treasuries, so an on-chain-only failure model does not apply."
+      },
+      "verdict": "Choosing red because the protocol's stated architecture (per /trust-and-security) places ~all user principal in off-chain custody at Coinbase Prime / BlackRock / Fidelity / Franklin Templeton / WisdomTree, with no on-chain fallback giving holders direct claim over those reserves and no timelocked exit window before an admin-driven oracle/compliance swap — the rubric's red criterion 'failure of an external dependency CAN cause theft or loss of principal' is met directly. The orange steel-man rests on the *quality* of the off-chain counterparties; the rubric grades on the structural dependency, not on counterparty creditworthiness."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "shows": "OUSG_InstantManager external calls at block 25138750: ondoOracle=0x9Cad45a8…, ondoCompliance=0x156F73fc…, ondoIDRegistry=0xcf6958D6…, ondoRateLimiter=0x98Db5022…, ondoTokenRouter=0x99B8d1D1…, ondoSubscriptionFees=0xEaC21810…, ondoRedemptionFees=0xE1cb2407…, adminSubscriptionChecker=0x1cb2Dcc3…. minimumRwaPrice = 110000000000000000000 (= $110 floor). Each `setOndo*` setter is gated by DEFAULT_ADMIN_ROLE with no timelock — confirmed by the write-method list and the verified source in BaseRWAManager.sol.", "chain": "Ethereum", "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094", "shows": "OndoOracle ABI exposes setHardcodedPrice(token,price), setTokenToAggregatorV3Oracle(token,oracle,delay), setTokenToOracleType(token,type), setTokenToRWAOracle(token,rwaOracle) — every one role-gated and immediate. No second-opinion oracle, no on-chain median, no staleness-pause mechanism enforced at this layer (timeDelay is just an Aggregator V3 staleness check per-asset).", "chain": "Ethereum", "address": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://docs.ondo.finance/trust-and-security", "shows": "Ondo's own published architecture: OUSG investor USDC is 'exchanged for USD primarily by Coinbase' and 'the majority of the Fund's assets are currently invested in the BlackRock USD Institutional Digital Liquidity Fund (BUIDL)' with additional positions at Fidelity, Franklin Templeton, WisdomTree. Ondo I LP is the legal wrapper; Ondo Capital Management LLC is the investment manager. USDY is a debt instrument issued by Ondo USDY LLC, a FinCEN-registered MSB." },
+      { "url": "https://docs.ondo.finance/addresses", "shows": "Confirms multi-chain deployment surface (Ethereum, Polygon, Solana, XRPL, Mantle, Sui, Aptos, Noble, Arbitrum, Stellar, Plume, Sei, BNB Chain, HyperEVM) and lists Ondo Bridge LayerZero OFT Adapters (Ethereum 0xa6275720…307D; Arbitrum/Mantle 0x0bE393DC…bB41) for OUSG/USDY cross-chain transfers." }
+    ],
+    "unknowns": [
+      "A1: The currently-configured OUSG RWA oracle behind OndoOracle.tokenToRWAOracle(0x1B19…ee92) was not re-read on-chain this run, so I cannot confirm whether the ±74 bps bounded RateCheck pattern is still enforced for OUSG.",
+      "A2: Identities of HARDCODED_SETTER_ROLE / RWA_ORACLE_SETTER_ROLE holders on OndoOracle were not pulled this run (getRoleMember calls failed against the read API with bytes32 args).",
+      "A3: USDY bridged balances per non-mainnet chain were not separately measured; the magnitude of LayerZero-bridged TVL vs canonical mainnet USDY balance is not pinned."
+    ],
+    "protocol_metadata": {}
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/f337e962-85ed-4e42-bdf6-b0ed89e7e834",
+    "grade": "red",
+    "headline": "On-chain ID-registry + compliance check is required at every subscribe/redeem; Ondo can revoke admission unilaterally",
+    "short_headline": "Contract-level KYC gate",
+    "rationale": {
+      "findings": [
+        { "code": "A1", "text": "OUSG_InstantManager._processSubscription / _processRedemption (verified source on Etherscan) both call `ondoCompliance.checkIsCompliant(rwaToken, _msgSender())` (which reverts ComplianceCheckFailed if not compliant) AND read `bytes32 userId = ondoIDRegistry.getRegisteredID(rwaToken, _msgSender())` then revert UserNotRegistered if `userId == bytes32(0)`. These are not modifier-style allowlists — they are state reads gated by a registry that Ondo writes to. Same pattern applies to USDY_InstantManager." },
+        { "code": "A2", "text": "Admission is conditioned on Ondo's operator EOA (0x059bC3Dbe522Da79B346643D420e927ba1eB61a9 observed making 20+ `Set User ID` calls in the 36 hours before fetch on OndoIDRegistry 0xcf69…D97df). Replacement procedure for that operator is on-chain (whoever holds the writer role on OndoIDRegistry can grant it elsewhere) but the *admission* of any new user depends on Ondo's off-chain KYC pipeline producing a userId for them — there is no permissionless route to register." },
+        { "code": "A3", "text": "Off-chain frontend (ondo.finance) is one path to interaction, but the InstantManager is callable directly via Etherscan write tab — the OUSG_InstantManager transaction history shows direct `Subscribe` and `Redeem` calls from many distinct EOAs (e.g. ENS-named rangwalla.eth, plus EOAs 0x0B07cCDd…66238, 0xA1b40f6b…33D60, 0xbd9676EA…fB03 in the 30 days before fetch). Frontend ToS was not extracted verbatim this run." },
+        { "code": "A3b", "text": "Independent access paths: (i) direct Etherscan write — confirmed by historical txs; (ii) USDY explicitly has a documented developer-integration guide at /developer-guides/usdy-instant-manager-integration intended for third-party protocols. So once a wallet is on the OndoIDRegistry, multiple paths exist. The gating is at the contract layer, not the publisher layer." },
+        { "code": "A4", "text": "USDY additionally enforces an on-chain blocklist via the Blocklist contract (0xd8c81…B0a8); the USDY transfer hook reads isBlocked(addr) for sender and receiver. The OUSG side uses the OndoIDRegistry as the positive-list (allowlist), not the blocklist pattern." },
+        { "code": "A5", "text": "Read access (balanceOf, totalSupply) is fully public — anyone can query OUSG/USDY balances. Write access (subscribe, redeem, transfer) is permissioned for both OUSG (via OndoIDRegistry+OndoCompliance) and USDY (via Blocklist + sanctions check)." },
+        { "code": "A6", "text": "Ondo's /trust-and-security page states OUSG is sold under Reg D 506(c) to 'verified Accredited Investors as defined in Regulation D' and to 'Qualified Purchasers as defined in the 40 Act … customer due diligence for anti-money laundering, countering terrorist financing, and sanctions compliance'. USDY is offered under Reg S, only to 'non-US persons in transactions outside the US'. These are not just frontend ToS — they are the rationale for the contract-level KYC gates above." }
+      ],
+      "steelman": {
+        "red": "The contract literally reverts every subscribe and redeem call from an address not in the OndoIDRegistry — there is no permissionless interaction path under any frontend, SDK, or aggregator, and the registry is written exclusively by Ondo's operator EOA.",
+        "orange": "Once a wallet is registered, it can interact with the contracts through any client and the protocol does not depend on any one frontend — i.e., the gate is just the regulatory wrapper, not operational capture.",
+        "green": "There is no plausible green: contract-level KYC on user entry/exit is the rubric's explicit red trigger."
+      },
+      "verdict": "Choosing red because the rubric's red criterion 'contract-level whitelist / KYC on user entry/exit' is satisfied verbatim — BaseRWAManager._processSubscription and _processRedemption revert UserNotRegistered when ondoIDRegistry.getRegisteredID returns bytes32(0), and that registry is exclusively written by Ondo. The 521 historical `Set User ID` transactions, all from a single Ondo-operated EOA, confirm this is the live admission gate. The orange steel-man would require the gate to be incidental to the official frontend; here the gate is in the deployed contract."
+    },
+    "evidence": [
+      { "url": "https://etherscan.io/address/0x93358db73b6cd4b98d89c8f5f230e81a95c2643a", "shows": "Verified source of OUSG_InstantManager's BaseRWAManager._processSubscription and _processRedemption explicitly call `ondoCompliance.checkIsCompliant(rwaToken, _msgSender())` and `bytes32 userId = ondoIDRegistry.getRegisteredID(rwaToken, _msgSender()); if (userId == bytes32(0)) revert UserNotRegistered();` on every subscription and redemption.", "chain": "Ethereum", "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://etherscan.io/address/0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "shows": "521 total transactions to OndoIDRegistry, of which the most recent 20+ are all `Set User ID` calls from the same EOA 0x059bC3Dbe522Da79B346643D420e927ba1eB61a9 — i.e., admission is operationally a single-operator role even if it could be delegated.", "chain": "Ethereum", "address": "0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://docs.ondo.finance/trust-and-security", "shows": "Ondo's published legal posture: OUSG is restricted to 'verified Accredited Investors as defined in Regulation D' and Qualified Purchasers under §3(c)(7); USDY is restricted to 'non-US persons in transactions outside the US' under Reg S. Investors 'must undergo customer due diligence for anti-money laundering, countering terrorist financing, and sanctions compliance purposes'." },
+      { "url": "https://defipunkd.com/address/1/0xd8c8174691d936E2C80114EC449037b13421B0a8", "shows": "USDY uses an on-chain Blocklist contract (Ondo Finance Blocklist Oracle) with an isBlocked(addr) read for transfer enforcement; the contract is owned by 0x99ca4f54…FD1173 (a 1-of-2 Safe per the control slice), so a single admission revocation acts immediately." }
+    ],
+    "unknowns": [
+      "A3: The ondo.finance frontend Terms of Service was not extracted verbatim this run (the home page returned only meta-tags), so jurisdictional / sanctions clauses are not quoted here even though they are contextually expected.",
+      "A2: The list of accounts that hold write access on OndoIDRegistry (which roles or contracts can call setUserID) was not pulled — only the most active writer was observed in the transaction history."
+    ],
+    "protocol_metadata": {}
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/f337e962-85ed-4e42-bdf6-b0ed89e7e834",
+    "grade": "orange",
+    "headline": "Core InstantManager + OUSG token exact-match verified with recent recognized audits; OndoIDRegistry implementation appears unverified",
+    "short_headline": "Verified but with proxy gaps",
+    "rationale": {
+      "findings": [
+        { "code": "V1", "text": "OUSG_InstantManager (0x9335…2643a) is verified on Etherscan as 'Contract Source Code Verified (Exact Match)' — Contract Name: OUSG_InstantManager, Solidity 0.8.16, optimized, london EVM. Source visible in 47 files." },
+        { "code": "V1", "text": "OUSG token (0x1B19…ee92) is verified on Etherscan as a TransparentUpgradeableProxy and defipunkd's auto-resolver successfully merged its implementation ABI (0x1CEB44b6…f3Ff) — exposing MINTER_ROLE, BURNER_ROLE, PAUSER_ROLE, KYC_CONFIGURER_ROLE — which is only possible if the implementation is itself verified on a recognized source (Etherscan or Sourcify)." },
+        { "code": "V1", "text": "OndoOracle (0x9Cad…b4094), USDY Blocklist (0xd8c8…B0a8), USDY token (0x96F6…985C — proxy), and the 1-of-2 Safe (0x99ca…1173 — SafeProxy → 0x4167…461a) are all verified on Etherscan/Sourcify per the defipunkd surfacer entries that returned non-empty ABI." },
+        { "code": "V2", "text": "Etherscan shows the verified source for OUSG_InstantManager uses BUSL-1.1 SPDX header attributed to Ondo Finance. The matching Ondo public repo for the new xManager architecture was not located via web search this run (the older OUSGInstantManager is in code-423n4/2024-03-ondo-finance; the new BaseRWAManager / xManager pattern does not have an obvious mirror in ondoprotocol/tokenized-funds or ondoprotocol/usdy). No commit SHA was pinned." },
+        { "code": "V3", "text": "Ondo's audit index at /audits lists multiple Ondo-Funds / USDY audits including March 2025 Spearbit (Cantina-hosted), May 2025 Spearbit (per the pinned audit_links), February 2025 Halborn, April 2024 Code4rena, April 2024 Cyfrin, September 2023 Code4rena, January 2023 Code4rena, August 2023 Zokyo. The March 2025 Spearbit PDF is present in the spearbit/portfolio repo. Audit coverage spans multiple deployment generations." },
+        { "code": "V4", "text": "Recognized firms with audits in the past 12 months relative to analysis_date: Spearbit (March 2025, May 2025) and Halborn (February 2025). Cyfrin (April 2024) and Code4rena (2023, 2024) provide earlier coverage. Spearbit and Halborn are listed in the slice's recognized-firms set." },
+        { "code": "V5", "text": "The current OUSG_InstantManager (0x9335…2643a) was deployed ~364 days before fetch (Mar 2025). The March 2025 and May 2025 Spearbit audits are temporally aligned to this deployment generation, but I did not open either PDF body this run, so I cannot confirm in-scope file list / commit pinning. No material drift signal was inspected." },
+        { "code": "V6", "text": "OndoIDRegistry (0xcf69…D97df) — a critical contract that gates every user action — is a verified TransparentUpgradeableProxy whose implementation is 0x136f28d6…d05213. defipunkd's read API responded with 'No verified ABI found for 0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df on chainId 1 (etherscan + sourcify both failed)' for the merged proxy-aware ABI, which strongly suggests the implementation 0x136f28d6… is not verified on either Etherscan or Sourcify. Per the V1 rule 'A verified proxy with an unverified implementation is effectively unverified,' this is a V6 fail on a contract that determines admission to the protocol." }
+      ],
+      "steelman": {
+        "red": "The most user-critical permissioning contract (OndoIDRegistry) cannot be inspected end-to-end on chain because its implementation appears unverified, and the V1 rule treats this as 'effectively unverified.'",
+        "orange": "Most contracts (OUSG token, OUSG_InstantManager, OndoOracle, USDY Blocklist, USDY proxy) are verified through to their implementations, multiple recent recognized-firm audits exist, and the only verifiability gap is a single proxy implementation — fits the orange criterion 'some main contracts verified' with a real but bounded gap.",
+        "green": "Hard to reach green: the V1 rule requires proxy AND implementation verified for ALL main contracts; with OndoIDRegistry implementation apparently unverified, green isn't supported even though the InstantManager and token are."
+      },
+      "verdict": "Choosing orange because the InstantManager source is exact-match verified, multiple recognized-firm audits cover the current deployment generation (Spearbit Mar/May 2025, Halborn Feb 2025), and most peripheral contracts are verified — but the OndoIDRegistry's implementation 0x136f28d6…d05213 appears to lack a verified ABI source (per the defipunkd 'No verified ABI found' fall-through), which is a real V6 hole on a contract that decides who can mint/redeem. That mix is squarely the orange criterion 'some of the main contracts are verified' / 'proxy verified but implementation only partially verified', not red (since the core fund-handling code is verified) and not green (since one main contract's implementation isn't)."
+    },
+    "evidence": [
+      { "url": "https://etherscan.io/address/0x93358db73b6cd4b98d89c8f5f230e81a95c2643a", "shows": "OUSG_InstantManager verification status: 'Contract Source Code Verified (Exact Match)'; full multi-file source visible including BaseRWAManager.sol, rOUSG.sol, IRWALike.sol, BUSL-1.1 SPDX attribution to Ondo Finance.", "chain": "Ethereum", "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92", "shows": "OUSG token proxy + implementation merged ABI auto-resolved by defipunkd (ABI source: etherscan; proxy → 0x1CEB44b6E515aBf009E0CCb6ddaFD723886cf3Ff) — confirms implementation is verified on Etherscan, otherwise the role-based ABI surface could not be merged.", "chain": "Ethereum", "address": "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "shows": "OndoIDRegistry: 'No verified ABI found for 0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df on chainId 1 (etherscan + sourcify both failed). Falling back to a generic battery of common method URLs.' The proxy itself is verified on Etherscan but the implementation 0x136f28d6…d05213 is not picked up by either index.", "chain": "Ethereum", "address": "0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://etherscan.io/address/0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "shows": "Confirms the proxy is verified ('Contract Source Code Verified (Exact Match) — Contract Name: TransparentUpgradeableProxy') with implementation slot pointing to 0x136f28d6…d05213. The Etherscan UI displays 'Implementation: 0x136f28d6…' but the implementation page is not auto-linked as verified.", "chain": "Ethereum", "address": "0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df", "fetched_at": "2026-05-18T00:00:00Z" },
+      { "url": "https://docs.ondo.finance/audits", "shows": "Audit list for Ondo Funds and USDY (Ethereum) including March 2025 Spearbit (Cantina-hosted), February 2025 Halborn, April 2024 Code4rena, April 2024 Cyfrin, September 2023 Code4rena, August 2023 Zokyo, April 2023 Nethermind, January 2023 Code4rena; Ondo Global Markets has additional 2025 Spearbit + Cyfrin + Cantina + FYEO audits." },
+      { "url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Ondo-Spearbit-Security-Review-March-2025.pdf", "shows": "Spearbit's portfolio repo confirms the existence of a March 2025 Ondo Security Review PDF (217 KB) on master — i.e., this is a real published Spearbit engagement. The PDF body was not parsed this run.", "commit": "772c68a886b50377e1b0b9fe6068cfe1b40a8a45" },
+      { "url": "https://defipunkd.com/address/1/0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094", "shows": "OndoOracle merged ABI auto-resolved (ABI source: etherscan) — confirms the oracle contract itself is verified with the live role definitions and write surface.", "chain": "Ethereum", "address": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094", "fetched_at": "2026-05-18T00:00:00Z" }
+    ],
+    "unknowns": [
+      "V2: I did not pin a commit SHA in any Ondo public GitHub repo to match the deployed OUSG_InstantManager source. The 2024-03 Code4rena repo covers the prior generation (legacy OUSGInstantManager 0x2826…6A43, retired April 2025); the new xManager / BaseRWAManager pattern was not located in ondoprotocol/tokenized-funds or ondoprotocol/usdy via web search.",
+      "V3: Audit PDFs (Spearbit March 2025, Spearbit May 2025, Halborn February 2025) were not parsed this run — only their existence and host pages were confirmed. Their in-scope file list / pinned commit hashes / severity findings status are not pulled.",
+      "V5: Post-audit drift was not measured — no diff between the in-scope commit of the March/May 2025 Spearbit audits and the currently deployed bytecode at 0x9335…2643a.",
+      "V6: The OndoIDRegistry implementation 0x136f28d64b658460abdd418da5c156be74d05213 verification status was not independently fetched via etherscan.io/address/0x136f28d6…/code — only the defipunkd auto-resolver's 'No verified ABI found' was observed."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/ondoprotocol", "https://github.com/ondoprotocol/usdy", "https://github.com/ondoprotocol/tokenized-funds"],
+      "audits": [
+        { "firm": "Spearbit", "url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Ondo-Spearbit-Security-Review-March-2025.pdf", "date": "2025-03" },
+        { "firm": "Spearbit", "url": "https://github.com/spearbit/portfolio/blob/master/pdfs/Ondo-Spearbit-Security-Review-May-2025.pdf", "date": "2025-05" },
+        { "firm": "Halborn", "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/Ondo-Halborn-Audit-Feb-2025.pdf", "date": "2025-02" },
+        { "firm": "Code4rena", "url": "https://code4rena.com/reports/2024-03-ondo-finance", "date": "2024-04" }
+      ]
+    }
+  }
+]
