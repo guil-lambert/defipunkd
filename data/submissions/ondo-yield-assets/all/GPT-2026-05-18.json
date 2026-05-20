@@ -1,0 +1,612 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e15d3-b218-8333-add6-cef9a5d468d8",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Control cannot be graded: OUSG/USDY managers expose broad pause/configuration powers, but proxy admins, role holders, and execution delays were not fully recoverable.",
+    "short_headline": "Control unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The current OUSG InstantManager exposes AccessControl-style DEFAULT_ADMIN_ROLE, CONFIGURER_ROLE, PAUSER_ROLE, and ADMIN_SUBSCRIPTION_ROLE constants, but this run did not recover the accounts holding those roles."
+        },
+        {
+          "code": "C1",
+          "text": "The current USDY InstantManager exposes the same AccessControl-style role constants and manager dependencies, but this run did not recover role members."
+        },
+        {
+          "code": "C2",
+          "text": "The OUSG and USDY token addresses are TokenProxy contracts exposing changeAdmin, upgradeTo, and upgradeToAndCall, but admin() and implementation() reads reverted through the surfacer, so the proxy admin and implementation were not determined."
+        },
+        {
+          "code": "C6",
+          "text": "The OUSG and USDY InstantManagers expose pauseRedeem and pauseSubscribe as write methods, while redeemPaused and subscribePaused were false at the pinned block."
+        },
+        {
+          "code": "C7",
+          "text": "The OUSG and USDY InstantManagers expose configuration methods including setOndoOracle, setOndoCompliance, setOndoIDRegistry, setOndoRateLimiter, fee setters, token-router setters, and pauseRedeem; these are potentially T1/T2 surfaces, but holder and delay information was incomplete."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Control assessment blocked because the main contracts expose fund-relevant pause, oracle, compliance, and proxy-upgrade surfaces, but this run did not determine the operative role holders, proxy admin, multisig path, or any timelock delay."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+        "shows": "OUSG InstantManager surfacer: verified ABI, pinned block 25138750, role constants, dependency addresses, pause state, user-facing read/write surfaces including pauseRedeem, pauseSubscribe, setOndoOracle, setOndoCompliance, setOndoIDRegistry, and redeem/subscribe functions.",
+        "chain": "Ethereum",
+        "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xa42613C243b67BF6194Ac327795b926B4b491f15",
+        "shows": "USDY InstantManager surfacer: verified ABI, pinned block 25138753, role constants, dependency addresses, pause state, and write methods including pauseRedeem, pauseSubscribe, setOndoOracle, setOndoCompliance, and setOndoIDRegistry.",
+        "chain": "Ethereum",
+        "address": "0xa42613C243b67BF6194Ac327795b926B4b491f15"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92",
+        "shows": "OUSG TokenProxy surfacer: TokenProxy ABI source sourcify; admin() and implementation() calls reverted; write surface lists changeAdmin, upgradeTo, and upgradeToAndCall.",
+        "chain": "Ethereum",
+        "address": "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
+        "shows": "USDY TokenProxy surfacer: TokenProxy ABI source sourcify; admin() and implementation() calls reverted; write surface lists changeAdmin, upgradeTo, and upgradeToAndCall.",
+        "chain": "Ethereum",
+        "address": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x72Be8C14B7564f7a61ba2f6B7E50D18DC1D4B63D",
+        "shows": "OUSG holdings Safe surfacer: GnosisSafeProxy, version 1.3.0, threshold 3, five owners, but this run did not prove this Safe is on the upgrade or role-admin path.",
+        "chain": "Ethereum",
+        "address": "0x72Be8C14B7564f7a61ba2f6B7E50D18DC1D4B63D"
+      }
+    ],
+    "unknowns": [
+      "C1: role members for DEFAULT_ADMIN_ROLE, CONFIGURER_ROLE, PAUSER_ROLE, and ADMIN_SUBSCRIPTION_ROLE were not enumerated for the OUSG and USDY InstantManagers.",
+      "C2: proxy admin and current implementation for OUSG and USDY TokenProxy could not be read because admin() and implementation() reverted in the surfacer.",
+      "C3: no complete execution path or timelock delay was determined for role changes, pauses, oracle changes, registry changes, or proxy upgrades.",
+      "C4: the only Safe successfully enumerated was 0x72Be8C14B7564f7a61ba2f6B7E50D18DC1D4B63D; this run did not prove which multisigs hold reachable role-admin, proxy-admin, pause, or configuration powers.",
+      "C5: no active Governor/GovernorBravo/OZ Governor path, voting period, quorum, proposal threshold, or queue delay was determined.",
+      "C6: pause functions exist, but the PAUSER_ROLE holder and maximum pause duration were not determined.",
+      "C7: the highest reachable power tier cannot be finalized without the missing holder and delay information."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ondoprotocol/usdy"
+      ],
+      "docs_url": "https://docs.ondo.finance/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Halborn",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-02"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.ondo.finance/general-access-products/usdy/eligibility",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0x72Be8C14B7564f7a61ba2f6B7E50D18DC1D4B63D",
+          "role": "OUSG Recipient / OUSG Holdings Safe; reachable control not proven in this run",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Ondo Yield Assets include tokenized yield products such as OUSG and USDY. Users subscribe or redeem through manager contracts that mint or burn yield-bearing or rebasing tokens against accepted payment assets, with compliance, registry, oracle, and rate-limit modules wired into the flow."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e15d3-b218-8333-add6-cef9a5d468d8",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Redemption is contract-gated and pausable: OUSG/USDY managers expose redeem functions, but redeemPaused can block exits and no on-chain max pause was identified.",
+    "short_headline": "Pausable gated exits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The OUSG InstantManager user-facing exit functions listed by the verified ABI are redeem(uint256,address,uint256) and redeemRebasingOUSG(uint256,address,uint256)."
+        },
+        {
+          "code": "E1",
+          "text": "The USDY InstantManager user-facing exit functions listed by the verified ABI are redeem(uint256,address,uint256) and redeemRebasingUSDY(uint256,address,uint256)."
+        },
+        {
+          "code": "E2",
+          "text": "Both InstantManagers expose redeemPaused() and pauseRedeem()/unpauseRedeem(), and the ABI includes a RedemptionsPaused error, indicating redemption can be pause-gated."
+        },
+        {
+          "code": "E3",
+          "text": "At the pinned surfacer blocks, redeemPaused() was false for both OUSG and USDY, but no maximum pause duration was surfaced."
+        },
+        {
+          "code": "E5",
+          "text": "The InstantManager flow is instant redemption rather than an explicitly queued withdrawal flow in the ABI observed here."
+        },
+        {
+          "code": "E7",
+          "text": "The surfacer lists redeem and redeemRebasing functions as contract write methods, so the functions are directly callable on-chain without depending on the official frontend."
+        }
+      ],
+      "steelman": {
+        "red": "Red is strongest because a core redemption path is explicitly pausable, the ABI exposes no max-pause cap, and no forced-exit path was identified.",
+        "orange": "Orange could fit if the pause role were a governed or time-capped emergency mechanism and finalized claims remained separately claimable, but this run did not find such bounds.",
+        "green": "Green would require permissionless exit with no broad pause, or a pause capped at no more than seven days plus non-pausable claims, which was not evidenced."
+      },
+      "verdict": "Choosing red because the observed core exit functions are redeem and redeemRebasing, both managers expose redeemPaused plus pauseRedeem/unpauseRedeem, and no max-pause cap or forced emergency exit was found in the on-chain surfacers."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+        "shows": "OUSG InstantManager surfacer: redeemPaused() returned false at pinned block; write methods include pauseRedeem, unpauseRedeem, redeem, and redeemRebasingOUSG; ABI includes RedemptionsPaused and UserNotRegistered errors.",
+        "chain": "Ethereum",
+        "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xa42613C243b67BF6194Ac327795b926B4b491f15",
+        "shows": "USDY InstantManager surfacer: redeemPaused() returned false at pinned block; write methods include pauseRedeem, unpauseRedeem, redeem, and redeemRebasingUSDY; ABI includes RedemptionsPaused and UserNotRegistered errors.",
+        "chain": "Ethereum",
+        "address": "0xa42613C243b67BF6194Ac327795b926B4b491f15"
+      },
+      {
+        "url": "https://docs.ondo.finance/general-access-products/usdy/eligibility",
+        "shows": "Official USDY eligibility page states that prohibited persons are prohibited from subscribing for, acquiring, or redeeming USDY tokens, including listed jurisdictions and US persons.",
+        "chain": "off-chain",
+        "address": "0x0000000000000000000000000000000000000000"
+      }
+    ],
+    "unknowns": [
+      "E2: source-level modifiers for redeem and redeemRebasing were not fully reconstructed from deployed source in this run.",
+      "E3: PAUSER_ROLE members and role-admin members were not enumerated; no maximum pause duration was found.",
+      "E4: no separate emergency-versus-governance pause path was reconstructed.",
+      "E5: no documented maximum queue duration or daily withdrawal caps were determined for non-instant or off-chain redemption flows.",
+      "E6: no forced-exit or escape-hatch mechanism was identified."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ondoprotocol/usdy"
+      ],
+      "docs_url": "https://docs.ondo.finance/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Halborn",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-02"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.ondo.finance/general-access-products/usdy/eligibility",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Ondo Yield Assets include tokenized yield products such as OUSG and USDY. Users subscribe or redeem through manager contracts that mint or burn yield-bearing or rebasing tokens against accepted payment assets, with compliance, registry, oracle, and rate-limit modules wired into the flow."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e15d3-b218-8333-add6-cef9a5d468d8",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Worst unmitigated dependency can impact ~100% of manager-mediated mint/redeem TVS: oracle, registry, compliance, rate-limit, and router dependencies are mutable by privileged roles.",
+    "short_headline": "Mutable external dependencies",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Both OUSG and USDY InstantManagers call or depend on external Ondo modules including ondoCompliance, ondoIDRegistry, ondoOracle, ondoRateLimiter, ondoRedemptionFees, ondoSubscriptionFees, and ondoTokenRouter."
+        },
+        {
+          "code": "A1",
+          "text": "The OndoOracle exposes methods for asset prices and role-controlled oracle mappings including tokenToAggregatorV3Oracle, tokenToHardcodedPrice, tokenToOracleType, and tokenToRWAOracle."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain oracle committee membership or reporting quorum was recovered, even though price reporting into OndoOracle is role controlled by setter roles."
+        },
+        {
+          "code": "A3",
+          "text": "The pinned address book includes LayerZero OFT adapter addresses for Ethereum, Arbitrum, Mantle, and other chains, but this run did not quantify material TVL riding on those bridges."
+        },
+        {
+          "code": "A4",
+          "text": "The product is an RWA wrapper whose assets depend on off-chain treasury/custody/issuer arrangements; on-chain surfacers identify treasury/custodian addresses in the pinned context, but this run did not reconstruct the off-chain custody failure model."
+        },
+        {
+          "code": "A6",
+          "text": "A minimumRwaPrice sanity threshold exists on both InstantManagers, but this run did not verify whether it is sufficient as a live fallback for oracle failure."
+        },
+        {
+          "code": "A9",
+          "text": "The InstantManager write surface includes setOndoOracle, setOndoCompliance, setOndoIDRegistry, setOndoRateLimiter, setOndoRedemptionFees, setOndoSubscriptionFees, and setOndoTokenRouter, meaning the external dependency surface is contract-mutable by privileged roles; no timelock or exit window was determined."
+        }
+      ],
+      "steelman": {
+        "red": "Red is strongest because the mint/redeem path relies on external oracle, registry, compliance, rate-limit, fee, and router modules that can be swapped by privileged roles with no verified timelock or exit window in this run.",
+        "orange": "Orange could fit if those mutable dependencies were protected by a seven-day or longer timelock, strong oracle sanity checks, and recoverable failure modes, but this run did not evidence those protections.",
+        "green": "Green would require that external dependency failure cannot cause principal loss or freeze and that dependency changes have an exit window; the observed manager surfaces do not establish that."
+      },
+      "verdict": "Choosing red because the OUSG and USDY InstantManagers route core mint/redeem behavior through mutable oracle, compliance, registry, rate-limit, fee, and router dependencies, and this run did not find a binding timelock or exit window on those dependency changes. Module share estimate: OUSG/USDY InstantManagers cover the manager-mediated mint/redeem path assessed here, treated as ~100% of assessed TVS exposure; cross-chain modules were not weighted due to missing TVS split."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+        "shows": "OUSG InstantManager surfacer: dependency addresses include ondoCompliance, ondoIDRegistry, ondoOracle, ondoRateLimiter, ondoRedemptionFees, ondoSubscriptionFees, and ondoTokenRouter; write methods include setters for these dependencies.",
+        "chain": "Ethereum",
+        "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xa42613C243b67BF6194Ac327795b926B4b491f15",
+        "shows": "USDY InstantManager surfacer: dependency addresses include ondoCompliance, ondoIDRegistry, ondoOracle, ondoRateLimiter, ondoRedemptionFees, ondoSubscriptionFees, and ondoTokenRouter; write methods include setters for these dependencies.",
+        "chain": "Ethereum",
+        "address": "0xa42613C243b67BF6194Ac327795b926B4b491f15"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
+        "shows": "OndoOracle surfacer: verified ABI with setter roles for aggregator, hardcoded, and RWA oracle sources; write methods include setHardcodedPrice, setTokenToAggregatorV3Oracle, setTokenToOracleType, and setTokenToRWAOracle.",
+        "chain": "Ethereum",
+        "address": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094"
+      },
+      {
+        "url": "https://docs.ondo.finance/general-access-products/usdy/basics",
+        "shows": "Official docs describe USDY as secured by short-term US Treasuries, shares of iShares Short Treasury Bond ETF, or bank demand deposits depending on issuance date.",
+        "chain": "off-chain",
+        "address": "0x0000000000000000000000000000000000000000"
+      }
+    ],
+    "unknowns": [
+      "A1: exhaustive external-call graph was not reconstructed from source for every pinned contract and chain.",
+      "A2: oracle setter role holders, any off-chain reporting committee, committee size, and quorum were not determined.",
+      "A3: bridge trust model and TVL share for LayerZero/OFT and non-Ethereum deployments were not quantified.",
+      "A4: off-chain custodian, issuer, and treasury failure propagation was not reconstructed beyond official asset-backing descriptions and pinned address labels.",
+      "A5: DeFiLlama fork lineage was not re-fetched in this run.",
+      "A6: minimumRwaPrice was observed, but its activation sufficiency and coverage against oracle/custody failures were not proven.",
+      "A7: no protocol-owned L2/L3 sequencer dependency was found; third-party L2 sequencers were not treated as protocol dependencies.",
+      "A8: keeper, relayer, or off-chain bot liveness requirements for mint/redeem settlement were not fully reconstructed.",
+      "A9: role holder and timelock for dependency setters were not determined."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ondoprotocol/usdy"
+      ],
+      "docs_url": "https://docs.ondo.finance/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Halborn",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-02"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Ondo Yield Assets include tokenized yield products such as OUSG and USDY. Users subscribe or redeem through manager contracts that mint or burn yield-bearing or rebasing tokens against accepted payment assets, with compliance, registry, oracle, and rate-limit modules wired into the flow."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e15d3-b218-8333-add6-cef9a5d468d8",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Contract and docs indicate permissioned access: USDY/OUSG flows use allowlist/compliance/registry gating and official eligibility prohibits many users from subscribing or redeeming.",
+    "short_headline": "Permissioned RWA access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The public ondoprotocol/usdy README states the RWA protocol allows whitelisted KYC'd users to hold RWA exposure, and USDY gates transfers based on an allowlist and blocklist."
+        },
+        {
+          "code": "A1",
+          "text": "The OUSG and USDY InstantManagers expose ondoCompliance and ondoIDRegistry dependencies, and their ABI includes a UserNotRegistered error, consistent with contract-level admission gating."
+        },
+        {
+          "code": "A2",
+          "text": "No independent off-chain admission operator was identified for direct contract calls; instead, eligibility appears enforced by registry/compliance modules and issuer policy."
+        },
+        {
+          "code": "A3-passive",
+          "text": "Ondo's Terms require users to represent they are not restricted or sanctioned persons and prohibit VPN or anonymization tools to circumvent restrictions."
+        },
+        {
+          "code": "A3-passive",
+          "text": "Ondo's USDY eligibility page states that prohibited persons are prohibited from subscribing for, acquiring, or redeeming USDY tokens, including US persons and multiple listed jurisdictions."
+        },
+        {
+          "code": "A4",
+          "text": "The manager contracts expose an ondoCompliance dependency and the public repo describes USDY transfer gating by allowlist and blocklist, indicating contract-level compliance tooling."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public through on-chain surfacers, but write access to core user actions is gated by registry/compliance/allowlist mechanisms."
+        },
+        {
+          "code": "A6",
+          "text": "Terms of Service and eligibility pages contain verbatim sanctions, jurisdiction, VPN, and eligibility restrictions."
+        }
+      ],
+      "steelman": {
+        "red": "Red is strongest because user-facing subscription, acquisition, transfer, and redemption are contract- and policy-gated through KYC/allowlist/blocklist/compliance mechanisms.",
+        "orange": "Orange would fit a permissionless contract that is practically captured by one frontend, but the evidence points to contract-level gating rather than mere frontend capture.",
+        "green": "Green would require unconditional contract-level entry and exit plus an independent access path, which conflicts with the observed compliance registry and allowlist/blocklist evidence."
+      },
+      "verdict": "Choosing red because the public repo states whitelisted KYC and allowlist/blocklist gating, the deployed managers expose compliance and ID registry dependencies with UserNotRegistered errors, and official eligibility pages prohibit specified users from subscribing, acquiring, or redeeming."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/ondoprotocol/usdy",
+        "shows": "Public repository README states Ondo's RWA protocol allows whitelisted KYC'd users to hold exposure to RWAs; USDY gates transfers based on an allowlist and blocklist.",
+        "chain": "off-chain",
+        "address": "0x0000000000000000000000000000000000000000"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+        "shows": "OUSG InstantManager surfacer shows ondoCompliance and ondoIDRegistry dependencies and a UserNotRegistered error in the verified ABI.",
+        "chain": "Ethereum",
+        "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xa42613C243b67BF6194Ac327795b926B4b491f15",
+        "shows": "USDY InstantManager surfacer shows ondoCompliance and ondoIDRegistry dependencies and a UserNotRegistered error in the verified ABI.",
+        "chain": "Ethereum",
+        "address": "0xa42613C243b67BF6194Ac327795b926B4b491f15"
+      },
+      {
+        "url": "https://docs.ondo.finance/general-access-products/usdy/eligibility",
+        "shows": "Verbatim eligibility evidence: 'Individuals located or residing in and entities organized under the laws of or with a principal place of business in, any jurisdiction listed below (“Prohibited Persons”) are prohibited from subscribing for, acquiring or redeeming USDY tokens'; the page also states US persons are prohibited from subscribing for, acquiring or redeeming USDY tokens.",
+        "chain": "off-chain",
+        "address": "0x0000000000000000000000000000000000000000"
+      },
+      {
+        "url": "https://docs.ondo.finance/legal/terms-of-service",
+        "shows": "Verbatim ToS evidence: users represent they are not residents, nationals, or agents of sanctioned jurisdictions, not sanctions-list persons, and 'do not, and will not, use VPN software or any other privacy or anonymization tools or techniques to circumvent, or attempt to circumvent, any restrictions that apply to the Services.'",
+        "chain": "off-chain",
+        "address": "0x0000000000000000000000000000000000000000"
+      }
+    ],
+    "unknowns": [
+      "A2: no complete enumeration of every off-chain operator in the admission path was reconstructed.",
+      "A3-active: this run did not verify runtime IP geoblocking, wallet screening, or KYC-wall behavior in the live official frontend.",
+      "A3b: independent access paths were not exhaustively searched because contract-level gating already determines the grade.",
+      "A4: exact blocklist/allowlist updater address and role-holder set were not determined."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ondoprotocol/usdy"
+      ],
+      "docs_url": "https://docs.ondo.finance/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Halborn",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-02"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.ondo.finance/general-access-products/usdy/eligibility",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Ondo Yield Assets include tokenized yield products such as OUSG and USDY. Users subscribe or redeem through manager contracts that mint or burn yield-bearing or rebasing tokens against accepted payment assets, with compliance, registry, oracle, and rate-limit modules wired into the flow."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ondo-yield-assets",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e15d3-b218-8333-add6-cef9a5d468d8",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Main manager/oracle ABIs are verified, but key dependency and proxy implementation/admin visibility is incomplete, including an unverified OndoIDRegistry dependency and unresolved token proxy implementations.",
+    "short_headline": "Verification gaps",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "The OUSG and USDY InstantManagers are verified by the DeFiPunkd surfacer, with ABI source sourcify."
+        },
+        {
+          "code": "V1",
+          "text": "OndoOracle is verified by the DeFiPunkd surfacer, with ABI source etherscan."
+        },
+        {
+          "code": "V1",
+          "text": "OndoIDRegistry had no verified ABI found by the surfacer, which reported etherscan and sourcify both failed."
+        },
+        {
+          "code": "V6",
+          "text": "OUSG and USDY token proxies expose TokenProxy ABI from sourcify, but admin() and implementation() calls reverted, so the current implementation contracts were not verified in this run."
+        },
+        {
+          "code": "V3",
+          "text": "Ondo docs list recognized audit providers and reports, including Spearbit March 2025, Halborn February 2025, Code4rena April 2024, Cyfrin April 2024, and other audits."
+        },
+        {
+          "code": "V4",
+          "text": "Spearbit, Halborn, Code4rena, and Cyfrin are recognized smart-contract security review providers for purposes of this rubric."
+        }
+      ],
+      "steelman": {
+        "red": "Red is strongest because a key deployed dependency, OndoIDRegistry, lacked verified ABI evidence in the surfacer, and current proxy implementations for OUSG/USDY tokens were not resolved.",
+        "orange": "Orange could fit if only peripheral contracts were unverified and the current implementations were otherwise verified, but this run could not show that for the registry/proxy surfaces.",
+        "green": "Green would require verified deployed bytecode for proxy and implementation plus public repo correspondence and current audit coverage, which was not established."
+      },
+      "verdict": "Choosing red because the managers and oracle are verified, but the OndoIDRegistry dependency lacked verified ABI evidence and the OUSG/USDY proxy implementations could not be resolved or verified through the surfacer, leaving core deployed-code verifiability incomplete."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+        "shows": "OUSG InstantManager surfacer identifies contract name OUSG_InstantManager and ABI source sourcify.",
+        "chain": "Ethereum",
+        "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xa42613C243b67BF6194Ac327795b926B4b491f15",
+        "shows": "USDY InstantManager surfacer identifies contract name USDY_InstantManager and ABI source sourcify.",
+        "chain": "Ethereum",
+        "address": "0xa42613C243b67BF6194Ac327795b926B4b491f15"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
+        "shows": "OndoOracle surfacer identifies contract name OndoOracle and ABI source etherscan.",
+        "chain": "Ethereum",
+        "address": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df",
+        "shows": "OndoIDRegistry surfacer reports no verified ABI found for the address on chainId 1, with etherscan and sourcify both failed.",
+        "chain": "Ethereum",
+        "address": "0xcf6958D69d535FD03BD6Df3F4fe6CDcd127D97df"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92",
+        "shows": "OUSG TokenProxy surfacer shows TokenProxy ABI source sourcify, but admin() and implementation() calls reverted.",
+        "chain": "Ethereum",
+        "address": "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
+        "shows": "USDY TokenProxy surfacer shows TokenProxy ABI source sourcify, but admin() and implementation() calls reverted.",
+        "chain": "Ethereum",
+        "address": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C"
+      },
+      {
+        "url": "https://docs.ondo.finance/audits",
+        "shows": "Official audit page lists multiple smart-contract audits, including March 2025 Spearbit, February 2025 Halborn, April 2024 Code4rena, April 2024 Cyfrin, September 2023 Code4rena, August 2023 Zokyo, April 2023 NetherMind, and January 2023 Code4rena.",
+        "chain": "off-chain",
+        "address": "0x0000000000000000000000000000000000000000"
+      },
+      {
+        "url": "https://github.com/ondoprotocol/usdy",
+        "shows": "Public source repository for Ondo RWA/USDY describes the protocol and contracts, but this run did not pin a commit or prove deployed bytecode correspondence.",
+        "chain": "off-chain",
+        "address": "0x0000000000000000000000000000000000000000"
+      }
+    ],
+    "unknowns": [
+      "V2: no source-to-repo correspondence or deployed-bytecode-to-commit match was established.",
+      "V3: audit scope for the current OUSG/USDY InstantManager, token proxy implementations, OndoIDRegistry, and dependency modules was not fully mapped to deployed contracts.",
+      "V5: post-audit drift was not sampled at the file or commit level.",
+      "V6: current token proxy implementation addresses were not resolved because implementation() reverted through the surfacer."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/ondoprotocol/usdy"
+      ],
+      "docs_url": "https://docs.ondo.finance/",
+      "audits": [
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-03"
+        },
+        {
+          "firm": "Halborn",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2025-02"
+        },
+        {
+          "firm": "Code4rena",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2024-04"
+        },
+        {
+          "firm": "Cyfrin",
+          "url": "https://docs.ondo.finance/audits",
+          "date": "2024-04"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Ondo Yield Assets include tokenized yield products such as OUSG and USDY. Users subscribe or redeem through manager contracts that mint or burn yield-bearing or rebasing tokens against accepted payment assets, with compliance, registry, oracle, and rate-limit modules wired into the flow."
+    }
+  }
+]
