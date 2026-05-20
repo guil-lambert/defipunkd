@@ -1,0 +1,762 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "polymarket-international",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e1920-7e3c-8327-9485-9a7e4972292b",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Admin and upgrade authority could not be resolved from live state reads; ABI inspection shows potentially T1/T2 privileged surfaces.",
+    "short_headline": "Control unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The official contracts page identifies the main Polygon contracts assessed: CTF Exchange, Neg Risk CTF Exchange, Neg Risk Adapter, Conditional Tokens, pUSD proxy/implementation, Onramp/Offramp, collateral adapters, UMA Adapter, and UMA Optimistic Oracle."
+        },
+        {
+          "code": "C1",
+          "text": "DefiPunkd surfacers exposed role-oriented views such as isAdmin/isOperator, owner, rolesOf, paused, and admins, but zero-arg state reads failed with Polygon RPC 401 or safe-open/read errors, so the current privileged actors were not determined."
+        },
+        {
+          "code": "C2",
+          "text": "pUSD/CollateralToken has a proxy address and implementation address in the official docs; the implementation ABI includes UUPS-style upgradeToAndCall/proxiableUUID and owner/role functions, while Polygonscan identifies the proxy as a minimal proxy to the implementation."
+        },
+        {
+          "code": "C3",
+          "text": "No Governor, timelock, queued execution path, or delay constant was verified for the core trading, collateral, or UMA-resolution contracts."
+        },
+        {
+          "code": "C4",
+          "text": "No reachable multisig was verified as owner/admin of the inspected contracts. The pinned Gnosis Safe Factory is a wallet factory, not evidence of a controlling Safe."
+        },
+        {
+          "code": "C5",
+          "text": "No on-chain governance contract, voting token, quorum, voting period, or proposal threshold was found in the inspected contract docs, surfacers, or repositories."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency-like surfaces are present in the ABI: CTF exchanges expose pauseTrading and pauseUser, CollateralOnramp/Offramp expose pause/unpause per asset, and UmaCtfAdapter exposes pause, flag, reset, and emergencyResolve per question."
+        },
+        {
+          "code": "C7",
+          "text": "Potential highest-tier surfaces include pUSD upgradeToAndCall/mint/addMinter/addWrapper, exchange pauseTrading/setFeeReceiver/setMaxFeeRate, on/offramp pause/unpause, and UMA emergencyResolve, but the controlling actor and delay for each path are unresolved."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Current owner/admin/governor, multisig owners, timelock delays, and emergency-role holders could not be read in this run, so the assessment cannot distinguish an orange/red unilateral T1/T2 path from a delayed or broader-control path."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.polymarket.com/resources/contracts",
+        "shows": "Official documentation says all Polymarket contracts are on Polygon chainId 137; lists the pinned core, collateral, wallet-factory, UMA adapter, and UMA Optimistic Oracle addresses; lists Quantstamp and Cantina March 2026 audits and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "Public CTF Exchange V2 repository; README describes CTF Exchange V2 as the core trading system, deployed Polygon addresses, operator-driven order matching, collateral onramp/offramp, audits, and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/uma-ctf-adapter",
+        "shows": "Public UMA CTF Adapter repository; README says the adapter resolves Polymarket prediction markets through UMA Optimistic Oracle, prepares conditions, sends OO requests, uses proposer/dispute/DVM flow, and allows anyone to call resolve after data is available."
+      },
+      {
+        "url": "https://github.com/Polymarket/neg-risk-ctf-adapter",
+        "shows": "Public negative-risk CTF adapter repository; README describes the negative-risk adapter, NegRiskOperator preparation flow, and use with the UMA CTF adapter."
+      },
+      {
+        "url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+        "shows": "Cantina bounty page is live, names Polymarket, states maximum reward $5,000,000 and start date 12 Apr 2026, and lists smart-contract critical impacts including pUSD unauthorized mint/burn, UmaCtfAdapter/NegRiskUmaCtfAdapter wrongful payouts, UUPS CollateralToken upgrade exploitation, and CTF split/merge/redeem extraction."
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0xE111180000d2663C0091e4f400237545B87B996B",
+        "shows": "CTF Exchange surfacer identifies chain polygon, contractName CTFExchange, ABI source etherscan, zero-arg read failure, and write/read surfaces including isAdmin, isOperator, pauseTrading, pauseUser, setFeeReceiver, setMaxFeeRate, addAdmin, and addOperator.",
+        "chain": "Polygon",
+        "address": "0xE111180000d2663C0091e4f400237545B87B996B"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0xe2222d279d744050d28e00520010520000310F59",
+        "shows": "Neg Risk CTF Exchange surfacer identifies CTFExchange ABI and write surfaces including addAdmin, addOperator, matchOrders, pauseTrading, pauseUser, setFeeReceiver, setMaxFeeRate, setUserPauseBlockInterval, unpauseTrading, and unpauseUser.",
+        "chain": "Polygon",
+        "address": "0xe2222d279d744050d28e00520010520000310F59"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x6bBCef9f7ef3B6C592c99e0f206a0DE94Ad0925f",
+        "shows": "pUSD CollateralToken implementation surfacer identifies CollateralToken ABI and write surfaces including addMinter, addWrapper, mint, burn, removeMinter, removeWrapper, transferOwnership, unwrap, wrap, and upgradeToAndCall; zero-arg reads failed.",
+        "chain": "Polygon",
+        "address": "0x6bBCef9f7ef3B6C592c99e0f206a0DE94Ad0925f"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x93070a847efEf7F70739046A929D47a521F5B8ee",
+        "shows": "CollateralOnramp surfacer identifies owner/role/paused views and write surfaces addAdmin, grantRoles, pause, unpause, and wrap; zero-arg reads failed.",
+        "chain": "Polygon",
+        "address": "0x93070a847efEf7F70739046A929D47a521F5B8ee"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x2957922Eb93258b93368531d39fAcCA3B4dC5854",
+        "shows": "CollateralOfframp surfacer identifies owner/role/paused views and write surfaces addAdmin, grantRoles, pause, unpause, and unwrap; zero-arg reads failed.",
+        "chain": "Polygon",
+        "address": "0x2957922Eb93258b93368531d39fAcCA3B4dC5854"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74",
+        "shows": "UmaCtfAdapter surfacer identifies admin views and privileged/question-control write surfaces addAdmin, removeAdmin, emergencyResolve, flag, pause, reset, resolve, and unpause; zero-arg reads failed.",
+        "chain": "Polygon",
+        "address": "0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74"
+      },
+      {
+        "url": "https://polygonscan.com/address/0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB",
+        "shows": "Polygonscan shows the pUSD proxy as a minimal proxy contract for implementation 0x6bBCef9f7ef3B6C592c99e0f206a0DE94Ad0925f.",
+        "chain": "Polygon",
+        "address": "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB"
+      }
+    ],
+    "unknowns": [
+      "C1: current owner/admin/operator/governor/pendingOwner was not determined for CTF Exchange, Neg Risk CTF Exchange, pUSD proxy/implementation, CollateralOnramp, CollateralOfframp, UMA Adapter, or other pinned contracts because live state reads failed or could not be opened.",
+      "C2: proxy admin or authorized UUPS upgrader for the pUSD proxy was not determined; the exact upgrade authority on any proxy-like/similar-match exchange surface was not determined.",
+      "C3: execution path and uncontested fast-path delays from proposal or admin action to execution were not determined.",
+      "C4: no reachable multisig threshold, owner set, signer identity split, or version was determined.",
+      "C5: no on-chain governance proposal threshold, voting period, quorum, or timelock delay was determined.",
+      "C6: pause/emergency role holders and maximum pause/emergency duration caps were not determined.",
+      "C7: highest reachable power tier on the actual control path was not classified because the controlling actors and delays are unresolved."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Polymarket/ctf-exchange-v2",
+        "https://github.com/Polymarket/uma-ctf-adapter",
+        "https://github.com/Polymarket/neg-risk-ctf-adapter"
+      ],
+      "docs_url": "https://docs.polymarket.com/",
+      "audits": [
+        {
+          "firm": "Quantstamp",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Quantstamp%20-%20March%202026.pdf",
+          "date": "2026-03"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Cantina%20-%20March%202026.pdf",
+          "date": "2026-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.polymarket.com/resources/contracts",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Polymarket International lets users trade binary and multiple-outcome prediction-market positions on Polygon. Outcomes are tokenized as Conditional Tokens backed by pUSD, and pUSD is an ERC-20 wrapper around USDC/USDC.e. CLOB V2 uses off-chain signed orders matched by an operator and settled on-chain through CTF Exchange contracts; market resolution flows through the UMA CTF adapter."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "polymarket-international",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e1920-7e3c-8327-9485-9a7e4972292b",
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "Direct redeem/merge/unwrap exits exist, but pause authority and cap for collateral exits could not be resolved.",
+    "short_headline": "Exit pause unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit and conversion functions observed include ConditionalTokens redeemPositions, mergePositions, safeTransferFrom/safeBatchTransferFrom, CollateralOfframp.unwrap, CollateralToken.unwrap, and direct pUSD withdrawal paths described in the bridge docs."
+        },
+        {
+          "code": "E2",
+          "text": "ConditionalTokens ABI lists redeemPositions and mergePositions as nonpayable write functions without an explicit role in the ABI; CollateralOfframp and CollateralOnramp expose paused(address), pause(address), unpause(address), role views, and OnlyUnpaused errors."
+        },
+        {
+          "code": "E3",
+          "text": "The pUSD docs explicitly say wrap and unwrap revert with OnlyUnpaused if an admin paused the underlying asset, but the admin role holder and pause duration were not read."
+        },
+        {
+          "code": "E4",
+          "text": "The inspected evidence shows asset-level pause/unpause on Onramp/Offramp and global/user pause on CTF exchanges, but does not distinguish emergency pause from governance pause or identify maximum caps."
+        },
+        {
+          "code": "E5",
+          "text": "Bridge withdrawal docs say withdrawals are instant/free, that pUSD can be withdrawn directly without Uniswap liquidity, and that cross-chain or USDC withdrawals use off-chain bridge/swap flows; no on-chain redemption queue duration was verified."
+        },
+        {
+          "code": "E6",
+          "text": "A partial escape hatch exists for users willing to hold/withdraw pUSD directly, and ConditionalTokens has direct redeem/merge functions after resolution, but adversarial-admin behavior on Offramp pause remains unresolved."
+        },
+        {
+          "code": "E7",
+          "text": "Direct on-chain ABI/write surfaces are visible for redeem/merge/unwrap/wrap, and docs provide direct contract-call examples for pUSD, but cross-chain withdrawal address creation remains an off-chain Bridge API flow."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Exit functions are visible, but the key grading question is whether any actor can indefinitely pause finalized claims or pUSD unwraps. The relevant pause role holders and time caps were not determined, so the slice remains unknown."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.polymarket.com/resources/contracts",
+        "shows": "Official documentation says all Polymarket contracts are on Polygon chainId 137; lists the pinned core, collateral, wallet-factory, UMA adapter, and UMA Optimistic Oracle addresses; lists Quantstamp and Cantina March 2026 audits and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "Public CTF Exchange V2 repository; README describes CTF Exchange V2 as the core trading system, deployed Polygon addresses, operator-driven order matching, collateral onramp/offramp, audits, and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/uma-ctf-adapter",
+        "shows": "Public UMA CTF Adapter repository; README says the adapter resolves Polymarket prediction markets through UMA Optimistic Oracle, prepares conditions, sends OO requests, uses proposer/dispute/DVM flow, and allows anyone to call resolve after data is available."
+      },
+      {
+        "url": "https://github.com/Polymarket/neg-risk-ctf-adapter",
+        "shows": "Public negative-risk CTF adapter repository; README describes the negative-risk adapter, NegRiskOperator preparation flow, and use with the UMA CTF adapter."
+      },
+      {
+        "url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+        "shows": "Cantina bounty page is live, names Polymarket, states maximum reward $5,000,000 and start date 12 Apr 2026, and lists smart-contract critical impacts including pUSD unauthorized mint/burn, UmaCtfAdapter/NegRiskUmaCtfAdapter wrongful payouts, UUPS CollateralToken upgrade exploitation, and CTF split/merge/redeem extraction."
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
+        "shows": "ConditionalTokens surfacer lists write methods redeemPositions, splitPosition, mergePositions, setApprovalForAll, safeTransferFrom, and safeBatchTransferFrom.",
+        "chain": "Polygon",
+        "address": "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045"
+      },
+      {
+        "url": "https://docs.polymarket.com/trading/ctf/overview",
+        "shows": "CTF overview explains that Polymarket outcome tokens are fully collateralized, and lists CTF user operations Split, Merge, and Redeem."
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x2957922Eb93258b93368531d39fAcCA3B4dC5854",
+        "shows": "CollateralOfframp surfacer lists paused(address), role views, pause/unpause, and unwrap(address,address,uint256).",
+        "chain": "Polygon",
+        "address": "0x2957922Eb93258b93368531d39fAcCA3B4dC5854"
+      },
+      {
+        "url": "https://docs.polymarket.com/concepts/pusd",
+        "shows": "pUSD docs say pUSD is backed by USDC, wrapping/unwrapping is enforced on-chain by Onramp/Offramp, wrap/unwrap revert OnlyUnpaused if admin paused USDC.e, and direct wrap/unwrap functions are provided."
+      },
+      {
+        "url": "https://docs.polymarket.com/trading/bridge/withdraw",
+        "shows": "Bridge withdrawal docs say pUSD can be withdrawn to supported chain/token through bridge/swap flow, direct pUSD withdrawal requires no Uniswap liquidity, and withdrawals are instant and free."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "README describes CollateralOfframp unwrapping PMCT back to USDC/USDCe, CTF operations, operator matching, and a user self-pause feature with default 100 blocks."
+      }
+    ],
+    "unknowns": [
+      "E1: exhaustive enumeration of every legacy/peripheral exit route beyond pinned contracts and official docs was not completed.",
+      "E2: source-level access modifiers for every exit function were not fully audited beyond ABI/docs evidence.",
+      "E3: pause role holder, role admin, current paused state, and maximum pause duration were not determined for Onramp, Offramp, pUSD, or exchange pause surfaces.",
+      "E4: emergency-vs-governance pause paths and caps were not distinguished because the role holders and governance path were unresolved.",
+      "E5: no on-chain maximum duration, cap, or pausable-status read was obtained for the Bridge API withdrawal flow; docs say instant but this is off-chain operational evidence only.",
+      "E6: no forced-exit mechanism proven to bypass an adversarial Offramp/collateral pause was found.",
+      "E7: direct on-chain exit is shown for CTF and pUSD/Offramp, but the cross-chain withdrawal UX depends on off-chain bridge address/quote infrastructure."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Polymarket/ctf-exchange-v2",
+        "https://github.com/Polymarket/uma-ctf-adapter",
+        "https://github.com/Polymarket/neg-risk-ctf-adapter"
+      ],
+      "docs_url": "https://docs.polymarket.com/",
+      "audits": [
+        {
+          "firm": "Quantstamp",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Quantstamp%20-%20March%202026.pdf",
+          "date": "2026-03"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Cantina%20-%20March%202026.pdf",
+          "date": "2026-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.polymarket.com/resources/contracts",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Polymarket International lets users trade binary and multiple-outcome prediction-market positions on Polygon. Outcomes are tokenized as Conditional Tokens backed by pUSD, and pUSD is an ERC-20 wrapper around USDC/USDC.e. CLOB V2 uses off-chain signed orders matched by an operator and settled on-chain through CTF Exchange contracts; market resolution flows through the UMA CTF adapter."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "polymarket-international",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e1920-7e3c-8327-9485-9a7e4972292b",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Worst dependency can affect ~100% of unresolved market TVS: UMA resolution and pUSD/USDC backing are cross-cutting external dependencies.",
+    "short_headline": "Oracle-backed outcomes",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core external dependencies identified: UmaCtfAdapter depends on UMA Optimistic Oracle/DVM resolution, ConditionalTokens depend on the oracle-reported payout vector, pUSD depends on USDC/USDC.e backing, and bridge withdrawals may depend on bridge/swap infrastructure."
+        },
+        {
+          "code": "A2",
+          "text": "UMA resolution is explicitly off-chain-input dependent: proposers respond with resolution data, disputes can reset requests, and a second dispute falls back to UMA DVM over a 48-72 hour period before anyone can call resolve."
+        },
+        {
+          "code": "A3",
+          "text": "Polymarket bridge docs support deposits and withdrawals across multiple chains and tokens, converting into pUSD on Polygon; these bridge paths are user-facing but optional relative to direct Polygon pUSD flows."
+        },
+        {
+          "code": "A4",
+          "text": "Collateral nesting is outcome token -> pUSD -> USDC/USDC.e. A USDC/USDC.e backing failure would propagate to pUSD and therefore to the collateral value of CTF positions across markets."
+        },
+        {
+          "code": "A5",
+          "text": "No fork lineage was verified in this run; the inspected public repos are Polymarket-specific components plus Gnosis ConditionalTokens usage."
+        },
+        {
+          "code": "A6",
+          "text": "Documented fallbacks include UMA dispute/DVM escalation, direct pUSD withdrawal bypassing Uniswap liquidity, and UI output-difference checks for bridge/swap withdrawals; these do not constitute an independent on-chain fallback that keeps users whole if UMA final resolution is wrong or USDC backing fails."
+        },
+        {
+          "code": "A7",
+          "text": "The protocol is deployed on Polygon mainnet and no Polymarket-owned L2/L3/appchain sequencer was identified; Polygon liveness is treated as substrate here."
+        },
+        {
+          "code": "A8",
+          "text": "Trading performance depends on an off-chain CLOB/operator path: users sign orders off-chain and the operator calls matchOrders. If this fails, trading degrades or halts, but direct CTF redemption/merge and pUSD paths remain separate."
+        },
+        {
+          "code": "A9",
+          "text": "UmaCtfAdapter has admin and emergency question-control surfaces, and collateral contracts have owner/admin role surfaces, but dependency-mutability authority and delay were not resolved."
+        }
+      ],
+      "steelman": {
+        "red": "UMA/DVM resolution and USDC/USDC.e backing can determine payouts or collateral value for the full set of unresolved CTF markets, so a failure can cause principal-level wrong payouts or collateral impairment.",
+        "orange": "UMA has proposer/dispute/DVM escalation and the trading operator mainly affects execution quality/liveness rather than custody, so many failures are recoverable delays rather than instant loss.",
+        "green": "The core settlement primitives are on-chain, CTF positions are fully collateralized by pUSD, and anyone can call resolve once resolution data is available."
+      },
+      "verdict": "Choosing red because the worst dependency is not merely performance: UMA final resolution sets CTF payout vectors, and pUSD collateral value is only as good as its USDC/USDC.e backing. Those dependencies are cross-cutting for roughly all unresolved market collateral, while the documented UMA escalation and direct-pUSD withdrawal paths do not provide an independent guarantee of correct payout or collateral solvency."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.polymarket.com/resources/contracts",
+        "shows": "Official documentation says all Polymarket contracts are on Polygon chainId 137; lists the pinned core, collateral, wallet-factory, UMA adapter, and UMA Optimistic Oracle addresses; lists Quantstamp and Cantina March 2026 audits and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "Public CTF Exchange V2 repository; README describes CTF Exchange V2 as the core trading system, deployed Polygon addresses, operator-driven order matching, collateral onramp/offramp, audits, and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/uma-ctf-adapter",
+        "shows": "Public UMA CTF Adapter repository; README says the adapter resolves Polymarket prediction markets through UMA Optimistic Oracle, prepares conditions, sends OO requests, uses proposer/dispute/DVM flow, and allows anyone to call resolve after data is available."
+      },
+      {
+        "url": "https://github.com/Polymarket/neg-risk-ctf-adapter",
+        "shows": "Public negative-risk CTF adapter repository; README describes the negative-risk adapter, NegRiskOperator preparation flow, and use with the UMA CTF adapter."
+      },
+      {
+        "url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+        "shows": "Cantina bounty page is live, names Polymarket, states maximum reward $5,000,000 and start date 12 Apr 2026, and lists smart-contract critical impacts including pUSD unauthorized mint/burn, UmaCtfAdapter/NegRiskUmaCtfAdapter wrongful payouts, UUPS CollateralToken upgrade exploitation, and CTF split/merge/redeem extraction."
+      },
+      {
+        "url": "https://docs.polymarket.com/trading/ctf/overview",
+        "shows": "CTF overview says every Yes/No pair is backed by exactly $1.00 pUSD locked in CTF, and condition IDs use the UMA CTF Adapter as oracle."
+      },
+      {
+        "url": "https://github.com/Polymarket/uma-ctf-adapter",
+        "shows": "UMA CTF Adapter README says the adapter fetches resolution data from UMA Optimistic Oracle, sends requests at market initialization, uses UMA proposers/disputes/DVM fallback, and anyone can call resolve after data is available."
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74",
+        "shows": "UmaCtfAdapter surfacer lists optimisticOracle, emergencySafetyPeriod, getExpectedPayouts, ready, questions, resolve, emergencyResolve, flag, pause, reset, and admin functions.",
+        "chain": "Polygon",
+        "address": "0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
+        "shows": "ConditionalTokens ABI includes payoutNumerators/payoutDenominator views and redeemPositions/reportPayouts/prepareCondition write methods, demonstrating outcome redemption depends on oracle-reported payouts.",
+        "chain": "Polygon",
+        "address": "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045"
+      },
+      {
+        "url": "https://docs.polymarket.com/concepts/pusd",
+        "shows": "pUSD docs say pUSD is an ERC-20 on Polygon backed by USDC, with wrapping/unwrapping enforced on-chain by CollateralOnramp and CollateralOfframp."
+      },
+      {
+        "url": "https://docs.polymarket.com/trading/bridge/deposit",
+        "shows": "Bridge deposit docs say deposits from Ethereum, Solana, Bitcoin, and other chains are converted to pUSD on Polygon, and warn unsupported tokens may cause irrecoverable loss."
+      },
+      {
+        "url": "https://docs.polymarket.com/trading/bridge/withdraw",
+        "shows": "Bridge withdrawal docs say withdrawal to non-pUSD routes unwraps to USDC and swaps through a Uniswap v3 pool, UI enforces less than 10bp output difference, the pool may be exhausted, and direct pUSD withdrawal bypasses Uniswap liquidity."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "CTF Exchange V2 README says users sign EIP-712 orders off-chain and the operator calls matchOrders; settlement uses direct transfers, CTF mint, or CTF merge."
+      }
+    ],
+    "unknowns": [
+      "A1: exact live optimisticOracle address from UmaCtfAdapter was not read because the read API/opening failed; the official docs pin the UMA Optimistic Oracle address separately.",
+      "A2: UMA proposer/DVM committee membership, quorum, and selection process were not verified in this run.",
+      "A3: material TVS split by bridge/source chain was not fetched; bridge dependency impact is treated as optional/user-path dependent rather than the headline dependency.",
+      "A4: exact USDC vs USDC.e backing balances and custody split for pUSD were not read on-chain.",
+      "A5: DeFiLlama forkedFrom was not re-fetched in this run.",
+      "A6: UMA DVM and bridge safeguards were not verified as live on-chain fallback mechanisms through state reads; they are documented/repository evidence only.",
+      "A9: governance/admin ability to change external dependencies without an exit window was not determined because owner/admin and timelock paths were unresolved."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Polymarket/ctf-exchange-v2",
+        "https://github.com/Polymarket/uma-ctf-adapter",
+        "https://github.com/Polymarket/neg-risk-ctf-adapter"
+      ],
+      "docs_url": "https://docs.polymarket.com/",
+      "audits": [
+        {
+          "firm": "Quantstamp",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Quantstamp%20-%20March%202026.pdf",
+          "date": "2026-03"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Cantina%20-%20March%202026.pdf",
+          "date": "2026-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.polymarket.com/resources/contracts",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Polymarket International lets users trade binary and multiple-outcome prediction-market positions on Polygon. Outcomes are tokenized as Conditional Tokens backed by pUSD, and pUSD is an ERC-20 wrapper around USDC/USDC.e. CLOB V2 uses off-chain signed orders matched by an operator and settled on-chain through CTF Exchange contracts; market resolution flows through the UMA CTF adapter."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "polymarket-international",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e1920-7e3c-8327-9485-9a7e4972292b",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Core trading is not permissionless at admission: users can sign orders, but Polymarket's CLOB/operator must admit and match them.",
+    "short_headline": "Operator-gated trading",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No on-chain KYC/whitelist modifier was identified on CTF redeem/merge or pUSD wrap/unwrap in the inspected ABIs, but the exchange has admin/operator roles and operator-only matching surfaces."
+        },
+        {
+          "code": "A2",
+          "text": "Core trading admission is operator-mediated: the README states users sign orders off-chain and the operator calls matchOrders; API docs require authenticated CLOB order submission; geographic docs say orders from blocked regions are rejected."
+        },
+        {
+          "code": "A3",
+          "text": "Official API/frontends implement active geographic restrictions: order placement is restricted from certain locations, blocked-region orders are rejected, and docs list countries/regions with blocked or close-only status."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent-ish paths exist for SDK/API/direct-contract use: official open-source TypeScript/Python/Rust clients exist, and pUSD/CTF contracts are directly callable. These do not remove the operator dependency for CLOB trade matching."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain OFAC/sanctions blocklist was found in the inspected CTF/pUSD/Onramp/Offramp ABIs; the observed sanctions/compliance restrictions are off-chain API/frontend geoblocking."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is public for data/orderbook endpoints, while CLOB trading endpoints require L2 POLY_* authentication headers and location eligibility. Contract-level pUSD/CTF transfers and redemption-style operations appear separately callable."
+        },
+        {
+          "code": "A6",
+          "text": "The ToS page was fetched, but the legal clauses did not render in the fetched body; the Help Center separately quotes that VPN bypass of geographic restrictions violates Terms of Service Section 2.1.4."
+        }
+      ],
+      "steelman": {
+        "red": "The user-facing act of trading on Polymarket's CLOB requires the official operator/API path to admit orders and call matchOrders, with no verified permissionless fallback that lets an arbitrary user force trade settlement.",
+        "orange": "Base contracts for pUSD and CTF positions are directly callable and SDKs are open-source, so custody/exit is less captured than order admission.",
+        "green": "No contract-level KYC/blocklist was identified for the core token/collateral exit primitives, and users retain local signing control over orders."
+      },
+      "verdict": "Choosing red because the core product action is trading, and evidence shows orders are submitted through authenticated CLOB endpoints, blocked-region orders are rejected, and the operator calls matchOrders on-chain. The existence of SDKs and direct exit functions does not create a permissionless route to have a trade admitted and matched."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.polymarket.com/resources/contracts",
+        "shows": "Official documentation says all Polymarket contracts are on Polygon chainId 137; lists the pinned core, collateral, wallet-factory, UMA adapter, and UMA Optimistic Oracle addresses; lists Quantstamp and Cantina March 2026 audits and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "Public CTF Exchange V2 repository; README describes CTF Exchange V2 as the core trading system, deployed Polygon addresses, operator-driven order matching, collateral onramp/offramp, audits, and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/uma-ctf-adapter",
+        "shows": "Public UMA CTF Adapter repository; README says the adapter resolves Polymarket prediction markets through UMA Optimistic Oracle, prepares conditions, sends OO requests, uses proposer/dispute/DVM flow, and allows anyone to call resolve after data is available."
+      },
+      {
+        "url": "https://github.com/Polymarket/neg-risk-ctf-adapter",
+        "shows": "Public negative-risk CTF adapter repository; README describes the negative-risk adapter, NegRiskOperator preparation flow, and use with the UMA CTF adapter."
+      },
+      {
+        "url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+        "shows": "Cantina bounty page is live, names Polymarket, states maximum reward $5,000,000 and start date 12 Apr 2026, and lists smart-contract critical impacts including pUSD unauthorized mint/burn, UmaCtfAdapter/NegRiskUmaCtfAdapter wrongful payouts, UUPS CollateralToken upgrade exploitation, and CTF split/merge/redeem extraction."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "README states users sign EIP-712 typed orders off-chain and the operator calls matchOrders; it also says order preapproval can be done by the operator and V2 removed fillOrder/fillOrders in favor of operator-only matchOrders."
+      },
+      {
+        "url": "https://docs.polymarket.com/api-reference/trade/post-a-new-order",
+        "shows": "API reference for posting a new order uses POST https://clob.polymarket.com/order and requires POLY_ADDRESS, POLY_API_KEY, POLY_PASSPHRASE, POLY_SIGNATURE, and POLY_TIMESTAMP headers."
+      },
+      {
+        "url": "https://docs.polymarket.com/api-reference/authentication",
+        "shows": "Authentication docs state CLOB trading endpoints for placing orders, cancellations, and heartbeat require all five POLY_* L2 HTTP headers, while read endpoints require no authentication."
+      },
+      {
+        "url": "https://docs.polymarket.com/api-reference/geoblock",
+        "shows": "Geoblock docs say Polymarket restricts order placement from certain locations, blocked-region orders will be rejected, and list blocked/close-only/frontend-restricted countries and regions."
+      },
+      {
+        "url": "https://help.polymarket.com/en/articles/13364163-geographic-restrictions",
+        "shows": "Help Center says Polymarket is not available in certain countries/regions, strictly prohibits VPN or similar tools to bypass geographic restrictions, and says such bypass violates Terms of Service Section 2.1.4."
+      },
+      {
+        "url": "https://docs.polymarket.com/api-reference/clients-sdks",
+        "shows": "Docs say Polymarket provides official open-source clients in TypeScript, Python, and Rust supporting CLOB API market data, order management, and authentication, with GitHub repos linked."
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0xE111180000d2663C0091e4f400237545B87B996B",
+        "shows": "CTF Exchange ABI exposes operator/admin role views and matchOrders, addOperator/removeOperator, pauseTrading, pauseUser, and related role functions.",
+        "chain": "Polygon",
+        "address": "0xE111180000d2663C0091e4f400237545B87B996B"
+      },
+      {
+        "url": "https://defipunkd.com/address/137/0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
+        "shows": "ConditionalTokens ABI exposes direct transfer, split, merge, and redeem functions without an ABI-visible KYC/blocklist parameter.",
+        "chain": "Polygon",
+        "address": "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045"
+      }
+    ],
+    "unknowns": [
+      "A1: full source grep for every allowlist/KYC modifier in all pinned peripheral contracts was not completed; inspected ABIs did not show a user whitelist on exit primitives.",
+      "A2: no public on-chain replacement procedure for the CLOB operator was found; exact number of operators and who controls addOperator/removeOperator were not read.",
+      "A3b: third-party frontends, wallet-integrated access, and aggregator routing were not exhaustively enumerated; official SDK/API/direct-contract paths were verified.",
+      "A4: no on-chain sanctions/blocklist read was found, but full source-level absence of every blocklist-like check across all contracts was not proven.",
+      "A6: https://polymarket.com/tos was fetched but did not expose the actual Terms clauses in the body, so jurisdiction/sanctions/eligibility Terms text could not be quoted verbatim from that page."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Polymarket/ctf-exchange-v2",
+        "https://github.com/Polymarket/uma-ctf-adapter",
+        "https://github.com/Polymarket/neg-risk-ctf-adapter"
+      ],
+      "docs_url": "https://docs.polymarket.com/",
+      "audits": [
+        {
+          "firm": "Quantstamp",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Quantstamp%20-%20March%202026.pdf",
+          "date": "2026-03"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Cantina%20-%20March%202026.pdf",
+          "date": "2026-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.polymarket.com/resources/contracts",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Polymarket International lets users trade binary and multiple-outcome prediction-market positions on Polygon. Outcomes are tokenized as Conditional Tokens backed by pUSD, and pUSD is an ERC-20 wrapper around USDC/USDC.e. CLOB V2 uses off-chain signed orders matched by an operator and settled on-chain through CTF Exchange contracts; market resolution flows through the UMA CTF adapter."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "polymarket-international",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-18",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a0e1920-7e3c-8327-9485-9a7e4972292b",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Main contracts are explorer-verified and public repos/audits exist, but audit scope, deploy commits, and post-audit drift were not pinned.",
+    "short_headline": "Verified, scope unclear",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "CTF Exchange, pUSD implementation, CollateralOnramp, CollateralOfframp, ConditionalTokens, UMA Adapter, and NegRiskAdapter were observed as source-code verified exact matches on Polygonscan; the pUSD proxy was shown as a minimal proxy to the verified implementation."
+        },
+        {
+          "code": "V1",
+          "text": "Neg Risk CTF Exchange appears as a similar match to the CTF Exchange V2 source on Polygonscan rather than a clearly fetched exact-match line; DefiPunkd still exposes an etherscan ABI for the address."
+        },
+        {
+          "code": "V2",
+          "text": "Public Polymarket repositories exist for ctf-exchange-v2, uma-ctf-adapter, and neg-risk-ctf-adapter, but no commit SHA or bytecode correspondence was pinned in this run."
+        },
+        {
+          "code": "V3",
+          "text": "Official docs and the ctf-exchange-v2 README link Quantstamp and Cantina March 2026 audit PDFs; the GitHub PDF pages were fetched, but report body/scope/commit details were not extracted."
+        },
+        {
+          "code": "V4",
+          "text": "Quantstamp is on the recognized-firm list. Cantina is a public audit/competition platform but was not in the recognized-firm list supplied in the rubric, so it is not used alone for a green-grade claim."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift was not assessed because no deploy commit, audited commit, compare view, or material diff sample was fetched."
+        },
+        {
+          "code": "V6",
+          "text": "The pUSD proxy implementation relationship was observed on Polygonscan; no unverified implementation was identified for the pUSD proxy. Other major inspected addresses were non-proxy or similar-match/exact-match explorer sources."
+        }
+      ],
+      "steelman": {
+        "red": "The pinned protocol context had no audit_links, Polygonscan pages say no audit submitted per address, and audit scope/commit was not extracted.",
+        "orange": "Explorer verification and public repositories are strong, but green requires pinning the deployed-source correspondence and audit scope/current-deployment coverage, which was not done.",
+        "green": "The main contracts are verified on Polygonscan, public source repos exist, and official docs link March 2026 Quantstamp/Cantina audits plus a live bounty within two months of analysis."
+      },
+      "verdict": "Choosing orange because bytecode verification and public source availability are good, and audit artifacts exist, but the run did not extract audit scope/commit, did not pin deploy commits, and did not sample post-audit drift. That blocks green; verified bytecode and public repos/audit links keep it above red."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.polymarket.com/resources/contracts",
+        "shows": "Official documentation says all Polymarket contracts are on Polygon chainId 137; lists the pinned core, collateral, wallet-factory, UMA adapter, and UMA Optimistic Oracle addresses; lists Quantstamp and Cantina March 2026 audits and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2",
+        "shows": "Public CTF Exchange V2 repository; README describes CTF Exchange V2 as the core trading system, deployed Polygon addresses, operator-driven order matching, collateral onramp/offramp, audits, and the Cantina bug bounty."
+      },
+      {
+        "url": "https://github.com/Polymarket/uma-ctf-adapter",
+        "shows": "Public UMA CTF Adapter repository; README says the adapter resolves Polymarket prediction markets through UMA Optimistic Oracle, prepares conditions, sends OO requests, uses proposer/dispute/DVM flow, and allows anyone to call resolve after data is available."
+      },
+      {
+        "url": "https://github.com/Polymarket/neg-risk-ctf-adapter",
+        "shows": "Public negative-risk CTF adapter repository; README describes the negative-risk adapter, NegRiskOperator preparation flow, and use with the UMA CTF adapter."
+      },
+      {
+        "url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+        "shows": "Cantina bounty page is live, names Polymarket, states maximum reward $5,000,000 and start date 12 Apr 2026, and lists smart-contract critical impacts including pUSD unauthorized mint/burn, UmaCtfAdapter/NegRiskUmaCtfAdapter wrongful payouts, UUPS CollateralToken upgrade exploitation, and CTF split/merge/redeem extraction."
+      },
+      {
+        "url": "https://polygonscan.com/address/0xE111180000d2663C0091e4f400237545B87B996B",
+        "shows": "Polygonscan shows CTFExchange source code verified as exact match, compiler v0.8.34, and source files including CTFExchange.sol and exchange mixins.",
+        "chain": "Polygon",
+        "address": "0xE111180000d2663C0091e4f400237545B87B996B"
+      },
+      {
+        "url": "https://polygonscan.com/address/0xe2222d279d744050d28e00520010520000310F59",
+        "shows": "Polygonscan shows Neg Risk CTF Exchange V2 as CTFExchange with a similar match to the CTF Exchange V2 address, compiler v0.8.34, and source-code view available.",
+        "chain": "Polygon",
+        "address": "0xe2222d279d744050d28e00520010520000310F59"
+      },
+      {
+        "url": "https://polygonscan.com/address/0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB",
+        "shows": "Polygonscan shows pUSD CollateralToken proxy as a minimal proxy contract for implementation 0x6bBCef9f7ef3B6C592c99e0f206a0DE94Ad0925f and exposes read/write as proxy tabs.",
+        "chain": "Polygon",
+        "address": "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x6bBCef9f7ef3B6C592c99e0f206a0DE94Ad0925f",
+        "shows": "Polygonscan shows pUSD CollateralToken implementation source code verified exact match, compiler v0.8.34, and source files including CollateralToken.sol and UUPSUpgradeable.",
+        "chain": "Polygon",
+        "address": "0x6bBCef9f7ef3B6C592c99e0f206a0DE94Ad0925f"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x93070a847efEf7F70739046A929D47a521F5B8ee",
+        "shows": "Polygonscan shows CollateralOnramp source code verified exact match, compiler v0.8.34.",
+        "chain": "Polygon",
+        "address": "0x93070a847efEf7F70739046A929D47a521F5B8ee"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x2957922Eb93258b93368531d39fAcCA3B4dC5854",
+        "shows": "Polygonscan shows CollateralOfframp source code verified exact match, compiler v0.8.34.",
+        "chain": "Polygon",
+        "address": "0x2957922Eb93258b93368531d39fAcCA3B4dC5854"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
+        "shows": "Polygonscan shows ConditionalTokens source code verified exact match, compiler v0.5.10, and ABI including redeem/split/merge/report payout functions.",
+        "chain": "Polygon",
+        "address": "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045"
+      },
+      {
+        "url": "https://polygonscan.com/address/0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74",
+        "shows": "Polygonscan shows UmaCtfAdapter source code verified exact match, compiler v0.8.15.",
+        "chain": "Polygon",
+        "address": "0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74"
+      },
+      {
+        "url": "https://polygonscan.com/address/0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296",
+        "shows": "Polygonscan shows NegRiskAdapter source code verified exact match, compiler v0.8.19.",
+        "chain": "Polygon",
+        "address": "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296"
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Quantstamp%20-%20March%202026.pdf",
+        "shows": "GitHub page for Quantstamp CTF Exchange V2 March 2026 PDF audit artifact was fetched; report body/scope was not extracted."
+      },
+      {
+        "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Cantina%20-%20March%202026.pdf",
+        "shows": "GitHub page for Cantina CTF Exchange V2 March 2026 PDF audit artifact was fetched; report body/scope was not extracted."
+      }
+    ],
+    "unknowns": [
+      "V1: complete verification status for every pinned peripheral/factory address was not exhaustively recorded; main trading, collateral, CTF, UMA, and neg-risk addresses were checked.",
+      "V2: no exact source-to-repo commit SHA or independent bytecode match was pinned.",
+      "V3: audit report bodies were not parsed/screenshotted, so contracts in scope, audit commit, and issue/fix scope remain unknown.",
+      "V4: Cantina was not in the supplied recognized-firm list; no separate recognition basis was established in this run.",
+      "V5: post-audit drift between March 2026 audits and deployed sources was not sampled with a compare view or commit diff.",
+      "V6: pUSD proxy implementation was identified on Polygonscan; no further proxy-admin implementation slot read was obtained through DefiPunkd."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Polymarket/ctf-exchange-v2",
+        "https://github.com/Polymarket/uma-ctf-adapter",
+        "https://github.com/Polymarket/neg-risk-ctf-adapter"
+      ],
+      "docs_url": "https://docs.polymarket.com/",
+      "audits": [
+        {
+          "firm": "Quantstamp",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Quantstamp%20-%20March%202026.pdf",
+          "date": "2026-03"
+        },
+        {
+          "firm": "Cantina",
+          "url": "https://github.com/Polymarket/ctf-exchange-v2/blob/main/audits/CTF%20Exchange%20V2%20-%20Cantina%20-%20March%202026.pdf",
+          "date": "2026-03"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://cantina.xyz/bounties/ff945ca2-2a6e-4b83-b1b6-7a0cd3b94bea",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.polymarket.com/resources/contracts",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Polymarket International lets users trade binary and multiple-outcome prediction-market positions on Polygon. Outcomes are tokenized as Conditional Tokens backed by pUSD, and pUSD is an ERC-20 wrapper around USDC/USDC.e. CLOB V2 uses off-chain signed orders matched by an operator and settled on-chain through CTF Exchange contracts; market resolution flows through the UMA CTF adapter."
+    }
+  }
+]
