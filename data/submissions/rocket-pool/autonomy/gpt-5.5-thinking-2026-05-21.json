@@ -1,0 +1,185 @@
+{
+  "schema_version": 4,
+  "slug": "rocket-pool",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-05-21",
+  "model": "gpt-5.5-thinking",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "oDAO balance reporting is a cross-cutting dependency for ~100% of rETH accounting, but Saturn guardrails and collateralized validator deposits make principal-loss unshown.",
+  "short_headline": "oDAO-bounded rETH accounting",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The inspected rETH contract derives getEthValue() and getRethValue() from RocketNetworkBalances totals resolved through RocketStorage, and getTotalCollateral() from RocketDepositPool plus the rETH contract ETH balance; no Chainlink/Pyth/AMM price feed is called in the token path."
+      },
+      {
+        "code": "A2",
+        "text": "The material off-chain reporting dependency is Rocket Pool's oDAO balance-reporting process: it supplies network balance data that drives rETH exchange-rate accounting. A faulty report can materially distort rate quality or redemption pricing until corrected, but the inspected evidence did not show a direct path for a single report to drain the underlying validator principal."
+      },
+      {
+        "code": "A2-staking",
+        "text": "Validator and node-operator risk is treated as Ethereum staking substrate risk rather than an external autonomy dependency for this slice: Rocket Pool node operators bond ETH/RPL or Saturn-era ETH collateral, and the protocol is not a small curated validator set in the evidence reviewed here."
+      },
+      {
+        "code": "A3",
+        "text": "The snapshot and enrichment evidence identify Rocket Pool's material TVS on Ethereum L1. Optional bridged rETH deployments are not required for core staking, rETH burn, or the L1 accounting path inspected here, so no material bridge dependency was used to grade the main module."
+      },
+      {
+        "code": "A4",
+        "text": "The core rETH product is not a nested receipt-of-receipt or restaking design: rETH is backed by ETH-denominated Rocket Pool validator deposits and protocol collateral rather than a chain of third-party vault or LRT wrappers."
+      },
+      {
+        "code": "A6",
+        "text": "Saturn I documentation states that constraints on oDAO-submitted balance data protect the rETH protocol rate from manipulation or faulty reporting, and that oDAO penalty guardrails cap how much can be penalized over time. These guardrails are treated as live because Saturn I is marked live, but the exact on-chain bounds were not read in this run."
+      },
+      {
+        "code": "A7",
+        "text": "Rocket Pool's material core module is on Ethereum L1. Ethereum consensus is substrate under the rubric, and no protocol-owned appchain, L2, or sequencer dependency was identified for the core rETH flow."
+      },
+      {
+        "code": "A8",
+        "text": "No catastrophic keeper or relayer liveness dependency was found for the core rETH flow. Deposits, burns, transfers, and storage reads are on-chain; oDAO reporting is covered under A2 rather than as a permissionless keeper market."
+      },
+      {
+        "code": "A9",
+        "text": "RocketStorage still exposes a governance-mutable registry surface and getGuardian() currently returns 0x0cCF14983364A7735d369879603930Afe10df21e, while RocketDAOProtocol getBootstrapModeDisabled() returns true. That means the old bootstrap shortcut appears disabled, but dependency-address changes can still occur through governance/registered contract mechanics, so the surface is not green enough without the exact Saturn delay and exit-window constants."
+      }
+    ],
+    "steelman": {
+      "red": "A red case would require showing that oDAO reporting, a bridge, or a governance-swapped dependency can directly cause material principal loss, but the inspected rETH and RocketStorage evidence did not show that path.",
+      "orange": "The orange case is strongest because oDAO balance reporting cross-cuts rETH accounting and can materially change expected performance or redemption pricing, while Saturn guardrails bound but do not eliminate the dependency and the exact bounds were not read on-chain.",
+      "green": "The green case is that rETH is Ethereum L1 native, has no third-party price-feed call in the token path, and principal is backed by validator deposits plus protocol collateral rather than an external provider's ledger."
+    },
+    "verdict": "Choosing orange because the Ethereum L1 rETH/liquid-staking module holds ~100% of the protocol TVS in the pinned snapshot and depends on oDAO-submitted network balances for rETH accounting; a bad oDAO report can materially change expected performance or redemption pricing, even though the inspected evidence and Saturn I guardrails do not show direct principal theft. Optional bridged rETH was not material to the inspected core flow, so weighted overall = orange."
+  },
+  "evidence": [
+    {
+      "url": "https://raw.githubusercontent.com/rocket-pool/rocketpool/master/contracts/contract/token/RocketTokenRETH.sol",
+      "shows": "RocketTokenRETH imports RocketNetworkBalancesInterface and RocketDepositPoolInterface; getEthValue()/getRethValue() read RocketNetworkBalances totals, getTotalCollateral() reads RocketDepositPool excess balance plus the rETH contract balance, and burn() requires sufficient collateral before transferring ETH.",
+      "chain": "Ethereum",
+      "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xae78736cd615f374d3085123a210448e74fc6393&method=getExchangeRate",
+      "shows": "Live on-chain read of rETH getExchangeRate() succeeded at block 25142972, returning 1163850201834192147 with abiSource=etherscan and implementation=null.",
+      "chain": "Ethereum",
+      "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xae78736cd615f374d3085123a210448e74fc6393&method=getTotalCollateral",
+      "shows": "Live on-chain read of rETH getTotalCollateral() succeeded at block 25142972, returning 3870370124466447898567 with abiSource=etherscan and implementation=null.",
+      "chain": "Ethereum",
+      "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46&method=getGuardian",
+      "shows": "Live on-chain read of RocketStorage getGuardian() succeeded at block 25142972, returning 0x0cCF14983364A7735d369879603930Afe10df21e; this is relevant to the governance-mutable registry surface.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1&method=getBootstrapModeDisabled",
+      "shows": "Live on-chain read of RocketDAOProtocol getBootstrapModeDisabled() succeeded at block 25142972 and returned true, indicating the bootstrap guardian path is disabled for the current control/dependency-swap discussion.",
+      "chain": "Ethereum",
+      "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    },
+    {
+      "url": "https://saturn.rocketpool.net/",
+      "shows": "Saturn I is marked live, includes balance submission guardrails for oDAO-submitted balance data, caps oDAO penalization over time, and states a mandatory delay before protocol upgrades go live.",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    },
+    {
+      "url": "https://dao.rocketpool.net/t/protocol-development-roadmap-update-aug-sept-oct/3810",
+      "shows": "Rocket Pool's roadmap update says the protocol DAO guardian was permanently disabled, the core team initially comprises the Security Council, rETH redemptions and protections are next in the development queue, and Saturn I audits were in progress before launch.",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/rocket-pool",
+      "shows": "Public TVL reference for Rocket Pool; the pinned repository snapshot for this submission records Rocket Pool TVL on Ethereum as the material core module for weighting.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-05-21T09:50:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: The full RocketStorage contract-name registry was not exhaustively enumerated for every possible dependency address; this run focused on the rETH/accounting path.",
+    "A2: Current oDAO member identities, exact member count, and live quorum threshold were not read on-chain in this run.",
+    "A3: Materiality of non-Ethereum bridged rETH was not separately quantified from bridge contract balances; the pinned snapshot treated Ethereum as the material core flow.",
+    "A6: Exact Saturn I balance-submission guardrail constants and penalty caps were not read on-chain, only the live Saturn documentation and rETH reads were checked.",
+    "A8: Node-operator automation and reward-claim liveness were not exhaustively classified for all Saturn-era megapool paths.",
+    "A9: The exact mandatory upgrade delay and user exit-window constants for governance dependency swaps were not read on-chain."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/rocket-pool/rocketpool",
+      "https://github.com/rocket-pool/smartnode"
+    ],
+    "docs_url": "https://docs.rocketpool.net",
+    "audits": [
+      {
+        "firm": "Sigma Prime",
+        "url": "https://rocketpool.net/files/sigma-prime-audit.pdf",
+        "date": "2021"
+      },
+      {
+        "firm": "ConsenSys Diligence",
+        "url": "https://consensys.net/diligence/audits/2021/04/rocketpool",
+        "date": "2021-04"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf",
+        "date": "2021"
+      },
+      {
+        "firm": "Sigma Prime",
+        "url": "https://dao.rocketpool.net/t/protocol-development-roadmap-update-aug-sept-oct/3810",
+        "date": "2025-10"
+      },
+      {
+        "firm": "Spearbit/Cantina",
+        "url": "https://dao.rocketpool.net/t/protocol-development-roadmap-update-aug-sept-oct/3810",
+        "date": "2025-10"
+      }
+    ],
+    "governance_forum": "https://dao.rocketpool.net",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xd33526068d116ce69f19a9ee46f0bd304f21a51f",
+      "symbol": "RPL"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+    "deployed_contracts_doc": "https://docs.rocketpool.net/overview/contracts-integrations",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "role": "RocketStorage registry",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+        "role": "RocketStorage guardian returned by getGuardian()",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1",
+        "role": "RocketDAOProtocol bootstrap-mode and governance contract",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Rocket Pool is an Ethereum liquid-staking protocol. Users deposit ETH and receive rETH, while node operators run validators through minipools or Saturn-era megapools and provide bonded collateral. This autonomy assessment focuses on whether oDAO reporting, bridges, keepers, or mutable dependencies can cause user principal loss or materially change expected performance."
+  }
+}
