@@ -558,7 +558,20 @@ function partialFillGrade(s: SliceAssessment): string {
     let text = btn.getAttribute("data-copy-text") ?? "";
     if (!text) {
       const sel = btn.getAttribute("data-copy-target");
-      const target = sel ? (document.querySelector(sel) as HTMLElement | null) : null;
+      // querySelector parses "." as a class-selector boundary, so an id
+      // selector like "#prompt-ether.fi-stake-control" matches an element
+      // with id "prompt-ether" AND class "fi-stake-control" — never the
+      // intended element. Protocol slugs can contain periods (ether.fi,
+      // ether.fi-stake, ether.fi-liquid), so resolve plain "#id" selectors
+      // via getElementById, which accepts any valid HTML5 id.
+      let target: HTMLElement | null = null;
+      if (sel) {
+        if (sel.startsWith("#")) {
+          target = document.getElementById(sel.slice(1));
+        } else {
+          target = document.querySelector(sel) as HTMLElement | null;
+        }
+      }
       if (!target) return;
       text = target.textContent ?? "";
     }
