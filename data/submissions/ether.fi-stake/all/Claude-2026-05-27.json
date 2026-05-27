@@ -1,0 +1,567 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/fd3aa084-68fa-446d-a02e-cb3bb84b6338",
+    "grade": "orange",
+    "headline": "10-day Timelock owns all UUPS-upgradeable fund-holding contracts; PROPOSER_ROLE holder unconfirmed",
+    "short_headline": "10-day timelock; proposer unknown",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "All core contracts confirm owner()=EtherFiTimelock (0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761): weETH (0xCd5fE2...), eETH (0x35fA16...), RoleRegistry (0x62247D...), EtherFiOracle (0x57AaF0...), EtherFiAdmin (0x0EF8fa...). LiquidityPool (0x308861...) is a sourcify-verified UUPSProxy; owner() not directly surfaced due to proxy-only ABI."
+        },
+        {
+          "code": "C2",
+          "text": "All assessed contracts are UUPS proxies with upgradeTo/upgradeToAndCall restricted to owner()=Timelock. LiquidityPool and the oracle are also UUPS proxies. The RoleRegistry itself is a UUPS proxy with upgradeTo governed by its owner (Timelock). LiquidityPool implementation was not auto-resolved by the defipunkd API (proxy=null), leaving a gap in the upgrade surface."
+        },
+        {
+          "code": "C3",
+          "text": "Execution path (single stage): [PROPOSER_ROLE holder] calls schedule() on EtherFiTimelock → wait minDelay=864,000 s (10 days, read from getMinDelay()) → any EXECUTOR_ROLE holder (or address(0) if open) calls execute(). No preceding Governor vote or DAO queue confirmed in this run. Uncontested fast-path delay = 10 days."
+        },
+        {
+          "code": "C4",
+          "text": "EtherFiTimelock uses OZ AccessControl (non-enumerable). PROPOSER_ROLE holder(s) cannot be identified via view call; EXECUTOR_ROLE holder (open/address(0) or restricted) also not confirmed. No Safe or other multisig was identified as proposer from this run. The Timelock itself holds TIMELOCK_ADMIN_ROLE by self-administration per OZ pattern."
+        },
+        {
+          "code": "C5",
+          "text": "No on-chain Governor contract (OZ Governor, GovernorBravo, Aragon Voting) confirmed as the Timelock proposer. ETHFI token (0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB) exists; a governance link is mentioned in official docs but no deployed Governor address was identified in this run."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency pause: EtherFiAdmin.pause(bool,bool,bool,bool,bool,bool) can simultaneously pause EtherFiOracle, StakingManager, AuctionManager, EtherFiNodesManager, LiquidityPool, and MembershipManager. Caller requires a role checked via RoleRegistry (PROTOCOL_PAUSER). No time cap on pause duration confirmed on-chain. RoleRegistry grants are governed by the 10-day Timelock."
+        },
+        {
+          "code": "C7",
+          "text": "Highest tier: T1. The upgradeTo() function on LiquidityPool (ETH fund-holding), eETH (token accounting), and weETH can replace their implementations via the Timelock. pauseContract() on WithdrawRequestNFT / EtherFiAdmin.pause() on LiquidityPool can freeze withdrawals. The 10-day Timelock sits before T1 actions but proposer identity is unconfirmed."
+        }
+      ],
+      "steelman": {
+        "red": "If PROPOSER_ROLE is held by a single team EOA, T1 actions (replace LiquidityPool implementation, replacing ETH accounting) can be scheduled and executed after 10 days with no additional approval gate.",
+        "orange": "The proposer identity is non-enumerable on-chain; even with a 10-day delay, a team multisig that fails Security Council criteria (fewer than 7 signers, fewer than 50% non-insiders) keeps this orange under the rubric.",
+        "green": "The 10-day Timelock delay satisfies the ≥7-day exit-window standard; if the proposer were confirmed as a Security Council-standard multisig or an active token-weighted governance vote, the grade would be green."
+      },
+      "verdict": "Choosing orange because the EtherFiTimelock minDelay of 864,000 s (10 days) satisfies the ≥7-day exit-window condition, but the PROPOSER_ROLE holder(s) on the non-enumerable AccessControl Timelock cannot be verified from view calls alone in this run. Without confirming the proposer meets Security Council criteria or is active on-chain token governance, the highest defensible grade is orange under the rubric."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761",
+        "shows": "EtherFiTimelock: getMinDelay()=864000 (10 days); ABI source=etherscan; roles PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE, TIMELOCK_ADMIN_ROLE defined; non-enumerable AccessControl",
+        "chain": "ethereum",
+        "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "shows": "weETH: UUPS proxy, implementation=0x2d10683E941275D502173053927AD6066e6aFd6B; owner()=Timelock 0x9f26d4...; upgradeTo present",
+        "chain": "ethereum",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+        "shows": "eETH: UUPS proxy, implementation=0xCB3D917A965A70214f430a135154Cd5ADdA2ad84; owner()=Timelock; upgradeTo present",
+        "chain": "ethereum",
+        "address": "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9",
+        "shows": "RoleRegistry: UUPS proxy, implementation=0x3A75019F8b09c278D152279d446c97d009E064f3; owner()=Timelock; PROTOCOL_PAUSER and PROTOCOL_UNPAUSER role constants exposed; setRole governed by owner",
+        "chain": "ethereum",
+        "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705",
+        "shows": "EtherFiAdmin (UUPSProxy): owner()=Timelock; pause(bool*6) covering oracle/stakingManager/auctionManager/nodesManager/liquidityPool/membershipManager; acceptableRebaseAprInBps=500; roleRegistry=0x62247D...",
+        "chain": "ethereum",
+        "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x308861A430be4cce5502d0A12724771Fc6DaF216",
+        "shows": "LiquidityPool: verified UUPSProxy (sourcify); proxy=null in defipunkd API (implementation not auto-resolved); AdminChanged/BeaconUpgraded/Upgraded events present",
+        "chain": "ethereum",
+        "address": "0x308861A430be4cce5502d0A12724771Fc6DaF216",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761",
+        "shows": "EtherFiTimelock source verified exact match (Etherscan); OZ TimelockController v4.8.0; AccessControl is non-enumerable; deployed 2 years ago by ether.fi Deployer",
+        "chain": "ethereum",
+        "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C4: PROPOSER_ROLE holder(s) on EtherFiTimelock not enumerable from non-AccessControlEnumerable contract; on-chain event log analysis not performed in this run",
+      "C4: EXECUTOR_ROLE — whether address(0) holds it (open execution) not confirmed",
+      "C5: No Governor contract address confirmed connecting ETHFI token governance to Timelock PROPOSER_ROLE"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol/smart-contracts"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi",
+      "audits": [
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"},
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2023-02"},
+        {"firm": "Certora", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"}
+      ],
+      "governance_forum": "https://etherfi.gitbook.io/gov",
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/etherfi/",
+      "security_contact": "security@ether.fi",
+      "deployed_contracts_doc": "https://etherfi.gitbook.io/etherfi/contracts-and-integrations/deployed-contracts",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761", "role": "EtherFiTimelock — owner of eETH, weETH, RoleRegistry, oracle, EtherFiAdmin", "actor_class": "timelock"},
+        {"chain": "Ethereum", "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9", "role": "RoleRegistry — controls PROTOCOL_PAUSER/PROTOCOL_UNPAUSER role grants; owner=Timelock", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705", "role": "EtherFiAdmin — oracle executor and multi-contract pause operator; owner=Timelock", "actor_class": "governance"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ether.fi is a non-custodial liquid restaking protocol where users deposit ETH to receive eETH (rebasing LST) or weETH (wrapped non-rebasing), with validators operated via SSV Network DVT clusters and restaked on EigenLayer for staking and AVS restaking rewards. Withdrawals queue through an NFT-based system finalized by a 3-member oracle committee that submits consensus reports to EtherFiOracle; all governance upgrades flow through a 10-day EtherFiTimelock. weETH is deployed across 15+ EVM chains, making it one of the most widely integrated liquid restaking tokens in DeFi."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/fd3aa084-68fa-446d-a02e-cb3bb84b6338",
+    "grade": "orange",
+    "headline": "Oracle-gated withdrawal finalization; WithdrawRequestNFT pausable with no on-chain time cap",
+    "short_headline": "Oracle-queued; pause no time cap",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Exit functions: (a) weETH.unwrap(uint256) — converts weETH to eETH permissionlessly; (b) WithdrawRequestNFT.claimWithdraw(uint256) and batchClaimWithdraw(uint256[]) — redeem ETH after oracle finalization; (c) LiquidityPool.requestWithdraw path (initiated via WithdrawRequestNFT.requestWithdraw payable); (d) EtherFiRedemptionManager (0xdadef1ffbfeaab4f68a9fd181395f68b4e4e7ae0) listed in official docs but not read in this run."
+        },
+        {
+          "code": "E2",
+          "text": "WithdrawRequestNFT has pauseContract() / unPauseContract() and paused()=false at block 25184483. claimWithdraw is nonpayable with no explicit modifier visible in ABI but the presence of pauseContract strongly implies a whenNotPaused guard; standard OZ pattern. weETH.unwrap() shows no pause modifier in its ABI — this conversion appears permissionless regardless of LiquidityPool pause state."
+        },
+        {
+          "code": "E3",
+          "text": "PROTOCOL_PAUSER role in RoleRegistry controls which addresses can call pauseContract() and EtherFiAdmin.pause(). Role holder(s) not confirmed in this run (RoleRegistry uses non-enumerable role tracking). No maximum pause duration is enforced on-chain; pause is indefinite pending explicit unPause by the role holder. RoleRegistry role grants require 10-day Timelock."
+        },
+        {
+          "code": "E4",
+          "text": "EtherFiAdmin.pause(bool,bool,bool,bool,bool,bool) covers LiquidityPool, oracle, staking/auction/nodes/membership managers simultaneously. No distinct emergency-scoped, time-capped pause vs governance pause is confirmed. Both pause and unpause require the PROTOCOL_PAUSER role; no auto-expiry exists."
+        },
+        {
+          "code": "E5",
+          "text": "Withdrawal finalization requires the oracle committee to include lastFinalizedWithdrawalRequestId in its periodic report; no on-chain maximum queue duration exists. At block 25184483: lastFinalizedRequestId=78875, nextRequestId=78886 (11 pending). No daily withdrawal cap visible in WithdrawRequestNFT ABI."
+        },
+        {
+          "code": "E6",
+          "text": "Partial permissionless exit: weETH.unwrap() converts weETH→eETH regardless of WithdrawRequestNFT or LiquidityPool pause; eETH is freely transferable. There is no permissionless emergency escape hatch for pending withdrawal NFTs bypassing oracle finalization under adversarial-admin conditions."
+        },
+        {
+          "code": "E7",
+          "text": "All exit functions are on-chain callable: claimWithdraw, batchClaimWithdraw, and unwrap are invokable directly via Etherscan write tab or any EVM client without requiring the official ether.fi frontend."
+        }
+      ],
+      "steelman": {
+        "red": "If PROTOCOL_PAUSER is held by a small team multisig (which it cannot be confirmed not to be), that multisig can unilaterally pause WithdrawRequestNFT indefinitely, blocking claims of already-finalized exits — meeting the red criterion.",
+        "orange": "The pause actor requires a role in RoleRegistry whose ultimate governance sits behind a 10-day Timelock; weETH.unwrap() provides eETH liquidity regardless of protocol pause; PROTOCOL_PAUSER change takes 10 days; realistic path is recoverable.",
+        "green": "Under the current architecture, if PROTOCOL_PAUSER had an enforced time cap (e.g., ≤7 days), the finalization-queue dependency is bounded and an orange would collapse to green."
+      },
+      "verdict": "Choosing orange because withdrawal finalization requires oracle committee liveness (not user-controlled), the WithdrawRequestNFT pause has no confirmed on-chain time cap and likely gates claims of finalized exits, but weETH.unwrap() provides a partial permissionless exit to eETH and the pause role is managed by a 10-day Timelock — insufficient evidence to reach red without confirming the PROTOCOL_PAUSER identity and whether they are a small uncapped multisig."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x7d5706f6ef3F89B3951E23e557CDFBC3239D4E2c",
+        "shows": "WithdrawRequestNFT: claimWithdraw, batchClaimWithdraw, pauseContract, unPauseContract present; paused()=false at block 25184483; lastFinalizedRequestId=78875; nextRequestId=78886; owner=Timelock",
+        "chain": "ethereum",
+        "address": "0x7d5706f6ef3F89B3951E23e557CDFBC3239D4E2c",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "shows": "weETH: unwrap(uint256) function present; no pause modifier visible in ABI; wrap and unwrap are write functions callable permissionlessly",
+        "chain": "ethereum",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705",
+        "shows": "EtherFiAdmin: pause(bool*6) covering liquidityPool among others; unPause(bool*6) mirrors pause; no time cap in ABI; caller role not enforced in ABI directly (role check via roleRegistry)",
+        "chain": "ethereum",
+        "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41",
+        "shows": "EtherFiOracle: slotForNextReport=14419743; lastPublishedReportRefSlot=14418463; oracle committee drives lastFinalizedWithdrawalRequestId in reports that must be executed before claimWithdraw succeeds",
+        "chain": "ethereum",
+        "address": "0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: PROTOCOL_PAUSER role holder(s) not confirmed in this run; whether it is a single EOA, small multisig, or larger set is unknown",
+      "E3: Maximum pause duration not enforced on-chain; indefinite pause possible pending explicit unPause",
+      "E1: EtherFiRedemptionManager (0xdadef1ffbfeaab4f68a9fd181395f68b4e4e7ae0) listed in official docs but not read in this run — may provide an alternative exit path"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol/smart-contracts"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi",
+      "audits": [
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"},
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2023-02"},
+        {"firm": "Certora", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"}
+      ],
+      "governance_forum": "https://etherfi.gitbook.io/gov",
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/etherfi/",
+      "security_contact": "security@ether.fi",
+      "deployed_contracts_doc": "https://etherfi.gitbook.io/etherfi/contracts-and-integrations/deployed-contracts",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761", "role": "EtherFiTimelock — governs role changes including PROTOCOL_PAUSER", "actor_class": "timelock"},
+        {"chain": "Ethereum", "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9", "role": "RoleRegistry — holds PROTOCOL_PAUSER grant authority", "actor_class": "governance"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ether.fi is a non-custodial liquid restaking protocol where users deposit ETH to receive eETH (rebasing LST) or weETH (wrapped non-rebasing), with validators operated via SSV Network DVT clusters and restaked on EigenLayer for staking and AVS restaking rewards. Withdrawals queue through an NFT-based system finalized by a 3-member oracle committee that submits consensus reports to EtherFiOracle; all governance upgrades flow through a 10-day EtherFiTimelock. weETH is deployed across 15+ EVM chains, making it one of the most widely integrated liquid restaking tokens in DeFi."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/fd3aa084-68fa-446d-a02e-cb3bb84b6338",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "2-of-3 oracle committee controls reward accrual and withdrawal finalization; EigenLayer slashing adds restaking-specific principal risk. Impacted TVS ~5% under realistic oracle failure; higher under coordinated EigenLayer slashing.",
+    "short_headline": "Small oracle; EigenLayer slashing risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "EtherFiOracle (0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41): ether.fi's proprietary oracle, not Chainlink or Pyth. Committee members submit reports including accruedRewards (rebases eETH supply), lastFinalizedWithdrawalRequestId (enables claimWithdraw), and validatorsToApprove/withdrawalRequestsToInvalidate. An offline oracle stalls withdrawal finalization; a malicious oracle can inflate reported rewards within sanity-check bounds or mark invalid requests as valid."
+        },
+        {
+          "code": "A2",
+          "text": "Oracle committee: numCommitteeMembers=3, numActiveCommitteeMembers=3, quorumSize=2 (read from EtherFiOracle at block 25184482). 2-of-3 quorum. Individual member addresses not confirmed in this run. Owner (Timelock, 10-day delay) can rotate members via addCommitteeMember/removeCommitteeMember. A 2-of-3 compromise can submit arbitrary reports, bounded by the acceptableRebaseAprInBps=500 (5% APR) sanity check on EtherFiAdmin."
+        },
+        {
+          "code": "A3",
+          "text": "weETH deployed on 15+ chains (Arbitrum, Base, Optimism, Scroll, Blast, BSC, Avalanche, Linea, ZKsync, Berachain, Sonic, Swell, Unichain, Ink, Katana, Monad, Morph, HyperEVM — per official deployed contracts docs). Cross-chain bridging mechanism not confirmed on-chain in this run; bridge trust model (LayerZero/OFT, canonical, or other) not verified. Material TVL is held on Ethereum mainnet; cross-chain positions add bridge dependency."
+        },
+        {
+          "code": "A4",
+          "text": "LRT/restaking depth: user ETH → LiquidityPool → validators → EigenLayer AVS restaking (2 levels). EigenLayer slashing by AVS operators can reduce principal at the validator level. ether.fi manages validator selection via EtherFiNodesManager; diversification across operators mitigates single-operator failure. AVS-level slashing events that propagate to principal are user-opted-into restaking risk."
+        },
+        {
+          "code": "A6",
+          "text": "acceptableRebaseAprInBps=500 on EtherFiAdmin (read at block 25184481): sanity check caps oracle reward inflation to ≤5% APR per reporting period. This is a live, on-chain mitigation for malicious reward over-reporting. Status: LIVE and enforcing. No similar on-chain bound for withdrawal invalidation abuse or oracle committee downtime was confirmed."
+        },
+        {
+          "code": "A8",
+          "text": "Oracle committee members must submit reports each period (reportPeriodSlot=1280 slots ≈ 4.3 hours at 12 s/slot). If fewer than quorumSize=2 members are active, reports stall: withdrawal finalization freezes, reward accrual pauses. This is a graceful degradation (funds safe, exits stalled) not a catastrophic failure. Governance (10-day Timelock) can replace committee members."
+        },
+        {
+          "code": "A9",
+          "text": "Oracle address is mutable: EtherFiAdmin.etherFiOracle() points to 0x57AaF0... and the owner (Timelock) can update this reference. The Timelock's 10-day delay provides an exit window before a new malicious oracle would take effect. acceptableRebaseAprInBps is also Timelock-controlled."
+        }
+      ],
+      "steelman": {
+        "red": "A compromised 2-of-3 oracle committee could invalidate legitimate withdrawal requests (withdrawalRequestsToInvalidate field) for all pending users, freezing exits indefinitely while governance remediation takes ≥10 days, effectively locking principal.",
+        "orange": "The oracle cannot directly drain the LiquidityPool; its worst-case unilateral action is stalling exits (liveness failure, not theft); EigenLayer slashing is user-opted-into restaking risk; the 5% APR sanity check bounds reward inflation.",
+        "green": "If the oracle committee were replaced by a larger, well-diversified set with slashing and bonding mitigations, and EigenLayer slashing were capped at protocol level, the autonomous risk would be minimal."
+      },
+      "verdict": "Choosing orange because the 2-of-3 oracle committee represents a small, permissioned off-chain actor whose failure stalls withdrawal finalization for all users and whose compromise (bounded by 5% APR sanity check) can distort rewards — and because EigenLayer restaking creates user-opted-in principal risk from AVS slashing events. Neither failure constitutes unconstrained fund theft (the oracle controls settlement timing, not fund custody), placing this squarely in Stage 1 / orange: external failure degrades performance and can freeze exits, but does not directly steal principal."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41",
+        "shows": "EtherFiOracle: numCommitteeMembers=3, numActiveCommitteeMembers=3, quorumSize=2; reportPeriodSlot=1280; owner=Timelock; paused=false; slotForNextReport=14419743",
+        "chain": "ethereum",
+        "address": "0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705",
+        "shows": "EtherFiAdmin: acceptableRebaseAprInBps=500 (live sanity check on oracle reports); etherFiOracle address stored and mutable by owner (Timelock)",
+        "chain": "ethereum",
+        "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://etherfi.gitbook.io/etherfi/contracts-and-integrations/deployed-contracts",
+        "shows": "weETH cross-chain deployments confirmed on 15+ chains (Arbitrum, Base, Optimism, Blast, BSC, Avalanche, Linea, ZKsync, etc.); ETHFI on Arbitrum and Base; bridge dependency exists for cross-chain TVL",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://etherfi.gitbook.io/etherfi/ether.fi-whitepaper/technical-documentation",
+        "shows": "Derived: protocol sends ETH to validators restaked on EigenLayer via SSV Network DVT clusters; oracle reports accruedRewards and lastFinalizedWithdrawalRequestId; Timelock governs upgrades; 'node operators join DVT clusters via SSV Network'",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A2: Individual oracle committee member addresses not confirmed in this run; insider vs non-insider classification not possible",
+      "A3: Bridge trust model for cross-chain weETH (LayerZero, canonical, custom multisig) not confirmed on-chain in this run",
+      "A4: EigenLayer AVS slashing parameters and ether.fi bonding/insurance mitigations not confirmed on-chain in this run"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol/smart-contracts"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi",
+      "audits": [
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"},
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2023-02"},
+        {"firm": "Certora", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"}
+      ],
+      "governance_forum": "https://etherfi.gitbook.io/gov",
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/etherfi/",
+      "security_contact": "security@ether.fi",
+      "deployed_contracts_doc": "https://etherfi.gitbook.io/etherfi/contracts-and-integrations/deployed-contracts",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41", "role": "EtherFiOracle — 3-member committee, 2-of-3 quorum; owner=Timelock", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761", "role": "EtherFiTimelock — can rotate oracle committee members and update oracle address", "actor_class": "timelock"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ether.fi is a non-custodial liquid restaking protocol where users deposit ETH to receive eETH (rebasing LST) or weETH (wrapped non-rebasing), with validators operated via SSV Network DVT clusters and restaked on EigenLayer for staking and AVS restaking rewards. Withdrawals queue through an NFT-based system finalized by a 3-member oracle committee that submits consensus reports to EtherFiOracle; all governance upgrades flow through a 10-day EtherFiTimelock. weETH is deployed across 15+ EVM chains, making it one of the most widely integrated liquid restaking tokens in DeFi."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/fd3aa084-68fa-446d-a02e-cb3bb84b6338",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Permissionless deposit, wrap, and unwrap; no on-chain whitelist; weETH widely integrated across DeFi",
+    "short_headline": "Permissionless; wide DeFi integration",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No onlyWhitelisted, allowlist, isAccredited, or isKYCed modifiers visible in the ABIs of weETH, eETH, LiquidityPool, or WithdrawRequestNFT. eETH.mintShares/burnShares are restricted to the LiquidityPool address (an internal protocol flow ensuring accounting integrity, not a user-admission whitelist). deposit and wrap functions are open to any Ethereum address."
+        },
+        {
+          "code": "A2",
+          "text": "Oracle committee finalizes withdrawal requests (admission-unconditional function: requestWithdraw is placeable by any user; claimWithdraw requires oracle finalization as a liveness dependency, not an admission gate). Deposit and wrap/unwrap do not require oracle approval. The oracle committee is a liveness dependency (covered in autonomy slice) not an access gating actor."
+        },
+        {
+          "code": "A3",
+          "text": "Official frontend at ether.fi. ToS not fetched in this run; content not confirmed. Based on the Immunefi page fetched, ether.fi operates as a public protocol serving DeFi users broadly. No evidence of runtime IP geo-blocking or wallet screening at contract level."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths confirmed: weETH is deployed on 15+ EVM chains with cross-chain addresses listed in official docs (Arbitrum: 0x35751..., Base: 0x04C05..., Optimism: 0x5A7fA..., etc.). weETH is integrated into Aave, Curve, and other major DeFi protocols via its ERC-20 interface. wrap/unwrap are callable permissionlessly from any EVM client. The Immunefi program references ether.fi as a permissionless DeFi protocol."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain sanctions oracle (Chainalysis, TRM, or OFAC blocklist) found in the ABIs of the main contracts (eETH, weETH, LiquidityPool, WithdrawRequestNFT). Contract-level admission is unconditional."
+        },
+        {
+          "code": "A5",
+          "text": "Read access fully permissionless (all view methods openly callable). Write access — deposit, wrap, unwrap, requestWithdraw — permissionless for any Ethereum address. claimWithdraw permissionless once oracle finalizes the corresponding request ID."
+        },
+        {
+          "code": "A6",
+          "text": "Official ToS not fetched in this run. Cannot provide a verbatim quote of any jurisdictional or sanctions eligibility clause."
+        }
+      ],
+      "steelman": {
+        "red": "If ether.fi were to deploy an on-chain sanctions oracle or KYC check in a future upgrade (permitted by the 10-day Timelock), admission could become gated — but no such mechanism exists in currently-deployed contracts.",
+        "orange": "If no independent DeFi access paths existed and the official frontend were the sole access channel, operational capture could downgrade to orange — but weETH's wide DeFi integration prevents this.",
+        "green": "Contracts are permissionless, no whitelist, and weETH is confirmed on 15+ chains and integrated in major DeFi protocols providing multiple independent access paths regardless of official frontend policy."
+      },
+      "verdict": "Choosing green because the core smart contracts impose no whitelist, KYC, or on-chain sanctions check on user entry or exit; deposit, wrap, and unwrap are unconditionally permissionless; and weETH's deployment across 15+ EVM chains and integration in DeFi protocols (confirmed in the official deployed contracts docs) constitutes multiple independent A3b access paths."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "shows": "weETH ABI: wrap(uint256) and unwrap(uint256) have no whitelist modifier; permissionless write access confirmed",
+        "chain": "ethereum",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+        "shows": "eETH ABI: mintShares/burnShares restricted to liquidityPool (not a user admission whitelist); no isKYC or allowlist modifier present",
+        "chain": "ethereum",
+        "address": "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://etherfi.gitbook.io/etherfi/contracts-and-integrations/deployed-contracts",
+        "shows": "weETH deployed on 15+ EVM chains with specific addresses listed (Arbitrum 0x35751..., Base 0x04C05..., Optimism 0x5A7fA..., Scroll, Blast, BSC, Avalanche, Linea, ZKsync, etc.) providing independent access via cross-chain DeFi",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/etherfi/information/",
+        "shows": "ether.fi described as a 'decentralized, non-custodial delegated staking protocol'; Immunefi program confirms no contract-level KYC as scope covers public smart contracts",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A6: Official ToS not fetched; verbatim jurisdictional or sanctions eligibility clauses not confirmed"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol/smart-contracts"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi",
+      "audits": [
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"},
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2023-02"},
+        {"firm": "Certora", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"}
+      ],
+      "governance_forum": "https://etherfi.gitbook.io/gov",
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/etherfi/",
+      "security_contact": "security@ether.fi",
+      "deployed_contracts_doc": "https://etherfi.gitbook.io/etherfi/contracts-and-integrations/deployed-contracts",
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "ether.fi is a non-custodial liquid restaking protocol where users deposit ETH to receive eETH (rebasing LST) or weETH (wrapped non-rebasing), with validators operated via SSV Network DVT clusters and restaked on EigenLayer for staking and AVS restaking rewards. Withdrawals queue through an NFT-based system finalized by a 3-member oracle committee that submits consensus reports to EtherFiOracle; all governance upgrades flow through a 10-day EtherFiTimelock. weETH is deployed across 15+ EVM chains, making it one of the most widely integrated liquid restaking tokens in DeFi."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/fd3aa084-68fa-446d-a02e-cb3bb84b6338",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Core contracts verified with recognized-firm audits (Zellic, Certora); LiquidityPool implementation not auto-resolved; most recent confirmed audit ~14 months pre-analysis",
+    "short_headline": "Verified; audit gap ~14 months",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Contracts verified: EtherFiTimelock (Etherscan exact match), weETH proxy (etherscan) + impl 0x2d10683E941275D502173053927AD6066e6aFd6B, eETH proxy (etherscan) + impl 0xCB3D917A965A70214f430a135154Cd5ADdA2ad84, RoleRegistry proxy (etherscan) + impl 0x3A75019F8b09c278D152279d446c97d009E064f3, EtherFiOracle proxy (etherscan) + impl 0x5eefE6f65a280A6f1Eb1FdFf36Ab9e2af6f38462, EtherFiAdmin proxy (etherscan) + impl 0xd50f28485A75A1FdE432BA7d012d0E2543D2f20d, WithdrawRequestNFT proxy (etherscan) + impl 0x2f4A5921FcAB46F1F3154e8b42Fc189e08fae3Ed. Gap: LiquidityPool (0x308861...) verified via Sourcify as UUPSProxy but defipunkd API returned proxy=null — implementation address not confirmed in this run."
+        },
+        {
+          "code": "V2",
+          "text": "GitHub repo etherfi-protocol/smart-contracts confirmed publicly accessible via search (MIT license, README visible). No specific commit SHA was pinned in this run; source-to-deployed bytecode correspondence not independently verified."
+        },
+        {
+          "code": "V3",
+          "text": "Audits confirmed via docs and search: (a) Zellic — at least two audits, dates from Zellic reports directory: February 2023 and March 2024; (b) Certora formal verification — mentioned in GitHub README as ongoing; (c) Hats.finance audit competition listed on GitBook security page. Most recently confirmed audit date: March 2024 (~14 months before analysis date). Audit PDFs returned 403 on direct fetch; exact scope of March 2024 audit not confirmed from fetched content."
+        },
+        {
+          "code": "V4",
+          "text": "Zellic and Certora are both on the recognized-firm list. Hats.finance is a competition platform (not a firm audit). The combination of Zellic + Certora formal verification represents strong coverage from recognized auditors."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift not assessed in this run. The March 2024 Zellic audit covers the protocol approximately 14 months before analysis date. ether.fi continuously develops (README confirms 'Regular and Continuous audits'); however, specific diffs between audited and deployed commits were not checked. The LiquidityPool implementation gap (V1) is the most material unresolved drift risk for a fund-holding contract."
+        },
+        {
+          "code": "V6",
+          "text": "Implementations verified separately for all proxies where auto-resolved (weETH, eETH, RoleRegistry, oracle, EtherFiAdmin, WithdrawRequestNFT). LiquidityPool implementation not confirmed as verified in this run due to defipunkd API returning proxy=null."
+        }
+      ],
+      "steelman": {
+        "red": "If the LiquidityPool implementation (primary fund-holding contract) is unverified or undiscovered, an outsider cannot audit the fund accounting code running on-chain, which would warrant red.",
+        "orange": "All assessed contracts except LiquidityPool impl are verified; recognized-firm audits exist but most recent confirmed date is ~14 months before analysis; continuous development without a confirmed follow-up audit scope creates meaningful drift uncertainty.",
+        "green": "All key contracts are verified on Etherscan/Sourcify with recognized-firm coverage (Zellic + Certora); if the March 2024 audit covers all currently deployed implementations with minimal drift, the grade would be green."
+      },
+      "verdict": "Choosing orange because while most proxies and their implementations are verified on Etherscan (etherscan ABI source confirmed for the majority), the LiquidityPool implementation was not auto-resolved in this run creating a verification gap on the primary fund-holding contract, and the most recent confirmed Zellic audit (March 2024) predates the analysis date by ~14 months with no follow-up audit scope confirmed — material drift in a continuously-developed protocol keeps this at orange rather than green."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "shows": "weETH: abiSource=etherscan (verified); proxy resolved to implementation 0x2d10683E941275D502173053927AD6066e6aFd6B",
+        "chain": "ethereum",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+        "shows": "eETH: abiSource=etherscan (verified); proxy resolved to implementation 0xCB3D917A965A70214f430a135154Cd5ADdA2ad84",
+        "chain": "ethereum",
+        "address": "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x308861A430be4cce5502d0A12724771Fc6DaF216",
+        "shows": "LiquidityPool: abiSource=sourcify; verified=true; proxy=null (implementation not resolved); contractName=UUPSProxy",
+        "chain": "ethereum",
+        "address": "0x308861A430be4cce5502d0A12724771Fc6DaF216",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761",
+        "shows": "EtherFiTimelock: Contract Source Code Verified (Exact Match) on Etherscan; compiler v0.8.13; OZ TimelockController",
+        "chain": "ethereum",
+        "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41",
+        "shows": "EtherFiOracle: abiSource=etherscan; proxy resolved to implementation 0x5eefE6f65a280A6f1Eb1FdFf36Ab9e2af6f38462",
+        "chain": "ethereum",
+        "address": "0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7d5706f6ef3F89B3951E23e557CDFBC3239D4E2c",
+        "shows": "WithdrawRequestNFT: abiSource=etherscan; proxy resolved to implementation 0x2f4A5921FcAB46F1F3154e8b42Fc189e08fae3Ed",
+        "chain": "ethereum",
+        "address": "0x7d5706f6ef3F89B3951E23e557CDFBC3239D4E2c",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://etherfi.gitbook.io/etherfi/security/audits",
+        "shows": "ether.fi confirms audits are in etherfi-protocol/smart-contracts/audits on GitHub; Hats.finance audit competition referenced; 'best auditors in the marketplace' cited",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/etherfi/information/",
+        "shows": "Immunefi program references 'ether.fi's completed audit reports' at GitBook; bug bounty up to $300,000 live since March 2024; confirms audit program is active",
+        "fetched_at": "2026-05-27T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "V2: No commit SHA pinned; source-to-deployed bytecode correspondence not verified in this run",
+      "V3: Zellic March 2024 audit PDF returned 403; exact contract scope and commit SHA not confirmed from fetched content",
+      "V5: Post-audit drift not assessed; LiquidityPool implementation address not confirmed to be verified",
+      "V6: LiquidityPool implementation (primary fund-holding contract) not auto-resolved by defipunkd API; verification status of that implementation unknown"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol/smart-contracts"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi",
+      "audits": [
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"},
+        {"firm": "Zellic", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2023-02"},
+        {"firm": "Certora", "url": "https://etherfi.gitbook.io/etherfi/security/audits", "date": "2024-03"}
+      ],
+      "governance_forum": "https://etherfi.gitbook.io/gov",
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/etherfi/",
+      "security_contact": "security@ether.fi",
+      "deployed_contracts_doc": "https://etherfi.gitbook.io/etherfi/contracts-and-integrations/deployed-contracts",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761", "role": "EtherFiTimelock — top-level upgrade and role authority", "actor_class": "timelock"},
+        {"chain": "Ethereum", "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9", "role": "RoleRegistry — operational role registry; owner=Timelock", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705", "role": "EtherFiAdmin — oracle executor and emergency pause operator; owner=Timelock", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x57AaF0004C716388B21795431CD7D5f9D3Bb6a41", "role": "EtherFiOracle — 3-member permissioned committee; owner=Timelock", "actor_class": "governance"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ether.fi is a non-custodial liquid restaking protocol where users deposit ETH to receive eETH (rebasing LST) or weETH (wrapped non-rebasing), with validators operated via SSV Network DVT clusters and restaked on EigenLayer for staking and AVS restaking rewards. Withdrawals queue through an NFT-based system finalized by a 3-member oracle committee that submits consensus reports to EtherFiOracle; all governance upgrades flow through a 10-day EtherFiTimelock. weETH is deployed across 15+ EVM chains, making it one of the most widely integrated liquid restaking tokens in DeFi."
+    }
+  }
+]
