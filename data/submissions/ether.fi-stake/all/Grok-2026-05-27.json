@@ -1,0 +1,291 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a2ebbcc0-20fc-48e7-9bcf-7486743008bb",
+    "grading_basis": "on-chain",
+    "grade": "orange",
+    "headline": "6/10 multisig controls 10-day timelock for T1 upgrades on UUPS proxies (weETH/eETH owner)",
+    "short_headline": "Multisig + 10d timelock (T1)",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "Timelock at 0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761 is owner of weETH (0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee), eETH, RoleRegistry; minDelay=864000s (10 days) via getMinDelay() at block 25184477 (https://defipunkd.com/address/1/0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761). 6/10 Safe at 0xcdd57D11476c22d265722F68390b036f3DA48c21 holds PROPOSER_ROLE and EXECUTOR_ROLE on timelock (hasRole true at block 25184506)."},
+        {"code": "C2", "text": "Multiple UUPS proxies (e.g. RoleRegistry 0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9, oracle executor 0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705 implementation 0xd50f28485A75A1FdE432BA7d012d0E2543D2f20d); timelock itself immutable (no proxy). Upgrade path reaches fund-holding contracts."},
+        {"code": "C3", "text": "Execution path: 6/10 multisig calls schedule (proposer) on timelock -> 10-day MIN_DELAY wait (getMinDelay=864000s) -> multisig calls execute (executor). Uncontested fast-path delay = 10 days. No additional timelock layers or on-chain governor found."},
+        {"code": "C4", "text": "Primary control multisig: 6/10 Safe (threshold 6/10, version 1.3.0) at 0xcdd57D11476c22d265722F68390b036f3DA48c21 holds timelock proposer/executor roles; legacy 2/6 Safe at 0xF155a2632Ef263a6A382028B3B33feb29175b8A5 noted in prior reports. No other emergency multisigs enumerated on upgrade path."},
+        {"code": "C5", "text": "No active on-chain Governor / token-weighted voting for protocol upgrades; ETHFI token exists (0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB) but no proposal/voting constants or timelock governance path found in reads or docs."},
+        {"code": "C6", "text": "No separate emergency-pause guardian with distinct time cap identified on main timelock or weETH; pause functions exist on peripheral contracts (e.g. oracle executor) but not confirmed on core upgrade surface."},
+        {"code": "C7", "text": "Highest tier T1: upgradeTo/upgradeToAndCall on weETH/eETH (fund-holding UUPS proxies owned by timelock) reachable via multisig + 10d timelock path. Also controls RoleRegistry and node/membership managers."}
+      ],
+      "steelman": {
+        "red": "6/10 multisig (team-managed per docs) unilaterally controls T1 upgrade surface on all user-fund contracts with no on-chain governance check or broad signer distribution.",
+        "orange": "10-day timelock delay provides exit window before any upgrade executes; multisig threshold (60%) and size (10 signers) raise bar above 2-of-3 but fall short of full Security Council criteria (unknown non-insider %).",
+        "green": "Long 10-day uncontested delay on T1 actions plus high-threshold multisig allows users to exit weETH before changes; timelock is transparent and on-chain verifiable."
+      },
+      "verdict": "Choosing orange because T1 upgrade authority exists on fund-holding contracts via 6/10 multisig + 10-day timelock (C3,C7); delay meets 7-day bar but controlling multisig does not qualify as Security Council (unknown signer composition) and no active on-chain governance token voting path exists (C5), per Hard Rule 13 and grade rules."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761", "shows": "EtherFiTimelock; getMinDelay()=864000s (10 days); roles and AccessControl at block 25184477; not proxy.", "chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761"},
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761&method=hasRole&args=0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1,0xcdd57D11476c22d265722F68390b036f3DA48c21", "shows": "hasRole(PROPOSER_ROLE, 6/10 multisig)=true at block 25184506", "chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761"},
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761&method=hasRole&args=0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63,0xcdd57D11476c22d265722F68390b036f3DA48c21", "shows": "hasRole(EXECUTOR_ROLE, 6/10 multisig)=true at block 25184506", "chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761"},
+      {"url": "https://defipunkd.com/api/safe/owners?chainId=1&address=0xcdd57D11476c22d265722F68390b036f3DA48c21", "shows": "Safe 1.3.0, threshold 6, 10 owners at block ~25184506", "chain": "Ethereum", "address": "0xcdd57D11476c22d265722F68390b036f3DA48c21"},
+      {"url": "https://defipunkd.com/address/1/0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee", "shows": "weETH UUPS proxy (upgrade events); owned by timelock per address_book and context", "chain": "Ethereum", "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"},
+      {"url": "https://defipunkd.com/address/1/0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9", "shows": "RoleRegistry UUPS proxy (upgradeable)", "chain": "Ethereum", "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9"},
+      {"url": "https://github.com/etherfi-protocol", "shows": "Open-source smart-contracts repo; multi-sig governance referenced in security practices", "commit": null},
+      {"url": "https://governance.aave.com/t/arfc-onboarding-weeth-to-aave-v3-on-scroll/18301", "shows": "Corroborates 4/7 multisig (now observed as 6/10) manages timelock roles; timelock address matches", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "C4: exact signer identities and % non-insider for 6/10 multisig (cannot confirm Security Council criteria)",
+      "C6: whether a distinct emergency guardian role with time cap exists on core contracts (peripheral pause found but not main upgrade path)",
+      "C5: any ETHFI token-weighted on-chain voting for protocol upgrades (no Governor contract or constants found)"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xcdd57D11476c22d265722F68390b036f3DA48c21", "role": "6/10 multisig controlling timelock proposer/executor roles", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761", "role": "Timelock (owner of weETH, eETH, RoleRegistry)", "actor_class": "timelock"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Liquid restaking protocol where users deposit ETH to receive weETH (value-accruing liquid restaked ETH) or eETH. Assets are staked on Ethereum and restaked via AVS operators for additional yield while remaining liquid and composable in DeFi. Non-custodial with permissionless redeem paths."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a2ebbcc0-20fc-48e7-9bcf-7486743008bb",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Permissionless burn/redeem of weETH/eETH with validator exit queue; pause scope and claim gating unclear on main contracts",
+    "short_headline": "Permissionless redeem + queue (pause unclear)",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "Main exit functions: burn eETH/weETH to redeem ETH from LiquidityPool (0x308861A430be4cce5502d0A12724771Fc6DaF216); request full unstake queues validator exits; anyone can call distribute after beacon finalization (docs)."},
+        {"code": "E2", "text": "Redeem/burn is permissionless (no onlyRole or whitelist in core flows per docs and on-chain reads); new-request placement vs finalized-claim distinction exists (queue for insufficient unbonded ETH)."},
+        {"code": "E3", "text": "Pause functions confirmed on peripheral contracts (e.g. oracle executor 0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705 has pause/unPause); no explicit PAUSE_ROLE holder or infinite-pause confirmation on weETH/LiquidityPool in reads."},
+        {"code": "E4", "text": "No clear separation of fast emergency pause (capped) vs governance pause found; multisig controls many roles but no time-capped guardian explicitly tied to exit claims."},
+        {"code": "E5", "text": "Queued redemptions documented: process from unbonded ETH or full validator exits; no daily cap stated but beacon-chain finalization delay inherent; queue itself not confirmed pausable."},
+        {"code": "E6", "text": "No explicit forced-exit/escape-hatch beyond standard redeem + anyone-can-distribute finalized ETH; no adversarial-admin permissionless bypass found."},
+        {"code": "E7", "text": "Exit functions directly callable on-chain (Etherscan write tab or wallet); no frontend dependency required per docs and permissionless design."}
+      ],
+      "steelman": {
+        "red": "Multisig or roles could pause new redemptions or claims indefinitely with no on-chain time cap or governance override visible.",
+        "orange": "Redeem/burn is permissionless and finalized claims distributable by anyone; any pause appears scoped to requests or peripherals, with 10-day timelock on broader changes providing exit window.",
+        "green": "Fully permissionless on-chain exit path exists for weETH/eETH; users can always burn and claim finalized ETH without admin signature or frontend."
+      },
+      "verdict": "Choosing orange because core redeem/burn and finalized distribution are permissionless and on-chain (E1,E2,E7) with no evidence of indefinite claim pause, but pause scope/actor on main LiquidityPool/weETH and exact queue pausability remain undetermined after checklist (E3-E5), meeting orange criteria for broad-scope pausability uncertainty."
+    },
+    "evidence": [
+      {"url": "https://etherfi.gitbook.io/etherfi/ether.fi-whitepaper/technical-documentation", "shows": "Redeeming eETH/weETH: burn to withdraw from unbonded ETH or queue validator exits; anyone can distribute finalized ETH; permissionless process", "chain": null, "address": null},
+      {"url": "https://help.ether.fi/en/articles/269224-how-to-unstake-your-assets", "shows": "Unstake flow for weETH/eETH: request, queue, claim after period; direct on-chain steps described", "chain": null, "address": null},
+      {"url": "https://defipunkd.com/address/1/0x308861A430be4cce5502d0A12724771Fc6DaF216", "shows": "Liquidity pool address (core for redemptions); surfaced in multiple proxy reads", "chain": "Ethereum", "address": "0x308861A430be4cce5502d0A12724771Fc6DaF216"},
+      {"url": "https://defipunkd.com/address/1/0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705", "shows": "Peripheral contract with explicit pause/unPause functions and roles", "chain": "Ethereum", "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705"},
+      {"url": "https://www.ether.fi/", "shows": "Withdraw or transfer vaults with ease; non-custodial liquid staking", "chain": null, "address": null}
+    ],
+    "unknowns": [
+      "E3: exact PAUSE_ROLE holder and whether infinite pause callable on weETH or LiquidityPool (only peripheral pause confirmed)",
+      "E4: emergency vs governance pause distinction and time caps on exit paths",
+      "E5: whether redemption queue itself is pausable by multisig or roles"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xcdd57D11476c22d265722F68390b036f3DA48c21", "role": "6/10 multisig (pause/upgrade adjacent)", "actor_class": "multisig"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Liquid restaking protocol where users deposit ETH to receive weETH (value-accruing liquid restaked ETH) or eETH. Assets are staked on Ethereum and restaked via AVS operators for additional yield while remaining liquid and composable in DeFi. Non-custodial with permissionless redeem paths."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a2ebbcc0-20fc-48e7-9bcf-7486743008bb",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "~100% TVS exposed to 9 permissioned node operators + EigenLayer AVS slashing; oracle executor and beacon substrate mitigate but do not eliminate principal risk",
+    "short_headline": "Operator/AVS slashing risk (diversified)",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "Core external calls: beacon chain Deposit/Withdrawal (substrate), EigenLayer AVS for restaking (via node operator manager 0xd5edf7730ABAd812247F6F54D7bd31a52554e35E), oracle executor 0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705 for reports (latestReportRefBlock etc.). Failure of oracle or AVS mis-report can affect rebase/yield but not direct mint of unbacked."},
+        {"code": "A2", "text": "9 professional permissioned node operators (from protocol docs); small curated set with no on-chain diversification proof or insurance in reads. Misbehavior/slashing can impair principal in restaked positions (A4 depth). Oracle executor committee/role-managed but single-contract surface."},
+        {"code": "A3", "text": "No material non-canonical bridge dependency for core staking (L2 weETH via LayerZero in separate repo but not primary TVS path); main TVS on Ethereum."},
+        {"code": "A4", "text": "Restaking depth: ETH -> eETH/weETH -> EigenLayer AVS operators (1-2 levels); slashing at operator/AVS level propagates to user principal in weETH (no per-market silo isolation for core restake)."},
+        {"code": "A5", "text": "No forkedFrom in DeFiLlama context; original liquid restaking design."},
+        {"code": "A6", "text": "Fallbacks: unbonded ETH buffer in LiquidityPool for redemptions; postReportWaitTimeInSlots (50) on oracle executor; acceptableRebaseAprInBps=500 sanity. No live second-oracle or rebase bound enforcement confirmed active in reads; many are deployed but activation status unknown."},
+        {"code": "A7", "text": "No appchain/sequencer; inherits Ethereum L1 liveness (substrate, not dependency)."},
+        {"code": "A8", "text": "No critical keeper/relayer liveness for core exit (permissionless distribute after beacon finalization); auto-compound in vaults is UX, not principal-critical."},
+        {"code": "A9", "text": "Governance-mutable (multisig via timelock): can update node operator set, AVS registrations, oracle executor address (via RoleRegistry and manager contracts); 10-day timelock provides exit window before new dependency introduced."}
+      ],
+      "steelman": {
+        "red": "9 permissioned operators + EigenLayer AVS create direct slashing path to 100% TVS principal; small set and no on-chain insurance make external failure catastrophic.",
+        "orange": "Diversified 9-operator set + unbonded buffer + 10-day timelock on operator/AVS changes bound principal loss and give exit window; oracle sanity checks (postReportWait) mitigate but not eliminate yield/price impact.",
+        "green": "All critical paths have on-chain buffers, permissionless finalization, and long timelock on mutable dependencies; no single external actor can freeze or steal principal without diversified failure."
+      },
+      "verdict": "Choosing orange because external dependencies (A2: 9 permissioned NOs, A4: EigenLayer AVS slashing, A1: oracle executor) can cause principal loss or yield freeze on ~100% TVS, but diversification, LiquidityPool buffer, and 10-day timelock on changes (A9) prevent unmitigated catastrophic single-point failure, per grade anchors (Stage 1 equivalent, impacted TVS bounded/recoverable)."
+    },
+    "evidence": [
+      {"url": "https://etherfi.gitbook.io/etherfi/ether.fi-whitepaper/technical-documentation", "shows": "9 professional permissioned node operators; full withdrawals queue validator exits; oracle/report handling with postReportWaitTimeInSlots=50 and acceptableRebaseAprInBps=500", "chain": null, "address": null},
+      {"url": "https://defipunkd.com/address/1/0xd5edf7730ABAd812247F6F54D7bd31a52554e35E", "shows": "Node operator manager contract (key for A2/A4)", "chain": "Ethereum", "address": "0xd5edf7730ABAd812247F6F54D7bd31a52554e35E"},
+      {"url": "https://defipunkd.com/address/1/0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705", "shows": "Oracle executor with report handling, pause, rebase params, and role registry init", "chain": "Ethereum", "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705"},
+      {"url": "https://defipunkd.com/address/1/0x308861A430be4cce5502d0A12724771Fc6DaF216", "shows": "Liquidity pool with unbonded ETH buffer for redemptions (A6 mitigation)", "chain": "Ethereum", "address": "0x308861A430be4cce5502d0A12724771Fc6DaF216"},
+      {"url": "https://github.com/etherfi-protocol/etherfi-avs-operator", "shows": "AVS operator contracts confirming EigenLayer restaking integration", "commit": null}
+    ],
+    "unknowns": [
+      "A2: exact operator set size/diversification metrics and slashing insurance/bonding on-chain (docs state 9 but no live verification)",
+      "A6: activation status of rebase/oracle circuit breakers (params exist but not confirmed enforcing today)",
+      "A9: whether node operator/AVS registry changes are timelock-protected or direct multisig (inferred via RoleRegistry)"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Liquid restaking protocol where users deposit ETH to receive weETH (value-accruing liquid restaked ETH) or eETH. Assets are staked on Ethereum and restaked via AVS operators for additional yield while remaining liquid and composable in DeFi. Non-custodial with permissionless redeem paths."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a2ebbcc0-20fc-48e7-9bcf-7486743008bb",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Fully permissionless contracts (no whitelist/KYC on deposit/redeem); independent paths via DEX/wallets/aggregators exist despite frontend ToS",
+    "short_headline": "Permissionless + independent access",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "No onlyWhitelisted, onlyRole, or KYC modifiers on core user entry/exit (deposit to weETH/eETH, burn/redeem) per docs and on-chain reads; all flows permissionless."},
+        {"code": "A2", "text": "No off-chain operator approval required for admission (deposit/redeem/claim); oracle/node reports affect settlement but not admission gate. Permissionless distribute after beacon finalization."},
+        {"code": "A3", "text": "Frontend ToS (gitbook) contains standard sanctions/jurisdiction boilerplate (A3-passive); no evidence of active IP geo-blocking or wallet screening on official UI in fetches. Reported as context only."},
+        {"code": "A3b", "text": "Independent paths confirmed: weETH tradable on DEXes (Uniswap etc.), wallet integrations (MetaMask), aggregators (DeFiLlama, 1inch), third-party frontends; direct Etherscan write for burn/redeem; no published SDK but contract-level access sufficient."},
+        {"code": "A4", "text": "No on-chain blocklist or OFAC check in contracts (no sanctions oracle integration found)."},
+        {"code": "A5", "text": "Read access fully permissionless (anyone can view balances, reports); write access (deposit/redeem) also permissionless."},
+        {"code": "A6", "text": "ToS URL: https://etherfi.gitbook.io/etherfi/ether.fi-legal/terms-of-use; verbatim eligibility clause not extractable due to SPA render but standard 'comply with applicable law / restricted jurisdictions' language present per risk disclosures page."}
+      ],
+      "steelman": {
+        "red": "Official frontend ToS and any potential wallet screening could block users; no on-chain KYC but practical access gated by publisher policies.",
+        "orange": "Contracts permissionless but no published SDK or third-party frontend dominance makes it operationally captured by official UI.",
+        "green": "Core contracts admit any address unconditionally for deposit/redeem/distribute; multiple independent on-chain paths (DEX, wallets, Etherscan) exist without publisher cooperation."
+      },
+      "verdict": "Choosing green because no contract-level whitelist/KYC or operator gate on any user action (A1,A2,A5), and independent access paths (DEX/wallets/aggregators) are live and permissionless (A3b), satisfying default green rule regardless of frontend ToS (A3 context only)."
+    },
+    "evidence": [
+      {"url": "https://etherfi.gitbook.io/etherfi/ether.fi-whitepaper/technical-documentation", "shows": "Permissionless redeeming/burning; anyone can distribute finalized ETH; no admission gates described", "chain": null, "address": null},
+      {"url": "https://help.ether.fi/en/articles/269224-how-to-unstake-your-assets", "shows": "Direct on-chain unstake/claim steps; no KYC or approval required", "chain": null, "address": null},
+      {"url": "https://www.ether.fi/", "shows": "Non-custodial; stake/redeem flows open; composable in 400+ DeFi protocols", "chain": null, "address": null},
+      {"url": "https://etherfi.gitbook.io/etherfi/ether.fi-legal/terms-of-use", "shows": "Standard ToS with jurisdictional/sanctions eligibility language (A3-passive)", "chain": null, "address": null},
+      {"url": "https://defipunkd.com/address/1/0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee", "shows": "weETH ERC-20 (permissionless transfer/burn)", "chain": "Ethereum", "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"}
+    ],
+    "unknowns": [
+      "A3: exact runtime enforcement (IP blocking or Chainalysis screening) on official frontend (not visible in static fetches)",
+      "A6: verbatim full ToS sanctions clause (SPA render limited extraction)"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Liquid restaking protocol where users deposit ETH to receive weETH (value-accruing liquid restaked ETH) or eETH. Assets are staked on Ethereum and restaked via AVS operators for additional yield while remaining liquid and composable in DeFi. Non-custodial with permissionless redeem paths."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "ether.fi-stake",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-27",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_a2ebbcc0-20fc-48e7-9bcf-7486743008bb",
+    "grading_basis": "on-chain",
+    "grade": "orange",
+    "headline": "Bytecode verified on Etherscan/Sourcify for core contracts (UUPS proxies + timelock); open-source GitHub repo; no pinned current audit reports or commit-pin in this run",
+    "short_headline": "Verified + open source (audit gap)",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "All pinned addresses verified: Timelock (Etherscan), RoleRegistry (Sourcify), weETH/eETH proxies (Etherscan ABI), oracle executor (Etherscan); proxy + implementation pairs resolved in /api/contract/abi responses."},
+        {"code": "V2", "text": "GitHub repo https://github.com/etherfi-protocol/smart-contracts matches structure (Solidity, UUPS, AccessControl, Timelock patterns) but no exact commit SHA pinned or bytecode diff performed in this run."},
+        {"code": "V3", "text": "No audit_links in per-protocol context; website claims 'audited by industry-leading firms' but no specific firm, date, or report URL fetched or verifiable in this run."},
+        {"code": "V4", "text": "No recognized-firm audit (Trail of Bits, Zellic, etc.) confirmed; unknown-firm or self-audit possible but not evidenced."},
+        {"code": "V5", "text": "Post-audit drift cannot be assessed (no baseline audit commit or recent diff sampled); recent GitHub activity (May 2026) but no material-change analysis possible."},
+        {"code": "V6", "text": "Proxies verified with implementation surfaced (e.g. oracle executor impl 0xd50f28485A75A1FdE432BA7d012d0E2543D2f20d); timelock immutable (direct contract)."}
+      ],
+      "steelman": {
+        "red": "No audit report or commit correspondence verifiable; reliance on 'industry-leading' claim without evidence.",
+        "orange": "All core bytecode verified on explorers and open-source repo exists with matching architecture; missing current audit and exact commit pin prevent green.",
+        "green": "Full verification on Etherscan/Sourcify for every pinned address + public GitHub repo allows independent inspection of deployed logic."
+      },
+      "verdict": "Choosing orange because bytecode is verified on explorers for proxies and implementation (V1,V6), open-source repo matches (V2), but no specific audit from recognized firm covering current deployment is evidenced (V3-V4) and no commit SHA or drift check possible (V5), per grade rules."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761", "shows": "EtherFiTimelock verified via Etherscan ABI at block 25184477", "chain": "Ethereum", "address": "0x9f26d4C958fD811A1F59B01B86Be7dFFc9d20761"},
+      {"url": "https://defipunkd.com/address/1/0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9", "shows": "RoleRegistry verified via Sourcify; UUPS proxy", "chain": "Ethereum", "address": "0x62247D29B4B9BECf4BB73E0c722cf6445cfC7cE9"},
+      {"url": "https://defipunkd.com/address/1/0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705", "shows": "Oracle executor verified Etherscan; UUPS with impl surfaced", "chain": "Ethereum", "address": "0x0EF8fa4760Db8f5Cd4d993f3e3416f30f942D705"},
+      {"url": "https://defipunkd.com/address/1/0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee", "shows": "weETH verified; proxy events confirm upgradeable", "chain": "Ethereum", "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"},
+      {"url": "https://github.com/etherfi-protocol", "shows": "Open-source MIT-licensed smart-contracts repo with UUPS/AccessControl/Timelock patterns", "commit": null},
+      {"url": "https://www.ether.fi/", "shows": "Claims audited by industry-leading firms (no specific links or reports)", "chain": null, "address": null}
+    ],
+    "unknowns": [
+      "V2: exact commit SHA matching deployed bytecode (no diff or pinned deployment JSON found)",
+      "V3-V4: any specific audit firm, date, or report URL covering 2026 deployments (none recorded or fetched)",
+      "V5: material post-audit code changes since last known review (GitHub active but no diff sampled)"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/etherfi-protocol"],
+      "docs_url": "https://etherfi.gitbook.io/etherfi/",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB", "symbol": "ETHFI"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Liquid restaking protocol where users deposit ETH to receive weETH (value-accruing liquid restaked ETH) or eETH. Assets are staked on Ethereum and restaked via AVS operators for additional yield while remaining liquid and composable in DeFi. Non-custodial with permissionless redeem paths."
+    }
+  }
+]
