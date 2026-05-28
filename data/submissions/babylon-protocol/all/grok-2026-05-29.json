@@ -1,0 +1,291 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_9b2a497f-bfc6-435e-a38e-93af4f0667e5",
+    "grading_basis": "off-chain-only",
+    "grade": "green",
+    "headline": "Self-custodial BTC core with scoped 6/9 Covenant Committee (unbonding verifier only) + BABY-governed Cosmos coordination layer; T1 unreachable, ~7-day on-chain unbonding delay on fast path.",
+    "short_headline": "Green: limited-scope multisig + gov timelock-equivalent",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "No EVM contract owner/admin/governor/pendingOwner readable (protocol is Bitcoin-native + Cosmos SDK Babylon Genesis). Covenant Committee (6/9 multisig) controls only unbonding co-signatures; Babylon Labs holds 3/9 keys, others reputable entities (AltLayer, CoinSummer Labs, Cubist, Informal Systems, RockX, Zellic). Committee explicitly cannot steal BTC or block expiration withdrawal."},
+        {"code": "C2", "text": "Bitcoin staking scripts immutable post-confirmation (Taproot timelock + covenant multisig paths). Babylon Genesis (Cosmos SDK) upgradeable via on-chain BABY governance; no proxy admin address or UUPS/Diamond found. Mixed upgradeability."},
+        {"code": "C3", "text": "Unbonding execution path: staker creates BTC unbonding tx → 6/9 Covenant Committee co-sign (fast path if online) → 1008 Bitcoin blocks (~7 days) on-chain timelock → withdraw tx. Governance path (params/upgrades on Genesis): BABY-weighted vote (min deposit 50k BABY, 3-day voting period / 1-day expedited, 33.4% quorum, 50% approval; no explicit post-vote timelock documented)."},
+        {"code": "C4", "text": "Primary multisig: Covenant Committee (6/9, threshold 66%, members publicly listed with industry affiliations; Babylon Labs 3/9 insider stake but power strictly limited to verification). No other reachable control multisigs on upgrade/fund paths. Genesis governance is token-weighted on-chain (not multisig)."},
+        {"code": "C5", "text": "On-chain governance exists on Babylon Genesis (BABY token-weighted voting for params, upgrades). Proposal threshold 50k BABY, voting period 3 days, quorum 33.4%, approval 50%, veto 33.4%. No timelock constant read; Cosmos SDK default execution post-pass."},
+        {"code": "C6", "text": "No separate emergency-pause/guardian role with uncapped power. Covenant Committee scoped to unbonding verification only; no infinite pause capability documented."},
+        {"code": "C7", "text": "Highest tier on uncontested fast path: T3 (governance can alter params like unbonding period or covenant threshold on Genesis). T1 unreachable — no function allows draining user BTC, replacing staking script logic, or minting unbacked claims (self-custodial Bitcoin Script + explicit committee limitations). T2 unreachable on BTC core."}
+      ],
+      "steelman": {
+        "red": "6/9 Covenant Committee (with team key concentration) + short 3-day governance voting could theoretically enable rapid param changes affecting unbonding economics if committee colludes or gov is captured.",
+        "orange": "Covenant multisig fails full Security Council criteria (team holds 3/9 keys) and sits on unbonding path; governance has short voting period with no documented timelock, creating T3 fast path.",
+        "green": "Bitcoin core is fully immutable and self-custodial (user private keys control final withdrawal after timelock expiration); Covenant Committee explicitly cannot steal funds or prevent expiration even if fully compromised (per official Phase-1 launch docs); highest reachable power is T3 governance on coordination layer only."
+      },
+      "verdict": "Choosing green because T1 is unreachable on the immutable self-custodial Bitcoin staking layer (core user funds never leave user control), Covenant Committee power is narrowly scoped to verification with explicit non-stealing guarantees, and any T3 governance changes require on-chain BABY voting with public proposal process; 7-day Bitcoin-block unbonding delay provides exit window on the practical fast path. Evidence from official launch blog and governance docs outweighs orange concerns about committee composition."
+    },
+    "evidence": [
+      {"url": "https://babylonlabs.io/blog/babylon-bitcoin-staking-mainnet-launch-phase-1", "shows": "Details 6/9 Covenant Committee composition (AltLayer, Babylon Labs 3 keys, CoinSummer Labs, Cubist, Informal Systems, RockX, Zellic), explicit statement that committee 'cannot steal the staker’s bitcoins, nor prevent the stake from expiration and becoming withdrawable, even if the committee is compromised', 1008-block (~7-day) unbonding period, 64000-block max stake duration, Phase-1 security model, and audit links.", "fetched_at": "2026-05-29T08:10:00Z"},
+      {"url": "https://docs.babylonlabs.io/guides/overview/babylon_genesis/baby_tokenomics/", "shows": "BABY token utility for gas and on-chain governance on Babylon Genesis (Cosmos SDK); BTC stakers do not vote; parameters and upgrades decided by BABY holders/validators.", "fetched_at": "2026-05-29T08:12:00Z"},
+      {"url": "https://forum.babylon.foundation/t/governance-docs/19", "shows": "Cosmos SDK governance parameters: min deposit 50,000 BABY, max deposit period 14 days, voting period 3 days (expedited 1 day), quorum 33.4%, approval threshold 50%, veto 33.4%.", "fetched_at": "2026-05-29T08:15:00Z"},
+      {"url": "https://github.com/babylonlabs-io/babylon/blob/main/docs/staking-script.md", "shows": "Bitcoin staking script specification including CovenantThreshold parameter, M-out-of-N multisig co-signing for compliant spending paths (unbonding, slashing), timelock paths; public and immutable once confirmed on Bitcoin.", "commit": "d96cd9de2ead944f064362e3fc0c34214fa066cd", "fetched_at": "2026-05-29T08:18:00Z"}
+    ],
+    "unknowns": [
+      "C1: No EVM contract owner/admin/pendingOwner/governor readable via block explorer or DeFiPunkd /api/contract/read (protocol has no EVM deployments; control surfaces are Bitcoin Script covenants + Cosmos SDK gov on Babylon Genesis).",
+      "C3: Exact current CovenantThreshold and unbonding period (1008 blocks in Phase-1 docs) not re-verified from live Babylon Genesis chain state or recent gov proposal; post-Phase-2 changes possible but not evidenced in fetched sources.",
+      "C4: Current signer identities and exact threshold for Covenant Committee post any rotations since Phase-1 launch not re-confirmed in live sources; 6/9 documented in 2024 launch blog.",
+      "C5: No on-chain read of exact votingDelay/votingPeriod constants or timelock (if any) on Babylon Genesis Governor module; Cosmos SDK defaults inferred from forum docs only.",
+      "C7: Whether governance proposals can alter covenant public keys or slashing conditions in a way that affects existing stakes without user exit window not explicitly ruled out in fetched docs (T3 assumed but conservative)."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/babylonlabs-io/babylon"],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [
+        {"firm": "Coinspect", "url": "https://docs.babylonlabs.io/assets/files/coinspect-phase1-audit.pdf", "date": "2024-06"},
+        {"firm": "Zellic", "url": "https://docs.babylonlabs.io/assets/files/zellic-phase1-audit.pdf", "date": "2024-06"},
+        {"firm": "Oak Security GmbH", "url": "https://docs.babylonlabs.io/assets/files/oak_security_gmbh_genesis_v2_audit-2025_06.pdf", "date": "2025-06"}
+      ],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": {"chain": "Babylon Genesis", "address": null, "symbol": "BABY"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Babylon Protocol enables self-custodial native Bitcoin staking to secure Bitcoin Supercharged Networks (BSNs) and other PoS chains. Users lock BTC directly in timelocked Taproot scripts on Bitcoin mainnet; coordination, finality, and BABY-token governance occur on Babylon Genesis (Cosmos SDK chain). No wrapping, bridging, or custodians required for core staking."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_9b2a497f-bfc6-435e-a38e-93af4f0667e5",
+    "grading_basis": "off-chain-only",
+    "grade": "green",
+    "headline": "Permissionless final withdrawal after on-chain timelock/expiration; early unbonding requires 6/9 committee co-sign + 7-day Bitcoin block delay but committee cannot block claims or prevent expiration.",
+    "short_headline": "Green: self-custodial exit with on-chain safeguards",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "User-facing exit functions: (1) early unbonding (staker-initiated BTC tx co-signed by Covenant Committee) followed by withdraw after unbonding period; (2) automatic expiration withdraw after chosen staking timelock (up to 64,000 Bitcoin blocks). Both use native Bitcoin transactions."},
+        {"code": "E2", "text": "Unbonding request placement requires Covenant Committee (6/9) co-signature for verification; claim/finalized withdrawal after 1008-block unbonding period or full expiration is permissionless (user private key only). No admin gate on finalized claims."},
+        {"code": "E3", "text": "No pause guards or PAUSE_ROLE on Bitcoin staking scripts. Covenant Committee co-sign is verification gate for early unbonding only; explicitly cannot prevent expiration-based withdrawal even if fully compromised or offline."},
+        {"code": "E4", "text": "No emergency vs governance pause distinction; no uncapped pause path exists. Committee acts as verification multisig, not emergency pauser."},
+        {"code": "E5", "text": "Queued early unbonding has documented max on-chain delay of 1008 Bitcoin blocks (~7 days). Queue itself is not pausable by any actor; expiration path bypasses queue entirely."},
+        {"code": "E6", "text": "Forced-exit / escape-hatch: automatic timelock expiration provides permissionless withdrawal path with no committee or admin involvement required. Slashing (if applicable post-Phase-1) follows protocol rules but does not block honest user exit."},
+        {"code": "E7", "text": "Exit functions directly callable on Bitcoin blockchain via any compatible wallet or script (Taproot script construction from public covenant params and staking docs). Official frontend (btcstaking.babylonlabs.io) is convenience only; not required for on-chain exit."}
+      ],
+      "steelman": {
+        "red": "Early unbonding requires 6/9 Covenant Committee co-signature, creating a potential liveness or collusion gate for fast exit (even if final expiration path remains open).",
+        "orange": "7-day Bitcoin-block unbonding delay + committee dependency for early exit could be viewed as material friction; frontend is the primary UX path even if technically bypassable.",
+        "green": "Final withdrawal is fully permissionless after either on-chain unbonding period or automatic timelock expiration; Covenant Committee has no power to block or pause claims of already-finalized exits and explicitly cannot prevent expiration-based withdrawal; native Bitcoin transactions mean no smart-contract pause or admin signature required for exit."
+      },
+      "verdict": "Choosing green because the protocol provides a guaranteed permissionless exit path via Bitcoin timelock expiration that no actor (including the full Covenant Committee) can block, early unbonding has a fixed short on-chain delay rather than indefinite pause, and claims of finalized funds are not gated. Self-custodial design + explicit non-blocking guarantees satisfy the exit criteria despite the verification step for early unbonding."
+    },
+    "evidence": [
+      {"url": "https://babylonlabs.io/blog/babylon-bitcoin-staking-mainnet-launch-phase-1", "shows": "Unbonding process: staker generates unbonding tx (co-signed by 6/9 committee) then withdrawal tx after 1008 Bitcoin blocks (~7 days); automatic expiration after 64,000 blocks with no committee involvement; explicit statement committee cannot prevent stake from 'expiration and becoming withdrawable'.", "fetched_at": "2026-05-29T08:10:00Z"},
+      {"url": "https://github.com/babylonlabs-io/babylon/blob/main/docs/staking-script.md", "shows": "Staking script defines timelock paths for unbonding and expiration; withdrawal requires only staker signature after timelock; covenant co-sign enforces rules but does not gate final spend after expiration.", "commit": "d96cd9de2ead944f064362e3fc0c34214fa066cd", "fetched_at": "2026-05-29T08:18:00Z"}
+    ],
+    "unknowns": [
+      "E2: Exact current unbonding period and CovenantThreshold parameters on live Babylon Genesis (or updated Bitcoin script params post-Phase-2) not re-read from chain state.",
+      "E3: Whether any on-chain pause or guardian role was introduced in Phase-2 restaking/vault modules on Babylon Genesis not evidenced in fetched Phase-1-focused sources.",
+      "E7: Practical ease of constructing valid unbonding/withdrawal Bitcoin transactions without official frontend (requires knowledge of current covenant public keys and script params) not tested end-to-end in this run."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/babylonlabs-io/babylon"],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [
+        {"firm": "Coinspect", "url": "https://docs.babylonlabs.io/assets/files/coinspect-phase1-audit.pdf", "date": "2024-06"},
+        {"firm": "Zellic", "url": "https://docs.babylonlabs.io/assets/files/zellic-phase1-audit.pdf", "date": "2024-06"}
+      ],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": {"chain": "Babylon Genesis", "address": null, "symbol": "BABY"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Babylon Protocol enables self-custodial native Bitcoin staking to secure Bitcoin Supercharged Networks (BSNs) and other PoS chains. Users lock BTC directly in timelocked Taproot scripts on Bitcoin mainnet; coordination, finality, and BABY-token governance occur on Babylon Genesis (Cosmos SDK chain). No wrapping, bridging, or custodians required for core staking."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_9b2a497f-bfc6-435e-a38e-93af4f0667e5",
+    "grading_basis": "off-chain-only",
+    "grade": "green",
+    "headline": "Self-custodial Bitcoin core with no external dependency able to cause principal loss; Covenant Committee or Genesis downtime delays early unbonding only (~0% impacted TVS for theft/freeze of principal).",
+    "short_headline": "Green: principal protected by self-custody + timelocks",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "Core contracts (Bitcoin Script) call no external oracles, price feeds, or bridges for staking/unbonding. Covenant Committee provides off-chain signatures for unbonding/slashing verification only. Babylon Genesis handles coordination/events but does not custody or move user BTC."},
+        {"code": "A2", "text": "Covenant Committee (9 signers, 6/9 threshold, reputable entities) acts as verification oracle for unbonding/slashing requests. Mis-reporting can delay early unbonding but cannot steal principal or block expiration withdrawal (explicit protocol guarantee). Finality Providers secure BSNs but user principal remains on Bitcoin under user keys."},
+        {"code": "A3", "text": "No bridge or cross-chain messaging dependency for core user staking flows; BTC remains on Bitcoin mainnet. Babylon Genesis (IBC-enabled Cosmos chain) used for coordination only."},
+        {"code": "A4", "text": "No nested collateral/restaking chains for user principal; BTC is staked natively on Bitcoin. Any future restaking (Phase-2+) would be opt-in on top of the same self-custodial base."},
+        {"code": "A5", "text": "No forkedFrom lineage recorded in DeFiLlama or docs for core Bitcoin staking mechanism."},
+        {"code": "A6", "text": "Fallbacks: automatic timelock expiration (user-controlled, no external input) catches any committee/Genesis failure for final exit. No sanity-check contracts or rebase bounds needed because Bitcoin Script enforces rules on-chain. Committee liveness is mitigated by expiration path (LIVE and enforcing)."},
+        {"code": "A7", "text": "No sequencer/L1-liveness dependency beyond Bitcoin substrate (Bitcoin is the base chain for staking txs). Babylon Genesis liveness affects coordination but not BTC lock validity."},
+        {"code": "A8", "text": "Covenant Emulator (off-chain bots run by committee members) required for timely unbonding co-signatures. Failure degrades to expiration path only (graceful; no insolvency or yield loss for stakers)."},
+        {"code": "A9", "text": "Governance on Babylon Genesis can mutate parameters (unbonding period, covenant threshold) via BABY vote but cannot hot-swap external dependencies that custody or move user BTC (no such mutable oracle/bridge/ vault surface on the Bitcoin staking layer)."}
+      ],
+      "steelman": {
+        "red": "Covenant Committee (off-chain) or Babylon Genesis downtime could freeze early unbonding for all stakers, creating systemic exit friction if prolonged.",
+        "orange": "Protocol depends on 9-member committee liveness for fast unbonding and Genesis chain for coordination; governance can change parameters that affect future stakes without per-user exit window.",
+        "green": "No external dependency can cause theft or loss of user principal — BTC never leaves user-controlled UTXOs; any committee or Genesis failure is fully mitigated by automatic timelock expiration path that requires no external signatures; impacted TVS for principal loss is effectively 0%."
+      },
+      "verdict": "Choosing green because the self-custodial Bitcoin Script design ensures user private keys alone control final withdrawal after timelock, with no external contract, oracle, bridge, or committee able to drain or permanently freeze principal (only delay early unbonding). Fallback to expiration is live and unconditional. Governance-mutable surface is limited to coordination parameters, not fund custody."
+    },
+    "evidence": [
+      {"url": "https://babylonlabs.io/blog/babylon-bitcoin-staking-mainnet-launch-phase-1", "shows": "Self-custodial design: 'Your keys. Your coins.'; committee 'cannot steal the staker’s bitcoins, nor prevent the stake from expiration and becoming withdrawable'; all staking on Bitcoin mainnet with no bridging/wrapping.", "fetched_at": "2026-05-29T08:10:00Z"},
+      {"url": "https://github.com/babylonlabs-io/babylon/blob/main/docs/staking-script.md", "shows": "Bitcoin Script enforces all spending rules (timelock, covenant co-sign, slashing conditions) on-chain with no external calls for core logic.", "commit": "d96cd9de2ead944f064362e3fc0c34214fa066cd", "fetched_at": "2026-05-29T08:18:00Z"}
+    ],
+    "unknowns": [
+      "A2: Current operational status and exact signer set of Covenant Committee (post any rotations) and whether all 9 run live Covenant Emulator bots not re-verified in real-time.",
+      "A6: Activation status of any Phase-2 restaking or vault modules on Babylon Genesis and whether they introduce new external dependencies not covered in Phase-1 staking script docs.",
+      "A9: Specific list of mutable parameters on Babylon Genesis that could indirectly affect staking economics (e.g., points system, caps) without long timelock not exhaustively enumerated from live chain state."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/babylonlabs-io/babylon"],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [
+        {"firm": "Coinspect", "url": "https://docs.babylonlabs.io/assets/files/coinspect-phase1-audit.pdf", "date": "2024-06"},
+        {"firm": "Zellic", "url": "https://docs.babylonlabs.io/assets/files/zellic-phase1-audit.pdf", "date": "2024-06"},
+        {"firm": "Oak Security GmbH", "url": "https://docs.babylonlabs.io/assets/files/oak_security_gmbh_genesis_v2_audit-2025_06.pdf", "date": "2025-06"}
+      ],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": {"chain": "Babylon Genesis", "address": null, "symbol": "BABY"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Babylon Protocol enables self-custodial native Bitcoin staking to secure Bitcoin Supercharged Networks (BSNs) and other PoS chains. Users lock BTC directly in timelocked Taproot scripts on Bitcoin mainnet; coordination, finality, and BABY-token governance occur on Babylon Genesis (Cosmos SDK chain). No wrapping, bridging, or custodians required for core staking."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_9b2a497f-bfc6-435e-a38e-93af4f0667e5",
+    "grading_basis": "off-chain-only",
+    "grade": "green",
+    "headline": "Fully permissionless Bitcoin Script staking and withdrawal; no contract-level whitelist/KYC or operator approval for core admission; independent paths via native BTC wallets and open-source tools exist alongside official UI.",
+    "short_headline": "Green: native BTC permissionless + independent paths",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "No whitelist/allowlist/onlyWhitelisted/onlyRole modifiers on Bitcoin staking or unbonding scripts. Any BTC holder can create valid staking tx with chosen finality provider and broadcast to Bitcoin network."},
+        {"code": "A2", "text": "Covenant Committee (6/9) provides co-signatures for unbonding verification but does not gate staking admission or require approval for initial stake placement. Staking is unconditional on Bitcoin; committee role is post-stake verification only."},
+        {"code": "A3", "text": "Official frontend (btcstaking.babylonlabs.io) likely contains standard ToS/sanctions self-certification (A3-passive); no evidence of active IP geo-blocking, wallet screening, or KYC wall in fetched sources. Reported as context only."},
+        {"code": "A3b", "text": "Independent access paths exist: (1) native Bitcoin wallets/scripts supporting Taproot/custom scripts (public covenant params allow direct tx construction); (2) third-party integrators (BitGo, Kiln, Fordefi) offering Babylon staking; (3) open-source tools from GitHub repos for wallet developers."},
+        {"code": "A4", "text": "No on-chain sanctions blocklist or OFAC-style address checking in Bitcoin staking scripts or Babylon Genesis coordination layer."},
+        {"code": "A5", "text": "Read access fully permissionless (anyone can query Bitcoin blockchain or Babylon Genesis for staking events). Write access (staking/unbonding) also permissionless at contract level."},
+        {"code": "A6", "text": "ToS/legal links exist on babylonlabs.io and docs (standard eligibility/sanctions clauses expected but not verbatim-extracted due to page structure); no evidence of restrictive on-chain enforcement."}
+      ],
+      "steelman": {
+        "red": "Covenant Committee co-signature requirement for early unbonding could be framed as operator approval gate on a core exit action.",
+        "orange": "Official frontend is the dominant UX; while theoretically bypassable, most users rely on it and third-party integrations may still route through official coordination layer.",
+        "green": "Bitcoin Script staking and final withdrawal require no whitelist, no KYC, no operator pre-approval for admission, and no on-chain blocklist; independent paths (native BTC construction + third-party custodians/integrators) exist and satisfy the credible-alternatives test; committee verification is scoped post-admission and does not block staking entry."
+      },
+      "verdict": "Choosing green because core user actions (staking placement and final withdrawal) are unconditionally admitted by the Bitcoin Script layer with no contract-level gates, and multiple independent access paths (native Bitcoin tooling, third-party integrators) exist without requiring the official publisher's ongoing cooperation. Frontend ToS and any passive compliance language are publisher policy on one client only."
+    },
+    "evidence": [
+      {"url": "https://babylonlabs.io/blog/babylon-bitcoin-staking-mainnet-launch-phase-1", "shows": "Self-custodial staking: 'Your keys. Your coins.'; anyone can stake native BTC on Bitcoin mainnet with no bridging/wrapping; unbonding requires committee co-sign but staking admission is open.", "fetched_at": "2026-05-29T08:10:00Z"},
+      {"url": "https://github.com/babylonlabs-io/babylon/blob/main/docs/staking-script.md", "shows": "Public Bitcoin staking script specification allows any user to construct valid staking/unbonding transactions; no address-based restrictions or permissioned entry points.", "commit": "d96cd9de2ead944f064362e3fc0c34214fa066cd", "fetched_at": "2026-05-29T08:18:00Z"}
+    ],
+    "unknowns": [
+      "A3: Verbatim text of any jurisdictional/sanctions clause in official ToS not extracted (page render limitations); recorded as context only.",
+      "A3b: Exhaustive list of all third-party frontends/wallets/integrators supporting Babylon staking not enumerated beyond examples (BitGo, Kiln); existence of at least one independent path is confirmed.",
+      "A6: Full current ToS URL and exact eligibility language not fetched in this run due to site navigation."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/babylonlabs-io/babylon"],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [
+        {"firm": "Halborn", "url": "https://docs.babylonlabs.io/guides/security/audit_reports/", "date": "2024"}
+      ],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": {"chain": "Babylon Genesis", "address": null, "symbol": "BABY"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Babylon Protocol enables self-custodial native Bitcoin staking to secure Bitcoin Supercharged Networks (BSNs) and other PoS chains. Users lock BTC directly in timelocked Taproot scripts on Bitcoin mainnet; coordination, finality, and BABY-token governance occur on Babylon Genesis (Cosmos SDK chain). No wrapping, bridging, or custodians required for core staking."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "grok-xai",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_9b2a497f-bfc6-435e-a38e-93af4f0667e5",
+    "grading_basis": "off-chain-only",
+    "grade": "green",
+    "headline": "Open-source Bitcoin Script + Cosmos SDK code with multiple audits from recognized firms (Zellic, Coinspect, Oak Security, Halborn) covering Phase-1 and subsequent upgrades; public staking script spec.",
+    "short_headline": "Green: audited open source across layers",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "Bitcoin staking scripts are public and verifiable via any Bitcoin explorer (Taproot addresses/scripts); no 'bytecode' in EVM sense. Babylon Genesis Cosmos modules are source-verified via GitHub (no proxy/implementation split issue)."},
+        {"code": "V2", "text": "Source-to-repo correspondence: staking script spec and Cosmos modules in https://github.com/babylonlabs-io/babylon match public documentation and audit scopes. Latest commit on main corresponds to active development."},
+        {"code": "V3", "text": "Audit coverage: Phase-1 (Coinspect June 2024, Zellic June 2024, Cantina contest), Genesis v2 upgrade (Oak Security June 2025), additional Halborn frontend audit, v4 upgrade audits (Coinspect, Halborn). Multiple firms, recent relative to phases."},
+        {"code": "V4", "text": "Auditor recognition: Zellic, Coinspect, Oak Security, Halborn, Sherlock, Informal Systems — all recognized in Solidity/Cosmos/Bitcoin security space. No unknown firms driving grade."},
+        {"code": "V5", "text": "Post-audit drift: Upgrades (v2, v4) explicitly re-audited by recognized firms; no material un-audited drift in core staking script or Genesis modules evidenced. Frontend separately audited."},
+        {"code": "V6", "text": "No proxy vs implementation gap; Bitcoin Script is the deployed 'code' (immutable on-chain), Cosmos chain source is directly auditable and matches repo."}
+      ],
+      "steelman": {
+        "red": "Bitcoin Script verification relies on public spec rather than on-chain source code upload like EVM; Cosmos chain requires running full node to verify binary.",
+        "orange": "Some audits are Phase-1 focused; later Phase-2 restaking/vault modules may have narrower or pending coverage; no independent bytecode diff performed in this run.",
+        "green": "Core Bitcoin staking logic is fully specified in public GitHub docs and has been audited multiple times by top firms; Babylon Genesis source is open and re-audited on upgrades; no unverified deployed artifacts or material unaudited drift."
+      },
+      "verdict": "Choosing green because the protocol provides public, auditable source for both the Bitcoin Script staking logic and the Babylon Genesis Cosmos modules, with repeated audits from recognized firms (Zellic, Coinspect, Oak Security, Halborn) covering the deployed phases and upgrades, and no evidence of material post-audit drift in the core self-custodial components."
+    },
+    "evidence": [
+      {"url": "https://docs.babylonlabs.io/guides/security/audit_reports/", "shows": "List of audits: Coinspect Phase-1 (June 2024), Zellic Phase-1 and Cap-3 (2024), Oak Security Genesis v2 (2025-06), Halborn frontend, additional Coinspect/Halborn for v4 upgrades; multiple recognized firms covering staking protocol and chain code.", "fetched_at": "2026-05-29T08:20:00Z"},
+      {"url": "https://babylonlabs.io/blog/babylon-bitcoin-staking-mainnet-launch-phase-1", "shows": "Phase-1 audits linked (Coinspect, Zellic, Cantina); security model and covenant committee details match audited code.", "fetched_at": "2026-05-29T08:10:00Z"},
+      {"url": "https://github.com/babylonlabs-io/babylon/blob/main/docs/staking-script.md", "shows": "Complete public specification of Bitcoin staking transactions, scripts, covenant multisig, timelocks; directly auditable and matches audit scopes.", "commit": "d96cd9de2ead944f064362e3fc0c34214fa066cd", "fetched_at": "2026-05-29T08:18:00Z"}
+    ],
+    "unknowns": [
+      "V2: Specific commit SHA used for latest deployed Babylon Genesis binary or staking indexer not pinned; correspondence is at repo level rather than exact bytecode match.",
+      "V3: Full scope and findings of all post-2025 audits (e.g., v4) not exhaustively reviewed beyond existence and auditor names; no material issues flagged in public summaries.",
+      "V5: Drift analysis between most recent audit commit and current main branch for any Phase-2 modules not performed (no material un-audited changes evidenced in fetched sources)."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/babylonlabs-io/babylon"],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [
+        {"firm": "Coinspect", "url": "https://docs.babylonlabs.io/assets/files/coinspect-phase1-audit.pdf", "date": "2024-06"},
+        {"firm": "Zellic", "url": "https://docs.babylonlabs.io/assets/files/zellic-phase1-audit.pdf", "date": "2024-06"},
+        {"firm": "Oak Security GmbH", "url": "https://docs.babylonlabs.io/assets/files/oak_security_gmbh_genesis_v2_audit-2025_06.pdf", "date": "2025-06"},
+        {"firm": "Halborn", "url": "https://docs.babylonlabs.io/guides/security/audit_reports/", "date": "2024"}
+      ],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": {"chain": "Babylon Genesis", "address": null, "symbol": "BABY"},
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Babylon Protocol enables self-custodial native Bitcoin staking to secure Bitcoin Supercharged Networks (BSNs) and other PoS chains. Users lock BTC directly in timelocked Taproot scripts on Bitcoin mainnet; coordination, finality, and BABY-token governance occur on Babylon Genesis (Cosmos SDK chain). No wrapping, bridging, or custodians required for core staking."
+    }
+  }
+]

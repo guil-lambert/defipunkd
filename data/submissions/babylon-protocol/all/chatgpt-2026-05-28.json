@@ -1,0 +1,626 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a18ce30-bee8-8333-adbf-e96d0feb3cfc",
+    "grading_basis": "off-chain-only",
+    "grade": "unknown",
+    "headline": "Control unknown: docs show BABY governance can change staking/light-client parameters and software, but live authorities, committee quorum, and delays were not re-read on-chain.",
+    "short_headline": "Control path unread",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "No pinned address_book or EVM surfacer existed for this Bitcoin/Cosmos deployment. Off-chain docs identify BABY token holders, delegates, and validators as governance participants, but no live owner/admin/governor state was readable in this run."
+        },
+        {
+          "code": "C2",
+          "text": "The fetched architecture is Cosmos SDK modules rather than EVM proxies. BTC Staking and BTC Light Client each expose MsgUpdateParams messages whose signer is the governance authority, but the live authority account and software-upgrade handler/admin path were not read from chain state."
+        },
+        {
+          "code": "C3",
+          "text": "Official docs describe a standard governance path with up to 14 days deposit, 3 days voting and automatic execution for parameter changes/fund transfers, plus an expedited 1-day voting path, but these numeric constants were not re-read from live bbn-1 state."
+        },
+        {
+          "code": "C4",
+          "text": "The covenant committee is an M-of-N Bitcoin-key multisig embedded in staking scripts, with public keys and threshold governed by Babylon Genesis parameters; current members, quorum, signer identities, and insider/non-insider status were not re-read."
+        },
+        {
+          "code": "C5",
+          "text": "The only governance constants obtained were documentation values for deposit, voting period, quorum, thresholds, veto and expedited threshold; no live Cosmos governance params were fetched."
+        },
+        {
+          "code": "C6",
+          "text": "No separate emergency pause, guardian, or security-council path was verified from live state. The fetched docs/code do not give a current emergency actor list."
+        },
+        {
+          "code": "C7",
+          "text": "The highest reachable tier could not be classified: governance appears able to update BTC staking params such as covenant keys/quorum, slashing rate, staking bounds, unbonding time, and light-client header-insertion allow-list, but the live execution path and delay were not read."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Blocked because the run established only off-chain documentation/code evidence for governance and module authority. Without live bbn-1 governance params, covenant committee params, upgrade handler state, or any readable current admin path, the upgrade/control tier and uncontested fast-path delay cannot be determined reproducibly."
+    },
+    "evidence": [
+      {
+        "url": "https://babylonlabs.io",
+        "shows": "Official website for Babylon Labs; links to Docs, GitHub, Forum, and Bug Bounty, and describes native self-custodial Bitcoin staking with no wrapping or pegging.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon",
+        "shows": "Public Babylon source repository; README describes Bitcoin timestamping and trustless self-custodial Bitcoin staking and links docs.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+        "shows": "Public Immunefi bounty page for Babylon Labs; maximum bounty $500,000, live since 16 September 2024, last updated 28 May 2026.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/security/policy",
+        "shows": "Security policy instructs researchers to privately report vulnerabilities to security@babylonlabs.io or GitHub Private Vulnerability Reporting.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/guides/overview/babylon_genesis/governance/",
+        "shows": "Official governance docs state Babylon Genesis uses Cosmos SDK governance; BABY holders and delegates propose, vote, and enact modifications. Docs list standard 50,000 BABY deposit, 14-day max deposit period, 3-day voting, expedited 1-day voting, 33.4% quorum, 50% approval threshold, 66.7% expedited threshold, and automatic implementation for approved parameter changes and fund transfers.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/x/btcstaking/README.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC Staking module README: module maintains finality providers and BTC delegations, handles delegation creation, covenant signatures and unbonding; parameters include covenant public keys/quorum; MsgCreateBTCDelegation signer is staker_addr; MsgBTCUndelegate verifies the BTC delegator signature; MsgUpdateParams is executable only via governance.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/x/btclightclient/README.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC Light Client README: Babylon maintains a Bitcoin header chain, validates inclusion proofs, restricts header insertion when insert_headers_allow_list is nonempty, applies Bitcoin-like PoW/difficulty/total-work rules, and updates light-client params only via governance.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/docs/staking-script.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC staking script spec: staker is controller/beneficiary; covenant committee is M-of-N; co-signatures are prerequisites for activation; transaction types include Staking, Unbonding, Slashing, and Withdrawal; timelock, unbonding, slashing, and refund paths are defined.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/node_information/",
+        "shows": "Official node docs list Babylon Genesis mainnet bbn-1 RPC, archive RPC, LCD, archive LCD, and gRPC endpoints; attempts to fetch live LCD parameter endpoints were blocked by the available fetch tool's URL allowlist.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/explorers/",
+        "shows": "Official explorer docs list MintScan and Xangle explorers for Babylon Genesis mainnet; MintScan was attempted but yielded no usable page body in this run.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      }
+    ],
+    "unknowns": [
+      "C1-offchain: no owner/admin/governor read was possible because the pinned address_book was null and Babylon Genesis is not an EVM chain supported by the DeFiPunkd read API; LCD param reads from the documented bbn-1 endpoint were rejected by the fetch allowlist.",
+      "C2-offchain: current software-upgrade authority, upgrade handler schedule, and any module authority account were not re-read from live bbn-1 state.",
+      "C3-offchain: standard and expedited governance timing values came only from docs; live deposit/voting/timelock or scheduling constants were not read on-chain.",
+      "C4-offchain: current covenant committee public keys, quorum, signer identities, and whether any multisig-like operational actors have reachable control were not read.",
+      "C5-offchain: proposal threshold, voting period, quorum, veto threshold, expedited period, and expedited threshold were not read from live governance params.",
+      "C6-offchain: no live emergency pause/guardian/security council role was fetched.",
+      "C7-offchain: no live path was sufficient to classify the highest reachable power tier over BTC staking, finality, light-client, or incentive modules."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/babylonlabs-io/babylon"
+      ],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+      "security_contact": "security@babylonlabs.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "unknown",
+      "about": "Babylon lets BTC holders stake native Bitcoin by locking UTXOs in Taproot-based staking scripts rather than wrapping or bridging BTC. The Babylon Genesis chain registers BTC delegations, tracks finality-provider voting power, and distributes BABY rewards. Slashing is enforced through pre-signed transactions, finality-provider EOTS keys, and covenant committee cosignatures."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a18ce30-bee8-8333-adbf-e96d0feb3cfc",
+    "grading_basis": "off-chain-only",
+    "grade": "green",
+    "headline": "Bitcoin principal exits are staker-controlled: timelock withdrawal and on-demand unbonding paths are Bitcoin transactions signed by the staker; live pause/parameter reads were unavailable.",
+    "short_headline": "Bitcoin-side exit",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit functions/flows found: staking-output timelock withdrawal, on-demand unbonding transaction, unbonding-output timelock withdrawal, slashing-refund withdrawal, MsgBTCUndelegate for Babylon-side unbonding state, and MsgWithdrawReward for Babylon rewards."
+        },
+        {
+          "code": "E2",
+          "text": "Principal exit access is script-level: staking-output timelock path requires StakerPK plus OP_CHECKSEQUENCEVERIFY; on-demand unbonding requires StakerPK plus covenant threshold signatures; unbonding-output and slashing-refund withdrawals require the staker signature after the relevant timelock."
+        },
+        {
+          "code": "E3",
+          "text": "The fetched staking script spec states covenant co-signatures are published before activation and that the covenant committee cannot act against stakers except by rejecting staking requests. No live pause role or PAUSE_INFINITELY equivalent was verified."
+        },
+        {
+          "code": "E4",
+          "text": "No separate emergency-pause versus governance-pause path was found in the Bitcoin script exits; principal withdrawal after timelock is a Bitcoin transaction, not an interface-mediated action. A Babylon-side pause role was not re-read."
+        },
+        {
+          "code": "E5",
+          "text": "Queued/early exit uses an on-demand unbonding period specified by Babylon parameters; the registration doc says the staker retrieves the pre-recorded unbonding transaction and covenant signatures, adds the staker signature, and broadcasts to Bitcoin. The current unbonding-time value was not re-read."
+        },
+        {
+          "code": "E6",
+          "text": "Adversarial-admin escape path for BTC principal is the Bitcoin-side timelock withdrawal path: once the relevant staking, unbonding, or slashing-refund timelock expires, the withdrawal transaction is signed by the staker and submitted to Bitcoin."
+        },
+        {
+          "code": "E7",
+          "text": "The Terms and registration docs both support non-frontend exit: the Interface is not needed to interact with the protocols, and withdrawals/reward claims can be made via Bitcoin transactions, RPC/LCD, CLI, or TypeScript."
+        }
+      ],
+      "steelman": {
+        "red": "A red case would require evidence that a live admin/governance pause can block claims of already-finalized or timelock-unlocked BTC indefinitely, but the fetched Bitcoin scripts and Terms do not show such a path.",
+        "orange": "An orange case is that early unbonding and reward claims depend on Babylon parameters, covenant signatures, and Babylon-side reporting whose live values/roles were not re-read from chain state.",
+        "green": "The green case is strongest for BTC principal: staker-controlled Bitcoin scripts provide withdrawal after timelock, on-demand unbonding signatures are recorded before activation, finality-provider consent is explicitly not required for unbonding, and the official interface is not needed."
+      },
+      "verdict": "Choosing green because the highest-confidence, fund-principal exit path is Bitcoin-side and staker-signed: after the staking or unbonding timelock, a withdrawal transaction can be constructed and submitted to Bitcoin, while on-demand unbonding relies on covenant signatures recorded at activation rather than future admin approval. The unresolved live Babylon parameters affect timing/early-exit state reporting and rewards, not the existence of a staker-controlled principal withdrawal path."
+    },
+    "evidence": [
+      {
+        "url": "https://babylonlabs.io",
+        "shows": "Official website for Babylon Labs; links to Docs, GitHub, Forum, and Bug Bounty, and describes native self-custodial Bitcoin staking with no wrapping or pegging.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon",
+        "shows": "Public Babylon source repository; README describes Bitcoin timestamping and trustless self-custodial Bitcoin staking and links docs.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+        "shows": "Public Immunefi bounty page for Babylon Labs; maximum bounty $500,000, live since 16 September 2024, last updated 28 May 2026.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/security/policy",
+        "shows": "Security policy instructs researchers to privately report vulnerabilities to security@babylonlabs.io or GitHub Private Vulnerability Reporting.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://babylonlabs.io/terms-of-use",
+        "shows": "Terms state anyone with internet access and technical sophistication can interact directly with the Protocols; the Interface is not needed; source codes are available at GitHub; Babylon Labs says it does not operate or control the Protocols, validators, or finality providers; users sign staking, unbonding, and withdrawal instructions with private keys inaccessible to the Interface or Provider.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/docs/staking-script.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC staking script spec: staker is controller/beneficiary; covenant committee is M-of-N; co-signatures are prerequisites for activation; transaction types include Staking, Unbonding, Slashing, and Withdrawal; timelock, unbonding, slashing, and refund paths are defined.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/docs/register-bitcoin-stake.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned stake registration doc: technical readers can construct and broadcast MsgCreateBTCDelegation via CLI, TypeScript, Golang, or Cosmos SDK; new phase-2 staking is accepted once the allow-list expires; on-demand unbonding uses covenant signatures recorded at activation; principal withdrawals are Bitcoin transactions signed by the staker; rewards can be withdrawn via RPC/LCD, CLI, or TypeScript.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/x/btcstaking/README.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC Staking module README: module maintains finality providers and BTC delegations, handles delegation creation, covenant signatures and unbonding; parameters include covenant public keys/quorum; MsgCreateBTCDelegation signer is staker_addr; MsgBTCUndelegate verifies the BTC delegator signature; MsgUpdateParams is executable only via governance.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/node_information/",
+        "shows": "Official node docs list Babylon Genesis mainnet bbn-1 RPC, archive RPC, LCD, archive LCD, and gRPC endpoints; attempts to fetch live LCD parameter endpoints were blocked by the available fetch tool's URL allowlist.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      }
+    ],
+    "unknowns": [
+      "E3-offchain: live Babylon pause/param role state was not read; no PAUSE_ROLE, GUARDIAN, or pause duration could be checked on-chain.",
+      "E4-offchain: no live emergency-vs-governance pause distinction could be queried from bbn-1.",
+      "E5-offchain: current unbonding_time_blocks/unbonding_time, withdrawal delays, and any active queue caps were not re-read from live params.",
+      "E7-offchain: direct write-tab style verification is not available for Bitcoin/Cosmos in the DeFiPunkd EVM read API; direct-callability is based on docs, Terms, and CLI/RPC paths."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/babylonlabs-io/babylon"
+      ],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+      "security_contact": "security@babylonlabs.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "unknown",
+      "about": "Babylon lets BTC holders stake native Bitcoin by locking UTXOs in Taproot-based staking scripts rather than wrapping or bridging BTC. The Babylon Genesis chain registers BTC delegations, tracks finality-provider voting power, and distributes BABY rewards. Slashing is enforced through pre-signed transactions, finality-provider EOTS keys, and covenant committee cosignatures."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a18ce30-bee8-8333-adbf-e96d0feb3cfc",
+    "grading_basis": "off-chain-only",
+    "grade": "unknown",
+    "headline": "Impacted TVS unclear: architecture depends on finality providers, covenant committee, BTC light-client header submission, and vigilantes, but live distribution/quorums/TVS share were not readable.",
+    "short_headline": "Dependencies unread",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "External/core cross-module dependencies found from source docs: BTC Staking consumes BTC Light Client confirmation data; Finality consumes voting power from BTC Staking; BTC Light Client accepts MsgInsertHeaders and validates Bitcoin headers/inclusion proofs under Bitcoin-like PoW and total-work rules. No price oracle was found in fetched materials."
+        },
+        {
+          "code": "A2",
+          "text": "Off-chain actor sets include finality providers, covenant committee members, and vigilante programs. The covenant committee provides M-of-N signatures for activation/unbonding/slashing paths; finality providers can trigger slashing if they double-sign; vigilantes report Bitcoin data and slashing/unbonding events."
+        },
+        {
+          "code": "A3",
+          "text": "The core BTC staking docs and website describe native Bitcoin staking without wrapping or pegging. The fetched sources also mention IBC/Consumer Zone communication, but material TVS on any bridge or cross-chain extension was not verified."
+        },
+        {
+          "code": "A4",
+          "text": "Collateral-chain depth is BTC UTXO locked in a Babylon-recognized staking script, delegated to a finality provider and registered on Babylon Genesis. Failure of a selected finality provider can propagate to principal via protocol slashing, with the slashed fraction governed by Babylon parameters."
+        },
+        {
+          "code": "A6",
+          "text": "Mitigations documented in source include Bitcoin-like header validation in BTC Light Client, pre-activation covenant signatures, staking-script timelocks, and BTC Staking Monitor slashing/unbonding observation; live activation and current parameters were not queried."
+        },
+        {
+          "code": "A7",
+          "text": "Babylon Genesis is its own Cosmos SDK chain with CometBFT and an extra finality round; no separate L2 sequencer dependency beyond its own validator/finality-provider stack was identified from fetched sources."
+        },
+        {
+          "code": "A8",
+          "text": "Keeper/relayer liveness dependencies are material: the architecture states secure operation requires at least one honest vigilante operator, and the BTC Staking Monitor reports unbonding/slashing events and can execute slashing if non-execution occurs."
+        },
+        {
+          "code": "A9",
+          "text": "Governance-mutable dependency surfaces exist in code/docs: BTC Staking params include covenant keys/quorum and BTC Light Client params include insert_headers_allow_list; both are changed through governance-only MsgUpdateParams, but the live governance delay/exit window was not re-read."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Blocked because the core architecture and dependency classes are visible in source docs, but the current live covenant quorum, covenant member set, finality-provider distribution, header-insertion allow-list, vigilante liveness model, governance delay, and TVS weighting by module were not readable. Without those, impacted TVS under the worst unmitigated dependency cannot be bounded reproducibly."
+    },
+    "evidence": [
+      {
+        "url": "https://babylonlabs.io",
+        "shows": "Official website for Babylon Labs; links to Docs, GitHub, Forum, and Bug Bounty, and describes native self-custodial Bitcoin staking with no wrapping or pegging.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon",
+        "shows": "Public Babylon source repository; README describes Bitcoin timestamping and trustless self-custodial Bitcoin staking and links docs.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+        "shows": "Public Immunefi bounty page for Babylon Labs; maximum bounty $500,000, live since 16 September 2024, last updated 28 May 2026.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/security/policy",
+        "shows": "Security policy instructs researchers to privately report vulnerabilities to security@babylonlabs.io or GitHub Private Vulnerability Reporting.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/docs/architecture.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned architecture doc: Babylon node modules include BTC Light Client, BTC Staking, Finality, Incentive, and vigilante programs; secure operation requires at least one honest vigilante operator; the BTC Staking Monitor reports unbonding and slashing and can extract finality-provider keys for slashing.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/x/btclightclient/README.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC Light Client README: Babylon maintains a Bitcoin header chain, validates inclusion proofs, restricts header insertion when insert_headers_allow_list is nonempty, applies Bitcoin-like PoW/difficulty/total-work rules, and updates light-client params only via governance.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/x/btcstaking/README.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC Staking module README: module maintains finality providers and BTC delegations, handles delegation creation, covenant signatures and unbonding; parameters include covenant public keys/quorum; MsgCreateBTCDelegation signer is staker_addr; MsgBTCUndelegate verifies the BTC delegator signature; MsgUpdateParams is executable only via governance.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/x/finality/README.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned Finality module README: finality providers participate in an extra finality round with voting power from BTC delegations; the module handles finality votes, finalization status, sluggish providers, and equivocation evidence.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/docs/staking-script.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC staking script spec: staker is controller/beneficiary; covenant committee is M-of-N; co-signatures are prerequisites for activation; transaction types include Staking, Unbonding, Slashing, and Withdrawal; timelock, unbonding, slashing, and refund paths are defined.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/node_information/",
+        "shows": "Official node docs list Babylon Genesis mainnet bbn-1 RPC, archive RPC, LCD, archive LCD, and gRPC endpoints; attempts to fetch live LCD parameter endpoints were blocked by the available fetch tool's URL allowlist.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      }
+    ],
+    "unknowns": [
+      "A1-offchain: live external-contract/module state, BTC light-client current header state, and insert_headers_allow_list were not fetched from bbn-1.",
+      "A2-offchain: current covenant committee size/quorum/signers, finality-provider distribution, validator set, and vigilante operator set were not read.",
+      "A3-offchain: material TVS on Consumer Zones, IBC paths, vaults, or other Babylon-linked modules was not measured.",
+      "A4-offchain: current slashing_fraction/slashing_rate, burn address, and whether any stake is multi-delegated or BSN-specific were not read from live params.",
+      "A5: fork lineage was not provided in the pinned context and was not independently verified.",
+      "A6-offchain: fallback activation status for covenant signatures, watcher/monitor behavior, and light-client allow-list was not read live; source docs are corroboration only.",
+      "A7-offchain: live Babylon Genesis validator/finality-provider liveness and CometBFT/finality safety parameters were not fetched.",
+      "A8-offchain: whether vigilante submission/reporting/slashing roles are permissionless in current live configuration was not re-read.",
+      "A9-offchain: governance delay and exit window for changing covenant keys/quorum, slashing params, and BTC light-client insertion allow-list were not read live.",
+      "A9-offchain: impacted TVS for the worst unmitigated dependency is unclear because current BTC-staked amounts by module/finality-provider and materiality of non-core modules were not measured in this run."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/babylonlabs-io/babylon"
+      ],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+      "security_contact": "security@babylonlabs.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "unknown",
+      "about": "Babylon lets BTC holders stake native Bitcoin by locking UTXOs in Taproot-based staking scripts rather than wrapping or bridging BTC. The Babylon Genesis chain registers BTC delegations, tracks finality-provider voting power, and distributes BABY rewards. Slashing is enforced through pre-signed transactions, finality-provider EOTS keys, and covenant committee cosignatures."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a18ce30-bee8-8333-adbf-e96d0feb3cfc",
+    "grading_basis": "off-chain-only",
+    "grade": "unknown",
+    "headline": "Access unknown: direct non-frontend paths exist, but current BTC-staking allow-list and contract-level admission status could not be re-read.",
+    "short_headline": "Allow-list unread",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "User entry point MsgCreateBTCDelegation is signed by staker_addr, but the fetched registration doc states new phase-2 staking registration is accepted once the allow-list expires, and the BTC Staking module README says create-delegation verification can require the staking tx to be in an allow-list if allow-listing is enabled."
+        },
+        {
+          "code": "A2",
+          "text": "Admission/activation involves Babylon validators and the covenant committee validating the staking operation. Pre-staking is designed to get validation before locking funds; covenant signatures are required before activation, but current operator set and allow-list status were not read."
+        },
+        {
+          "code": "A3",
+          "text": "Official Interface/Services impose passive Terms restrictions including age, technical-knowledge, sanctions/restricted-territory, Canada/Australia, and VPN/IP-hiding restrictions. These are publisher/service policies, not proven contract-level restrictions."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths exist in the fetched sources: the Terms state the Interface is not needed and anyone with internet access and technical sophistication can interact directly with the Protocols; registration docs list CLI, TypeScript, Golang, Cosmos SDK/RPC/LCD methods."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain sanctions/blocklist check was identified in fetched docs/code, but current live admission params were not queried."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is available through documented RPC/LCD/gRPC endpoints and module queries; write access for staking/rewards uses signed Cosmos messages and Bitcoin transactions, subject to any current allow-list or parameter checks not read live."
+        },
+        {
+          "code": "A6",
+          "text": "ToS clause extracted verbatim in evidence: users are not eligible if they are in restricted/sanctioned territories, are Sanctions Lists Persons, transact with such persons/territories, are in Canada or Australia, or use VPN/IP-hiding methods."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Blocked because the run found strong off-chain evidence of direct, non-frontend interaction paths, but it could not verify the current allow-list state or whether any contract-level/user-action admission gate remains active. Since A1 is the operative grade input and the live allow-list status was not read, the admission grade is unknown rather than green."
+    },
+    "evidence": [
+      {
+        "url": "https://babylonlabs.io",
+        "shows": "Official website for Babylon Labs; links to Docs, GitHub, Forum, and Bug Bounty, and describes native self-custodial Bitcoin staking with no wrapping or pegging.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon",
+        "shows": "Public Babylon source repository; README describes Bitcoin timestamping and trustless self-custodial Bitcoin staking and links docs.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+        "shows": "Public Immunefi bounty page for Babylon Labs; maximum bounty $500,000, live since 16 September 2024, last updated 28 May 2026.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/security/policy",
+        "shows": "Security policy instructs researchers to privately report vulnerabilities to security@babylonlabs.io or GitHub Private Vulnerability Reporting.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://babylonlabs.io/terms-of-use",
+        "shows": "Terms state anyone with internet access and technical sophistication can interact directly with the Protocols; the Interface is not needed; source codes are available at GitHub; Babylon Labs says it does not operate or control the Protocols, validators, or finality providers; users sign staking, unbonding, and withdrawal instructions with private keys inaccessible to the Interface or Provider.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://babylonlabs.io/terms-of-use",
+        "shows": "Terms eligibility clause states users are ineligible if they are under 18, lack technical knowledge, are in restricted/sanctioned territories, are Sanctions Lists Persons, transact with such persons or territories, are in Canada or Australia, or use a VPN or similar tool to hide IP address.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/docs/register-bitcoin-stake.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned stake registration doc: technical readers can construct and broadcast MsgCreateBTCDelegation via CLI, TypeScript, Golang, or Cosmos SDK; new phase-2 staking is accepted once the allow-list expires; on-demand unbonding uses covenant signatures recorded at activation; principal withdrawals are Bitcoin transactions signed by the staker; rewards can be withdrawn via RPC/LCD, CLI, or TypeScript.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/blob/16e00c88d9cfd2e9f92bb786c474f6e79628a49f/x/btcstaking/README.md",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit-pinned BTC Staking module README: module maintains finality providers and BTC delegations, handles delegation creation, covenant signatures and unbonding; parameters include covenant public keys/quorum; MsgCreateBTCDelegation signer is staker_addr; MsgBTCUndelegate verifies the BTC delegator signature; MsgUpdateParams is executable only via governance.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/node_information/",
+        "shows": "Official node docs list Babylon Genesis mainnet bbn-1 RPC, archive RPC, LCD, archive LCD, and gRPC endpoints; attempts to fetch live LCD parameter endpoints were blocked by the available fetch tool's URL allowlist.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      }
+    ],
+    "unknowns": [
+      "A1-offchain: current BTC staking allow-list expiration/status and whether MsgCreateBTCDelegation is presently gated were not read from live bbn-1 params.",
+      "A2-offchain: current covenant committee activation process, replacement procedure, and whether any operator can deny admission beyond rejecting pre-lock staking requests were not verified live.",
+      "A4-offchain: no live contract-level sanctions/blocklist or address-screening state could be queried.",
+      "A5-offchain: live write-admission params for staking, unbonding, reward claims, and header submission were not read from RPC/LCD because the available fetch path could not open the documented LCD endpoints."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/babylonlabs-io/babylon"
+      ],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+      "security_contact": "security@babylonlabs.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "unknown",
+      "about": "Babylon lets BTC holders stake native Bitcoin by locking UTXOs in Taproot-based staking scripts rather than wrapping or bridging BTC. The Babylon Genesis chain registers BTC delegations, tracks finality-provider voting power, and distributes BABY rewards. Slashing is enforced through pre-signed transactions, finality-provider EOTS keys, and covenant committee cosignatures."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "babylon-protocol",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-28",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/share/6a18ce30-bee8-8333-adbf-e96d0feb3cfc",
+    "grading_basis": "off-chain-only",
+    "grade": "unknown",
+    "headline": "Verifiability unknown: public repo, signed release, audits and bounty exist, but no live mainnet binary/source-to-deployment or audit drift check was obtained.",
+    "short_headline": "Live binary unverified",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "This is not an EVM bytecode/proxy deployment for the available DeFiPunkd ABI endpoint. Official docs list bbn-1, MintScan and Xangle, but no explorer page body or live binary/protocol version proof was obtained."
+        },
+        {
+          "code": "V2",
+          "text": "A public source repository exists and release v4.3.0 is a signed GitHub release at verified commit 16e00c8 with SHA256-listed binaries, but no source-to-live-mainnet binary correspondence was established."
+        },
+        {
+          "code": "V3",
+          "text": "Official audit docs list initial Genesis audits and v2/v4 upgrade audits, including Zellic and Halborn, but parsed docs did not expose dates, exact commit scope, or deployed-version mapping."
+        },
+        {
+          "code": "V4",
+          "text": "Some listed auditors are recognized by the rubric list, including Zellic and Halborn; other listed firms/venues were not classified here as sufficient for a green claim without scope/date details."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift was not resolved. The latest fetched release/commit is v4.3.0 from 2026-05-05 and contains security/advisory fixes and an upgrade handler, but no audit-to-current diff or live deployed version proof was fetched."
+        },
+        {
+          "code": "V6",
+          "text": "EVM proxy/implementation verification is not applicable; the equivalent unresolved check is whether current bbn-1 validators run code corresponding to the public verified release/commit."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Blocked because the repository, release, and audit posture are visible off-chain, but the run did not obtain a live, reproducible mapping from Babylon Genesis mainnet state or explorer data to the exact source commit/binary and audit scope. That prevents a green/orange/red verifiability grade under the requested deployed-code standard."
+    },
+    "evidence": [
+      {
+        "url": "https://babylonlabs.io",
+        "shows": "Official website for Babylon Labs; links to Docs, GitHub, Forum, and Bug Bounty, and describes native self-custodial Bitcoin staking with no wrapping or pegging.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon",
+        "shows": "Public Babylon source repository; README describes Bitcoin timestamping and trustless self-custodial Bitcoin staking and links docs.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+        "shows": "Public Immunefi bounty page for Babylon Labs; maximum bounty $500,000, live since 16 September 2024, last updated 28 May 2026.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/security/policy",
+        "shows": "Security policy instructs researchers to privately report vulnerabilities to security@babylonlabs.io or GitHub Private Vulnerability Reporting.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/chain_information/",
+        "shows": "Official chain info identifies Babylon Genesis Mainnet chain ID bbn-1, binary babylond, and genesis date 2025-03-15.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/node_information/",
+        "shows": "Official node docs list Babylon Genesis mainnet bbn-1 RPC, archive RPC, LCD, archive LCD, and gRPC endpoints; attempts to fetch live LCD parameter endpoints were blocked by the available fetch tool's URL allowlist.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/developers/babylon_genesis_chain/explorers/",
+        "shows": "Official explorer docs list MintScan and Xangle explorers for Babylon Genesis mainnet; MintScan was attempted but yielded no usable page body in this run.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/releases",
+        "shows": "GitHub releases page shows latest v4.3.0 released 2026-05-05, immutable release, signed verified tag, verified commit 16e00c8, and published binary assets with SHA256 hashes.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://github.com/babylonlabs-io/babylon/commit/16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "commit": "16e00c88d9cfd2e9f92bb786c474f6e79628a49f",
+        "shows": "Commit 16e00c8 for v4.3.0 includes security/advisory fixes and registers the v4.3 upgrade handler; no live chain proof was fetched tying this commit to the current deployed mainnet binary.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      },
+      {
+        "url": "https://docs.babylonlabs.io/guides/security/audit_reports/",
+        "shows": "Official audit page lists Phase 1 audits, initial Genesis audits by Coinspect, Zellic and Sherlock, v2 audits by Oak Security and Informal Systems, v4 upgrade audits by Coinspect and Halborn, and frontend app audits by Halborn; the page did not expose exact dates, deployed version mapping, or commit scope in parsed body.",
+        "fetched_at": "2026-05-28T23:05:40Z"
+      }
+    ],
+    "unknowns": [
+      "V1-offchain: no live verified-bytecode analogue was obtained for Babylon Genesis; MintScan/Xangle did not provide usable fetched code/version evidence in this run.",
+      "V2-offchain: no bytecode/binary/source-to-live-mainnet correspondence was established for the current bbn-1 deployment.",
+      "V3-offchain: audit report dates, exact contracts/modules, and commit hashes in scope were not extracted from audit PDFs/reports in this run.",
+      "V4-offchain: auditor recognition was only partially classifiable from the audit index; scope/date details were missing.",
+      "V5-offchain: no post-audit drift diff was sampled between audit scope and the current release/live deployment.",
+      "V6-offchain: proxy/implementation verification is not applicable; current node binary/version-to-source verification remains unread."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/babylonlabs-io/babylon"
+      ],
+      "docs_url": "https://docs.babylonlabs.io",
+      "audits": [],
+      "governance_forum": "https://forum.babylon.foundation/",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/babylon-labs/information/",
+      "security_contact": "security@babylonlabs.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "unknown",
+      "about": "Babylon lets BTC holders stake native Bitcoin by locking UTXOs in Taproot-based staking scripts rather than wrapping or bridging BTC. The Babylon Genesis chain registers BTC delegations, tracks finality-provider voting power, and distributes BABY rewards. Slashing is enforced through pre-signed transactions, finality-provider EOTS keys, and covenant committee cosignatures."
+    }
+  }
+]
