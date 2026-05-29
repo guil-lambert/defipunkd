@@ -1,0 +1,1212 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1a1a8deda08191ad91dcdbd1627ea1",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "T1/T2 admin power runs through a 3-day GovernorTimelock plus non-Security-Council multisigs; emergency pause and some Base/admin surfaces remain weaker or partly unverifiable.",
+    "short_headline": "3-day T1 control",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "On Ethereum, MapleGlobals reports governor/admin 0x2eFF... and securityAdmin 0x6b1A..., while the syrupUSDC PoolManager reports governor 0x2eFF..., globals 0x804a..., withdrawalManager 0x1bc47... and poolPermissionManager 0xBe10...."
+        },
+        {
+          "code": "C2",
+          "text": "Core control surfaces are mixed/upgradeable: MapleGlobals, PoolManager, PoolPermissionManager and MapleCCIPReceiver are proxied or expose implementation setters; the PoolPermissionManager proxy is administered by the 4-of-7 DAO multisig, and MapleGlobals is governed by GovernorTimelock."
+        },
+        {
+          "code": "C3",
+          "text": "The uncontested GovernorTimelock path has MIN_DELAY 86400 seconds and defaultTimelockParameters [259200,172800], so the default schedule-to-execute delay observed for GovernorTimelock-governed privileged actions is 259200 seconds; Pool Delegate timelock docs describe a separate pool-upgrade path whose parameters can be retroactively changed by Governor."
+        },
+        {
+          "code": "C4",
+          "text": "Reachable multisigs identified in this run include the Ethereum DAO multisig 4-of-7, Ethereum securityAdmin 3-of-6, legacy/pinned globalAdmin 2-of-3 whose current reachability was not proven, and Base governor 3-of-5; signer identities/non-insider status were not verified, so none qualifies as a Security Council in this run."
+        },
+        {
+          "code": "C5",
+          "text": "Docs describe SYRUP governance, but the privileged on-chain execution surface fetched in this run is a GovernorTimelock/role-admin mechanism rather than a fully parameterized token-weighted Governor with readable proposal threshold, voting period and quorum; those constants were not verified."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency power is separate from the Governor path: official docs and MapleGlobals state show securityAdmin 0x6b1A... can participate in global/per-contract pause controls, and the security page says a multisig can temporarily disable almost all Maple functions."
+        },
+        {
+          "code": "C7",
+          "text": "Worst verified blast radius is T1/T2: the Governor/Globals/PoolManager surfaces can upgrade core components, set protocol pause, set price oracles/manual override prices, change liquidity caps, change pool permission manager/withdrawal manager and configure strategies; pause and withdrawal-manager/oracle changes are fund-critical or economically material."
+        }
+      ],
+      "steelman": {
+        "red": "Red case: if the securityAdmin or an unverified Base admin can pause or reroute user-fund flows with no delay and no on-chain cap, users face a fund-critical hot-admin path.",
+        "orange": "Orange case: the main Ethereum T1/T2 path is governed by a 3-day GovernorTimelock and multisigs that fail the Security Council standard, while emergency pause is held by a 3-of-6 multisig and Base admin surfaces are partly unverifiable.",
+        "green": "Green case: the principal GovernorTimelock path is on-chain, has a readable delay, and the DAO multisig is 4-of-7 rather than a single EOA or 2-of-3 hot key."
+      },
+      "verdict": "Choosing orange because the highest reachable tier includes T1/T2 actions such as core upgrades, pause, oracle/manual override and withdrawal-manager or permission-manager changes, but the main Ethereum GovernorTimelock path is 259200 seconds rather than zero; the responsible multisigs do not meet the Security Council standard and several Base/emergency surfaces were not fully auditable in this run."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.maple.finance/",
+        "shows": "Official docs describe Maple as a digital asset lending platform using compliance and due diligence, and Syrup as making Maple's institutional lending marketplace available through DeFi."
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official deployed-contracts/integration page lists Syrup smart-contract addresses, PoolPermissionManager, direct requestRedeem integration and Maple JS ABI references."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-core-v2",
+        "shows": "Public Maple V2 core repository contains the core smart contracts, submodules for globals, pool-v2, pool-permission-manager and withdrawal-manager-queue, and links audit reports/bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-js",
+        "shows": "Public Maple JavaScript SDK for interacting with Maple smart contracts; README documents installation, network address exports and transaction helpers."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-cross-chain-receiver",
+        "shows": "Public Maple cross-chain receiver repository describes the Chainlink CCIP-powered receiver module for cross-chain Maple deposits/redemptions."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page lists audits including November 2025 Withdrawal Manager audits by Spearbit/Sherlock, January 2026 CCIP Receiver audits by Dedaub/Sigma Prime, emergency pause, oracle protections and bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+        "shows": "Public Maple V2 audit README lists older Maple V2 reports, including Trail of Bits, Spearbit and Three Sigma coverage."
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/maple/information/",
+        "shows": "Immunefi Maple bug bounty page shows live bounty metadata, maximum smart-contract bounty of $500,000, and scope information."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "Ethereum GovernorTimelock surfacer verifies the timelock contract, default delay values and role-management/write surface.",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "shows": "Ethereum DAO multisig is a Safe with threshold 4 of 7 owners.",
+        "chain": "Ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "Ethereum securityAdmin is a multisig with threshold 3 of 6 owners.",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals is a proxy governed by GovernorTimelock, with operationalAdmin and securityAdmin addresses surfaced and upgrade/pause/oracle write methods visible.",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+        "shows": "Base governor is a Gnosis Safe L2 multisig with threshold 3 of 5 owners.",
+        "chain": "Base",
+        "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "Ethereum GovernorTimelock is verified by the read surfacer; MIN_DELAY is 86400 seconds, MIN_EXECUTION_WINDOW is 86400 seconds, defaultTimelockParameters is [259200,172800], and write surface includes scheduleProposals, executeProposals, setDefaultTimelockParameters, setFunctionTimelockParameters, updateRole and withdrawERC20Token.",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "shows": "Ethereum DAO multisig is a Safe 1.3.0 with threshold 4 and 7 owners at the pinned block.",
+        "chain": "Ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "Ethereum securityAdmin is a multisig with threshold 3 and 6 owners at the pinned block.",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0D8b2C1F11c5f9cD51de6dB3b256C1e3b0800200",
+        "shows": "Pinned globalAdmin address is a multisig with threshold 2 and 3 owners; this run did not prove it remains on the current MapleGlobals upgrade path.",
+        "chain": "Ethereum",
+        "address": "0x0D8b2C1F11c5f9cD51de6dB3b256C1e3b0800200"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "Ethereum MapleGlobals is a NonTransparentProxy with implementation 0x9BeAbb1B6F3ad1DdB87b65148BA5Eb6102334956; admin/governor are 0x2eFF..., operationalAdmin is 0xCe1c..., securityAdmin is 0x6b1A..., protocolPaused is false, and write surface includes setProtocolPause, setContractPause, setFunctionUnpause, setPriceOracle, setManualOverridePrice, setImplementation and fee/validity setters.",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "syrupUSDC PoolManager is a proxy with governor 0x2eFF..., globals 0x804a..., poolPermissionManager 0xBe10..., withdrawalManager 0x1bc47..., liquidityCap 2500000000000000, and write surface including setImplementation, setLiquidityCap, setPoolPermissionManager, setWithdrawalManager, setIsStrategy, requestRedeem and requestWithdraw.",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3",
+        "shows": "PoolPermissionManager is an upgradeable proxy; admin is the DAO multisig 0xd6d4..., globals is 0x804a..., and write methods include configurePool, setLenderAllowlist, setLenderBitmaps, setPermissionAdmin, setPoolBitmaps, setPoolPermissionLevel and setImplementation.",
+        "chain": "Ethereum",
+        "address": "0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3"
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/admin-functions/governor-admin-actions",
+        "shows": "Official admin docs list Governor-permissioned actions on Globals, PoolManager, PoolPermissionManager, Strategies and upgrades; examples include setProtocolPause, setPriceOracle, setLiquidityCap, setPoolPermissionManager, setLenderAllowlist and upgrades of Globals, Liquidator and Withdrawal Manager."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/admin-functions/timelocks",
+        "shows": "Official timelock docs state Governor privileged actions route through GovernorTimelock; PoolManager/LoanManager/WithdrawalManager upgrades use Pool Delegate timelocks, and the Governor can change timelock parameters retroactively."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/emergency-protocol-pause",
+        "shows": "Official emergency-pause docs state global pause can be called by Governor or securityAdmin, and granular pausing includes protocol-level, per-contract and per-function unpause controls."
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+        "shows": "Base governor address is a Gnosis Safe L2 multisig with threshold 3 and 5 owners at the pinned Base block.",
+        "chain": "Base",
+        "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0x6150371231f783e97906af4861Bc1eD11cE1c9Ea",
+        "shows": "Pinned Base securityAdmin address did not resolve to a verified ABI through the surfacer; owner/admin/governor reads were only exposed as generic fallback URLs, so actor class and scope were not verified.",
+        "chain": "Base",
+        "address": "0x6150371231f783e97906af4861Bc1eD11cE1c9Ea"
+      }
+    ],
+    "unknowns": [
+      "C1: Base globals/securityAdmin owner/admin/governor reads could not be decoded because the pinned Base addresses did not resolve to verified ABIs in this run.",
+      "C2: Exact proxy admin and implementation for every pinned Base and legacy address were not verified.",
+      "C3: Pool Delegate timelock parameter for each live PoolManager/LoanManager/WithdrawalManager path was not exhaustively read; docs state these are mutable by Governor.",
+      "C4: Signer identities and insider/non-insider classifications for all multisigs were not verified.",
+      "C5: On-chain voting proposal threshold, voting period and quorum constants were not found/read for a token-weighted Governor in this run.",
+      "C6: Maximum duration of securityAdmin emergency pause was not verified on-chain.",
+      "C7: Per-function bounds for fee/oracle/strategy/permission setters were not fully audited from source."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/maple-labs/maple-core-v2",
+        "https://github.com/maple-labs/maple-js",
+        "https://github.com/maple-labs/maple-cross-chain-receiver"
+      ],
+      "docs_url": "https://docs.maple.finance/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+          "date": "2022-08-24"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2025-11"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2026-01"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/maple/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+          "role": "DAO multisig / GovernorTimelock role manager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+          "role": "GovernorTimelock / MapleGlobals governor",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+          "role": "securityAdmin multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8",
+          "role": "operationalAdmin",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Base",
+          "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+          "role": "Base governor multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Maple is an on-chain lending and asset-management protocol where lenders deposit stablecoins into pools such as syrupUSDC and syrupUSDT, and pool assets are deployed into institutional credit, liquidity provisioning, and related yield strategies. Syrup exposes Maple's institutional lending market through DeFi integrations; smart-contract deposits route through SyrupRouter and PoolPermissionManager, while withdrawals use requestRedeem into a FIFO queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1a1a8deda08191ad91dcdbd1627ea1",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Users can request redemption on-chain, but exits are queue-processed by Maple/Maple Direct, can take up to 30 days, and broad pause powers lack a verified cap.",
+    "short_headline": "Queued, pausable exits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit methods observed for the Pool/PoolManager family include withdraw, redeem, requestRedeem and requestWithdraw; official integration docs present requestRedeem(uint256,address) as the direct withdrawal request path."
+        },
+        {
+          "code": "E2",
+          "text": "This run did not fully recover source-level modifiers for every exit function, but the official flow shows withdrawal request placement is a user transaction while processing is done by Maple/Maple Direct through the queue."
+        },
+        {
+          "code": "E3",
+          "text": "Pause guards are broad: Maple security docs state an emergency multisig can trigger a protocol pause that temporarily disables almost all functions, and emergency-pause docs state Governor or securityAdmin can apply protocol-level and contract-level pause controls; no maximum pause duration was verified on-chain."
+        },
+        {
+          "code": "E4",
+          "text": "Emergency pause and governance pause are distinct: securityAdmin can act on the global/per-contract pause path, while Governor also has pause controls through MapleGlobals/GovernorTimelock."
+        },
+        {
+          "code": "E5",
+          "text": "Queued redemption is explicit: withdrawals are FIFO, processed automatically/by Maple when liquidity is available, expected under 2 days but can take up to 30 days, and completion sends assets directly to the wallet without a separate user claim transaction."
+        },
+        {
+          "code": "E6",
+          "text": "No forced-exit or adversarial-admin escape hatch was verified; the documented fallback for liquidity is queue processing or secondary-market swap, not a permissionless bypass of paused queue processing."
+        },
+        {
+          "code": "E7",
+          "text": "Exit initiation is directly callable on-chain because docs provide a requestRedeem integration snippet and Pool/PoolManager ABIs list requestRedeem/requestWithdraw; the official frontend is not required for request placement."
+        }
+      ],
+      "steelman": {
+        "red": "Red case: a broad protocol pause with no verified time cap could block withdrawal requests or queue processing, and users have no separate claim-of-finalized-funds transaction to bypass admin-controlled processing.",
+        "orange": "Orange case: users can initiate requestRedeem on-chain without the frontend, but redemption is queue-based, can take up to 30 days, and broad pause/processing controls remain under Governor/securityAdmin rather than being capped on-chain in the evidence fetched.",
+        "green": "Green case: withdrawal request placement is direct, documented, and not frontend-dependent, and when queue processing completes the funds are sent directly to the lender wallet without an additional claim transaction."
+      },
+      "verdict": "Choosing orange because exits are directly callable via requestRedeem/requestWithdraw and the queue has a documented maximum of about 30 days, but queue processing is not purely user-driven and the broad emergency/governance pause path had no verified on-chain maximum duration; I did not verify that finalized-but-unpaid claims can be paused indefinitely, so red is plausible but not fully proven."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.maple.finance/",
+        "shows": "Official docs describe Maple as a digital asset lending platform using compliance and due diligence, and Syrup as making Maple's institutional lending marketplace available through DeFi."
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official deployed-contracts/integration page lists Syrup smart-contract addresses, PoolPermissionManager, direct requestRedeem integration and Maple JS ABI references."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-core-v2",
+        "shows": "Public Maple V2 core repository contains the core smart contracts, submodules for globals, pool-v2, pool-permission-manager and withdrawal-manager-queue, and links audit reports/bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-js",
+        "shows": "Public Maple JavaScript SDK for interacting with Maple smart contracts; README documents installation, network address exports and transaction helpers."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-cross-chain-receiver",
+        "shows": "Public Maple cross-chain receiver repository describes the Chainlink CCIP-powered receiver module for cross-chain Maple deposits/redemptions."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page lists audits including November 2025 Withdrawal Manager audits by Spearbit/Sherlock, January 2026 CCIP Receiver audits by Dedaub/Sigma Prime, emergency pause, oracle protections and bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+        "shows": "Public Maple V2 audit README lists older Maple V2 reports, including Trail of Bits, Spearbit and Three Sigma coverage."
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/maple/information/",
+        "shows": "Immunefi Maple bug bounty page shows live bounty metadata, maximum smart-contract bounty of $500,000, and scope information."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "Ethereum GovernorTimelock surfacer verifies the timelock contract, default delay values and role-management/write surface.",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "shows": "Ethereum DAO multisig is a Safe with threshold 4 of 7 owners.",
+        "chain": "Ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "Ethereum securityAdmin is a multisig with threshold 3 of 6 owners.",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals is a proxy governed by GovernorTimelock, with operationalAdmin and securityAdmin addresses surfaced and upgrade/pause/oracle write methods visible.",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+        "shows": "Base governor is a Gnosis Safe L2 multisig with threshold 3 of 5 owners.",
+        "chain": "Base",
+        "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "shows": "syrupUSDC Pool ABI lists exit/entry methods including deposit, withdraw, redeem, requestRedeem and requestWithdraw; totalAssets was 1389661665922226 and totalSupply was 1191348172129417 at the pinned Ethereum block.",
+        "chain": "Ethereum",
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D",
+        "shows": "syrupUSDT Pool ABI uses the same Pool surface and reported totalAssets 426170190130119, totalSupply 377429691635383 and unrealizedLosses 0 at the pinned Ethereum block.",
+        "chain": "Ethereum",
+        "address": "0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "syrupUSDC PoolManager write surface includes requestRedeem, requestWithdraw, processRedeem, processWithdraw, setActive, setPoolPermissionManager and setWithdrawalManager; withdrawalManager is 0x1bc47... and pool is syrupUSDC.",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3",
+        "shows": "Pinned syrupUSDC WithdrawalManagerQueue surfacer resolved only the proxy shell ABI and did not expose the implementation read surface in this run.",
+        "chain": "Ethereum",
+        "address": "0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3"
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official integration docs list withdrawal as requestRedeem, describe FIFO queue processing, say withdrawals are processed automatically by Maple, expected under 2 days but can take up to 30 days, and completion sends assets directly to the wallet with no additional transaction."
+      },
+      {
+        "url": "https://docs.maple.finance/maple-institutional-for-lenders/withdrawal-process",
+        "shows": "Official institutional docs describe a queue-based Withdrawal Manager where a lender enters the queue with one transaction, Maple Direct processes withdrawals, and funds are sent directly to the wallet without a second claim transaction."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/emergency-protocol-pause",
+        "shows": "Emergency-pause docs state Governor or securityAdmin can set protocol pause and per-contract pause, with per-function unpause used to allow limited recovery actions."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page says a multisig can trigger protocol pause in a critical incident and that the pause can temporarily disable almost all functions in Maple."
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official docs provide direct smart-contract integration examples, including IPool.requestRedeem(uint256,address), indicating exits can be initiated without the official frontend."
+      }
+    ],
+    "unknowns": [
+      "E1: Exit functions for every non-Syrup legacy/current pool across Ethereum, Base and Solana were not exhaustively enumerated.",
+      "E2: Source-level modifiers and pause guards for each overloaded withdraw/redeem/requestRedeem/requestWithdraw function were not fully recovered because WithdrawalManagerQueue implementation did not resolve in the surfacer.",
+      "E3: Role-holder hasRole/getRoleAdmin values and maximum pause duration were not read for every pause guard; no PAUSE_INFINITELY equivalent was confirmed or ruled out on-chain.",
+      "E4: Exact emergency-vs-governance pause scope per exit function was not proven from deployed source.",
+      "E5: The 30-day queue maximum was documented in official docs but not re-read as an on-chain hard cap.",
+      "E6: No forced-exit/escape-hatch mechanism was found; absence was not proven across every deployed module.",
+      "E7: Direct on-chain exit initiation was verified for requestRedeem documentation/ABI, but not tested by transaction simulation."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/maple-labs/maple-core-v2",
+        "https://github.com/maple-labs/maple-js",
+        "https://github.com/maple-labs/maple-cross-chain-receiver"
+      ],
+      "docs_url": "https://docs.maple.finance/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+          "date": "2022-08-24"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2025-11"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2026-01"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/maple/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+          "role": "DAO multisig / GovernorTimelock role manager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+          "role": "GovernorTimelock / MapleGlobals governor",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+          "role": "securityAdmin multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8",
+          "role": "operationalAdmin",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Base",
+          "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+          "role": "Base governor multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Maple is an on-chain lending and asset-management protocol where lenders deposit stablecoins into pools such as syrupUSDC and syrupUSDT, and pool assets are deployed into institutional credit, liquidity provisioning, and related yield strategies. Syrup exposes Maple's institutional lending market through DeFi integrations; smart-contract deposits route through SyrupRouter and PoolPermissionManager, while withdrawals use requestRedeem into a FIFO queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1a1a8deda08191ad91dcdbd1627ea1",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Worst dependency can impair principal: Maple depends on institutional borrower/strategy performance plus mutable oracle/strategy/CCIP surfaces; affected TVS can be material, about $1.8B across the two fetched Syrup pools.",
+    "short_headline": "Principal dependency risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Material external dependencies include institutional borrowers/credit strategies, DeFi liquidity/futures-basis strategies, Chainlink oracles/oracle wrappers, and the Chainlink CCIP router used by MapleCCIPReceiver; live oracle feed addresses were not enumerated."
+        },
+        {
+          "code": "A2",
+          "text": "Maple/Maple Direct is a material off-chain actor for underwriting/credit operations and queue processing; official docs say yield comes from institutional loans and withdrawals are processed by Maple/Maple Direct."
+        },
+        {
+          "code": "A3",
+          "text": "Cross-chain mint/redeem is a distinct module: the MapleCCIPReceiver is bound to syrupUSDC and reads CCIP_ROUTER 0x80226..., with depositsEnabled/redemptionsEnabled true; its README describes Chainlink CCIP routing source-chain deposits and redemptions into Ethereum Maple pools."
+        },
+        {
+          "code": "A4",
+          "text": "Nested/strategy exposure exists at least at the pool-manager level: syrupUSDC PoolManager reports strategyListLength 4, and docs describe yield support from DeFi liquidity provision and futures basis trading; the per-strategy dependency census was not completed."
+        },
+        {
+          "code": "A5",
+          "text": "No DeFiLlama fork-lineage evidence was fetched in this run; no fork finding is asserted."
+        },
+        {
+          "code": "A6",
+          "text": "Fallback/circuit-breaker evidence exists but is incomplete: docs cite Chainlink oracle wrappers, withdrawal cooldowns, emergency pause and Tenderly monitoring, but this run did not verify live oracle wrapper addresses or on-chain activation status for each fallback."
+        },
+        {
+          "code": "A7",
+          "text": "No protocol-owned appchain/sequencer dependency was identified; Base/Solana are treated as deployment substrate unless used through the CCIP module."
+        },
+        {
+          "code": "A8",
+          "text": "Keeper/operator liveness is material for withdrawals and cross-chain flows: Maple/Maple Direct queue processing and CCIP message execution/retry functions are needed for timely completion, while users can still place Ethereum withdrawal requests directly."
+        },
+        {
+          "code": "A9",
+          "text": "Governance can mutate external dependency surfaces: MapleGlobals exposes setPriceOracle and manual override price functions, PoolManager exposes strategy and withdrawal-manager/permission-manager setters, and admin docs list Governor authority over these actions; the observed GovernorTimelock default delay is 259200 seconds, below a 7-day exit window."
+        }
+      ],
+      "steelman": {
+        "red": "Red case: Maple's core product is externally dependent on institutional borrower/strategy performance and governance-mutable oracles/strategies, and a failure can impair principal for a material share of TVS rather than merely reducing unclaimed yield.",
+        "orange": "Orange case: dependencies are explicit and largely product-specific, withdrawals are queued rather than instant, and documented monitors/oracle wrappers/emergency pause can bound some failures but do not prove users stay whole.",
+        "green": "Green case: users opt into Maple lending pools with disclosed credit/strategy exposure, and the protocol has documented Chainlink oracles, wrappers, monitoring, cooldowns and emergency pause rather than a completely opaque external dependency stack."
+      },
+      "verdict": "Choosing red because the worst unmitigated dependency can affect principal: Maple yield depends on institutional loans/strategies and governance-mutable oracle/strategy surfaces, while the fetched on-chain and docs evidence did not show live fallbacks that keep users whole. Impacted TVS estimate: syrupUSDC plus syrupUSDT alone held about $1.816B at the pinned blocks, roughly 46% of the $3.94B AUM shown on the homepage; any single pool-level borrower/strategy/oracle failure can affect ~100% of that affected pool and more than 25% of protocol TVS if it hits a large Syrup pool."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.maple.finance/",
+        "shows": "Official docs describe Maple as a digital asset lending platform using compliance and due diligence, and Syrup as making Maple's institutional lending marketplace available through DeFi."
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official deployed-contracts/integration page lists Syrup smart-contract addresses, PoolPermissionManager, direct requestRedeem integration and Maple JS ABI references."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-core-v2",
+        "shows": "Public Maple V2 core repository contains the core smart contracts, submodules for globals, pool-v2, pool-permission-manager and withdrawal-manager-queue, and links audit reports/bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-js",
+        "shows": "Public Maple JavaScript SDK for interacting with Maple smart contracts; README documents installation, network address exports and transaction helpers."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-cross-chain-receiver",
+        "shows": "Public Maple cross-chain receiver repository describes the Chainlink CCIP-powered receiver module for cross-chain Maple deposits/redemptions."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page lists audits including November 2025 Withdrawal Manager audits by Spearbit/Sherlock, January 2026 CCIP Receiver audits by Dedaub/Sigma Prime, emergency pause, oracle protections and bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+        "shows": "Public Maple V2 audit README lists older Maple V2 reports, including Trail of Bits, Spearbit and Three Sigma coverage."
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/maple/information/",
+        "shows": "Immunefi Maple bug bounty page shows live bounty metadata, maximum smart-contract bounty of $500,000, and scope information."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "Ethereum GovernorTimelock surfacer verifies the timelock contract, default delay values and role-management/write surface.",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "shows": "Ethereum DAO multisig is a Safe with threshold 4 of 7 owners.",
+        "chain": "Ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "Ethereum securityAdmin is a multisig with threshold 3 of 6 owners.",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals is a proxy governed by GovernorTimelock, with operationalAdmin and securityAdmin addresses surfaced and upgrade/pause/oracle write methods visible.",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+        "shows": "Base governor is a Gnosis Safe L2 multisig with threshold 3 of 5 owners.",
+        "chain": "Base",
+        "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE"
+      },
+      {
+        "url": "https://docs.maple.finance/",
+        "shows": "Official docs state Maple yield is primarily generated from fixed-rate overcollateralized loans to institutional borrowers, supported by DeFi liquidity provision and futures basis trading."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "syrupUSDC PoolManager reports strategyListLength 4, totalAssets 1389661456350481, withdrawalManager 0x1bc47..., poolPermissionManager 0xBe10..., globals 0x804a..., and write methods to set strategies/withdrawal manager/pool permission manager.",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "shows": "syrupUSDC Pool reported totalAssets 1389661665922226 and totalSupply 1191348172129417 at the pinned Ethereum block.",
+        "chain": "Ethereum",
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D",
+        "shows": "syrupUSDT Pool reported totalAssets 426170190130119 and totalSupply 377429691635383 at the pinned Ethereum block.",
+        "chain": "Ethereum",
+        "address": "0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D"
+      },
+      {
+        "url": "https://maple.finance/",
+        "shows": "Public homepage reported Maple AUM of $3.94B during this run and shows Syrup liquid-yielding-dollar products and Maple Institutional secured lending."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page states Maple uses Chainlink oracles, oracle wrappers, withdrawal cooldowns, and Tenderly monitoring; this page does not itself provide live oracle addresses or on-chain activation status for each wrapper."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals read/write surface includes priceOracleOf, manualOverridePrice, setPriceOracle, setManualOverridePrice, setProtocolPause and setContractPause; governor is 0x2eFF... and securityAdmin is 0x6b1A....",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4",
+        "shows": "MapleCCIPReceiver is an ERC1967Proxy; CCIP_ROUTER is 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D, getPool points to syrupUSDC 0x80ac..., depositsEnabled and redemptionsEnabled were true, and write methods include enableDeposits, enableRedemptions, executeRedeemList, processMessage, retryFailedMessage and upgradeToAndCall.",
+        "chain": "Ethereum",
+        "address": "0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4"
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-cross-chain-receiver",
+        "shows": "Maple cross-chain receiver README describes a Chainlink CCIP-powered bridge for cross-chain deposits/redemptions into Maple pools; flow is source chain to CCIP to bridge to Maple pools, with redemption request and later execution/token return through CCIP."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/admin-functions/governor-admin-actions",
+        "shows": "Official admin docs show the Governor can set price oracles, set manual override prices, add strategies, set strategies active/inactive, configure PoolPermissionManager permissions and upgrade core components."
+      }
+    ],
+    "unknowns": [
+      "A1: Live Chainlink/oracle wrapper addresses and latestAnswer/latestRoundData values were not enumerated.",
+      "A2: Maple Direct/operator committee membership, replacement procedure and exact queue-processing decentralization were not verified on-chain.",
+      "A3: Material TVS on each cross-chain origin chain was not measured; only Ethereum MapleCCIPReceiver and README architecture were checked.",
+      "A4: Full per-strategy/per-borrower collateral chain and strategy address list were not enumerated.",
+      "A5: DeFiLlama forkedFrom field was not fetched in this run.",
+      "A6: Oracle-wrapper/cooldown/monitor activation status was documented but not fully verified live on-chain.",
+      "A7: No appchain-owned sequencer dependency found; Base/Solana deployment substrate not graded here.",
+      "A8: Exact permissionlessness of all keepers/relayers that execute queue and CCIP redemptions was not verified.",
+      "A9: Timelock/exit-window for every external-dependency mutation path was not exhaustively reconstructed beyond GovernorTimelock default delay and docs."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/maple-labs/maple-core-v2",
+        "https://github.com/maple-labs/maple-js",
+        "https://github.com/maple-labs/maple-cross-chain-receiver"
+      ],
+      "docs_url": "https://docs.maple.finance/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+          "date": "2022-08-24"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2025-11"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2026-01"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/maple/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+          "role": "DAO multisig / GovernorTimelock role manager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+          "role": "GovernorTimelock / MapleGlobals governor",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+          "role": "securityAdmin multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8",
+          "role": "operationalAdmin",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Base",
+          "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+          "role": "Base governor multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Maple is an on-chain lending and asset-management protocol where lenders deposit stablecoins into pools such as syrupUSDC and syrupUSDT, and pool assets are deployed into institutional credit, liquidity provisioning, and related yield strategies. Syrup exposes Maple's institutional lending market through DeFi integrations; smart-contract deposits route through SyrupRouter and PoolPermissionManager, while withdrawals use requestRedeem into a FIFO queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1a1a8deda08191ad91dcdbd1627ea1",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Syrup deposit admission is on-chain permissioned: Maple/permission-admin authorization is required even through SDK/direct-contract paths.",
+    "short_headline": "Permissioned deposits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "User entry is contract-level permissioned for Syrup deposits: deposits must route through SyrupRouter, PoolPermissionManager enforces lender permissions, first-time deposits require a Maple-provided authorization signature, and only authorized lenders can deposit."
+        },
+        {
+          "code": "A2",
+          "text": "Admission to deposit requires Maple/permission-admin authorization for new lenders; withdrawal request placement via requestRedeem is documented as directly callable and does not require new off-chain approval in the integration snippet."
+        },
+        {
+          "code": "A3",
+          "text": "Frontend/interface restrictions are active-policy context: Maple reserves the right to block IPs or wallet identities on the Interface, and Syrup jurisdictions exclude users/entities/access from restricted jurisdictions including the United States."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths exist through the published Maple JS SDK and direct smart-contract integration docs, but they do not remove the contract-level deposit authorization requirement."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain OFAC/sanctions blocklist check was verified in the core Pool/PoolPermissionManager ABI; the verified contract-level gate is Maple's PoolPermissionManager permission bitmap/allowlist system."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is permissionless through public contracts/docs/SDK, but write access differs by function: deposits are permissioned, while withdrawal request placement is directly callable for existing holders."
+        },
+        {
+          "code": "A6",
+          "text": "Legal extraction succeeded: interface terms include sanctions/restricted-jurisdiction clauses and reserve interface-level blocking rights; Syrup terms also state the interface is not essential to using the Protocol."
+        }
+      ],
+      "steelman": {
+        "red": "Red case: a core user action, depositing into Syrup pools, is gated by contract-level permissions and Maple-provided authorization signatures, not merely by frontend ToS.",
+        "orange": "Orange case: independent SDK/direct-contract paths exist and withdrawals can be requested on-chain, so the system is not fully captured by the official frontend despite permissioned entry.",
+        "green": "Green case: users can interact with deployed contracts through SDK/direct calls and the interface itself is not essential, but this only helps after the contract-level permission gate is satisfied."
+      },
+      "verdict": "Choosing red because admission to a core action, Syrup deposits, is explicitly contract-level permissioned through SyrupRouter and PoolPermissionManager and requires Maple/permission-admin authorization; independent SDK/direct-contract paths and frontend-independence do not overcome the on-chain allowlist gate."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.maple.finance/",
+        "shows": "Official docs describe Maple as a digital asset lending platform using compliance and due diligence, and Syrup as making Maple's institutional lending marketplace available through DeFi."
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official deployed-contracts/integration page lists Syrup smart-contract addresses, PoolPermissionManager, direct requestRedeem integration and Maple JS ABI references."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-core-v2",
+        "shows": "Public Maple V2 core repository contains the core smart contracts, submodules for globals, pool-v2, pool-permission-manager and withdrawal-manager-queue, and links audit reports/bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-js",
+        "shows": "Public Maple JavaScript SDK for interacting with Maple smart contracts; README documents installation, network address exports and transaction helpers."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-cross-chain-receiver",
+        "shows": "Public Maple cross-chain receiver repository describes the Chainlink CCIP-powered receiver module for cross-chain Maple deposits/redemptions."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page lists audits including November 2025 Withdrawal Manager audits by Spearbit/Sherlock, January 2026 CCIP Receiver audits by Dedaub/Sigma Prime, emergency pause, oracle protections and bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+        "shows": "Public Maple V2 audit README lists older Maple V2 reports, including Trail of Bits, Spearbit and Three Sigma coverage."
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/maple/information/",
+        "shows": "Immunefi Maple bug bounty page shows live bounty metadata, maximum smart-contract bounty of $500,000, and scope information."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "Ethereum GovernorTimelock surfacer verifies the timelock contract, default delay values and role-management/write surface.",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "shows": "Ethereum DAO multisig is a Safe with threshold 4 of 7 owners.",
+        "chain": "Ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "Ethereum securityAdmin is a multisig with threshold 3 of 6 owners.",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals is a proxy governed by GovernorTimelock, with operationalAdmin and securityAdmin addresses surfaced and upgrade/pause/oracle write methods visible.",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+        "shows": "Base governor is a Gnosis Safe L2 multisig with threshold 3 of 5 owners.",
+        "chain": "Base",
+        "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE"
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official smart-contract integration docs state deposits must go through SyrupRouter with authorization handled by PoolPermissionManager; first-time deposits require a Maple-provided authorization signature and addresses must be permissioned before deposits succeed."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3",
+        "shows": "PoolPermissionManager has permission and allowlist-related read/write surface: hasPermission, lenderAllowlist, lenderBitmaps, permissionAdmins, permissionLevels, poolBitmaps, setLenderAllowlist, setLenderBitmaps, setPermissionAdmin and setPoolPermissionLevel.",
+        "chain": "Ethereum",
+        "address": "0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3"
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official FAQ states authorization and routing are enforced through SyrupRouter and PoolPermissionManager, only authorized lenders can deposit, and authorization is required for all Syrup deposits."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-js",
+        "shows": "Published Maple JS SDK supports direct smart-contract interaction, network addresses and transaction execution outside the official Maple frontend."
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official docs list direct on-chain withdrawal via requestRedeem and give an IPool.requestRedeem integration snippet."
+      },
+      {
+        "url": "https://docs.maple.finance/legal/interface-terms-of-use",
+        "shows": "Interface Terms reserve the right to disable wallet identities or block IP addresses, restrict interface access, and prohibit use from sanctioned jurisdictions including listed OFAC-related jurisdictions."
+      },
+      {
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-available-jurisdictions",
+        "shows": "Syrup jurisdiction page says syrupUSDC and syrupUSDT are not available to residents/citizens/tax residents/entities/persons accessing from restricted jurisdictions, and lists restricted jurisdictions including the United States."
+      },
+      {
+        "url": "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt",
+        "shows": "Syrup interface terms state the interface is separate from the Protocol and is not essential for accessing or interacting with the Protocol."
+      }
+    ],
+    "unknowns": [
+      "A1: All non-Syrup Maple Institutional pool entry points and borrower-facing admission gates were not exhaustively checked.",
+      "A2: Operator approval for borrower loan origination and institutional lender onboarding was not fully enumerated by function class.",
+      "A3: Runtime presence of IP/wallet blocking on the current official UI was not tested live; legal/interface policy was extracted instead.",
+      "A3b: Third-party aggregator routing beyond Maple JS/direct-contract integration was not exhaustively searched.",
+      "A4: Absence of a contract-level sanctions oracle/blocklist was not proven for every deployed module.",
+      "A5: Borrower-side write access and loan-management admission were not fully enumerated.",
+      "A6: ToS clauses were extracted for the main Maple and Syrup interfaces, but not every linked legal document was fully parsed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/maple-labs/maple-core-v2",
+        "https://github.com/maple-labs/maple-js",
+        "https://github.com/maple-labs/maple-cross-chain-receiver"
+      ],
+      "docs_url": "https://docs.maple.finance/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+          "date": "2022-08-24"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2025-11"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2026-01"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/maple/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+          "role": "DAO multisig / GovernorTimelock role manager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+          "role": "GovernorTimelock / MapleGlobals governor",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+          "role": "securityAdmin multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8",
+          "role": "operationalAdmin",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Base",
+          "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+          "role": "Base governor multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Maple is an on-chain lending and asset-management protocol where lenders deposit stablecoins into pools such as syrupUSDC and syrupUSDT, and pool assets are deployed into institutional credit, liquidity provisioning, and related yield strategies. Syrup exposes Maple's institutional lending market through DeFi integrations; smart-contract deposits route through SyrupRouter and PoolPermissionManager, while withdrawals use requestRedeem into a FIFO queue."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1a1a8deda08191ad91dcdbd1627ea1",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Ethereum core is mostly verified and audited, but full verification is incomplete across pinned Base/admin and withdrawal-manager surfaces, with no deployment-commit drift check.",
+    "short_headline": "Mostly verified, gaps",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Key Ethereum contracts are largely verified: MapleGlobals, PoolManager, PoolPermissionManager, Pool and MapleCCIPReceiver surfacers show etherscan/sourcify ABI sources and proxy implementations where resolved; however pinned Base securityAdmin/globals addresses did not resolve to verified ABIs."
+        },
+        {
+          "code": "V2",
+          "text": "A public Maple V2 core repo and Maple JS repo exist and structurally correspond to the visible deployed modules/ABIs, but this run did not pin a deployment commit SHA or perform bytecode matching."
+        },
+        {
+          "code": "V3",
+          "text": "Audit coverage is substantial and recent for current modules: official docs list September 2025 Governor Timelock audits, November 2025 Withdrawal Manager audits, and January 2026 CCIP Receiver audits; older Maple V2 audit README lists Trail of Bits/Spearbit/Three Sigma/0xMacro coverage for earlier releases."
+        },
+        {
+          "code": "V4",
+          "text": "Recognized auditors observed in fetched audit evidence include Trail of Bits, Spearbit and Sigma Prime; Sherlock, 0xMacro and Dedaub are also listed by Maple but were not treated as sufficient by themselves for green-grade recognition under the prompt's recognized-firm list."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift was not fully reconstructed: no bytecode-to-repo commit match or diff sampling against audit commits was performed, so drift remains an unknown rather than an asserted downgrade by itself."
+        },
+        {
+          "code": "V6",
+          "text": "Proxy implementation verification is mixed: MapleGlobals and PoolPermissionManager implementations were surfaced, MapleCCIPReceiver implementation was surfaced, but WithdrawalManagerQueue only exposed a proxy shell in this run and some Base pinned contracts had no verified ABI."
+        }
+      ],
+      "steelman": {
+        "red": "Red case: unverified or unresolved implementations on pinned Base/admin/withdrawal-manager surfaces prevent a full outsider reconstruction of all deployed code paths.",
+        "orange": "Orange case: most Ethereum core contracts are verified and audited, but verification is incomplete across all pinned deployments and this run did not establish source-to-deployment commit or post-audit drift.",
+        "green": "Green case: the main Ethereum core has public repos, verified ABIs/proxy implementations for major components, and recent audits by recognized firms covering GovernorTimelock, Withdrawal Manager and CCIP Receiver releases."
+      },
+      "verdict": "Choosing orange because the main Ethereum core is substantially verifiable and recently audited, but the full protocol posture is not green: several pinned Base/admin surfaces lacked verified ABI or implementation resolution, WithdrawalManagerQueue implementation was not resolved in the surfacer, and no source-to-deployed-commit or drift check was completed."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.maple.finance/",
+        "shows": "Official docs describe Maple as a digital asset lending platform using compliance and due diligence, and Syrup as making Maple's institutional lending marketplace available through DeFi."
+      },
+      {
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+        "shows": "Official deployed-contracts/integration page lists Syrup smart-contract addresses, PoolPermissionManager, direct requestRedeem integration and Maple JS ABI references."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-core-v2",
+        "shows": "Public Maple V2 core repository contains the core smart contracts, submodules for globals, pool-v2, pool-permission-manager and withdrawal-manager-queue, and links audit reports/bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-js",
+        "shows": "Public Maple JavaScript SDK for interacting with Maple smart contracts; README documents installation, network address exports and transaction helpers."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-cross-chain-receiver",
+        "shows": "Public Maple cross-chain receiver repository describes the Chainlink CCIP-powered receiver module for cross-chain Maple deposits/redemptions."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page lists audits including November 2025 Withdrawal Manager audits by Spearbit/Sherlock, January 2026 CCIP Receiver audits by Dedaub/Sigma Prime, emergency pause, oracle protections and bug bounty."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+        "shows": "Public Maple V2 audit README lists older Maple V2 reports, including Trail of Bits, Spearbit and Three Sigma coverage."
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/maple/information/",
+        "shows": "Immunefi Maple bug bounty page shows live bounty metadata, maximum smart-contract bounty of $500,000, and scope information."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "Ethereum GovernorTimelock surfacer verifies the timelock contract, default delay values and role-management/write surface.",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "shows": "Ethereum DAO multisig is a Safe with threshold 4 of 7 owners.",
+        "chain": "Ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "Ethereum securityAdmin is a multisig with threshold 3 of 6 owners.",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals is a proxy governed by GovernorTimelock, with operationalAdmin and securityAdmin addresses surfaced and upgrade/pause/oracle write methods visible.",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+        "shows": "Base governor is a Gnosis Safe L2 multisig with threshold 3 of 5 owners.",
+        "chain": "Base",
+        "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals proxy ABI source is etherscan and resolves to implementation 0x9BeAbb1B6F3ad1DdB87b65148BA5Eb6102334956.",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x9BeAbb1B6F3ad1DdB87b65148BA5Eb6102334956",
+        "shows": "MapleGlobals implementation ABI source is sourcify, providing separate implementation verification evidence.",
+        "chain": "Ethereum",
+        "address": "0x9BeAbb1B6F3ad1DdB87b65148BA5Eb6102334956"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "syrupUSDC PoolManager is a verified proxy with implementation 0xfE02Be1aD28EdFd8e3dD6F29C402B244C2A258B8 surfaced.",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "shows": "syrupUSDC Pool ABI source is etherscan and raw ABI exposes Pool entry/exit and ERC-4626-like methods.",
+        "chain": "Ethereum",
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3",
+        "shows": "PoolPermissionManager proxy ABI source is etherscan and resolves to implementation 0xC353f6f5F7388828287Eb76468631E1C8d0d1ec8.",
+        "chain": "Ethereum",
+        "address": "0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3",
+        "shows": "WithdrawalManagerQueue proxy surfacer only exposed a proxy shell through sourcify and did not resolve the implementation ABI in this run.",
+        "chain": "Ethereum",
+        "address": "0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4",
+        "shows": "MapleCCIPReceiver is a verified ERC1967Proxy with implementation 0x23CEF2965Db19f67A996371F9Cb1A2F33D2b4821 and ABI source etherscan.",
+        "chain": "Ethereum",
+        "address": "0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0x7f3C3636208A18c7941BF051807db56864061465",
+        "shows": "Pinned Base globals singleton did not resolve to a verified ABI through etherscan or sourcify in this run.",
+        "chain": "Base",
+        "address": "0x7f3C3636208A18c7941BF051807db56864061465"
+      },
+      {
+        "url": "https://defipunkd.com/address/8453/0x6150371231f783e97906af4861Bc1eD11cE1c9Ea",
+        "shows": "Pinned Base securityAdmin did not resolve to a verified ABI through etherscan or sourcify in this run.",
+        "chain": "Base",
+        "address": "0x6150371231f783e97906af4861Bc1eD11cE1c9Ea"
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-core-v2",
+        "shows": "Public Maple V2 core repo contains contract submodules and audit references; this run did not pin a source-to-deployment commit or bytecode diff."
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Official security page lists recent current-release audits: September 2025 Governor Timelock, November 2025 Withdrawal Manager and January 2026 CCIP Receiver audits."
+      },
+      {
+        "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+        "shows": "Public audit README lists older Maple V2 audit reports, including Trail of Bits, Spearbit and Three Sigma reports for 2022 and 2023 releases."
+      }
+    ],
+    "unknowns": [
+      "V1: Verification status for every pinned address, including Solana deployments and Base cashUSDCPool/token/treasury/operationalAdmin, was not exhaustively checked.",
+      "V2: No source-to-repo commit SHA or bytecode diff was pinned for deployed contracts.",
+      "V3: The legacy Code4rena audit links in the pinned input were not individually opened/scoped to current deployed contracts; current audit matrix and Maple V2 audit README were fetched.",
+      "V4: Auditor recognition was applied only to firms explicitly recognized by the prompt or broadly visible in fetched evidence.",
+      "V5: Post-audit drift was not sampled with compare views or deployment manifests; no material drift finding is asserted.",
+      "V6: WithdrawalManagerQueue implementation and multiple Base pinned implementations were not resolved by the surfacer."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/maple-labs/maple-core-v2",
+        "https://github.com/maple-labs/maple-js",
+        "https://github.com/maple-labs/maple-cross-chain-receiver"
+      ],
+      "docs_url": "https://docs.maple.finance/",
+      "audits": [
+        {
+          "firm": "Trail of Bits",
+          "url": "https://github.com/maple-labs/maple-v2-audits/blob/main/README.md",
+          "date": "2022-08-24"
+        },
+        {
+          "firm": "Spearbit",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2025-11"
+        },
+        {
+          "firm": "Sigma Prime",
+          "url": "https://docs.maple.finance/technical-resources/security/security",
+          "date": "2026-01"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/maple/information/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.maple.finance/integrate/ethereum-mainnet/smart-contract-integration",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+          "role": "DAO multisig / GovernorTimelock role manager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+          "role": "GovernorTimelock / MapleGlobals governor",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+          "role": "securityAdmin multisig",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8",
+          "role": "operationalAdmin",
+          "actor_class": "unknown"
+        },
+        {
+          "chain": "Base",
+          "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE",
+          "role": "Base governor multisig",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "mixed",
+      "about": "Maple is an on-chain lending and asset-management protocol where lenders deposit stablecoins into pools such as syrupUSDC and syrupUSDT, and pool assets are deployed into institutional credit, liquidity provisioning, and related yield strategies. Syrup exposes Maple's institutional lending market through DeFi integrations; smart-contract deposits route through SyrupRouter and PoolPermissionManager, while withdrawals use requestRedeem into a FIFO queue."
+    }
+  }
+]
