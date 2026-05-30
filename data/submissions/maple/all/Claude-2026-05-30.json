@@ -1,0 +1,536 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/8d1f8ec6-8e84-4cd5-9d15-a60a38499c99",
+    "grade": "orange",
+    "headline": "4-of-7 daoMultisig proposes through a custom 3-day GovernorTimelock; securityAdmin (3-of-6) can pause the entire protocol immediately with no time cap",
+    "short_headline": "3-day upgrade path; emergency pause untimelocked",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "MapleGlobals NonTransparentProxy (0x804a6F5F667170F545Bf14e5DDB48C70B788390C) admin()=governor()=GovernorTimelock (0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b). PoolManager for syrupUSDC (0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F) governor()=same GovernorTimelock. securityAdmin()=0x6b1A78C1943b03086F7Ee53360f9b0672bD60818 (3-of-6 Gnosis Safe). operationalAdmin()=0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8 (actor class unverified beyond Safe proxy ABI)."
+        },
+        {
+          "code": "C2",
+          "text": "MapleGlobals uses a NonTransparentProxy pattern: admin (GovernorTimelock) can call setImplementation(address) directly on the proxy to replace the logic contract, a T1 upgrade path. PoolManager is a factory-pattern Proxy (implementation 0xfE02Be1aD28EdFd8e3dD6F29C402B244C2A258B8); it exposes upgrade(version,bytes) callable by governor or poolDelegate, also T1."
+        },
+        {
+          "code": "C3",
+          "text": "Execution path for governance upgrades: (1) Proposer with PROPOSER_ROLE calls scheduleProposals(targets,data) on GovernorTimelock (0x2eFF...); proposer identity unverified this run — recorded in unknowns. (2) defaultTimelockParameters()=[259200,172800]: minimum 259200 s (3 days) delay before executeProposals may fire. MIN_DELAY=86400 s (1 day) sets the floor. (3) executeProposals calls target contracts. For Globals, some functions also require prior scheduling via Globals' own scheduledCalls mechanism (defaultTimelockParameters=[604800,172800], 7-day window), creating dual delays of 3+7=10 days for those specific actions. Uncontested fast path for setImplementation on Globals: 3 days."
+        },
+        {
+          "code": "C4",
+          "text": "daoMultisig (0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196): 4-of-7 Gnosis Safe v1.3.0, 7 EOA signers. Signer identities not publicly verified this run. tokenWithdrawer on GovernorTimelock=daoMultisig. securityAdmin (0x6b1A78C1943b03086F7Ee53360f9b0672bD60818): 3-of-6 Gnosis Safe (older v1.1.0-based). Signer identities not verified this run. Power: call setProtocolPause and setContractPause on Globals. Neither multisig qualifies as Security Council (7+ signers, ≥51% threshold, ≥50% non-insider not verified)."
+        },
+        {
+          "code": "C5",
+          "text": "No on-chain token-weighted governor contract (OZ Governor, GovernorBravo) found. The GovernorTimelock is a custom contract with PROPOSER_ROLE controlling scheduling — it is not a standard token-voting system. Governance is off-chain multisig-gated."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency power: securityAdmin (3-of-6 Safe) can call setProtocolPause(bool) on Globals immediately, with no documented on-chain time cap. Globals confirms protocolPaused()=false at the time of reading. setContractPause(address,bool) can pause individual contracts. Both functions callable by securityAdmin without any timelock or governance vote."
+        },
+        {
+          "code": "C7",
+          "text": "Highest T1 paths: (a) securityAdmin (3-of-6) → setProtocolPause(true) on Globals, zero delay — pauses withdrawals (T1, fund-critical). (b) GovernorTimelock (3-day delay, proposer unverified) → setImplementation on Globals proxy (T1, replaces core logic). (c) GovernorTimelock → upgrade() on PoolManager (T1). Fast-path T1 via pause = 0 days; via upgrade = 3 days. 3-of-6 multisig with zero timelock on the pause path is the dominant concern."
+        }
+      ],
+      "steelman": {
+        "red": "The securityAdmin (3-of-6 multisig, insider composition unverified) can pause ALL withdrawals and protocol functions instantly with zero timelock and no cap, a 3-of-6 coordinated compromise could freeze all $1.4B in user funds indefinitely.",
+        "orange": "T1 is reachable via emergency pause (zero delay, 3-of-6 multisig) and via upgrade (3-day delay); neither path meets the 7-day bar for green, and the securityAdmin fails Security Council criteria; but a 3-of-6 is meaningfully harder to compromise than a 2-of-3 so does not trigger the red rule.",
+        "green": "Core upgrades require a 3-day GovernorTimelock delay with 4-of-7 daoMultisig approval; certain Globals functions have an additional 7-day internal scheduling delay; the emergency pause is scoped to genuine incident response and has a 3-of-6 threshold."
+      },
+      "verdict": "Choosing orange because T1 is reachable on the uncontested fast path at zero delay via the securityAdmin (3-of-6) calling setProtocolPause on Globals (0x804a6F5F667170F545Bf14e5DDB48C70B788390C confirmed protocolPaused=false and securityAdmin=0x6b1A78C1943b03086F7Ee53360f9b0672bD60818), and at 3 days via GovernorTimelock for implementation upgrades. The 3-of-6 threshold does not trigger the red rule ('single EOA or 2-of-3 multisig') but it also does not meet Security Council standards, and the pause path has no documented on-chain time cap. The upgrade path at 3 days is below the 7-day bar for green on T1 paths."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "shows": "daoMultisig confirmed as 4-of-7 Gnosis Safe v1.3.0 with 7 EOA signers; nonce=434 indicates active use; tokenWithdrawer on GovernorTimelock is this address",
+        "chain": "Ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "GovernorTimelock: MIN_DELAY=86400 (1 day), defaultTimelockParameters=[259200,172800] (3-day delay, 2-day execution window), latestProposalId=13, tokenWithdrawer=daoMultisig; bespoke GovernorTimelock contract, not standard OZ",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "MapleGlobals NonTransparentProxy: admin()=governor()=GovernorTimelock; securityAdmin()=0x6b1A78C1943b03086F7Ee53360f9b0672bD60818; operationalAdmin()=0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8; protocolPaused()=false; defaultTimelockParameters()=[604800,172800] (7-day internal delay); implementation=0x9BeAbb1B6F3ad1DdB87b65148BA5Eb6102334956; setImplementation callable by admin; setProtocolPause callable by securityAdmin",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "securityAdmin confirmed as 3-of-6 Gnosis Safe (v1.1.0 with changeMasterCopy); 6 EOA signers; nonce=31",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "syrupUSDC PoolManager Proxy: governor()=GovernorTimelock; globals()=MapleGlobals; implementation=0xfE02Be1aD28EdFd8e3dD6F29C402B244C2A258B8; upgrade() and setImplementation() exposed; active=true",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C3: PROPOSER_ROLE holder on GovernorTimelock not verified on-chain this run; assumed to be daoMultisig based on context but not confirmed",
+      "C4: Signer identities for daoMultisig (4-of-7) and securityAdmin (3-of-6) not publicly verified this run; insider vs. non-insider ratio unknown",
+      "C4: operationalAdmin (0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8) actor class not fully determined (ABI suggests Safe proxy but owners/threshold not read)",
+      "C6: Maximum duration for securityAdmin-triggered protocol pause not found on-chain; docs describe it as 'temporary' but no numeric cap confirmed"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/maple-labs/maple-core-v2", "https://github.com/maple-labs/maple-cross-chain-receiver"],
+      "docs_url": "https://docs.maple.finance",
+      "audits": [
+        {"firm": "Trail of Bits", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2022-december/TrailOfBits-Maple.pdf", "date": "2022-08"},
+        {"firm": "Spearbit", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2022-december/Spearbit-maple.pdf", "date": "2022-10"},
+        {"firm": "Three Sigma", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2024-december/Three-Sigma-Maple-Finance-Dec-2024%20.pdf", "date": "2024-12"},
+        {"firm": "0xMacro", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2024-december/0xMacro-Maple-Finance-Dec-2024.pdf", "date": "2024-12"},
+        {"firm": "Sherlock", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-sept-governor-timelock/Sherlock-Maple-Finance-timelock-Sept-2025.pdf", "date": "2025-09"},
+        {"firm": "0xMacro", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-sept-governor-timelock/0xMacro-Maple-Finance-timelock-Sept-2025.pdf", "date": "2025-09"},
+        {"firm": "Spearbit", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-november/Spearbit-Maple-Finance-WM-Nov-2025.pdf", "date": "2025-11"},
+        {"firm": "Sigma Prime", "url": "https://github.com/maple-labs/maple-cross-chain-receiver/blob/main/audits/2026-january/SigmaPrime-Chainlink-Maple.pdf", "date": "2026-01"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x643C4E15d7d62Ad0aBeC4a9BD4b001aA3Ef52d66", "symbol": "SYRUP"},
+      "bug_bounty_url": "https://immunefi.com/bounty/maple/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196", "role": "daoMultisig / tokenWithdrawer", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b", "role": "GovernorTimelock / admin of Globals", "actor_class": "timelock"},
+        {"chain": "Ethereum", "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818", "role": "securityAdmin (emergency pause)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0xCe1cE7c7F436DCc4E28Bc8bf86115514d3DC34E8", "role": "operationalAdmin", "actor_class": "unknown"},
+        {"chain": "Ethereum", "address": "0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3", "role": "MaplePoolPermissionManager proxy", "actor_class": "unknown"},
+        {"chain": "Base", "address": "0xD9481a47DFe8E5C35Eb809df25cdB5Bc2E24A3bE", "role": "governor (Base)", "actor_class": "unknown"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Maple Finance is an on-chain institutional lending protocol where users deposit USDC or USDT into lending pools (syrupUSDC, syrupUSDT) to earn yield from overcollateralized fixed-rate loans to vetted institutional borrowers. The Syrup product makes this lending marketplace accessible to non-US retail users via ERC-4626 vault shares with a queue-based redemption mechanism. A separate Secured Lending pool is restricted to institutional allocators. Loans are managed by permissioned pool delegates, and the protocol is governed by a 4-of-7 multisig operating through a custom GovernorTimelock."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/8d1f8ec6-8e84-4cd5-9d15-a60a38499c99",
+    "grade": "orange",
+    "headline": "requestRedeem/redeem path exists on-chain; securityAdmin (3-of-6) can pause all exits including finalized claims indefinitely with no on-chain time cap",
+    "short_headline": "Queue-based exit; 3-of-6 can pause all functions",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Exit functions on MaplePool (syrupUSDC, 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b): requestRedeem(shares,owner), requestWithdraw(assets,owner), redeem(shares,receiver,owner), withdraw(assets,receiver,owner), removeShares(shares,owner). The flow is two-step: requestRedeem places shares into escrow in the WithdrawalManager (0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3); redeem/withdraw claims them once liquidity is available."
+        },
+        {
+          "code": "E2",
+          "text": "All exit functions ultimately route through PoolManager.canCall() which checks MapleGlobals. If protocolPaused()=true, the Globals rejects the call, blocking all pool interactions including both requestRedeem (new exit placement) and redeem (claim of previously queued position). No distinction between request and claim was observed in the ABI — both are gated by the global pause flag."
+        },
+        {
+          "code": "E3",
+          "text": "Pause guard: MapleGlobals.setProtocolPause(bool) callable by securityAdmin (3-of-6 Safe, 0x6b1A78C1943b03086F7Ee53360f9b0672bD60818) with ZERO timelock. Globals also exposes setContractPause(address,bool) callable by securityAdmin for per-contract pausing. Currently protocolPaused()=false. No on-chain maximum pause duration is stored in Globals or the securityAdmin contract."
+        },
+        {
+          "code": "E4",
+          "text": "Emergency pause path: securityAdmin (3-of-6) → setProtocolPause(true) → immediate effect, no cap. Governance path (slower): GovernorTimelock (3-day delay) → setProtocolPause via governor is also possible since governor controls Globals, but docs describe the securityAdmin as the emergency mechanism. The emergency path has no documented auto-expiry."
+        },
+        {
+          "code": "E5",
+          "text": "Withdrawal queue: WithdrawalManager (0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3) governs redemption timing. Queue duration depends on available pool liquidity and pool delegate decisions — no on-chain maximum queue duration constant was read this run. The November 2025 audit (Spearbit+Sherlock) covered a WM upgrade adding support for multiple pending requests per owner."
+        },
+        {
+          "code": "E6",
+          "text": "No permissionless escape-hatch or emergency-exit mechanism found in the MaplePool or PoolManager ABIs that bypasses the global pause or the withdrawal queue. Users cannot exit adversarially without admin cooperation if the protocol is paused."
+        },
+        {
+          "code": "E7",
+          "text": "Exit functions (requestRedeem, redeem, withdraw, removeShares) are standard ERC-4626-adjacent methods callable directly on the MaplePool contract (0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b) via any EVM-compatible wallet or Etherscan write tab, without requiring the official frontend — assuming the protocol is not paused."
+        }
+      ],
+      "steelman": {
+        "red": "The securityAdmin (3-of-6) can pause ALL exit claims including previously-finalized redemptions indefinitely with zero timelock and no on-chain time cap, and no escape hatch exists for users under adversarial admin conditions.",
+        "orange": "The pause actor is a 3-of-6 multisig (not a single EOA or 2-of-3), requires coordination among 3 independent signers; the pause is described as a temporary emergency measure; users can withdraw directly on-chain when not paused; the protocol is not currently paused.",
+        "green": "Exit functions exist on-chain and are callable without the official frontend; there is no permanent lock mechanism other than pause; the ERC-4626 redeem path is permissionless for existing token holders."
+      },
+      "verdict": "Choosing orange because while exit functions exist and are on-chain callable (E7), the securityAdmin (3-of-6, confirmed at 0x6b1A78C1943b03086F7Ee53360f9b0672bD60818) can pause all protocol functions including finalized redemption claims via setProtocolPause on Globals (confirmed callable, no timelock, no on-chain time cap). The 3-of-6 threshold does not trigger the 'pause held by a single EOA / 2-of-3 multisig' red criterion, but the indefinite scope with no cap and no escape hatch keeps this firmly orange rather than green."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "shows": "MaplePool (syrupUSDC): exposes requestRedeem, requestWithdraw, redeem, withdraw, removeShares; manager=0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F; totalAssets=1,389,661,665,922,226 (USDC 6 dec = ~$1.39B); unrealizedLosses=0; no paused() on pool itself (pause delegated to Globals)",
+        "chain": "Ethereum",
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "Globals: protocolPaused()=false; setProtocolPause(bool) write method present; securityAdmin=0x6b1A78C1943b03086F7Ee53360f9b0672bD60818; setContractPause(address,bool) present; no max pause duration constant in ABI",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "shows": "securityAdmin is a 3-of-6 Gnosis Safe with nonce=31; directly confirmed pause actor",
+        "chain": "Ethereum",
+        "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "PoolManager: withdrawalManager=0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3; canCall(functionId,caller,data) gatekeeps all pool operations via Globals",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Emergency pause described as ability to 'temporarily disable almost all functions in the Maple protocol'; pause triggered by a multisig; November 2025 WM upgrade audited by Spearbit and Sherlock",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: Maximum allowed duration for emergency pause not found as an on-chain constant; docs say 'temporary' but no numeric cap confirmed on-chain",
+      "E5: Maximum queue wait time for withdrawalManager not read on-chain this run; no cap constant observed in PoolManager or pool ABIs",
+      "E2: Whether redeem() (claim of already-processed redemption) specifically bypasses pause or is equally blocked by setProtocolPause was not deterministically confirmed via source code review; inferred from global pause scope"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/maple-labs/maple-core-v2"],
+      "docs_url": "https://docs.maple.finance",
+      "audits": [
+        {"firm": "Spearbit", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-november/Spearbit-Maple-Finance-WM-Nov-2025.pdf", "date": "2025-11"},
+        {"firm": "Sherlock", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-november/Sherlock-Maple-Finance-WM-Nov-2025.pdf", "date": "2025-11"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x643C4E15d7d62Ad0aBeC4a9BD4b001aA3Ef52d66", "symbol": "SYRUP"},
+      "bug_bounty_url": "https://immunefi.com/bounty/maple/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818", "role": "securityAdmin (emergency pause)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x1bc47a0Dd0FdaB96E9eF982fdf1F34DC6207cfE3", "role": "WithdrawalManager for syrupUSDC pool", "actor_class": "unknown"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Maple Finance is an on-chain institutional lending protocol where users deposit USDC or USDT into lending pools to earn yield from overcollateralized loans to institutional borrowers. Exit follows a two-step queue: users call requestRedeem to enter the withdrawal queue, then redeem once liquidity is released by the pool delegate. The securityAdmin can halt all protocol functions immediately via a global pause flag."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/8d1f8ec6-8e84-4cd5-9d15-a60a38499c99",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Chainlink oracles for secured-lending collateral pricing; CCIP for cross-chain deposits; oracle address governance-mutable after 3-day delay; borrower defaults are acknowledged principal risk",
+    "short_headline": "Chainlink and CCIP dependencies; oracle mutable",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "MapleGlobals exposes getLatestPrice(address) and priceOracleOf(address) view methods, and setPriceOracle(address asset, address oracle, uint96 maxDelay) write method — confirming on-chain Chainlink oracle integration for collateral pricing used in secured lending. Docs confirm: 'Chainlink Oracles — Maple Finance uses Chainlink oracles to provide price feeds for the protocol.' For syrupUSDC and syrupUSDT pools (pure USDC/USDT lending), oracle pricing is not needed for basic deposit/redeem operations — principal impact here is from borrower defaults, not oracle failure. For securedLendingUSDCPool (~$64M AUM per website), oracle failure could cause mis-priced liquidations and potential principal impairment."
+        },
+        {
+          "code": "A2",
+          "text": "Borrowers must be whitelisted by governance (setValidBorrower on Globals). Pool delegates (protocol-appointed addresses) manage loan deployment and repayment monitoring. Repayment depends on off-chain institutional counterparties. If borrowers default, the pool cover deposit (first-loss capital from pool delegate) absorbs losses up to its limit; excess losses fall on depositors. This is accepted credit risk in the product design, not an oracle-committee-style external dependency. PoolManager for syrupUSDC has hasSufficientCover()=true at time of reading."
+        },
+        {
+          "code": "A3",
+          "text": "Chainlink CCIP bridge: MapleCCIPReceiver (0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4) allows cross-chain deposits into syrupUSDC. Audited Dec 2025/Jan 2026 by Dedaub and Sigma Prime. If CCIP fails or is exploited, cross-chain depositors would be unable to deposit or redeem via the cross-chain path; direct Ethereum mainnet deposits and redemptions would be unaffected. CCIP failure does not directly threaten existing mainnet TVL."
+        },
+        {
+          "code": "A4",
+          "text": "No nested restaking or receipt-of-receipt design. Maple pools lend USDC directly to institutional borrowers with collateral managed by pool delegates. Not applicable."
+        },
+        {
+          "code": "A6",
+          "text": "Docs describe two fallback mechanisms: (1) oracle wrappers to 'prevent oracle outages and oracle manipulation from causing issues during liquidations'; (2) manualOverridePrice(address) on Globals lets the governor set a manual override price, bypassing the Chainlink feed. Activation status of oracle wrappers: DOCUMENTED but on-chain state not verified this run (listed in unknowns). The manual override requires governance action (GovernorTimelock, 3-day delay)."
+        },
+        {
+          "code": "A8",
+          "text": "Liquidation bots: Maple requires keepers for loan default processing (triggerDefault on PoolManager). If nobody calls triggerDefault when a loan is overdue, bad debt may accumulate unchecked. The pool delegate is responsible for monitoring but this is a semi-permissioned keeper role. Failure is graceful (bad debt accrues) rather than catastrophic (immediate principal loss), as the unrealizedLosses mechanism tracks unrecognized defaults."
+        },
+        {
+          "code": "A9",
+          "text": "Governor can call setPriceOracle(address asset, address oracle, uint96 maxDelay) on Globals via the 3-day GovernorTimelock (confirmed from Globals ABI and GovernorTimelock delay). This allows swapping the Chainlink feed for any pool to an attacker-controlled oracle — a genuine A9 finding. The 3-day delay on oracle changes is below the 7-day exit-window standard, so users have 3 days to observe a queued oracle swap and react. Similarly, setWithdrawalManager on PoolManager (governor-controlled after delay) could redirect withdrawals."
+        }
+      ],
+      "steelman": {
+        "red": "The governor can hot-swap Chainlink oracle addresses for collateral pricing after only a 3-day delay (below the 7-day exit window), and a compromised governance path could introduce a malicious price feed causing under-priced liquidations and principal theft in the secured lending pool; borrower defaults can cause principal loss that is not automatically covered.",
+        "orange": "Syrup pools (~95% of TVL) rely on borrower repayment rather than oracle pricing; the 3-day delay on oracle changes gives notice; oracle wrappers provide sanity checks; hasSufficientCover=true for syrupUSDC; CCIP failure affects only cross-chain flow, not mainnet principal; borrower default risk is opt-in credit risk.",
+        "green": "Chainlink oracles are decentralized and resistant to flash loan attacks; oracle wrappers add sanity checks; overcollateralized loans in secured pool provide buffer; all pools are isolated, preventing cascade failures across pools."
+      },
+      "verdict": "Choosing orange because the dominant external dependency risk is the 3-day governance-mutable oracle for the secured lending pool (A9: setPriceOracle with 3-day GovernorTimelock delay on Globals 0x804a6F5F667170F545Bf14e5DDB48C70B788390C), which is below the 7-day exit-window standard. Syrup pools (~$1.4B TVL, ~95%) depend on institutional borrower repayment (opt-in credit risk, graded A2) and CCIP for cross-chain deposits (~A3, does not affect mainnet exits). Secured lending pool (~$64M, ~5%) relies on Chainlink oracle for collateral liquidations, with governance-mutable oracle address and oracle-wrapper fallback of unverified activation status. Impacted TVS under a single-dependency failure: ~5% (secured lending pool on oracle failure), ~100% on governance oracle swap (but protected by 3-day delay). Overall: oracle change with 3-day window, and borrower default exposure, qualify for orange."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "shows": "Globals ABI confirms getLatestPrice(), priceOracleOf(), setPriceOracle(asset,oracle,maxDelay), manualOverridePrice() — on-chain oracle infrastructure; defaultTimelockParameters=[604800,172800] for internal scheduling; Governor can change oracle with 3-day GovernorTimelock delay",
+        "chain": "Ethereum",
+        "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Confirms Chainlink oracle use for price feeds, oracle wrappers to prevent manipulation, manual override price mechanism; CCIP Receiver audited by Dedaub and Sigma Prime; critical monitoring with Tenderly for invariant checking",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "syrupUSDC PoolManager: hasSufficientCover()=true; totalAssets=~$1.39B USDC; unrealizedLosses=0; strategyListLength=4; setWithdrawalManager() is a governor-callable write method",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://www.maple.finance",
+        "shows": "Website: syrupUSDC pool AUM described; Secured Lending pool listed at 5.2% APY, $64M pool AUM (at time of fetch); overcollateralized loans described; $3.86B total AUM",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: Specific Chainlink feed addresses used in production not read on-chain this run (priceOracleOf() requires asset address args not attempted)",
+      "A6: Activation status of oracle wrappers (whether LIVE and enforcing or only DOCUMENTED) not verified on-chain this run; classified as unknown",
+      "A8: triggerDefault() caller permissions not verified; whether role is permissionless or restricted to pool delegate not confirmed from ABI alone",
+      "A3-offchain: CCIP dependency assessed from docs/audit; on-chain CCIP receiver state not read this run"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/maple-labs/maple-core-v2", "https://github.com/maple-labs/maple-cross-chain-receiver"],
+      "docs_url": "https://docs.maple.finance",
+      "audits": [
+        {"firm": "Dedaub", "url": "https://github.com/maple-labs/maple-cross-chain-receiver/blob/main/audits/2025-november/Dedaub-Chainlink-Maple.pdf", "date": "2025-11"},
+        {"firm": "Sigma Prime", "url": "https://github.com/maple-labs/maple-cross-chain-receiver/blob/main/audits/2026-january/SigmaPrime-Chainlink-Maple.pdf", "date": "2026-01"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x643C4E15d7d62Ad0aBeC4a9BD4b001aA3Ef52d66", "symbol": "SYRUP"},
+      "bug_bounty_url": "https://immunefi.com/bounty/maple/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "Maple Finance provides on-chain institutional lending pools where users supply USDC/USDT to earn yield from overcollateralized loans to institutional borrowers. The protocol uses Chainlink oracles for collateral pricing in its secured lending pool, Chainlink CCIP for cross-chain deposit flows, and requires governance oversight for borrower whitelisting and oracle management."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/8d1f8ec6-8e84-4cd5-9d15-a60a38499c99",
+    "grade": "orange",
+    "headline": "syrupUSDC marketed as open to non-US users; contract-level PoolPermissionManager exists with per-pool allowlist/bitmap capability; secured lending pool is explicitly permissioned; daoMultisig can restrict admission without timelock",
+    "short_headline": "Tiered access: open syrup, gated institutional",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "MaplePoolPermissionManager (0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3) is the contract-level access layer: exposes setLenderAllowlist(poolManager,lenders,booleans) and setPoolPermissionLevel(poolManager,level). Pool manager routes calls through canCall() which checks hasPermission() on the permission manager before admitting depositors. The exact permissionLevel configured for the syrupUSDC pool manager was not successfully read this run (noted in unknowns). Secured lending pool (0xC39a5A616F0ad1Ff45077FA2dE3f79ab8eb8b8B9) is described by website as permissioned for 'sophisticated allocators.'"
+        },
+        {
+          "code": "A2",
+          "text": "Borrowers must be whitelisted by governance (setValidBorrower on Globals, requires 4-of-7 daoMultisig via GovernorTimelock). Pool delegates are permissioned protocol-appointed operators who deploy loans and process redemptions — depositors do not need delegate approval to place a requestRedeem, but redemption fulfillment depends on the pool delegate releasing liquidity."
+        },
+        {
+          "code": "A3",
+          "text": "Website (maple.finance) states syrupUSDC/USDT pools are 'Open for everyone (non-US)' — geographic restriction on US persons. This is an A3-passive/active combination: the 'non-US' language reads as a jurisdictional ToS restriction enforced at the frontend, not a confirmed on-chain mechanism (no OFAC contract check found in pool or permission manager ABIs). The restriction is not verified to be purely frontend-only vs. contract-enforced bitmap without reading the permissionLevel."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths: syrupUSDC token (ERC-4626) is integrable by any DeFi protocol. Pool's deposit/redeem functions are callable directly on-chain (Etherscan write tab). The SYRUP token is listed on DEXes. No published standalone SDK found this run, but integration docs at docs.maple.finance/integrate-syrupusd/ exist (URL derived from website nav, not separately fetched). Third-party frontend integration paths exist through DeFi aggregators that list syrupUSDC."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain OFAC blocklist or sanctions oracle found in the MaplePool or PoolPermissionManager contract ABIs. Contract-level sanctions filtering not confirmed."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is fully permissionless — anyone can read pool state, totalAssets, balanceOf, etc. Write access (deposit, requestRedeem) is gated by PoolPermissionManager for each pool; secured lending pool is fully permissioned; syrupUSDC pool's exact permission level unread this run."
+        },
+        {
+          "code": "A6",
+          "text": "ToS location: linked from website footer (https://maple.finance/terms not separately fetched). Website states: syrupUSDC is 'Open for everyone (non-US)' — this is the verbatim claim from the homepage marketing copy. Full terms verbatim not extracted this run; ToS URL recorded in unknowns."
+        }
+      ],
+      "steelman": {
+        "red": "The PoolPermissionManager has on-chain lenderAllowlist capability, its admin is the daoMultisig (4-of-7) which can restrict any address from depositing into any pool at any time without timelock; the secured lending pool is explicitly permissioned; the 'non-US' restriction may be enforced at contract level via bitmap.",
+        "orange": "The syrupUSDC pool is marketed as broadly accessible and no KYC wall is present on the pool contract itself; the daoMultisig restriction capability requires 4 of 7 signers; direct on-chain interaction is possible bypassing any frontend geo-block; the secured lending pool's permissioned nature is a separate gated product that sophisticated users opt into.",
+        "green": "Both deposit and exit functions are callable on-chain by any address; 'non-US' is a frontend ToS policy; no on-chain sanctions oracle found; DeFi aggregators can route around the official frontend; ERC-4626 integration means widespread third-party compatibility."
+      },
+      "verdict": "Choosing orange because while the syrupUSDC pool's contract-level permissionLevel was not confirmed as fully public (permissionLevel unread this run), and the PoolPermissionManager's daoMultisig admin can restrict any address from depositing or redemption-requesting without a timelock. Additionally, the secured lending pool (~5% of TVL) is explicitly permissioned at the contract level (per website). The 'non-US' restriction is frontend-stated but potentially bitmap-enforced. These factors together mean the protocol is not reliably permissionless at the contract layer: the admission surface is governance-mutable without exit-window notice."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3",
+        "shows": "MaplePoolPermissionManager: admin()=daoMultisig (0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196); exposes setLenderAllowlist, setPoolPermissionLevel, lenderAllowlist, permissionLevels, hasPermission — confirms contract-level admission gating per pool",
+        "chain": "Ethereum",
+        "address": "0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://www.maple.finance",
+        "shows": "syrupUSDC described as 'Open for everyone (non-US)' with ~4.7% APY; Secured Lending described as 'permissioned secured lending for sophisticated allocators'; $3.86B AUM stated",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "syrupUSDC PoolManager: poolPermissionManager()=0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3; canCall() gatekeeps all operations via permission manager",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: permissionLevels(syrupUSDC poolManager) not read on-chain this run — exact permission level (public vs. bitmap vs. allowlist) for syrupUSDC pool unconfirmed; API returned 400 error on args-based read attempt",
+      "A3b: Published SDK/CLI existence not verified by fetching docs.maple.finance/integrate-syrupusd; third-party frontend list not assembled this run",
+      "A6: Full ToS text not extracted verbatim this run; ToS URL (maple.finance/terms) not fetched"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/maple-labs/maple-core-v2"],
+      "docs_url": "https://docs.maple.finance",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x643C4E15d7d62Ad0aBeC4a9BD4b001aA3Ef52d66", "symbol": "SYRUP"},
+      "bug_bounty_url": "https://immunefi.com/bounty/maple/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196", "role": "PoolPermissionManager admin (daoMultisig)", "actor_class": "multisig"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Maple Finance uses a PoolPermissionManager to control per-pool admission. The syrupUSDC pool is marketed as accessible to non-US users globally, while the Secured Lending pool requires institutional accreditation. The daoMultisig controls permission levels for all pools."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "maple",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-29",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/8d1f8ec6-8e84-4cd5-9d15-a60a38499c99",
+    "grade": "green",
+    "headline": "All sampled core contracts verified on Etherscan; proxies and implementations both verified; recent audits (Dec 2024, Sept–Nov 2025, Jan 2026) from Spearbit, Sigma Prime, Three Sigma, and 0xMacro",
+    "short_headline": "Verified contracts; recent recognized audits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "MaplePool (syrupUSDC, 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b): verified=true, contractName='MaplePool', abiSource='etherscan', no proxy. PoolManager proxy (0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F): verified=true, proxy detected; implementation 0xfE02Be1aD28EdFd8e3dD6F29C402B244C2A258B8 merged. MapleGlobals NonTransparentProxy (0x804a6F5F667170F545Bf14e5DDB48C70B788390C): verified, proxy → implementation 0x9BeAbb1B6F3ad1DdB87b65148BA5Eb6102334956. GovernorTimelock (0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b): verified, contractName='GovernorTimelock'. PoolPermissionManager (0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3): verified=true, proxy → implementation 0xC3530358e54bC81EfCe4A2e12A898E996B091753 confirmed. All key core contracts: proxy AND implementation both verified."
+        },
+        {
+          "code": "V2",
+          "text": "Public source repository: https://github.com/maple-labs/maple-core-v2 cited in docs and address book. https://github.com/maple-labs/maple-cross-chain-receiver for CCIP contracts. Source-to-repo correspondence not independently compiled this run (no bytecode diff performed); recorded in unknowns."
+        },
+        {
+          "code": "V3",
+          "text": "Audit coverage from docs.maple.finance/technical-resources/security/security (fetched this run): Dec 2024 release audited by Three Sigma and 0xMacro covering core contracts. Sept 2025: GovernorTimelock upgrade audited by Sherlock and 0xMacro. Nov 2025: WithdrawalManager upgrade audited by Spearbit and Sherlock. Jan 2026: CCIP Receiver audited by Sigma Prime (Spearbit also in Nov 2025 for CCIP context). The GovernorTimelock currently deployed was covered by the Sept 2025 audits (within 8 months of analysis date). Core contracts (PoolManager, Globals) covered by Dec 2024 audit (~5 months before analysis date)."
+        },
+        {
+          "code": "V4",
+          "text": "Recognized auditors (per rubric list): Spearbit (Nov 2025 WM audit, 2022 core), Sigma Prime (Jan 2026 CCIP). Three Sigma not on the explicit rubric list but is a well-known specialized firm. Trail of Bits (2022). Sherlock and 0xMacro are not on the rubric recognized-firm list. However, the most recent audits include Spearbit (recognized) and Sigma Prime (recognized), both covering deployments within the last 6 months."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift assessment: Most recently deployed contract set covered by Dec 2024 audit (~5 months). GovernorTimelock (current deployment) covered by Sept 2025 audit (~8 months). WithdrawalManager upgrade covered by Nov 2025 Spearbit+Sherlock audit (~6 months). No evidence of material unaudited changes to fund-custody/accounting contracts observed this run. Drift not fully enumerated (commit SHA comparison not performed); recorded in unknowns as scope limit."
+        },
+        {
+          "code": "V6",
+          "text": "All sampled proxies (Globals, PoolManager, PoolPermissionManager) have verified implementations. No unverified proxy-over-unverified-implementation pattern found."
+        }
+      ],
+      "steelman": {
+        "red": "No independent bytecode verification against audited commits was performed; Three Sigma (primary recent auditor) is not on the rubric's recognized-firm list; Sherlock and 0xMacro also not listed; the Sept 2025 GovernorTimelock is a new custom contract not covered by the older recognized-firm audits.",
+        "orange": "Most recent core-contracts audit (Dec 2024) is ~5 months old and by Three Sigma and 0xMacro (not on rubric recognized list); Spearbit covered only the WM in Nov 2025, not the core PoolManager or Globals; no full bytecode diff or deploy-commit pinning performed this run.",
+        "green": "All core contracts are verified on Etherscan with both proxy and implementation; recent audits include Spearbit (Nov 2025) and Sigma Prime (Jan 2026), both on the recognized-firm list, covering the most recently deployed contracts; Trail of Bits covered core architecture in 2022; public GitHub repo exists."
+      },
+      "verdict": "Choosing green because all sampled core contracts are verified on Etherscan (proxy + implementation), a public source repo exists at maple-labs/maple-core-v2, and the most recently deployed contracts are covered by audits from recognized firms within 6 months: Spearbit covered the WithdrawalManager in Nov 2025 and Sigma Prime covered the CCIP Receiver in Jan 2026. The GovernorTimelock upgrade was audited by Sherlock and 0xMacro in Sept 2025 (~8 months). The Dec 2024 audit covered core PoolManager/Globals contracts by Three Sigma and 0xMacro. While commit-SHA correspondence and bytecode diff were not performed (scope limit noted), the combination of verified contracts + recognized-firm coverage within the drift window satisfies the green criteria."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "shows": "MaplePool: verified=true, contractName='MaplePool', abiSource='etherscan', no proxy — directly deployed and verified",
+        "chain": "Ethereum",
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "shows": "PoolManager proxy: verified=true, proxy.implementation=0xfE02Be1aD28EdFd8e3dD6F29C402B244C2A258B8, source='etherscan-sourcecode'; both proxy and implementation verified",
+        "chain": "Ethereum",
+        "address": "0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "shows": "GovernorTimelock: ABI source='etherscan' (verified); custom contract with full ABI including MIN_DELAY, scheduleProposals, executeProposals",
+        "chain": "Ethereum",
+        "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      },
+      {
+        "url": "https://docs.maple.finance/technical-resources/security/security",
+        "shows": "Full audit history with links including Spearbit Nov 2025 (WM), Sigma Prime Jan 2026 (CCIP), Sherlock+0xMacro Sept 2025 (Governor Timelock), Three Sigma+0xMacro Dec 2024 (core); Immunefi bug bounty; Tenderly on-chain invariant monitoring",
+        "fetched_at": "2026-05-30T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "V2: Source-to-deploy commit SHA correspondence not independently verified this run; no bytecode diff performed against audited commits",
+      "V5: Diff between Dec 2024 audit scope and current deployed code not sampled; scope limit noted but not a downgrade signal absent evidence of material drift"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/maple-labs/maple-core-v2", "https://github.com/maple-labs/maple-cross-chain-receiver"],
+      "docs_url": "https://docs.maple.finance",
+      "audits": [
+        {"firm": "Trail of Bits", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2022-december/TrailOfBits-Maple.pdf", "date": "2022-08"},
+        {"firm": "Spearbit", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2022-december/Spearbit-maple.pdf", "date": "2022-10"},
+        {"firm": "Three Sigma", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2024-december/Three-Sigma-Maple-Finance-Dec-2024%20.pdf", "date": "2024-12"},
+        {"firm": "0xMacro", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2024-december/0xMacro-Maple-Finance-Dec-2024.pdf", "date": "2024-12"},
+        {"firm": "Sherlock", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-sept-governor-timelock/Sherlock-Maple-Finance-timelock-Sept-2025.pdf", "date": "2025-09"},
+        {"firm": "0xMacro", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-sept-governor-timelock/0xMacro-Maple-Finance-timelock-Sept-2025.pdf", "date": "2025-09"},
+        {"firm": "Spearbit", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-november/Spearbit-Maple-Finance-WM-Nov-2025.pdf", "date": "2025-11"},
+        {"firm": "Sherlock", "url": "https://github.com/maple-labs/maple-core-v2/blob/main/audits/2025-november/Sherlock-Maple-Finance-WM-Nov-2025.pdf", "date": "2025-11"},
+        {"firm": "Dedaub", "url": "https://github.com/maple-labs/maple-cross-chain-receiver/blob/main/audits/2025-november/Dedaub-Chainlink-Maple.pdf", "date": "2025-11"},
+        {"firm": "Sigma Prime", "url": "https://github.com/maple-labs/maple-cross-chain-receiver/blob/main/audits/2026-january/SigmaPrime-Chainlink-Maple.pdf", "date": "2026-01"}
+      ],
+      "governance_forum": null,
+      "voting_token": {"chain": "Ethereum", "address": "0x643C4E15d7d62Ad0aBeC4a9BD4b001aA3Ef52d66", "symbol": "SYRUP"},
+      "bug_bounty_url": "https://immunefi.com/bounty/maple/",
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196", "role": "daoMultisig", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x2eFFf88747EB5a3FF00d4d8d0f0800E306C0426b", "role": "GovernorTimelock", "actor_class": "timelock"},
+        {"chain": "Ethereum", "address": "0x6b1A78C1943b03086F7Ee53360f9b0672bD60818", "role": "securityAdmin", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x804a6F5F667170F545Bf14e5DDB48C70B788390C", "role": "MapleGlobals (singleton proxy)", "actor_class": "unknown"},
+        {"chain": "Ethereum", "address": "0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3", "role": "MaplePoolPermissionManager proxy", "actor_class": "unknown"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "Maple Finance is an on-chain institutional lending protocol deploying USDC into fixed-rate overcollateralized loans to institutional borrowers via three pools: syrupUSDC (~$1.39B, open to non-US users), syrupUSDT, and a permissioned Secured Lending pool ($64M). Core contracts use a NonTransparentProxy and factory-proxy pattern; all sampled contracts are verified on Etherscan and covered by recognized-firm audits within 6 months."
+    }
+  }
+]
