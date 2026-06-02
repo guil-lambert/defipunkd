@@ -1,0 +1,308 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/b022b0df-7f78-40b5-b1f3-8659a2513305",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "T1 upgrade reachable via 10-day timelock proposed by 3-of-5 (Protocol Council) or 3-of-6 (Operations) multisig — delay clears 7 days, but proposing multisig fails Security Council size criterion.",
+    "short_headline": "10-day timelock, sub-SC proposer",
+    "rationale": {
+      "findings": [
+        { "code": "C1", "text": "StrategyManager proxy owner() returns 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 (Executor Multisig). DelegationManager has no owner() (pause-guarded only). Both are TransparentUpgradeableProxy with admin set to OZ ProxyAdmin 0x8b9566AdA63B64d1E1dcF1418b43fd1433b72444 per README deployment table." },
+        { "code": "C2", "text": "Upgradeability: TransparentUpgradeableProxy@OZ-4.7.1/4.9.0 for core (StrategyManager, DelegationManager, EigenPodManager, AVSDirectory, AllocationManager, RewardsCoordinator, PermissionController, EmissionsController). ProxyAdmin (0x8b9566AdA...) is the upgrade authority and is itself a smart contract gated by the Timelock per the published architecture." },
+        { "code": "C3", "text": "Uncontested fast path: Proposer multisig (Protocol Council 3-of-5 or Operations Multisig) → schedule() to TimelockController 0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d (getMinDelay = 864000s = 10 days, read on-chain at block 25231788) → execute() by Executor Multisig 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 → ProxyAdmin.upgrade(). Total uncontested delay: 10 days." },
+        { "code": "C4", "text": "Multisigs (per README and on-chain reads): Community Multisig 0xFEA47018D632A77bA579846c840d5706705Dc598 verified on-chain as 9-of-13 (getThreshold=9, getOwners returned 13 addresses, block 25231788). Pauser Multisig 0x5050389572f2d220ad927CcbeA0D406831012390 (per address_book and protocol blog: 1-of-9 emergency pause only). Executor Multisig 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 (unpauser per PauserRegistry). Operations Multisig 0xBE1685C81aA44FF9FB319dD389addd9374383e90 (per address_book: 3-of-6). Protocol Council Multisig 0x461854d84ee845f905e0ecf6c288ddeeb4a9533f (per Eigen Foundation technical architecture: 3-of-5; 2 Eigen Foundation + 3 external). Signer identities and insider/non-insider classification not independently verified this run for the routine-upgrade proposers." },
+        { "code": "C5", "text": "No on-chain Governor / GovernorBravo / OZ Governor / Aragon Voting contract is part of the core architecture; governance is multisig-and-timelock. EIGEN token (0xec53bf9167f50cdeb3ae105f56099aaab9061f83) holders do not directly vote on upgrades on-chain at present." },
+        { "code": "C6", "text": "Emergency powers: Pauser Multisig (1-of-9) holds PAUSER role via PauserRegistry 0xB8765ed72235d279c3Fb53936E4606db0Ef12806 (unpauser() = 0x369e...111 verified on-chain). Pauser can call pause()/pauseAll() on core contracts without timelock; unpause requires Executor and is governance-gated. No on-chain MAX_PAUSE_DURATION constant in the contracts read this run." },
+        { "code": "C7", "text": "Highest reachable tier on the fast path: T1. The ProxyAdmin can upgradeAndCall() the implementation of fund-holding contracts (StrategyManager, DelegationManager, EigenPodManager) — replacing implementation can change accounting, fund flow, or drain user funds. Bound by the 10-day timelock delay on the schedule→execute path." }
+      ],
+      "steelman": {
+        "red": "If any proposer multisig is compromised and the 10-day timelock could be bypassed (e.g., via a parallel emergency path), a single 3-of-5 ish actor could schedule a T1 implementation swap.",
+        "orange": "The proposing multisigs that sit on the T1 upgrade path (Protocol Council 3-of-5, Operations 3-of-6) fail the Security Council size criterion (<7 signers), even though the 10-day timelock comfortably clears the 7-day exit-window bar — per the rubric this configuration is explicitly orange.",
+        "green": "The 10-day timelock (864000s, read on-chain) gives users a longer-than-7-day uncontested exit window for any T1 upgrade, the upgrade authority is a smart contract (not an EOA), routine upgrades require multiple parties (proposer + executor), and the architecture matches the rubric's structure for T1-with-≥7-day-delay."
+      },
+      "verdict": "Choosing orange because the 10-day timelock (verified on-chain at getMinDelay=864000s) clears the 7-day green bar on delay alone, but the multisigs that sit on the T1 upgrade path (Protocol Council 3-of-5, Operations Multisig 3-of-6) explicitly fail the Security Council size criterion (≥7 signers) — the rubric calls this exact configuration orange ('a multisig failing one or more Security Council criteria sits on a T1/T2 path'). The Community Multisig (9-of-13) does pass on size/threshold but is positioned as emergency governance, and signer non-insider status was not verified on-chain this run; the routine T1 upgrade path operates through the smaller multisigs."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d", "shows": "TimelockController getMinDelay() = 864000 seconds (= 10 days), pinned to block 25231788. Roles: PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE, TIMELOCK_ADMIN_ROLE present. Write methods include schedule, execute, scheduleBatch, executeBatch, cancel, updateDelay.", "chain": "Ethereum", "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xFEA47018D632A77bA579846c840d5706705Dc598", "shows": "Community Multisig (GnosisSafe v1.3.0): getThreshold() = 9, getOwners() returned 13 unique owner addresses, block 25231788. Confirms 9-of-13 configuration.", "chain": "Ethereum", "address": "0xFEA47018D632A77bA579846c840d5706705Dc598", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "shows": "StrategyManager TransparentUpgradeableProxy with implementation 0x88582996b70FDd7C4f16e3Fde7B53858FcE0d394, version 1.12.0. owner() = 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 (Executor). pauserRegistry() = 0xB8765ed72235d279c3Fb53936E4606db0Ef12806. ABI exposes changeAdmin, upgradeTo, upgradeToAndCall (proxy admin functions, callable only by admin).", "chain": "Ethereum", "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "shows": "DelegationManager TransparentUpgradeableProxy, implementation 0xE7022a128Acd4C6cad7aFf6FA874D61f984BcE75, version 1.9.0. minWithdrawalDelayBlocks = 100800 (= 14 days at 12s/block). pauserRegistry = 0xB8765ed72235d279c3Fb53936E4606db0Ef12806. Has pause/pauseAll/unpause and upgradeTo/upgradeToAndCall/changeAdmin functions.", "chain": "Ethereum", "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "shows": "PauserRegistry: unpauser() = 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 (Executor Multisig), pinned block 25052323. ABI exposes setIsPauser(address,bool) — nonpayable, setUnpauser(address) — nonpayable.", "chain": "Ethereum", "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md", "shows": "Mainnet Ethereum deployment table on v1.12.0. Lists core proxies (DelegationManager, StrategyManager, EigenPodManager, AVSDirectory, RewardsCoordinator, PermissionController, AllocationManager, EmissionsController) all as TransparentUpgradeableProxy with implementations on OZ TUP@4.7.1 or 4.9.0. Multisigs table identifies PauserRegistry 0xB876...2806, Timelock 0xC06F...Aa2d, bEIGEN Timelock 0x7381...bc53, OZ Proxy Admin 0x8b95...2444, Pauser Multisig, Community Multisig, Executor Multisig, Operations Multisig 0xBE1685..., Protocol Council Multisig 0x461854..., Foundation Multisig, BEIGEN Executor Multisig.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://docs.eigenfoundation.org/protocol-governance/technical-architecture", "shows": "Documented governance design: Protocol Council = 3-of-5 Gnosis Safe (2 Eigen Foundation + 3 external members), routes through 10-day primary timelock 0xC06F...Aa2d. Operations Multisig and Protocol Council are the only two parties with proposer power. Executor Multisig executes after timelock delay. bEIGEN-only timelock at 0x738130...bc53.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://blog.eigencloud.xyz/eigenlayer-stage-1-mainnet-launch/", "shows": "Protocol blog: 'The Operations Multisig is a 3-of-5 and can execute routine upgrades and maintenance through a timelock that enforces a minimum 10-day delay on all safety-critical actions. It can also pause EigenLayer functionality in emergency situations. The Pauser Multisig is a 1-of-9 multisig that can also pause EigenLayer functionality in emergency situations, but holds no other powers.' Note: initial launch description; current Protocol Council architecture supersedes some details.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xbe1685c81aa44ff9fb319dd389addd9374383e90", "shows": "Operations Multisig is a GnosisSafeProxy (constructor takes _singleton). Bare 2-entry ABI returned — defipunkd proxy resolution to the Safe singleton did not surface threshold/owners for this address in this run.", "chain": "Ethereum", "address": "0xBE1685C81aA44FF9FB319dD389addd9374383e90", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x369e6F597e22EaB55fFb173C6d9cD234BD699111", "shows": "Executor Multisig is a GnosisSafeProxy. Bare 2-entry proxy ABI returned — threshold and owners not directly readable through the surfacer in this run.", "chain": "Ethereum", "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111", "fetched_at": "2026-05-31T00:00:00Z" }
+    ],
+    "unknowns": [
+      "C4: Operations Multisig (0xBE1685...e90) threshold and owners could not be read on-chain in this run — defipunkd surfacer returned bare GnosisSafeProxy ABI without singleton merge, /api/contract/read on getThreshold returned 400. Documented as 3-of-5 (blog) or 3-of-6 (address_book) — sources disagree.",
+      "C4: Executor Multisig (0x369e...111), Pauser Multisig (0x5050...390), Protocol Council Multisig (0x461854...) thresholds and owners not directly read on-chain in this run for the same reason.",
+      "C4-offchain: Community Multisig 9-of-13 owners — insider/non-insider classification not performed; signers' affiliations not verified against public announcements. Without this, the Security Council criterion 'every signer publicly announced and ≥50% non-insider' is undetermined.",
+      "C2: ProxyAdmin (0x8b9566AdA...) owner not directly read this run (defipunkd address page outside allowlist; /api/contract/read returned 400). Per the published governance design, the ProxyAdmin is owned by the Executor Multisig and goes through the Timelock; not independently verified on-chain in this run.",
+      "C3-offchain: Exact PROPOSER_ROLE / EXECUTOR_ROLE / CANCELLER_ROLE holders on the Timelock 0xC06F...Aa2d not enumerated on-chain (hasRole reads not performed). The architecture is reported by the Eigen Foundation page; not re-verified."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Layr-Labs/eigenlayer-contracts", "https://github.com/Layr-Labs/eigenlayer-middleware"],
+      "docs_url": "https://docs.eigencloud.xyz",
+      "audits": [
+        { "firm": "Sigma Prime", "url": "https://github.com/sigp/public-audits/blob/master/reports/eigenlayer/Sigma_Prime_Layr_Labs_EigenLayer_Slashing_Security_Assessment_Report_v2_0.pdf", "date": "2024" },
+        { "firm": "Certora", "url": "https://www.certora.com/reports/eigenlayer-pepe", "date": "2024-08" }
+      ],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md",
+      "admin_addresses": [
+        { "chain": "Ethereum", "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d", "role": "Primary upgrade Timelock (10-day delay; getMinDelay=864000s verified on-chain)", "actor_class": "timelock" },
+        { "chain": "Ethereum", "address": "0x738130BC8eADe1Bc65A9c056DEa636835896bc53", "role": "bEIGEN-only upgrade Timelock", "actor_class": "timelock" },
+        { "chain": "Ethereum", "address": "0xFEA47018D632A77bA579846c840d5706705Dc598", "role": "Community Multisig (9-of-13 verified on-chain) — emergency governance", "actor_class": "multisig" },
+        { "chain": "Ethereum", "address": "0xBE1685C81aA44FF9FB319dD389addd9374383e90", "role": "Operations Multisig — routine upgrade proposer via timelock", "actor_class": "multisig" },
+        { "chain": "Ethereum", "address": "0x461854d84ee845f905e0ecf6c288ddeeb4a9533f", "role": "Protocol Council Multisig (3-of-5 per Eigen Foundation docs) — proposer / executor", "actor_class": "multisig" },
+        { "chain": "Ethereum", "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111", "role": "Executor Multisig — unpauser in PauserRegistry; owner() of StrategyManager", "actor_class": "multisig" },
+        { "chain": "Ethereum", "address": "0x5050389572f2d220ad927CcbeA0D406831012390", "role": "Pauser Multisig (1-of-9) — emergency pause only", "actor_class": "multisig" },
+        { "chain": "Ethereum", "address": "0x8b9566AdA63B64d1E1dcF1418b43fd1433b72444", "role": "OZ ProxyAdmin for TransparentUpgradeableProxy core contracts", "actor_class": "unknown" },
+        { "chain": "Ethereum", "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "role": "PauserRegistry — unpauser=Executor Multisig (verified on-chain)", "actor_class": "unknown" }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer is the Ethereum-based restaking protocol underlying EigenCloud, allowing users to deposit liquid staking tokens or natively-staked ETH (via EigenPods) to provide cryptoeconomic security to Autonomous Verifiable Services (AVSs). Users delegate restaked stake to Operators, who opt in to slashing conditions; rewards flow through the RewardsCoordinator and slashing through the AllocationManager. Core contracts (StrategyManager, DelegationManager, EigenPodManager) are TransparentUpgradeableProxy upgradeable via a 10-day OZ TimelockController."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/b022b0df-7f78-40b5-b1f3-8659a2513305",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Permissionless 14-day queued withdrawal, but 1-of-9 Pauser can pause both queueWithdrawals and completeQueuedWithdrawal indefinitely (no on-chain time cap); unpause requires Executor.",
+    "short_headline": "14-day queue, indefinite pause",
+    "rationale": {
+      "findings": [
+        { "code": "E1", "text": "User-facing exit functions read from DelegationManager (0x39053D...37A) ABI: queueWithdrawals((address[],uint256[],address)[]), completeQueuedWithdrawal((tuple),address[],bool), completeQueuedWithdrawals((tuple)[],address[][],bool[]), undelegate(address), redelegate(address,(bytes,uint256),bytes32). StrategyManager (0x858646...75A) exposes withdrawSharesAsTokens(address,address,address,uint256) (DelegationManager-only callable) and removeDepositShares (DelegationManager-only callable). EigenPodManager handles native ETH restaking exits via beacon chain proofs (not enumerated this run)." },
+        { "code": "E2", "text": "Both queueWithdrawals (new-request placement) and completeQueuedWithdrawal (claim of finalized exit after 14-day wait) are gated by the contract's paused() / paused(uint8) state, which is managed through pauserRegistry. The two operations share the same pause framework — the ABI exposes pause(uint256) and pauseAll() write functions on DelegationManager." },
+        { "code": "E3", "text": "PauserRegistry 0xB8765e...2806 unpauser() = 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 (Executor Multisig) verified on-chain. Pauser set (those for whom isPauser==true) and exact pause-bit-to-function mapping not enumerated in this run — hasRole/isPauser reads were not all run. No PAUSE_INFINITELY constant or MAX_PAUSE_DURATION constant present in the read ABI; pauses persist until unpaused." },
+        { "code": "E4", "text": "Emergency vs governance pause: Per protocol blog and address_book, the Pauser Multisig 0x5050389572... is a 1-of-9 (any single signer can pause for emergencies). The Executor Multisig is the unpauser and is governance-gated (typically operating through the 10-day Timelock for unpause and other governance actions). Direct 1-of-9 threshold not re-read on-chain this run (defipunkd surfacer did not merge Safe singleton ABI for this address)." },
+        { "code": "E5", "text": "Queued redemption: minWithdrawalDelayBlocks = 100800 (verified on-chain on DelegationManager, block 25045790) — at 12s/block this is ~14 days. No daily withdrawal cap in the read ABI. The queue itself is pausable (queueWithdrawals is pause-guarded)." },
+        { "code": "E6", "text": "No on-chain forced-exit / escape-hatch / permissionless emergency-exit mechanism is present in the read ABIs. Exit is permissionless in steady state but depends on contract state not being paused." },
+        { "code": "E7", "text": "All exit functions (queueWithdrawals, completeQueuedWithdrawal, undelegate, redelegate) are directly callable on-chain via Etherscan Write Contract tab or any wallet — no frontend dependency." }
+      ],
+      "steelman": {
+        "red": "Both queueWithdrawals and completeQueuedWithdrawal can be paused by the 1-of-9 Pauser Multisig with no on-chain time cap and no carve-out for claims of already-finalized withdrawals; the rubric explicitly flags 'ANY actor can pause CLAIMS of finalized exits indefinitely' as a red condition, and any single one of nine signers acting alone is essentially 'ANY actor'.",
+        "orange": "The 1-of-9 emergency pauser sits below the green bar (no time cap, broad scope) but above the literal red trigger (the rubric reserves red for 'single EOA / 2-of-3 multisig with no time cap'); the unpause is held by a separate, governance-gated Executor; the 14-day queue means stakers know about the exit pipeline well in advance; in normal operation exit is permissionless.",
+        "green": "Exit is permissionless, has no admin signature requirement, no whitelist, no frontend dependency, and the 14-day queue is well-known and on-chain-verifiable."
+      },
+      "verdict": "Choosing orange because the exit primitives are themselves permissionless (queueWithdrawals + completeQueuedWithdrawal callable by anyone with no admin signature, no frontend lock-in) but the contracts contain a pause framework gated by a 1-of-9 emergency Pauser with no on-chain time cap and (to the extent verified) no exemption for claims of already-finalized withdrawals — that defeats green. The literal red trigger ('pause held by a single EOA / 2-of-3 multisig with no time cap') doesn't apply because Pauser is 1-of-9, and the unpauser is the more robust Executor Multisig (governance-gated). The orange branch ('pausable with broad scope OR claims-of-finalized are exempt but new-request placement can be paused indefinitely by governance') fits best given the documented emergency-only scope and the separation between pause and unpause roles."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "shows": "DelegationManager ABI exposes queueWithdrawals, completeQueuedWithdrawal, completeQueuedWithdrawals, undelegate, redelegate as user-callable exit functions, and pause(uint256), pauseAll(), unpause(uint256). minWithdrawalDelayBlocks() = 100800 read on-chain at block 25045790. pauserRegistry() = 0xB8765e...2806. paused() = 0 at snapshot.", "chain": "Ethereum", "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "shows": "StrategyManager ABI exposes depositIntoStrategy, depositIntoStrategyWithSignature, withdrawSharesAsTokens (callable by DelegationManager only per OnlyDelegationManager error), and pause(uint256), pauseAll(), unpause(uint256). pauserRegistry() = 0xB8765e...2806. paused() = 0 at snapshot. owner() = 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 (Executor).", "chain": "Ethereum", "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "shows": "PauserRegistry: unpauser() returns Executor Multisig 0x369e6F597e22EaB55fFb173C6d9cD234BD699111. isPauser(address) is the per-address check (not enumerated for all candidates this run). No MAX_PAUSE_DURATION view method present.", "chain": "Ethereum", "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md", "shows": "Identifies Pauser Multisig at 0x5050389572f2d220ad927CcbeA0D406831012390 and Executor Multisig at 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 as separate Gnosis Safes on Mainnet Ethereum; PauserRegistry at 0xB8765ed72235d279c3Fb53936E4606db0Ef12806 listed under Multisigs.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://blog.eigencloud.xyz/eigenlayer-stage-1-mainnet-launch/", "shows": "Protocol launch post describes Pauser Multisig as 1-of-9 with emergency-pause scope and 'no other powers', and Operations Multisig as 3-of-5 routing through a 10-day timelock for routine upgrades.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" }
+    ],
+    "unknowns": [
+      "E2: Exact pause-bit (uint256 index) → function mapping for DelegationManager and StrategyManager not enumerated on-chain — cannot confirm whether queueWithdrawals and completeQueuedWithdrawal are gated by the same or different bits, i.e. whether claims-of-finalized can be exempted under any pause configuration.",
+      "E3: Which addresses currently have isPauser==true on PauserRegistry not enumerated (would require multiple hasRole/isPauser reads). The Pauser Multisig 0x5050... is the documented holder, but other addresses may also hold pauser status.",
+      "E4: Pauser Multisig (0x5050...) threshold not re-read on-chain this run — defipunkd surfacer returned bare GnosisSafeProxy ABI; /api/contract/read on getThreshold returned 400. Relying on protocol blog and address_book for the 1-of-9 claim.",
+      "E5: Whether any on-chain MAX_PAUSE_DURATION or auto-expiry mechanism exists on Pausable.sol base — not enumerated this run; the surfaced ABIs do not show one. Pauses are persistent until unpaused."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Layr-Labs/eigenlayer-contracts"],
+      "docs_url": "https://docs.eigencloud.xyz",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md",
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer restaking exits are queued: users call queueWithdrawals on DelegationManager, wait at least 100800 blocks (~14 days, minWithdrawalDelayBlocks verified on-chain), then call completeQueuedWithdrawal to either receive tokens or re-delegate. Both placement and claim are subject to the same pause framework, controlled by PauserRegistry."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/b022b0df-7f78-40b5-b1f3-8659a2513305",
+    "grading_basis": "on-chain",
+    "grade": "green",
+    "headline": "Core restaking has no external oracle / price-feed dependency, no bridge dependency for principal, and per-strategy isolation of underlying-asset risk — impacted TVS from any single external dependency failure: effectively 0.",
+    "short_headline": "No external deps for principal",
+    "rationale": {
+      "findings": [
+        { "code": "A1", "text": "No external oracle / price feed / AMM read in core contract ABIs. DelegationManager ABI (102 entries) and StrategyManager ABI (84 entries) read this run contain no calls to Chainlink/Pyth/Redstone interfaces, no latestAnswer/latestRoundData/getPrice methods, and no AggregatorV3 imports surfaced. Strategy shares are tracked in protocol-native accounting; conversion to underlying tokens is internal to each Strategy contract." },
+        { "code": "A2", "text": "No off-chain oracle committee reporting INTO core; restaking does not require off-chain valuation. For native ETH restaking via EigenPods, validator behavior is the substrate (Ethereum PoS) — per the rubric, this is NOT counted as an external dependency when operator diversity is broad; node operators are user-chosen per delegation and slashing is opt-in. AVS off-chain committees report into AVS-specific contracts, not into core restaking principal accounting." },
+        { "code": "A3", "text": "Cross-chain dependencies: EigenLayer's multichain protocol (CrossChainRegistry, OperatorTableUpdater, ECDSACertificateVerifier, BN254CertificateVerifier) transports AVS stake metadata from Ethereum (source) to Base (destination) for AVS verification. User principal stays on Ethereum mainnet — Base is destination-only for task verification, not for staking. No material TVL of user principal sits on a non-canonical bridge for this protocol." },
+        { "code": "A4", "text": "Underlying collateral risk: EigenLayer wraps third-party LSTs (stETH, rETH, cbETH, ETHx, ankrETH, OETH, osETH, swETH, wBETH, sfrxETH, lsETH, mETH) and the protocol's own EIGEN/bEIGEN into per-strategy isolated contracts. A failure of any one LST does NOT propagate to stakers in other LST strategies — risk is per-market opt-in. Per the rubric carve-out, this is not autonomy-red on its own." },
+        { "code": "A5", "text": "Fork lineage: EigenLayer is original protocol design (pioneer of restaking primitive); no forkedFrom relationship." },
+        { "code": "A6", "text": "Fallback / circuit breaker: The 14-day withdrawal queue (minWithdrawalDelayBlocks=100800, verified on-chain) acts as an extended exit window allowing users to react before any external counterparty's failure plays out. PauserRegistry exists for emergency pause (LIVE, in (i) activation state). No second-opinion oracle is required because no oracle is consulted." },
+        { "code": "A7", "text": "Sequencer / L1-liveness: EigenLayer is deployed on Ethereum mainnet (substrate, not A7 dependency). Base deployment is destination-only for AVS verification — Base sequencer failure would impact AVS verification on Base but not principal on Ethereum." },
+        { "code": "A8", "text": "Keeper / relayer / off-chain bot liveness: Users themselves call queueWithdrawals and completeQueuedWithdrawal — no keeper required to advance withdrawals. AVS-specific keepers exist within AVS contracts but are separate from core restaking principal flow." },
+        { "code": "A9", "text": "Governance-mutable dependency surface: The PauserRegistry can have its isPauser set changed by the unpauser. The proxy admin can upgrade any core contract implementation. However, A9 specifically asks whether governance can introduce a NEW EXTERNAL dependency without timelock. Core staking has no external dependency to introduce — strategies are per-asset and opt-in; users self-select which strategies to deposit into. The 10-day timelock guards core upgrades, giving stakers an exit window." }
+      ],
+      "steelman": {
+        "red": "If governance silently upgrades a Strategy implementation to one that calls an external oracle or trusts an external committee for share accounting, all stakers in that strategy could be exposed; the 10-day timelock is short relative to the discovery time, and not all strategies may be timelock-gated.",
+        "orange": "EigenLayer's slashing is performed by AVS contracts whose code is not part of the core review here — operator opt-in to an AVS introduces dependency on that AVS's slashing logic, which can be code with bugs; if slashing is mis-applied, principal can be lost.",
+        "green": "Core restaking has no on-chain oracle dependency, no required off-chain committee for principal accounting, no bridge dependency for user principal (mainnet-only deposits), and per-strategy isolation prevents cross-market contagion — failure of any single external system the protocol touches cannot cause loss of principal for stakers in other markets."
+      },
+      "verdict": "Choosing green because the A1–A9 inspection of DelegationManager and StrategyManager ABIs shows no external oracle/price-feed calls, no required off-chain committee to mint/burn shares, no bridge carrying user principal off-chain, and per-strategy isolation of underlying-asset risk. The Stage 2 anchor fits: failure of any single external dependency cannot cause loss of user principal in core restaking. AVS-level risk is opt-in per operator delegation (users choose which operators, who choose which AVSs to opt into) — outside core principal scope. The 14-day withdrawal queue further bounds exposure."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "shows": "DelegationManager full ABI (102 entries) contains no oracle/aggregator/getPrice/latestAnswer methods. External contract references are limited to strategyManager (0x858646...75A), eigenPodManager (0x91E677...338), allocationManager (0x948a420...c39), pauserRegistry (0xB8765e...806), permissionController (0x25E5F8...0E5) — all protocol-internal addresses listed in EigenLayer deployments.", "chain": "Ethereum", "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "shows": "StrategyManager full ABI (84 entries) contains no oracle calls. Internal-only references: allocationManager, delegation (DelegationManager), pauserRegistry, strategyWhitelister (StrategyFactory 0x5e4C39...647). Per-staker accounting via stakerDepositShares(address,address) maps user → strategy → shares; conversion to underlying happens inside each Strategy contract.", "chain": "Ethereum", "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md", "shows": "Mainnet deployment lists 12 LST strategies plus EigenStrategy (EIGEN) plus Beacon Chain ETH placeholder. Per-strategy isolation: each LST has its own StrategyBase proxy. Multichain table shows Base deployment is destination-only ('Base only supports verification of tasks from stake that lives on Mainnet Ethereum. Standard core protocol functionality (restaking, slashing) does not exist on Base.').", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "shows": "PauserRegistry is internally controlled (setIsPauser, setUnpauser are write methods callable only by unpauser). No external committee or oracle role in the pauser registry itself.", "chain": "Ethereum", "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "fetched_at": "2026-05-31T00:00:00Z" }
+    ],
+    "unknowns": [
+      "A1: Per-strategy Strategy contract internals (e.g., StrategyBaseTVLLimits) — not directly read this run; if any individual Strategy implementation reads an external oracle for share-to-underlying conversion, it would be a per-market dependency. The shared StrategyBase implementation at 0xB427E2Eb...7230 was not directly inspected on defipunkd this run.",
+      "A4: For native ETH restaking via EigenPods, beacon-chain proof verification details and operator-set diversity figures — not enumerated this run. Per rubric, ETH PoS substrate counts only when operator set is non-diversified; EigenLayer's operator set has historically been broad (>30 independent operators) but not re-counted this run.",
+      "A6: Whether the WITHDRAWAL_DELAY constant or other circuit breakers can be lowered by governance without a 10-day timelock — not explicitly tested; the read DelegationManager exposes minWithdrawalDelayBlocks as a view with no setter in the surfaced ABI (the value is set in the constructor as an immutable parameter), suggesting it cannot be lowered post-deployment without an implementation upgrade.",
+      "A9: Whether the AllocationManager can register a NEW external dependency (a new slashing-condition contract that this protocol then trusts) without the 10-day timelock — AllocationManager not deeply inspected this run for governance-mutable external surfaces."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Layr-Labs/eigenlayer-contracts"],
+      "docs_url": "https://docs.eigencloud.xyz",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md",
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer's core restaking accounting (deposit shares, delegation shares, withdrawal queue) runs entirely on-chain without external oracle dependencies. Per-strategy isolation means each underlying asset's risk stays in its own market; cross-chain extensions (Base) carry AVS verification metadata only, not user principal."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/b022b0df-7f78-40b5-b1f3-8659a2513305",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "depositIntoStrategy, queueWithdrawals, completeQueuedWithdrawal all permissionless on-chain; no contract-level KYC/whitelist on users; ecosystem of LRTs and third-party frontends provides multiple independent access paths.",
+    "short_headline": "Permissionless contracts, many paths",
+    "rationale": {
+      "findings": [
+        { "code": "A1", "text": "No whitelist/allowlist modifier on user-facing entry points in the read ABIs. depositIntoStrategy(address strategy, address token, uint256 amount), depositIntoStrategyWithSignature(...), queueWithdrawals(...), completeQueuedWithdrawal(...), delegateTo(...), undelegate(...) are all callable without isKYCed/isAccredited/onlyWhitelisted checks. Strategy whitelisting on StrategyManager applies to which strategies can accept deposits, not to which users can deposit (anyone deploying a strategy via the permissionless StrategyFactory automatically gets it whitelisted per the README's 'Anyone can deploy and whitelist strategies for standard ERC20s by using the StrategyFactory')." },
+        { "code": "A2", "text": "No off-chain operator approval required to admit a user deposit/withdrawal. The Pauser Multisig can pause but does not gate individual user admissions. No 'admit user' role found in the surfaced ABIs." },
+        { "code": "A3", "text": "Frontend ToS at https://docs.eigencloud.xyz/products/eigenlayer/legal/terms-of-service — direct fetch blocked by docs site bot protection this run. Frontend ToS posture is reported as context only and does not move the grade." },
+        { "code": "A3b", "text": "Independent access paths exist: (i) direct contract interaction via Etherscan Write tab on each proxy address; (ii) the public github.com/Layr-Labs/eigenlayer-contracts repo provides scripts and integration tests for SDK-style access; (iii) a large ecosystem of LRT protocols (Renzo, EtherFi, Puffer, KelpDAO, Swell, etc.) integrates with EigenLayer permissionlessly and routes user deposits through the core contracts — each is operated by a separate legal entity. Independent path existence is not in doubt." },
+        { "code": "A4", "text": "No on-chain sanctions / blocklist checks in core ABIs. PermissionController (0x25E5F8...0E5) per README is for UAM delegation (operator → admin permissioning), not user sanctions screening." },
+        { "code": "A5", "text": "Read access is permissionless (view methods are public on all proxies inspected). Write access: user-facing functions (deposit, queue, complete, delegate, undelegate) are public; operator-only / DelegationManager-only / AllocationManager-only functions exist for cross-contract calls per OnlyDelegationManager/OnlyEigenPodManager/OnlyAllocationManager errors — these are internal-coordination access controls, not user-admission controls." },
+        { "code": "A6", "text": "Verbatim ToS quote could not be extracted this run — docs.eigencloud.xyz returned bot-detection block. ToS URL recorded in unknowns[]." }
+      ],
+      "steelman": {
+        "red": "If the official frontend at eigencloud.xyz enforces strong runtime geo-blocking or wallet screening and no documented alternative paths exist for casual users, practical access could be limited (though this would not affect the grade per the rubric, which weighs A3b path existence over A3 publisher policy).",
+        "orange": "If contracts admit users unconditionally but there are no third-party SDKs, no third-party frontends, and no aggregator routing, the protocol would be operationally captured by the official publisher.",
+        "green": "Core contracts admit users unconditionally with no contract-level KYC, no on-chain sanctions check, no operator-approval requirement; multiple independent access paths exist (public source repo with integration tests, ecosystem of LRT protocols, direct Etherscan interaction); the rubric default for this profile is green."
+      },
+      "verdict": "Choosing green because contracts are fully permissionless on user entry/exit (no whitelist, no KYC, no operator-approval-to-admit), independent access paths are abundant (public repo, LRT protocols, direct contract interaction), and per the rubric default 'when contracts are fully permissionless AND any A3b independent path exists, the default grade is green regardless of frontend ToS or A3-active enforcement on the official UI'. Frontend ToS posture is not the grade lever."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "shows": "StrategyManager depositIntoStrategy(address,address,uint256) and depositIntoStrategyWithSignature(...) are nonpayable write functions with no onlyWhitelisted/isKYCed/onlyAccredited modifier visible in the ABI. The only deposit-gating logic visible is 'StrategyNotWhitelisted' error referring to strategy admission, not user admission.", "chain": "Ethereum", "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "shows": "DelegationManager queueWithdrawals, completeQueuedWithdrawal(s), delegateTo, undelegate, redelegate, registerAsOperator are all nonpayable public write methods with no user-allowlist modifier. Error list does not include any KYC/sanctions-style error.", "chain": "Ethereum", "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md", "shows": "'Anyone can deploy and whitelist strategies for standard ERC20s by using the StrategyFactory deployed to the address below' — strategy whitelisting via the StrategyFactory at 0x5e4C39Ad...647 is permissionless. Public source repo provides integration tests and scripts as an SDK alternative to any official UI.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://www.eigencloud.xyz/", "shows": "Official EigenCloud site footer references blog.eigencloud.xyz, forum.eigenlayer.xyz, github.com/Layr-Labs, docs.eigencloud.xyz, and links to Terms of Service / Acceptable Use Policy pages — i.e. acknowledges the published ToS posture but does not gate the underlying contracts.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" }
+    ],
+    "unknowns": [
+      "A6: ToS verbatim quote not extracted — direct fetch to docs.eigencloud.xyz Terms of Service URL was blocked by bot detection this run. Cannot report runtime A3-active enforcement (geo-blocking, wallet screening) on the official frontend without a successful fetch."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Layr-Labs/eigenlayer-contracts"],
+      "docs_url": "https://docs.eigencloud.xyz",
+      "audits": [],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md",
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "Anyone holding a whitelisted LST (or ETH via EigenPods) can deposit into EigenLayer strategies on Ethereum without permission, delegate to any registered operator, and withdraw via the 14-day queue. Strategy whitelisting itself is permissionless via the StrategyFactory."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "claude-opus-4-7",
+    "chat_url": "https://claude.ai/share/b022b0df-7f78-40b5-b1f3-8659a2513305",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "All core proxies and implementations verified on Etherscan via defipunkd ABI source 'etherscan'; public Layr-Labs/eigenlayer-contracts repo with version-pinned releases; multiple audits by recognized firms (Sigma Prime, Certora, Consensys Diligence).",
+    "short_headline": "Verified + audited + repo'd",
+    "rationale": {
+      "findings": [
+        { "code": "V1", "text": "Defipunkd's /api/contract/abi for each inspected proxy returned 'abiSource: etherscan' (or 'sourcify' for the Operations Multisig and Executor Multisig Safe proxies), indicating bytecode verification. Proxies inspected: Community Multisig (Safe v1.3.0, GnosisSafeProxy verified, singleton 0xd9Db2...552 verified), Timelock 0xC06F...Aa2d (verified directly, no proxy), StrategyManager (TransparentUpgradeableProxy verified, impl 0x88582996...d394), DelegationManager (TUP verified, impl 0xE7022a12...Ce75), PauserRegistry 0xB876...806 (verified directly). For the Pauser/Executor/Operations Safes, the surfacer returned a bare 2-entry GnosisSafeProxy ABI, but the Safe singleton itself (0xd9Db2...552) was independently verified during the Community Multisig inspection." },
+        { "code": "V2", "text": "Public source repository at github.com/Layr-Labs/eigenlayer-contracts contains the deployed core contracts; README documents the Mainnet Ethereum deployment as v1.12.0 and links each contract to its tag-pinned source (DelegationManager → v1.6.0 source, StrategyManager → v1.12.0 source, EigenPodManager → v1.6.0 source, RewardsCoordinator → v1.12.0 source, AVSDirectory → v1.3.0 source, AllocationManager → v1.6.0 source, PermissionController → v1.3.0 source, EmissionsController → v1.12.0 source). The repo structure and the explorer-visible Solidity source match in file organization (one contract per file). Independent compile/bytecode-match not performed this run." },
+        { "code": "V3", "text": "Audit firms identified via the official audits page (https://docs.eigencloud.xyz/eigenlayer/security/audits): Sigma Prime and Certora named. Sigma Prime public-audits repo (github.com/sigp/public-audits) hosts EigenLayer Slashing Security Assessment Report v2.0. Certora published 'EigenLayer PEPE' report dated 2024-07 to 2024-08 covering EigenPod, EigenPodManager, and supporting libraries. Earlier audits include Consensys Diligence (2023) and a Code4rena contest (2023-04). Multiple audits exist; the most recent on-chain deployments (v1.12.0, v1.6.0) post-date the public 2024 audits — drift assessment in V5 below." },
+        { "code": "V4", "text": "Sigma Prime ✓ recognized (on the slice's recognized-firms list). Certora ✓ recognized (formal verification, explicitly named on the recognized list). Consensys Diligence ✓ recognized. All audit firms cited are top-tier." },
+        { "code": "V5", "text": "Post-audit drift: Mainnet is on v1.12.0; the 2024 Certora PEPE audit covered EigenPod/EigenPodManager at an earlier commit. The Sigma Prime Slashing audit covered an earlier slashing release. Subsequent versions (v1.6.0 → v1.12.0) include changes for Pectra hardfork compatibility (per HackMD audit handbook found in search), multichain extensions (CrossChainRegistry, OperatorTableUpdater), and additional features. Active Certora CI workflow runs and recent PR merges (e.g., 'fix: address Certora audit findings for Slashing UX Improvements') suggest continuous formal-verification engagement. Specific diff sampling for v1.12.0 vs the most recent in-scope audit commit not performed this run; recording in unknowns[]." },
+        { "code": "V6", "text": "For each inspected TransparentUpgradeableProxy, the defipunkd surfacer auto-resolved the proxy and rendered the merged implementation ABI (e.g., StrategyManager surfacer showed both the proxy admin functions AND the implementation's depositIntoStrategy, owner, pauserRegistry, version=1.12.0 — confirming the implementation contract at 0x88582996...d394 is independently verified). DelegationManager similarly resolved to implementation 0xE7022a12...Ce75 with version 1.9.0. Both proxy AND implementation are verified." }
+      ],
+      "steelman": {
+        "red": "If the live v1.12.0 implementation contains material accounting changes that no recognized firm has reviewed (and the team's internal review is the only attestation), then audit coverage of the currently-deployed state is incomplete.",
+        "orange": "Post-audit drift between the most recent published audit and v1.12.0 is unknown without diff sampling — features like multichain support and Pectra adjustments may have been added after the public audit windows.",
+        "green": "All inspected proxies and implementations are verified on Etherscan; the public Layr-Labs repo corresponds to the deployed source with version tags pinned per the README; multiple audits from top-tier recognized firms (Sigma Prime, Certora, Consensys Diligence) cover the protocol; active Certora CI workflows and recent fix commits show continuous formal-verification engagement."
+      },
+      "verdict": "Choosing green because the rubric's green conditions are all satisfied: deployed bytecode is verified on Etherscan (proxy AND implementation per defipunkd's auto-resolution), a public source repo exists whose contents correspond to the explorer-visible source with version tags, and at least one audit from a recognized firm covers the protocol's currently-deployed contracts within a reasonable window (Certora's continuous engagement on slashing improvements; Sigma Prime's repeated engagements). Drift specifics for v1.12.0 vs the most recent in-scope public audit are not enumerated this run but recorded in unknowns[] per rubric guidance ('drift downgrades only when changes are material to fund-custody/settlement and no later audit covers the delta — when not sampled, record as unknown rather than auto-downgrade')."
+    },
+    "evidence": [
+      { "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "shows": "StrategyManager TransparentUpgradeableProxy: ABI source 'etherscan', proxy → implementation 0x88582996b70FDd7C4f16e3Fde7B53858FcE0d394 (also verified on Etherscan, since its specific methods like depositIntoStrategy, owner, version='1.12.0' rendered as pre-executed view results). Both proxy and implementation verified.", "chain": "Ethereum", "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "shows": "DelegationManager TransparentUpgradeableProxy: ABI source 'etherscan', proxy → implementation 0xE7022a128Acd4C6cad7aFf6FA874D61f984BcE75, version='1.9.0'. Implementation verified (otherwise version() view call would not have rendered).", "chain": "Ethereum", "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d", "shows": "Timelock 0xC06F...Aa2d: ABI source 'etherscan', no proxy (direct contract). Standard OZ TimelockController surface fully verified.", "chain": "Ethereum", "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "shows": "PauserRegistry 0xB876...806: ABI source 'etherscan', contract type 'PauserRegistry' identified. Direct (non-proxy) contract, verified.", "chain": "Ethereum", "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md", "shows": "Public source repository with version-pinned mainnet deployment table (v1.12.0). Each proxy address links to the corresponding tag in github.com/Layr-Labs/eigenlayer-contracts (e.g., DelegationManager → v1.6.0 source). Repo is the Layr-Labs canonical contracts repo.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://docs.eigencloud.xyz/eigenlayer/security/audits", "shows": "Official audits page names Sigma Prime and Certora as audit partners and points readers to the EigenLayer-Contracts / Audits and EigenLayer-Middleware / Audits repositories.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://www.certora.com/reports/eigenlayer-pepe", "shows": "Certora's EigenLayer PEPE formal-verification report: 'specification and verification of Eigenlayer using the Certora Prover and manual code review findings. The work was undertaken from July 9th 2024 to august 12th 2024. The scope of this audit is the Eigen pod, pod manager, and supporting libraries.'", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://github.com/sigp/public-audits/blob/master/reports/eigenlayer/Sigma_Prime_Layr_Labs_EigenLayer_Slashing_Security_Assessment_Report_v2_0.pdf", "shows": "Sigma Prime's EigenLayer Slashing Security Assessment Report v2.0, published to their public audits repo.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" },
+      { "url": "https://github.com/Layr-Labs/eigenlayer-contracts/actions/workflows/certora-prover.yml", "shows": "Active Certora-Prover CI workflow on the Layr-Labs/eigenlayer-contracts repo; recent runs include 'fix: address Certora audit findings for Slashing UX Improvements' and 'feat(audit): publish Hourglass + Multichain + RMS audit reports' — evidence of continuous formal-verification engagement.", "chain": "Ethereum", "fetched_at": "2026-05-31T00:00:00Z" }
+    ],
+    "unknowns": [
+      "V2: Independent local compile / bytecode-equivalence diff between deployed implementation 0x88582996...d394 (StrategyManager v1.12.0) and the github.com/Layr-Labs/eigenlayer-contracts v1.12.0 tag — not performed this run. Per rubric, this is a scope limit recorded here, not a downgrade signal.",
+      "V5: Specific diff between v1.12.0 (current mainnet) and the most recent in-scope audit commit not sampled this run. Cannot definitively rule out material drift in fund-custody / settlement / accounting since the audited commit, though the existence of active Certora CI engagement reduces this concern.",
+      "V3: Exact dates and per-firm scope-by-commit for each historical audit (Sigma Prime 2023-05, 2023-07, 2024-02; Certora 2024-08; Consensys Diligence 2023-04) — not independently re-fetched from each PDF this run. Names and rough dates corroborated via the Eigen audits page snippet and external aggregators."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/Layr-Labs/eigenlayer-contracts", "https://github.com/Layr-Labs/eigenlayer-middleware"],
+      "docs_url": "https://docs.eigencloud.xyz",
+      "audits": [
+        { "firm": "Sigma Prime", "url": "https://github.com/sigp/public-audits/blob/master/reports/eigenlayer/Sigma_Prime_Layr_Labs_EigenLayer_Slashing_Security_Assessment_Report_v2_0.pdf", "date": "2024" },
+        { "firm": "Certora", "url": "https://www.certora.com/reports/eigenlayer-pepe", "date": "2024-08" }
+      ],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/README.md",
+      "admin_addresses": [],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer core contracts are open-source under the Layr-Labs/eigenlayer-contracts GitHub repo with semver-tagged releases; mainnet is on v1.12.0. Deployed implementations are verified on Etherscan and have been audited by Sigma Prime, Certora (formal verification), and Consensys Diligence across multiple engagements; a Certora CI workflow continuously runs prover specifications against PRs."
+    }
+  }
+]
