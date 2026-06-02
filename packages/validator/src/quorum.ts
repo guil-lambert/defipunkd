@@ -209,7 +209,7 @@ export function mergeProtocolMetadata(scored: ScoredSubmission[]): Meta | undefi
   const audits = unionArray(
     withMeta,
     (m) => m.audits ?? [],
-    (a) => `${a.firm.toLowerCase()}|${a.url.toLowerCase()}`,
+    (a) => `${a.firm.toLowerCase()}|${a.url?.toLowerCase() ?? ""}`,
   );
   const admin_addresses = unionArray(
     withMeta,
@@ -226,7 +226,7 @@ export function mergeProtocolMetadata(scored: ScoredSubmission[]): Meta | undefi
   const voting_token = pickScalarBy(
     withMeta,
     (m) => m.voting_token ?? null,
-    (v) => `${v.chain.toLowerCase()}|${v.address.toLowerCase()}`,
+    (v) => `${v.chain.toLowerCase()}|${v.address?.toLowerCase() ?? ""}`,
   );
 
   const out: Meta = {};

@@ -62,7 +62,8 @@ const RationaleSchema = z
 const AuditEntrySchema = z
   .object({
     firm: z.string().min(1),
-    url: z.string().url(),
+    // Some audits exist without a public report URL (e.g. firm-named only).
+    url: z.string().url().nullish(),
     date: z.string().nullish(),
   })
   .passthrough();
@@ -70,7 +71,8 @@ const AuditEntrySchema = z
 const VotingTokenSchema = z
   .object({
     chain: z.string().min(1),
-    address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+    // Non-EVM chains (e.g. Cosmos/Babylon Genesis) have no 0x address.
+    address: z.string().regex(/^0x[0-9a-fA-F]{40}$/).nullish(),
     symbol: z.string().min(1).max(32).optional(),
   })
   .passthrough();
