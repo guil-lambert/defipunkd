@@ -1,0 +1,773 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1f308f7da48191b715bdb11f2edb4b",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "T1 upgrades and pause controls sit behind multisig governance, a 10-day routine timelock and a documented emergency bypass.",
+    "short_headline": "Multisig T1 control",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "For an assessed core contract, StrategyManager owner() returns 0x369e6F597e22EaB55fFb173C6d9cD234BD699111; PauserRegistry unpauser() returns the same Executor multisig; Community multisig threshold is 9 of 13 on-chain."
+        },
+        {
+          "code": "C2",
+          "text": "The current Ethereum core deployment is upgradeable: the public deployment table lists core contracts as transparent upgradeable proxies, and the StrategyManager proxy exposes changeAdmin, upgradeTo and upgradeToAndCall on the proxy write surface."
+        },
+        {
+          "code": "C3",
+          "text": "Routine upgrade execution path verified this run is proposer multisig or Protocol Council -> primary timelock 0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d -> execute after getMinDelay() = 864000 seconds; the docs identify Operations and Protocol Council as upgrade proposers and Protocol Council as executor."
+        },
+        {
+          "code": "C4",
+          "text": "Reachable multisigs include Community 9-of-13, Operations 3-of-6, Protocol Council 3-of-5, Pauser 1-of-8, and Executor; the Community threshold was read on-chain, while several other thresholds and scopes are from official governance docs plus Safe explorer pages."
+        },
+        {
+          "code": "C5",
+          "text": "No token-weighted Governor execution path was verified in this run; the documented control architecture for protocol upgrades is multisig proposer(s), primary timelock and Protocol Council / Community emergency multisig."
+        },
+        {
+          "code": "C6",
+          "text": "Emergency powers are separate from the routine timelock path: docs state the Community multisig can immediately execute time-critical upgrades or replace the timelock, and Pauser/Protocol Council/Operations/Pauser multisigs have emergency pause powers."
+        },
+        {
+          "code": "C7",
+          "text": "The reachable blast radius is T1 because the upgrade surface reaches core fund-accounting and withdrawal contracts, and StrategyManager exposes pauseAll plus proxy upgrade and admin-change functions on a core restaking path."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that T1 core contracts expose upgrade and changeAdmin functions, and an emergency multisig can execute time-critical upgrades without the normal 10-day delay.",
+        "orange": "The orange case is that T1 changes are mostly routed through a 10-day timelock, but the upgrade path is multisig-controlled rather than active token governance or a fully qualifying security-council-plus-timelock structure, and an emergency path can bypass the delay.",
+        "green": "The green case is that routine upgrades have a 864000 second exit window and the most extreme emergency path is held by a 9-of-13 Community multisig with public signers rather than a single EOA or small Safe."
+      },
+      "verdict": "Choosing orange because T1 upgrade and pause authority reaches the core restaking contracts, the routine path has a 10-day timelock, but the controlling actors are multisigs and the documented Community emergency path can execute time-critical upgrades or replace the timelock without the routine delay."
+    },
+    "evidence": [
+      {
+        "url": "https://www.eigencloud.xyz",
+        "shows": "Website fetch succeeded for the protocol site and exposes links to docs, GitHub and forum."
+      },
+      {
+        "url": "https://docs.eigenfoundation.org/protocol-governance/technical-architecture",
+        "shows": "Governance architecture page identifies Protocol Council, Operations, Community and Pauser multisigs; it states routine upgrades are queued through the primary timelock with a 10-day minimum delay and that Community multisig can immediately execute time-critical upgrades or replace the timelock."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+        "chain": "Ethereum",
+        "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+        "shows": "Primary timelock surfacer returns getMinDelay() = 864000 seconds and exposes schedule, execute, executeBatch, grantRole, revokeRole and updateDelay methods."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xFEA47018D632A77bA579846c840d5706705Dc598",
+        "chain": "Ethereum",
+        "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+        "shows": "Community multisig surfacer identifies a Gnosis Safe proxy, getThreshold() = 9 and 13 owner addresses."
+      },
+      {
+        "url": "https://etherscan.io/address/0xBE1685C81aA44FF9FB319dD389addd9374383e90",
+        "chain": "Ethereum",
+        "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+        "shows": "Operations multisig explorer page identifies a Safe proxy using Safe Singleton 1.3.0 and shows verified proxy source."
+      },
+      {
+        "url": "https://etherscan.io/address/0x5050389572f2d220ad927CcbeA0D406831012390",
+        "chain": "Ethereum",
+        "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+        "shows": "Pauser multisig explorer page identifies a Safe proxy using Safe Singleton 1.3.0 and shows verified proxy source."
+      },
+      {
+        "url": "https://etherscan.io/address/0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+        "chain": "Ethereum",
+        "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+        "shows": "Executor multisig explorer page identifies a Safe proxy using Safe Singleton 1.3.0."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+        "chain": "Ethereum",
+        "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+        "shows": "PauserRegistry surfacer returns unpauser() = 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 and exposes isPauser, setIsPauser and setUnpauser."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+        "chain": "Ethereum",
+        "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+        "shows": "StrategyManager proxy surfacer identifies a TransparentUpgradeableProxy with implementation 0x88582996b70FDd7C4f16e3Fde7B53858FcE0d394; owner() returns 0x369e6F597e22EaB55fFb173C6d9cD234BD699111; write surface includes pause, pauseAll, unpause, changeAdmin, upgradeTo and upgradeToAndCall."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts",
+        "shows": "Public deployments table lists current Ethereum core contracts as transparent upgradeable proxies and identifies core proxies for DelegationManager, StrategyManager, EigenPodManager, AVSDirectory, RewardsCoordinator, PermissionController and AllocationManager."
+      }
+    ],
+    "unknowns": [
+      "C1: proxy admin slots for all core proxies were not fully re-read on-chain; several TransparentUpgradeableProxy admin() calls revert to non-admin callers on the surfacer.",
+      "C4: /api/safe/owners returned Internal Error for several Safes; Operations, Pauser and Executor thresholds and signer sets were not fully re-read through the Safe owners API in this run.",
+      "C5: no Governor proposalThreshold, votingDelay, votingPeriod or quorum constants were found or read; no token-governance execution path was graded."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Layr-Labs/eigenlayer-contracts"
+      ],
+      "docs_url": "https://docs.eigencloud.xyz/eigenlayer",
+      "audits": [],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/eigenlayer/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+          "role": "Primary upgrade timelock with 864000 second minimum delay",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+          "role": "Community multisig, emergency governance",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+          "role": "Operations multisig, routine upgrade proposer",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+          "role": "Pauser multisig, emergency pause only",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+          "role": "Executor multisig, unpauser and owner shown by StrategyManager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+          "role": "PauserRegistry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer, now presented under EigenCloud, lets users restake native ETH, EIGEN, LSTs and other supported ERC-20 assets to secure AVSs. Restakers deposit assets, delegate to operators, and later queue and complete withdrawals after an escrow delay. The distinctive mechanism is reusable slashable stake: AVSs can attach economic penalties and rewards to operators backed by restaked user assets."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1f308f7da48191b715bdb11f2edb4b",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Withdrawal requests and completions are permissionless when live, but finalized exits are pause-gated with no verified maximum pause duration.",
+    "short_headline": "Claims pausable",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "User-facing exit functions identified are DelegationManager.queueWithdrawals, DelegationManager.completeQueuedWithdrawal, DelegationManager.completeQueuedWithdrawals, undelegate-induced queued withdrawals, StrategyManager.withdrawSharesAsTokens via DelegationManager, and native-restaking EigenPod/EigenPodManager withdrawal steps documented in the guide."
+        },
+        {
+          "code": "E2",
+          "text": "Queue placement and claim/finalization differ but both are pause-gated: queueWithdrawals uses PAUSED_ENTER_WITHDRAWAL_QUEUE, while completeQueuedWithdrawal and completeQueuedWithdrawals use PAUSED_EXIT_WITHDRAWAL_QUEUE."
+        },
+        {
+          "code": "E3",
+          "text": "The pause mechanism is broad and role-based: pause and pauseAll are onlyPauser, unpause is onlyUnpauser, pauseAll sets all pause bits, and no auto-expiry or maximum pause duration was present in the Pausable code reviewed."
+        },
+        {
+          "code": "E4",
+          "text": "Official governance docs separate emergency pause actors from routine governance, and the PauserRegistry exposes role-management methods; the unpauser is the Executor multisig read on-chain."
+        },
+        {
+          "code": "E5",
+          "text": "Queued redemption exists and is not instant: the developer guide and guardrails describe a 14-day withdrawal or escrow delay before completion."
+        },
+        {
+          "code": "E6",
+          "text": "No permissionless escape hatch was found that bypasses PAUSED_EXIT_WITHDRAWAL_QUEUE for finalized DelegationManager withdrawals under an adversarial pause."
+        },
+        {
+          "code": "E7",
+          "text": "Exit is directly callable on-chain when unpaused: the official developer guide explicitly documents smart contract restaking without relying on the Web App, and the DelegationManager explorer shows Queue Withdrawal and Complete Queued Withdrawal activity."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that a pauser can set all pause bits and finalized withdrawal completion is explicitly gated by PAUSED_EXIT_WITHDRAWAL_QUEUE with no on-chain maximum duration found.",
+        "orange": "The orange case is that exits are permissionless when unpaused and delayed by a documented 14-day queue, while pause and unpause are held by multisig roles rather than a single EOA.",
+        "green": "The green case is that users can call queue and completion functions directly on-chain, and the withdrawal delay creates an orderly exit process in normal conditions."
+      },
+      "verdict": "Choosing red because claims of finalized exits are pause-gated by PAUSED_EXIT_WITHDRAWAL_QUEUE, pauseAll can set all pause bits, and no hard maximum pause duration or forced-exit path was verified."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/restakers/restaking-guides/restaking-developer-guide",
+        "shows": "Developer guide says smart contract restaking can interact directly with core contracts without relying on the Web App; LST exits use DelegationManager.queueWithdrawal, a 14-day escrow, and completeQueuedWithdrawal; native exits use EigenPod and DelegationManager flows."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/core/DelegationManager.sol",
+        "shows": "DelegationManager source shows queueWithdrawals is external and onlyWhenNotPaused(PAUSED_ENTER_WITHDRAWAL_QUEUE); completeQueuedWithdrawal and completeQueuedWithdrawals are external and onlyWhenNotPaused(PAUSED_EXIT_WITHDRAWAL_QUEUE)."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/core/StrategyManager.sol",
+        "shows": "StrategyManager source shows depositIntoStrategy is onlyWhenNotPaused(PAUSED_DEPOSITS) and withdrawSharesAsTokens is callable only by DelegationManager for token withdrawal completion."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/permissions/Pausable.sol",
+        "shows": "Pausable source shows pause(newPausedStatus) and pauseAll() are onlyPauser, unpause(newPausedStatus) is onlyUnpauser, and pauseAll sets all pause bits; no auto-expiry or maximum pause duration is present in the shown code."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+        "chain": "Ethereum",
+        "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+        "shows": "PauserRegistry returns unpauser() = 0x369e6F597e22EaB55fFb173C6d9cD234BD699111 and exposes isPauser, setIsPauser and setUnpauser."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+        "chain": "Ethereum",
+        "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+        "shows": "StrategyManager proxy surfacer returns paused() = 0 at the fetched block and exposes pause, pauseAll, unpause and withdrawal-related methods."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/security/guardrails",
+        "shows": "Guardrails page identifies a 14-day withdrawal delay."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/security/withdrawal-delay",
+        "shows": "Withdrawal-delay page says withdrawals can be disabled while contracts are paused and that the delay is meant to let users exit before arbitrary state or code changes through upgrades."
+      },
+      {
+        "url": "https://etherscan.io/address/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+        "chain": "Ethereum",
+        "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+        "shows": "DelegationManager explorer page shows verified proxy status and transaction function names including Queue Withdrawal and Complete Queued Withdrawal, supporting direct on-chain exit interaction."
+      }
+    ],
+    "unknowns": [
+      "E3: exact on-chain isPauser(address) membership for every pauser actor was not re-read; the assessed scope combines PauserRegistry unpauser state, official docs and Pausable code.",
+      "E5: MIN_WITHDRAWAL_DELAY_BLOCKS was not re-read as an on-chain constant; 14 days is from official docs.",
+      "E6: no escape hatch was found in the inspected docs/code, but an exhaustive search of every peripheral withdrawal router was not completed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Layr-Labs/eigenlayer-contracts"
+      ],
+      "docs_url": "https://docs.eigencloud.xyz/eigenlayer",
+      "audits": [],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/eigenlayer/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+          "role": "Primary upgrade timelock with 864000 second minimum delay",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+          "role": "Community multisig, emergency governance",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+          "role": "Operations multisig, routine upgrade proposer",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+          "role": "Pauser multisig, emergency pause only",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+          "role": "Executor multisig, unpauser and owner shown by StrategyManager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+          "role": "PauserRegistry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer, now presented under EigenCloud, lets users restake native ETH, EIGEN, LSTs and other supported ERC-20 assets to secure AVSs. Restakers deposit assets, delegate to operators, and later queue and complete withdrawals after an escrow delay. The distinctive mechanism is reusable slashable stake: AVSs can attach economic penalties and rewards to operators backed by restaked user assets."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1f308f7da48191b715bdb11f2edb4b",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Core restaking exposes material delegated stake to external AVS/operator-set slashing that can reduce principal.",
+    "short_headline": "AVS slashing risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Material external call/dependency surfaces include supported strategies and ERC-20/LST assets through StrategyManager, EigenPod/beacon-chain proof flows for native ETH, AVS registrars during operator registration, and AVS slasher contracts through AllocationManager."
+        },
+        {
+          "code": "A2",
+          "text": "AVSs and their configured slashers report into the protocol through AllocationManager.slashOperator; slashing criteria are AVS-defined and need not be objectively attributable on-chain, which creates an external actor dependency that can reduce user principal."
+        },
+        {
+          "code": "A3",
+          "text": "The assessed core deployment is Ethereum mainnet; no material bridge or cross-chain messaging TVS was verified in this run for the core restaking flow."
+        },
+        {
+          "code": "A4",
+          "text": "Nested collateral/restaking risk is core to the system: delegated native ETH, LST/ERC-20 strategies and EIGEN can be exposed to operator-set slashing; the docs state delegated funds become immediately slashable when the operator has allocated slashable stake."
+        },
+        {
+          "code": "A5",
+          "text": "No fork-lineage finding was verified in this run."
+        },
+        {
+          "code": "A6",
+          "text": "Live circuit breakers and delays exist, including pause bits, a 14-day withdrawal delay and allocation/slasher delays, but these do not keep users whole against a valid AVS slashing event once stake is slashable."
+        },
+        {
+          "code": "A7",
+          "text": "No EigenCloud-owned L2, L3 or appchain sequencer dependency was identified for the Ethereum core deployment assessed here."
+        },
+        {
+          "code": "A8",
+          "text": "Native restaking depends on users or proof submitters performing checkpoint and proof flows; failure appears to delay accounting or withdrawals rather than automatically transfer funds to an operator."
+        },
+        {
+          "code": "A9",
+          "text": "The external dependency surface is mutable at the AVS layer: AVSs can configure registrars, operator sets, strategies and slashers, and slasher changes become active after configured delay; this can alter which external actors can reject operator registration or slash allocated stake."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that a core mechanism lets external AVSs or their slashers burn or redistribute allocated user-backed stake, with AVS-defined criteria that need not be objectively attributable on-chain.",
+        "orange": "The orange case is that slashable exposure is opt-in through delegation and allocation, with withdrawal and allocation delays plus pause controls, so failures are bounded to allocated stake rather than every possible asset instantly.",
+        "green": "The green case is that base deposit and withdrawal machinery is on Ethereum and directly callable, and several risks are disclosed and mediated by explicit operator-set and allocation mechanics."
+      },
+      "verdict": "Choosing red because the worst unmitigated dependency is not merely performance degradation: AVS/operator-set slashing can burn or redistribute allocated stake and reduce user principal. Impacted TVS is approximately the share of EigenLayer TVS allocated to slashable operator sets; exact share was not verified, but the mechanism can affect material delegated stake and is core to the protocol."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts",
+        "shows": "Repository README describes EigenLayer as restaking slashable stake on Ethereum and lists supported restaking assets including EIGEN, native ETH, LSTs and ERC-20s; current deployments include StrategyManager, DelegationManager, EigenPodManager, RewardsCoordinator and AllocationManager."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/concepts/slashing/slashing-concept",
+        "shows": "Slashing docs state that slashing is determined by an AVS, can result in burning or redistribution of funds, and does not have to be objectively attributable on-chain."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/docs/core/AllocationManager.md",
+        "shows": "AllocationManager docs state it manages operator sets, allocation and slashing of slashable stake, is the entry point an AVS uses to slash an operator, and that slashOperator reduces operator allocation magnitude and updates DelegationManager shares."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/docs/core/DelegationManager.md",
+        "shows": "DelegationManager docs state all delegated funds are immediately slashable if the operator has allocated slashable stake to an operator set; withdrawal amounts can be lower if the staker or delegated operator experienced slashing; beacon-chain ETH also includes beacon-chain slashing factors."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/docs/core/AllocationManager.md",
+        "shows": "AllocationManager docs state operator registration calls an AVS-configured IAVSRegistrar and registration fails if that registrar reverts; deregistration passes through the AVS registrar and stake remains slashable until DEALLOCATION_DELAY."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/reference/safety-delays-reference",
+        "shows": "Safety delays page states ALLOCATION_CONFIGURATION_DELAY is 126000 blocks and that ALLOCATION_DELAY is operator-settable with no protocol constraint."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/permissions/Pausable.sol",
+        "shows": "Pausable circuit breaker can pause selected protocol functions or all bits and can be unpaused only by the configured unpauser."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/restakers/restaking-guides/restaking-developer-guide",
+        "shows": "Restaking guide describes direct deposits, delegation, queueing and completion; native restaking requires beacon-chain/EigenPod proof and checkpoint flows."
+      }
+    ],
+    "unknowns": [
+      "A1: exhaustive per-strategy external dependency census across all supported LST/ERC-20 strategies was not completed.",
+      "A3: cross-chain or multichain deployment TVS share was not verified; no bridge dependency was graded.",
+      "A6: no live fallback that keeps users whole after erroneous but accepted AVS slashing was found; per-AVS dispute or insurance processes were not enumerated.",
+      "A9: exact live registrar and slasher addresses for every operator set were not enumerated on-chain."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Layr-Labs/eigenlayer-contracts"
+      ],
+      "docs_url": "https://docs.eigencloud.xyz/eigenlayer",
+      "audits": [],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/eigenlayer/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+          "role": "Primary upgrade timelock with 864000 second minimum delay",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+          "role": "Community multisig, emergency governance",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+          "role": "Operations multisig, routine upgrade proposer",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+          "role": "Pauser multisig, emergency pause only",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+          "role": "Executor multisig, unpauser and owner shown by StrategyManager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+          "role": "PauserRegistry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer, now presented under EigenCloud, lets users restake native ETH, EIGEN, LSTs and other supported ERC-20 assets to secure AVSs. Restakers deposit assets, delegate to operators, and later queue and complete withdrawals after an escrow delay. The distinctive mechanism is reusable slashable stake: AVSs can attach economic penalties and rewards to operators backed by restaked user assets."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1f308f7da48191b715bdb11f2edb4b",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Core restaker entry and exit are directly callable without user KYC/whitelist; official services carry sanctions ToS restrictions.",
+    "short_headline": "Direct contract access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No user-address whitelist, KYC modifier or onlyRole gate was found on the inspected restaker deposit, delegation, queue or completion paths; deposit is constrained by strategy support/whitelisting and pause status, not by user identity."
+        },
+        {
+          "code": "A2",
+          "text": "Restaker admission to deposit, delegate, queue and complete is not shown as requiring a privileged off-chain operator; operator registration into AVS operator sets is different and can be rejected by AVS registrar logic."
+        },
+        {
+          "code": "A3",
+          "text": "Official services have legal restrictions: Terms exclude Prohibited Persons and sanctioned jurisdictions, and the Acceptable Use Policy prohibits sanctioned or export-controlled use."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths exist: the official developer guide documents direct smart-contract use without the Web App, and the public repository and explorer pages expose contract addresses and call surfaces."
+        },
+        {
+          "code": "A4",
+          "text": "No contract-level sanctions oracle or OFAC blocklist check was identified in the inspected restaker entry and exit functions."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is permissionless, and write access for core restaker flows is permissionless when unpaused and when the chosen strategy is supported; operator-set registration has AVS-specific registrar checks."
+        },
+        {
+          "code": "A6",
+          "text": "ToS/Legal restrictions were extracted verbatim from the Eigen Foundation Terms and EigenCloud Acceptable Use Policy; these restrict the Services, while the Terms separately state the Protocol smart contracts are not part of the Services."
+        }
+      ],
+      "steelman": {
+        "red": "The red case would be that some operator-set registration can be rejected by an AVS registrar, but that is not the core restaker deposit or exit path.",
+        "orange": "The orange case is that official Services impose sanctions and eligibility restrictions, and supported strategies are constrained, but this is not a contract-level user whitelist on restaker access.",
+        "green": "The green case is that restaker contracts admit users directly when unpaused, no user-address KYC or blocklist was found on entry or exit, and independent contract-level access is explicitly documented."
+      },
+      "verdict": "Choosing green because the core restaker deposit, delegation and exit flows are directly callable on-chain without official frontend cooperation, and the restrictions found are service-level ToS/AUP restrictions or AVS/operator-set registrar checks rather than a contract-level whitelist on restakers."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/restakers/restaking-guides/restaking-developer-guide",
+        "shows": "Official guide states smart contract restaking can be done directly with core contracts and does not rely on the Web App; it gives direct function flows for depositIntoStrategy, queueWithdrawal, completeQueuedWithdrawal, delegateTo and undelegate."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/core/DelegationManager.sol",
+        "shows": "DelegationManager source exposes user-facing delegation and withdrawal functions with pause guards but no user-address KYC or allowlist modifier shown in the inspected exit paths."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/src/contracts/core/StrategyManager.sol",
+        "shows": "StrategyManager source exposes depositIntoStrategy and depositIntoStrategyWithSignature with pause and strategy-whitelist checks rather than a user KYC or address allowlist in the inspected deposit path."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts/blob/main/docs/core/AllocationManager.md",
+        "shows": "AllocationManager docs state operator registration to AVS operator sets calls an AVS registrar that can revert; this is an operator/AVS admission path, not the basic restaker deposit/withdrawal path."
+      },
+      {
+        "url": "https://docs.eigenfoundation.org/legal/terms-of-service",
+        "shows": "Terms quote: 'You must be 18 years of age or older and not be a Prohibited Person to use the Services'; Prohibited Person includes sanctions-listed persons and persons located in sanctioned jurisdictions. Terms also state the Protocol and underlying smart contracts are not part of the Services and are not controlled by the organization."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigencloud/legal/acceptable-use-policy",
+        "shows": "Acceptable Use Policy prohibits use of the service by or for the benefit of any individual, organization or government subject to international sanctions or export-control restrictions."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts",
+        "shows": "Public GitHub repository and deployment table provide an independent source path for direct contract interaction."
+      },
+      {
+        "url": "https://etherscan.io/address/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+        "chain": "Ethereum",
+        "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+        "shows": "DelegationManager explorer page exposes on-chain contract interactions and shows queue/complete withdrawal activity."
+      }
+    ],
+    "unknowns": [
+      "A3: official frontend runtime enforcement such as IP geo-blocking or wallet screening was not tested.",
+      "A4: an exhaustive grep of every current implementation for OFAC, TRM, Chainalysis or blocklist strings was not completed.",
+      "A1: strategy-level whitelisting/support was identified, but the full current set of supported strategies was not enumerated."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Layr-Labs/eigenlayer-contracts"
+      ],
+      "docs_url": "https://docs.eigencloud.xyz/eigenlayer",
+      "audits": [],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/eigenlayer/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+          "role": "Primary upgrade timelock with 864000 second minimum delay",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+          "role": "Community multisig, emergency governance",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+          "role": "Operations multisig, routine upgrade proposer",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+          "role": "Pauser multisig, emergency pause only",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+          "role": "Executor multisig, unpauser and owner shown by StrategyManager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+          "role": "PauserRegistry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer, now presented under EigenCloud, lets users restake native ETH, EIGEN, LSTs and other supported ERC-20 assets to secure AVSs. Restakers deposit assets, delegate to operators, and later queue and complete withdrawals after an escrow delay. The distinctive mechanism is reusable slashable stake: AVSs can attach economic penalties and rewards to operators backed by restaked user assets."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "eigencloud",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-25T10:00:13.281Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-31",
+    "model": "gpt-5.5-thinking",
+    "chat_url": "https://chatgpt.com/s/t_6a1f308f7da48191b715bdb11f2edb4b",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Source, proxies and audit trail are public, but commit match, audit scope and full implementation verification were not fully closed.",
+    "short_headline": "Mostly verifiable",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Several assessed contracts are verified or have ABI source available: StrategyManager proxy via etherscan ABI source with resolved implementation, DelegationManager proxy on Etherscan with implementation shown, primary timelock via etherscan ABI source, and multiple Safe proxies with verified proxy source."
+        },
+        {
+          "code": "V2",
+          "text": "A public source repository exists and its deployment table corresponds to the assessed current Ethereum core contracts and implementations, but no exact commit SHA or bytecode-diff match was established."
+        },
+        {
+          "code": "V3",
+          "text": "Official audit documentation exists and names recognized auditors Sigma Prime and Certora, but exact audit dates, commits and current-deployment scope were not fully opened and mapped in this run."
+        },
+        {
+          "code": "V4",
+          "text": "Certora and Sigma Prime are recognized security/formal-verification auditors for Solidity and smart-contract systems."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift was not resolved: the current deployment table and audits page were fetched, but diffs between audited commits and deployed implementation sources were not sampled."
+        },
+        {
+          "code": "V6",
+          "text": "Proxy/implementation status was verified for StrategyManager and DelegationManager, but the current implementations for every core proxy in the address book were not independently opened and verified in this run."
+        }
+      ],
+      "steelman": {
+        "red": "The red case would require unverified deployed bytecode, no public repo or no audits, but fetched evidence shows verified proxies or ABI sources, a public repo, and an audits page.",
+        "orange": "The orange case is that verifiability is broadly present, but audit scope, exact deployment commit matching, post-audit drift and every current proxy implementation were not fully resolved.",
+        "green": "The green case is that the main contracts are publicly deployed, proxied implementations are listed, source is public and recognized audit firms are documented."
+      },
+      "verdict": "Choosing orange because the deployed code is substantially verifiable and a public source/audit trail exists, but the run did not establish exact source-to-deployed commit correspondence, full audit scope/date coverage for current implementations, or post-audit drift."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+        "chain": "Ethereum",
+        "address": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+        "shows": "StrategyManager surfacer shows ABI source etherscan, TransparentUpgradeableProxy, and resolved implementation 0x88582996b70FDd7C4f16e3Fde7B53858FcE0d394."
+      },
+      {
+        "url": "https://etherscan.io/address/0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+        "chain": "Ethereum",
+        "address": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+        "shows": "DelegationManager explorer page shows Source Code (Proxy), Implementation 0xE7022a12E59458f706d2F6AEf0ef026daF984BcE75, and contract interaction activity."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+        "chain": "Ethereum",
+        "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+        "shows": "Primary timelock surfacer reports ABI source etherscan and zero-arg view/write methods."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xFEA47018D632A77bA579846c840d5706705Dc598",
+        "chain": "Ethereum",
+        "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+        "shows": "Community Safe surfacer reports ABI source etherscan, GnosisSafeProxy and Safe owner/threshold reads."
+      },
+      {
+        "url": "https://etherscan.io/address/0xBE1685C81aA44FF9FB319dD389addd9374383e90",
+        "chain": "Ethereum",
+        "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+        "shows": "Operations Safe explorer page shows verified proxy source and Safe Singleton 1.3.0 implementation."
+      },
+      {
+        "url": "https://etherscan.io/address/0x5050389572f2d220ad927CcbeA0D406831012390",
+        "chain": "Ethereum",
+        "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+        "shows": "Pauser Safe explorer page shows verified proxy source and Safe Singleton 1.3.0 implementation."
+      },
+      {
+        "url": "https://github.com/Layr-Labs/eigenlayer-contracts",
+        "shows": "Public source repository includes current deployment addresses and implementation addresses for the Ethereum mainnet core contracts."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/security/audits",
+        "shows": "Audits page says recent EigenLayer audits include Sigma Prime and Certora and links to current and historical audit-report repositories."
+      },
+      {
+        "url": "https://docs.eigencloud.xyz/eigenlayer/security/bug-bounty",
+        "shows": "Security page links to the EigenLayer Immunefi bug bounty."
+      }
+    ],
+    "unknowns": [
+      "V2: no specific lowercase commit SHA was pinned for the deployed source, and no independent bytecode-diff was performed.",
+      "V3: exact audit report URLs, dates, scoped contracts and audited commits were not fully enumerated from the audit repositories.",
+      "V5: material post-audit drift was not sampled through GitHub compare views or implementation diffs.",
+      "V6: implementations for all core proxies beyond the sampled StrategyManager and DelegationManager were not independently fetched and checked for verification."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/Layr-Labs/eigenlayer-contracts"
+      ],
+      "docs_url": "https://docs.eigencloud.xyz/eigenlayer",
+      "audits": [],
+      "governance_forum": "https://forum.eigenlayer.xyz",
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bounty/eigenlayer/",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://github.com/Layr-Labs/eigenlayer-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xC06Fd4F821eaC1fF1ae8067b36342899b57BAa2d",
+          "role": "Primary upgrade timelock with 864000 second minimum delay",
+          "actor_class": "timelock"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xFEA47018D632A77bA579846c840d5706705Dc598",
+          "role": "Community multisig, emergency governance",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xbe1685c81aa44ff9fb319dd389addd9374383e90",
+          "role": "Operations multisig, routine upgrade proposer",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x5050389572f2d220ad927CcbeA0D406831012390",
+          "role": "Pauser multisig, emergency pause only",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0x369e6F597e22EaB55fFb173C6d9cD234BD699111",
+          "role": "Executor multisig, unpauser and owner shown by StrategyManager",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Ethereum",
+          "address": "0xB8765ed72235d279c3Fb53936E4606db0Ef12806",
+          "role": "PauserRegistry",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "EigenLayer, now presented under EigenCloud, lets users restake native ETH, EIGEN, LSTs and other supported ERC-20 assets to secure AVSs. Restakers deposit assets, delegate to operators, and later queue and complete withdrawals after an escrow delay. The distinctive mechanism is reusable slashable stake: AVSs can attach economic penalties and rewards to operators backed by restaked user assets."
+    }
+  }
+]
