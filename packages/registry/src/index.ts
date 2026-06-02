@@ -216,7 +216,7 @@ function mergeMetadata(existing: ProtocolMetadata | undefined, sub: ProtocolMeta
   };
   out.github = unionArr(existing.github, sub.github, (s) => s.toLowerCase());
   if (out.github.length === 0) delete out.github;
-  out.audits = unionArr(existing.audits, sub.audits, (a) => `${a.firm.toLowerCase()}|${a.url.toLowerCase()}`);
+  out.audits = unionArr(existing.audits, sub.audits, (a) => `${a.firm.toLowerCase()}|${a.url?.toLowerCase() ?? ""}`);
   if (out.audits.length === 0) delete out.audits;
   out.admin_addresses = unionArr(existing.admin_addresses, sub.admin_addresses, (a) => `${a.chain.toLowerCase()}|${a.address.toLowerCase()}`);
   if (out.admin_addresses.length === 0) delete out.admin_addresses;

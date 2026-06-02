@@ -13,8 +13,8 @@ export type Rationale = {
   verdict: string;
 };
 
-export type AuditEntry = { firm: string; url: string; date?: string };
-export type VotingToken = { chain: string; address: string; symbol?: string };
+export type AuditEntry = { firm: string; url?: string | null; date?: string };
+export type VotingToken = { chain: string; address?: string | null; symbol?: string };
 export type AdminAddress = {
   chain: string;
   address: string;
@@ -235,7 +235,7 @@ export function aggregateProtocolMetadata(
   const audits = unionBy(
     entries,
     (m) => m.audits ?? [],
-    (a) => `${a.firm.toLowerCase()}|${a.url.toLowerCase()}`,
+    (a) => `${a.firm.toLowerCase()}|${a.url?.toLowerCase() ?? ""}`,
   );
   const admin_addresses = unionBy(
     entries,
@@ -341,7 +341,7 @@ export function aggregateProtocolMetadataFromSubmissions(
   const audits = unionByMeta(
     entries,
     (m) => m.audits ?? [],
-    (a) => `${a.firm.toLowerCase()}|${a.url.toLowerCase()}`,
+    (a) => `${a.firm.toLowerCase()}|${a.url?.toLowerCase() ?? ""}`,
   );
   const admin_addresses = unionByMeta(
     entries,
