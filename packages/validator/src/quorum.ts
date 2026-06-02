@@ -66,8 +66,12 @@ function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): Scored
     weight += 0.15;
   }
 
+  // Prompt-version drift decays weight multiplicatively (~10%/version) rather
+  // than by a flat absolute subtraction. Proportional decay keeps a strong,
+  // well-evidenced older submission proportionally strong instead of erasing
+  // its evidence bonuses outright, and never drives weight negative.
   const versionDelta = ctx.currentPromptVersion - s.prompt_version;
-  if (versionDelta > 0) weight -= 0.2 * versionDelta;
+  if (versionDelta > 0) weight *= 0.9 ** versionDelta;
 
   if (s.snapshot_generated_at !== ctx.currentSnapshotGeneratedAt) weight -= 0.1;
 
