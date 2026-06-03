@@ -32,7 +32,7 @@
     if (!anchorEl) return;
     const host = anchorEl.parentElement || anchorEl;
     if (!claim(host, "headerbadge")) return;
-    const badge = renderBadge(record, slug, 22);
+    const badge = renderBadge(record, slug, 30);
     anchorEl.insertAdjacentElement("afterend", badge);
   }
 

@@ -385,7 +385,7 @@
       link.setAttribute("href", defipunkdUrl(e.slug));
       content.textContent = "";
       content.appendChild(
-        htmlEl("div", { class: "dpk-stream-row" }, [renderPizza(e.slices, { size: 64 }), renderRiskMatrix(e.slices)]),
+        htmlEl("div", { class: "dpk-stream-row" }, [renderPizza(e.slices, { size: 90 }), renderRiskMatrix(e.slices)]),
       );
       if (tabBar) {
         const kids = tabBar.children;

@@ -22,7 +22,7 @@
       const record = lookup(slug);
       if (!record) continue;
 
-      const badge = renderBadge(record, slug, 20);
+      const badge = renderBadge(record, slug, 28);
       // Right-align: pin the pizza to the right edge of the Name cell, vertically
       // centered. Absolute positioning avoids the name link's truncation clip
       // (e.g. "Babylon Protocol…") and lines every row's pizza up at the column
@@ -33,7 +33,7 @@
         if (window.getComputedStyle(cell).position === "static") cell.style.position = "relative";
         // Reserve space on the right so long names (e.g. "Binance staked ETH")
         // truncate/wrap instead of running under the absolutely-pinned pizza.
-        cell.style.paddingRight = "40px";
+        cell.style.paddingRight = "48px";
         cell.appendChild(badge);
       } else {
         let nameBlock = a;
