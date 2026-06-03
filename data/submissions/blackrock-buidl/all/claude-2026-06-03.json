@@ -1,0 +1,573 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "control",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/6759ab8b-fe27-4f5a-ad90-38b73d6fd58f",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Single unverified operator (Securitize, via unverified key 0xe01605) holds T1 powers over every BUIDL deployment with zero timelock and no multisig",
+    "short_headline": "Single operator, T1 powers, no timelock",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "On Ethereum (block 25045900), contractOwner() and owner() on 0x7712c34205737192402172409a8F7ccef8aA2AEc both return 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e. The same address is confirmed as owner() on Arbitrum (0xA6525) at block 469664011 and Avalanche (0x53FC82) at block 87089637 — a single cross-chain key controls every BUIDL deployment."
+        },
+        {
+          "code": "C1",
+          "text": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e is NOT a Gnosis Safe (defipunkd /api/safe/owners returned HTTP 404) and NOT a verified contract on Etherscan (defipunkd /api/contract/abi returned HTTP 404, surfacer shows 'No verified ABI found'). Actor class: unknown unverified contract or EOA. Published press confirms Securitize uses Fireblocks key management for contract operations, but that claim rests on a search-result snippet only and is not independently confirmed in this run."
+        },
+        {
+          "code": "C2",
+          "text": "Ethereum proxy (0x7712): custom proxy pattern exposing setTarget(address) — owner can swap the implementation address in a single transaction with no timelock. Arbitrum (0xA6525, ERC1967Proxy) and Avalanche (0x53FC82, ERC1967Proxy) expose upgradeToAndCall(address,bytes) (UUPS pattern, UPGRADE_INTERFACE_VERSION = 5.0.0) callable by the same 0xe01605 owner. All proxy-admin authority across every assessed chain terminates at this single address."
+        },
+        {
+          "code": "C3",
+          "text": "No timelock found. No MIN_DELAY, getMinDelay, or timelocked governor contract was discovered on any chain. No governance token or governor contract was identified. The fast path from proposal to execution is 0 seconds: owner calls setTarget(newImpl) or upgradeToAndCall(newImpl, data) directly."
+        },
+        {
+          "code": "C4",
+          "text": "0xe01605 is not a Gnosis Safe (safe/owners 404). No other multisig holding upgrade, pause, or parameter authority was discovered. No Security Council equivalent exists; the single-actor criterion for the red threshold is met."
+        },
+        {
+          "code": "C5",
+          "text": "No on-chain governance: no Governor contract, no voting token, no quorum or voting period constants discoverable. BUIDL is administered entirely by the single Securitize-controlled key."
+        },
+        {
+          "code": "C6",
+          "text": "pause() and unpause() are in the ABI (confirmed on all three assessed chains) and callable by the owner. No separate emergency role with a shorter time cap or different actor was found. No on-chain bound on pause duration was found. isPaused() returns false on all three chains at the assessed blocks."
+        },
+        {
+          "code": "C7",
+          "text": "T1 (FUND-CRITICAL) is reachable via multiple paths: (a) setTarget()/upgradeToAndCall() lets owner replace the token implementation to arbitrary bytecode, enabling drain of all balances; (b) seize(address,address,uint256,string) forcibly moves tokens from any holder to any address with no on-chain constraint; (c) pause() blocks all transfers indefinitely with no expiry. All three T1 paths are callable by the single unverified 0xe01605 key with zero delay."
+        }
+      ],
+      "steelman": {
+        "red": "A single unverified key (0xe01605) can replace the token implementation, seize any holder's balance, or pause all transfers indefinitely in a single transaction with no timelock — this is the definition of T1 reachable with no timelock by a single actor whose contract bytecode cannot be audited.",
+        "orange": "Securitize is a SEC-registered transfer agent subject to regulatory oversight, and BUIDL fund shares have off-chain legal protections via BlackRock's regulatory filings; a rogue upgrade would expose Securitize to severe legal liability, making de-facto misuse implausible.",
+        "green": "All BUIDL actions require Securitize's cooperation by design (it is a regulated fund, not DeFi), so the absence of a decentralized timelock is a feature of the regulated architecture, not a security gap relative to the product's risk model."
+      },
+      "verdict": "Choosing red because 0xe01605 — a single, unverified, non-Safe address — holds setTarget(), upgradeToAndCall(), seize(), and uncapped pause() across all assessed BUIDL deployments with zero timelock delay. The ABI of 0x7712 (Ethereum), 0xA6525 (Arbitrum), and 0x53FC82 (Avalanche) each confirm these functions exist and point to the same owner. The orange and green steel-mans describe regulatory deterrence and intentional design, but the grade rubric tiers on what the contract permits, not regulatory likelihood — T1 reachable with no timelock by a single actor whose bytecode is unverifiable is definitionally red."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "shows": "Ethereum BUIDL proxy: contractOwner() = owner() = 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e; ABI includes setTarget(address), pause(), seize(address,address,uint256,string), burn(address,uint256,string); isPaused() = false; proxy targets implementation 0x603Bb6909Be14f83282E03632280D91bE7fB83b2",
+        "chain": "Ethereum",
+        "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872",
+        "shows": "Arbitrum BUIDL: ERC1967Proxy, UPGRADE_INTERFACE_VERSION = 5.0.0, owner() = 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e, ABI includes upgradeToAndCall(address,bytes), pause(), seize(), isPaused() = false",
+        "chain": "Arbitrum",
+        "address": "0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872"
+      },
+      {
+        "url": "https://defipunkd.com/address/43114/0x53FC82f14F009009b440a706e31c9021E1196A2F",
+        "shows": "Avalanche BUIDL: ERC1967Proxy, UPGRADE_INTERFACE_VERSION = 5.0.0, owner() = 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e, ABI includes upgradeToAndCall(address,bytes), pause(), seize(), isPaused() = false",
+        "chain": "Avalanche",
+        "address": "0x53FC82f14F009009b440a706e31c9021E1196A2F"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+        "shows": "Owner address surfacer: 'No verified ABI found for 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e on chainId 1 (etherscan + sourcify both failed).' Confirms the token's controlling address is an unverified contract or EOA.",
+        "chain": "Ethereum",
+        "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e"
+      }
+    ],
+    "unknowns": [
+      "C3: No timelock or governor contract discovered on any assessed chain; additional chains (Optimism, Polygon, Solana, Aptos, BNB Chain) not verified in this run but same 0xe01605 owner is expected based on cross-chain pattern",
+      "C4: Actor class of 0xe01605 not confirmed — safe/owners returned 404 and ABI endpoint returned 404, consistent with unverified contract or EOA; Fireblocks MPC attribution relies on search snippet only, not a full-page fetch"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/securitize-io/dstoken"],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Halborn",
+          "url": "https://www.halborn.com/audits/securitize/dstoken-e07b34",
+          "date": "2025-09"
+        },
+        {
+          "firm": "Cyfrin",
+          "url": "https://github.com/securitize-io/dstoken/blob/master/audits/2025-10-10-cyfrin-securitize-dstoken-v4-2.1.pdf",
+          "date": "2025-10"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "protocol@securitize.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+          "role": "contractOwner / upgrade admin of BUIDL token proxy on all assessed chains (Ethereum, Arbitrum, Avalanche)",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund) is a tokenized money market fund launched in March 2024 that gives qualified institutional investors on-chain exposure to U.S. Treasury bills, cash, and overnight repurchase agreements. BlackRock manages the underlying assets and BNY Mellon acts as custodian; Securitize serves as SEC-registered transfer agent, tokenization platform, and compliance layer. Investors subscribe and redeem through Securitize's permissioned platform, with on-chain BUIDL tokens representing fund shares; daily dividends are distributed as new token issuances, and transfers are restricted to wallet addresses whitelisted after KYC/AML verification."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/6759ab8b-fe27-4f5a-ad90-38b73d6fd58f",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "No user-callable on-chain exit function exists; burn/redeem requires Securitize's issuer key, token can be paused indefinitely, and funds can be seized without consent",
+    "short_headline": "Purely custodial, no self-service exit",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "ABI inspection of all three assessed deployments (Ethereum 0x7712, Arbitrum 0xA6525, Avalanche 0x53FC82) reveals no user-callable redeem(), withdraw(), or requestWithdrawal() function. The exit-adjacent functions are: burn(address,uint256,string) — a write function callable only by privileged roles; seize(address,address,uint256,string) — callable only by privileged roles, moves tokens from user without consent. Users cannot initiate any redemption on-chain."
+        },
+        {
+          "code": "E2",
+          "text": "transfer() and transferFrom() in the ABI route through preTransferCheck(address,address,uint256) which validates against COMPLIANCE_SERVICE and REGISTRY_SERVICE; both parties must be whitelisted. isPaused() provides a global pause guard: when true, all transfers are blocked. The ABI confirms pause() is callable by the owner (0xe01605) with no on-chain time cap. burn() is restricted to ISSUER role holders — not the token owner themselves."
+        },
+        {
+          "code": "E3",
+          "text": "pause() is callable by the owner 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e. No time cap on pause duration is enforced on-chain (no auto-expiry constant found in ABI or surfacer output). isPaused() returns false at the assessed blocks on all three chains (not currently paused). No separate PAUSE_ROLE or guardian role with a different actor was discovered; pause authority is coextensive with the single owner key."
+        },
+        {
+          "code": "E4",
+          "text": "No separate fast-acting emergency pause (with cap) vs. slow governance pause path was found. A single pause() function, callable by the same owner with no time differentiation, covers both scenarios."
+        },
+        {
+          "code": "E5",
+          "text": "No on-chain redemption queue, daily withdrawal cap, or maximum queue duration constant was found in any assessed contract. Redemption is purely off-chain through Securitize's platform; on-chain there is no queue to inspect."
+        },
+        {
+          "code": "E6",
+          "text": "No forced-exit, escape-hatch, or permissionless emergency-exit mechanism exists. Users cannot recover their principal on-chain without Securitize's cooperation."
+        },
+        {
+          "code": "E7",
+          "text": "No user-facing exit function is callable on-chain (Etherscan write tab or generic wallet) without Securitize involvement. The only on-chain user action is transfer() to another whitelisted address, which transfers the claim but does not redeem it for the underlying fund value. Redemption settlement is fully off-chain."
+        }
+      ],
+      "steelman": {
+        "red": "There is no on-chain exit function at all — BUIDL is purely custodial, the burn is restricted to the ISSUER role (Securitize), and the token can be paused indefinitely by a single unverified key with no escrow hatch for locked users.",
+        "orange": "Claims on already-finalized redemption proceeds are processed off-chain by Securitize within a predictable T+0/T+1 business day window; practical exit times are short, and the fund is legally structured so BNY Mellon holds the underlying Treasuries separately from Securitize's operations.",
+        "green": "As a SEC-regulated tokenized fund, BUIDL redemptions must be processed by BlackRock within legally mandated windows, making indefinite pause practically impossible; the off-chain legal framework provides stronger redemption guarantees than any on-chain mechanism could."
+      },
+      "verdict": "Choosing red because there is no on-chain exit function at all — the rubric's red trigger is satisfied ('there is no on-chain exit function at all (purely custodial)'). burn() requires the ISSUER role; transfer() requires both parties to be whitelisted by Securitize. Additionally, the owner can call pause() indefinitely, blocking even peer-to-peer transfers. The orange and green steel-mans invoke off-chain legal protections, which are genuine but outside the scope of on-chain assessment: the contract itself has no user-callable redemption path and no time-capped pause."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "shows": "Ethereum BUIDL ABI: write methods listed include burn(address,uint256,string), seize(address,address,uint256,string), pause(), unpause(). No withdraw(), redeem(), or requestWithdrawal() present. isPaused() = false. preTransferCheck() exists as compliance gate on all transfers.",
+        "chain": "Ethereum",
+        "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872",
+        "shows": "Arbitrum BUIDL ABI: identical function set; burn, seize, pause present; no user-callable redeem; isPaused() = false at block 469664011.",
+        "chain": "Arbitrum",
+        "address": "0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872"
+      },
+      {
+        "url": "https://defipunkd.com/address/43114/0x53FC82f14F009009b440a706e31c9021E1196A2F",
+        "shows": "Avalanche BUIDL ABI: same pattern — burn, seize, pause present; no user-callable exit; isPaused() = false at block 87089637.",
+        "chain": "Avalanche",
+        "address": "0x53FC82f14F009009b440a706e31c9021E1196A2F"
+      },
+      {
+        "url": "https://github.com/securitize-io/dstoken",
+        "shows": "README confirms 'Burning — Tokens can be burned (destroyed)' and 'Seizing — Tokens can be seized from their owner's wallet' — both limited to the Issuer role. No user-initiated redemption path is described."
+      }
+    ],
+    "unknowns": [
+      "E3: Identity of address(es) holding ISSUER role on each deployment not determined in this run (getDSService call with ISSUER service ID not attempted); role holders would also need to be checked against safe/owners",
+      "E5: Off-chain redemption queue terms (max settlement time, daily cap) not confirmed from a fully-fetched source this run; securitize.io rendered as JavaScript-only SPA"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/securitize-io/dstoken"],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Halborn",
+          "url": "https://www.halborn.com/audits/securitize/dstoken-e07b34",
+          "date": "2025-09"
+        },
+        {
+          "firm": "Cyfrin",
+          "url": "https://github.com/securitize-io/dstoken/blob/master/audits/2025-10-10-cyfrin-securitize-dstoken-v4-2.1.pdf",
+          "date": "2025-10"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "protocol@securitize.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+          "role": "contractOwner / upgrade admin of BUIDL token proxy on all assessed chains (Ethereum, Arbitrum, Avalanche)",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund) is a tokenized money market fund launched in March 2024 that gives qualified institutional investors on-chain exposure to U.S. Treasury bills, cash, and overnight repurchase agreements. BlackRock manages the underlying assets and BNY Mellon acts as custodian; Securitize serves as SEC-registered transfer agent, tokenization platform, and compliance layer. Investors subscribe and redeem through Securitize's permissioned platform, with on-chain BUIDL tokens representing fund shares; daily dividends are distributed as new token issuances, and transfers are restricted to wallet addresses whitelisted after KYC/AML verification."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/6759ab8b-fe27-4f5a-ad90-38b73d6fd58f",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "~100% of TVS depends on Securitize's operational liveness for on-chain redemption; no permissionless exit or fallback mechanism exists if Securitize ceases operations",
+    "short_headline": "Custodial operator required for all redemptions",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The BUIDL token ABI on all three assessed chains contains no external oracle calls, no price feed reads, no AMM interactions, and no bridge calls within the token contract itself. The token is a self-contained ERC-20 with compliance gates; it does not call any external on-chain price source. This is a strength — the on-chain token does not introduce oracle manipulation risk."
+        },
+        {
+          "code": "A2",
+          "text": "Securitize acts as the sole off-chain operator for all token lifecycle actions: wallet whitelisting (RegistryService), minting (TOKEN_ISSUER role), and burning (required for redemption). BNY Mellon custodies the off-chain U.S. Treasuries and repurchase agreements. BlackRock manages fund investment decisions. All three are single points of failure in the redemption chain. The GitHub README confirms 'Burning — Tokens can be burned (destroyed)' is limited to the Issuer role (held by Securitize). If Securitize ceases operations, no burns can be executed on-chain and investors cannot recover principal via on-chain means. Note: the legal claim on the underlying fund assets may survive Securitize's failure through court-ordered transfer agent replacement, but the on-chain mechanism is unambiguously blocked."
+        },
+        {
+          "code": "A3",
+          "text": "BNB Chain deployment uses Wormhole as the cross-chain bridge (confirmed from Cyfrin audit report listing 2026-02-10-cyfrin-securitize-bridge-wormhole-executor-v2.0.pdf and search results describing 'powered by Securitize and Wormhole'). Wormhole is a guardian-set bridge with a track record of exploits. Material TVL resides on Avalanche (~$414M at assessed block) and Ethereum (~$148M), not exclusively on BNB Chain, so Wormhole bridge failure would not impair the majority of TVS. The Wormhole bridge audit is recent (February 2026, Cyfrin)."
+        },
+        {
+          "code": "A4",
+          "text": "No nested collateral chain. BUIDL tokens represent a direct claim on a money market fund holding T-bills and repos — a single-level structure. No restaking, LRT, or receipt-of-receipt design."
+        },
+        {
+          "code": "A6",
+          "text": "No on-chain circuit breakers or fallback mechanisms for Securitize/operator failure were found in any assessed contract. There is no permissionless pause override, no community-governed time-release mechanism, and no emergency redemption path that activates automatically if the operator is unresponsive. All fallback is purely off-chain and legal."
+        },
+        {
+          "code": "A7",
+          "text": "Not applicable: BUIDL is deployed permissionlessly on third-party L2s (Arbitrum, Optimism, Polygon) and L1s (Ethereum, Avalanche). No proprietary sequencer or appchain architecture."
+        },
+        {
+          "code": "A8",
+          "text": "Securitize must sign every redemption transaction (executing burn()) and every minting transaction. This is a catastrophic liveness dependency: if Securitize stops processing, no principal recovery is possible on-chain. The role is permissioned (ISSUER role), not permissionless. The failure mode is not graceful — it locks principal until a legal transfer agent appointment is completed off-chain."
+        },
+        {
+          "code": "A9",
+          "text": "setDSService(uint256,address) in the token ABI allows the owner (0xe01605) to swap any protocol service contract (COMPLIANCE_SERVICE, REGISTRY_SERVICE, TRUST_SERVICE, LOCK_MANAGER, etc.) to a new address without timelock. This means the owner can silently redirect compliance/whitelist logic to a different external contract. This is an A9 finding: governance can hot-swap the protocol's external compliance dependency with no exit window."
+        }
+      ],
+      "steelman": {
+        "red": "All redemptions require Securitize to execute burn() on-chain; Securitize has no on-chain fallback, no auto-release timeout, and no permissionless emergency path — if Securitize stops operating, ~100% of BUIDL TVS is locked on-chain until a court-ordered successor transfer agent is appointed, which could take months.",
+        "orange": "BNY Mellon holds the underlying T-bills independently of Securitize; legal redemption rights survive Securitize failure through receivership, and SEC-registered transfer agent obligations create a legal continuity pathway; the actual monetary loss risk is bounded because the underlying assets (T-bills) are near-riskless.",
+        "green": "For the asset class (tokenized money market fund), this level of operator dependence is structurally equivalent to any other money market fund — the tokenization layer adds no incremental custodial risk beyond what investors already accepted, and the underlying fund's legal structure provides strong protections."
+      },
+      "verdict": "Choosing red because Securitize's operational liveness is required for all on-chain principal recovery (burn() is ISSUER-only with no fallback), and setDSService() allows the owner to swap compliance/service contract addresses without a timelock or exit window — satisfying the A8 catastrophic liveness criterion and the A9 governance-mutable dependency criterion. Impacted TVS under a Securitize operational failure: ~100% of on-chain BUIDL tokens across all chains (Ethereum ~$148M, Avalanche ~$414M, Arbitrum ~$25.5M at assessed blocks, plus Optimism and Polygon not quantified). The orange steel-man correctly identifies that legal recovery mechanisms exist, but those are off-chain and outside the on-chain assessment scope; the grade reflects the on-chain autonomy posture."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "shows": "Ethereum BUIDL ABI: no external oracle or AMM call in the ABI; setDSService(uint256,address) present allowing owner to replace any service contract; burn() restricted to privileged role, no user-callable redemption.",
+        "chain": "Ethereum",
+        "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc"
+      },
+      {
+        "url": "https://defipunkd.com/address/43114/0x53FC82f14F009009b440a706e31c9021E1196A2F",
+        "shows": "Avalanche BUIDL: totalSupply at block 87089637 = 414430029430000 (6 dec) ≈ $414M; same ABI structure with no fallback or user exit.",
+        "chain": "Avalanche",
+        "address": "0x53FC82f14F009009b440a706e31c9021E1196A2F"
+      },
+      {
+        "url": "https://github.com/securitize-io/dstoken",
+        "shows": "README: 'Burning — Tokens can be burned (destroyed)' is limited to the Issuer Role; /audits folder contains 2026-02-10-cyfrin-securitize-bridge-wormhole-executor-v2.0.pdf confirming Wormhole bridge integration audited by Cyfrin."
+      }
+    ],
+    "unknowns": [
+      "A1: Internal compliance service contract addresses not resolved this run; getDSService() calls for each serviceId not attempted",
+      "A3: BNB Chain deployment TVL not confirmed on-chain this run; Wormhole bridge address for BUIDL cross-chain not verified",
+      "A5: DeFiLlama forkedFrom field not checked in this run"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/securitize-io/dstoken"],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Halborn",
+          "url": "https://www.halborn.com/audits/securitize/dstoken-e07b34",
+          "date": "2025-09"
+        },
+        {
+          "firm": "Cyfrin",
+          "url": "https://github.com/securitize-io/dstoken/blob/master/audits/2025-10-10-cyfrin-securitize-dstoken-v4-2.1.pdf",
+          "date": "2025-10"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "protocol@securitize.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+          "role": "contractOwner / upgrade admin of BUIDL token proxy on all assessed chains (Ethereum, Arbitrum, Avalanche)",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund) is a tokenized money market fund launched in March 2024 that gives qualified institutional investors on-chain exposure to U.S. Treasury bills, cash, and overnight repurchase agreements. BlackRock manages the underlying assets and BNY Mellon acts as custodian; Securitize serves as SEC-registered transfer agent, tokenization platform, and compliance layer. Investors subscribe and redeem through Securitize's permissioned platform, with on-chain BUIDL tokens representing fund shares; daily dividends are distributed as new token issuances, and transfers are restricted to wallet addresses whitelisted after KYC/AML verification."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/6759ab8b-fe27-4f5a-ad90-38b73d6fd58f",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Contract-level on-chain whitelist enforced via ComplianceService and RegistryService — no transfer or issuance is possible without prior KYC/AML approval and wallet registration by Securitize",
+    "short_headline": "On-chain KYC whitelist gates all access",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "preTransferCheck(address,address,uint256) routes all transfer() and transferFrom() calls through COMPLIANCE_SERVICE (serviceId 8) and REGISTRY_SERVICE (serviceId 4) — both confirmed present in the ABI of all three assessed deployments. The REGISTRY_SERVICE enforces wallet whitelisting: only wallet addresses registered by an authorized actor (Securitize) pass the compliance check. Non-whitelisted addresses cannot receive or send BUIDL tokens. issueTokens() and burn() are restricted to ISSUER role holders. The whitelist is enforced entirely on-chain, not only via frontend."
+        },
+        {
+          "code": "A2",
+          "text": "Securitize holds ROLE_MASTER (value 1) and ROLE_ISSUER (value 2) in the TrustService, as indicated by the role constants in the ABI and the GitHub README ('Master — used to perform token-wide changes and designate other roles'; 'Issuer — allowed to mint more tokens, burn tokens'). Wallet registration (admission to the whitelist) requires an entity with the ROLE_EXCHANGE or ROLE_TRANSFER_AGENT role to register the investor via RegistryService. This is a single permissioned operator (Securitize) with no documented on-chain replacement procedure. No transfer, issuance, or redemption can be admitted without Securitize's prior approval."
+        },
+        {
+          "code": "A3",
+          "text": "Securitize's website (securitize.io/blackrock/buidl) requires JavaScript and could not be fully rendered; full ToS text is in unknowns. From the GitHub README and Halborn audit scope description: 'compliance rules applicable to a DS token' include 'KYC/AML validity, accredited investor status'. Published product descriptions (search results) confirm minimum $5M investment for the Ethereum share class and accredited/qualified purchaser requirements. Frontend enforcement: Securitize applies active KYC enforcement (investor must complete Securitize iD KYC before wallet whitelisting), which gates on-chain admission."
+        },
+        {
+          "code": "A3b",
+          "text": "No independent access path bypasses the on-chain whitelist. UniswapX integration (Feb 2026) requires pre-whitelisting through Securitize Markets per published press: 'investors who elect to trade through UniswapX will be pre-qualified and whitelisted, preserving regulatory controls.' No published SDK, third-party frontend, wallet integration, or aggregator route allows interaction without Securitize's whitelist. DEX aggregators (e.g., 1inch) cannot route unwhitelisted wallets to BUIDL since the transfer would revert on-chain."
+        },
+        {
+          "code": "A4",
+          "text": "On-chain compliance enforcement is structural: all transfers route through the RegistryService (on-chain wallet registry). The whitelist is maintained in the RegistryService contract by Securitize. No OFAC on-chain blocklist in the traditional sense — instead, a positive-only whitelist where non-whitelisted addresses are denied by default. This is stricter than a typical sanctions blocklist."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is permissionless: balanceOf(), totalSupply(), isPaused(), preTransferCheck() are all publicly callable view functions with no access restriction. Anyone can read BUIDL state. Write access (transfer, mint, burn) requires whitelist membership controlled by Securitize."
+        },
+        {
+          "code": "A6",
+          "text": "Full ToS text not extractable: securitize.io/terms-conditions was not successfully fetched (JavaScript SPA). From the Securitize BUIDL product page (search snippet, not full page fetch): 'BUIDL adheres to high KYC/AML standards and only permits token transfers to whitelisted investors.' This snippet is cited as context only, not as verbatim ToS evidence. Verbatim ToS extraction belongs in unknowns."
+        }
+      ],
+      "steelman": {
+        "red": "The token contract enforces a positive-only whitelist on every transfer — no unwhitelisted address can participate regardless of frontend, aggregator, or direct contract interaction — and the whitelist is controlled entirely by a single permissioned operator (Securitize) with no documented on-chain governance for replacement.",
+        "orange": "BUIDL is a regulated security and on-chain compliance enforcement is legally required by U.S. securities law; the permissioned whitelist is a regulatory necessity, not an access restriction chosen to exclude users arbitrarily; Securitize operates an ATS under FINRA/SIPC regulation.",
+        "green": "BUIDL is explicitly designed for institutional investors who self-select into a permissioned structure; the whitelist is the product, not a barrier to an otherwise open protocol."
+      },
+      "verdict": "Choosing red because the contract enforces a positive-only whitelist via ComplianceService and RegistryService on all transfers — directly matching the rubric's 'contract-level whitelist/KYC on user entry/exit' red trigger. This is confirmed directly from the on-chain ABI across Ethereum, Arbitrum, and Avalanche. The orange and green steel-mans are accurate descriptions of the regulatory rationale, but do not change the on-chain access posture: no transfer is possible without Securitize-controlled whitelist membership."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "shows": "Ethereum BUIDL ABI confirms preTransferCheck(address,address,uint256) as compliance gate on all transfers; COMPLIANCE_SERVICE (8) and REGISTRY_SERVICE (4) are named service IDs; ROLE_MASTER (1), ROLE_ISSUER (2), ROLE_EXCHANGE (4), ROLE_TRANSFER_AGENT (8) are defined role constants restricting who can admit wallets.",
+        "chain": "Ethereum",
+        "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872",
+        "shows": "Arbitrum BUIDL confirms identical compliance gate structure; COMPLIANCE_SERVICE and REGISTRY_SERVICE service IDs confirmed.",
+        "chain": "Arbitrum",
+        "address": "0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872"
+      },
+      {
+        "url": "https://github.com/securitize-io/dstoken",
+        "shows": "README: 'The Registry Service contracts implement a database of investors, along with their regulatory related data (accreditation, qualification, KYC/AML, etc) and their list of confirmed wallets.' and 'The compliance service contracts enforce the actual compliance rules... so trades are done in a regulatory-compliant manner.' Confirms on-chain enforcement of whitelist and KYC/AML."
+      },
+      {
+        "url": "https://www.halborn.com/audits/securitize/dstoken-e07b34",
+        "shows": "Halborn audit confirms: 'ComplianceService enforces transfer restrictions, lockups, and jurisdictional investor limits using data from the RegistryService. Core actions such as transfer, swap, buy, and redemption automatically route through these compliance checks, ensuring every movement of tokens respects regulations.'"
+      }
+    ],
+    "unknowns": [
+      "A6: Verbatim Securitize ToS/eligibility clause not extracted — securitize.io is a JavaScript SPA that returned 'You need to enable JavaScript to run this app.' Full eligibility, jurisdictional restriction, and sanctions clause text not confirmed from a fetched source this run"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/securitize-io/dstoken"],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Halborn",
+          "url": "https://www.halborn.com/audits/securitize/dstoken-e07b34",
+          "date": "2025-09"
+        },
+        {
+          "firm": "Cyfrin",
+          "url": "https://github.com/securitize-io/dstoken/blob/master/audits/2025-10-10-cyfrin-securitize-dstoken-v4-2.1.pdf",
+          "date": "2025-10"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "protocol@securitize.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+          "role": "contractOwner / upgrade admin of BUIDL token proxy on all assessed chains (Ethereum, Arbitrum, Avalanche)",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund) is a tokenized money market fund launched in March 2024 that gives qualified institutional investors on-chain exposure to U.S. Treasury bills, cash, and overnight repurchase agreements. BlackRock manages the underlying assets and BNY Mellon acts as custodian; Securitize serves as SEC-registered transfer agent, tokenization platform, and compliance layer. Investors subscribe and redeem through Securitize's permissioned platform, with on-chain BUIDL tokens representing fund shares; daily dividends are distributed as new token issuances, and transfers are restricted to wallet addresses whitelisted after KYC/AML verification."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "claude-sonnet-4-6",
+    "chat_url": "https://claude.ai/share/6759ab8b-fe27-4f5a-ad90-38b73d6fd58f",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Proxy and implementation contracts verified on-chain; Halborn and Cyfrin audits (Oct 2025) cover DSToken v4, but Ethereum deployment uses an older custom proxy pattern predating v4 audit scope",
+    "short_headline": "Verified code, audit gap on ETH deployment",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Ethereum token proxy (0x7712c34205737192402172409a8F7ccef8aA2AEc): verified on Etherscan (ABI source = 'etherscan', surfacer pre-executes 35 view methods). Implementation (0x603Bb6909Be14f83282E03632280D91bE7fB83b2): verified on Etherscan (ABI source = 'etherscan'). Arbitrum token proxy (0xA6525): verified (ABI source = 'etherscan'). Avalanche token proxy (0x53FC82): verified (ABI source = 'etherscan'). Admin address 0xe01605: NOT verified (ABI endpoint returned 404, surfacer: 'No verified ABI found')."
+        },
+        {
+          "code": "V2",
+          "text": "Public source repository exists at https://github.com/securitize-io/dstoken (securitize-io/dstoken, Apache 2.0). Commit-level correspondence between deployed bytecode and repository was not independently confirmed in this run (no bytecode diff executed). The Ethereum proxy uses a custom setTarget() pattern (ProxyOwnerChanged, ProxyTargetSet events; setTarget, setOwner functions in proxy ABI), while the GitHub repository's latest v4 describes ERC1967/UUPS proxies. This ABI shape divergence suggests the Ethereum deployment uses an older proxy layer."
+        },
+        {
+          "code": "V3",
+          "text": "Halborn audit: scope = securitize-io/dstoken at commit f288c35 (September 1–25, 2025), covers DSToken v4 core contracts (DSToken.sol, ComplianceService, RegistryService, TrustService, etc.). 0 critical, 0 high, 2 medium, 4 low, 7 informational; all medium/low issues resolved. Cyfrin audit: 2025-10-10-cyfrin-securitize-dstoken-v4-2.1.pdf in the /audits folder. Additional Cyfrin audit: 'Securitize Global Registry' (Oct 2025), and 'Securitize Solana Whitelist' (Oct 2025). Cyfrin also audited the Wormhole bridge executor (Feb 2026). These audits cover the v4 ERC1967-based deployment well."
+        },
+        {
+          "code": "V4",
+          "text": "Halborn is a broadly recognized Solidity auditing firm. Cyfrin is a broadly recognized Solidity auditing firm. Both qualify under the recognized-firm standard for green grading."
+        },
+        {
+          "code": "V5",
+          "text": "The Ethereum token proxy uses ProxyOwnerChanged/ProxyTargetSet events and setTarget()/setOwner() functions — this is the older Securitize custom proxy pattern, not the ERC1967 UUPS pattern used in the v4 codebase (Arbitrum/Avalanche show upgradeToAndCall() and UPGRADE_INTERFACE_VERSION = '5.0.0'). The Halborn and Cyfrin v4 audits were conducted against commit f288c35 which corresponds to the ERC1967-based implementation. The Ethereum proxy and its associated implementation may correspond to DSToken v3.x which predates the October 2025 v4 audits. An earlier CoinFabrik audit was referenced in web search results for an older DSToken version, but that report was not fetched in this run and its scope cannot be confirmed. This constitutes a potential audit drift gap for the Ethereum deployment — the fund's original and historically largest deployment."
+        },
+        {
+          "code": "V6",
+          "text": "Ethereum: proxy 0x7712 is verified; implementation 0x603B is verified separately (ABI source etherscan confirmed). Arbitrum: proxy 0xA6525 verified; implementation 0xdbf6db49066784A69244d3b33Cf44C25Ec86C0F7 shown in surfacer as proxy target, not independently fetched in this run. Avalanche: proxy 0x53FC82 verified; implementation 0xf93667D01c7675E2667Ee392Aa69104DF79c4Ad0 shown in surfacer."
+        }
+      ],
+      "steelman": {
+        "red": "The owner/admin address 0xe01605 is unverified bytecode; the Ethereum deployment uses an older proxy mechanism not covered by the October 2025 v4 audits; and the Cyfrin/Halborn audits cover a specific commit that has not been pinned to the live Ethereum bytecode in this run.",
+        "orange": "Proxy and implementation contracts on Ethereum are verified on Etherscan; two recognized auditors (Halborn and Cyfrin) have reviewed DSToken v4; but the Ethereum deployment's older custom-proxy pattern may predate the v4 audit scope, creating a specific audit coverage gap for the primary chain.",
+        "green": "All assessed proxy and implementation contracts are verified on their respective chain explorers; Halborn and Cyfrin are recognized firms; multiple recent audits (September–October 2025) provide broad coverage of the DSToken v4 framework that all newer deployments (Arbitrum, Avalanche) use."
+      },
+      "verdict": "Choosing orange because the Ethereum deployment (the original and historically most significant deployment) uses an older custom proxy pattern (setTarget/ProxyTargetSet) that differs from the v4 ERC1967/UUPS code audited by Halborn at commit f288c35 and by Cyfrin in October 2025. This creates an audit coverage gap for the Ethereum chain's proxy layer and potentially its implementation. Newer deployments (Arbitrum, Avalanche with UPGRADE_INTERFACE_VERSION = '5.0.0') are covered by the v4 audits. The admin address 0xe01605 remains unverified. The green steel-man requires confirming the Ethereum bytecode corresponds to an audited commit, which was not achieved in this run."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "shows": "Ethereum BUIDL proxy: ABI source = etherscan (verified); proxy pattern uses setTarget()/setOwner() and ProxyTargetSet/ProxyOwnerChanged events — custom proxy, not ERC1967. getVersion() returns [3, 6, 6, 5, 5] suggesting older multi-component versioning.",
+        "chain": "Ethereum",
+        "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x603Bb6909Be14f83282E03632280D91bE7fB83b2",
+        "shows": "Ethereum implementation: ABI source = etherscan (verified); no setTarget/setOwner/ProxyTargetSet (implementation, not proxy); getVersion() = [1].",
+        "chain": "Ethereum",
+        "address": "0x603Bb6909Be14f83282E03632280D91bE7fB83b2"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872",
+        "shows": "Arbitrum BUIDL: ABI source = etherscan (verified); ERC1967Proxy pattern; UPGRADE_INTERFACE_VERSION = '5.0.0'; upgradeToAndCall present; implementation = 0xdbf6db49066784A69244d3b33Cf44C25Ec86C0F7.",
+        "chain": "Arbitrum",
+        "address": "0xA6525Ae43eDCd03dC08E775774dCAbd3bb925872"
+      },
+      {
+        "url": "https://defipunkd.com/address/43114/0x53FC82f14F009009b440a706e31c9021E1196A2F",
+        "shows": "Avalanche BUIDL: ABI source = etherscan (verified); ERC1967Proxy; UPGRADE_INTERFACE_VERSION = '5.0.0'; implementation = 0xf93667D01c7675E2667Ee392Aa69104DF79c4Ad0.",
+        "chain": "Avalanche",
+        "address": "0x53FC82f14F009009b440a706e31c9021E1196A2F"
+      },
+      {
+        "url": "https://www.halborn.com/audits/securitize/dstoken-e07b34",
+        "shows": "Halborn DSToken audit: engagement September 1–25, 2025; assessed commit f288c35 of securitize-io/dstoken; scope includes DSToken.sol, ComplianceService, RegistryService, TrustService; 0 critical, 0 high findings; all medium/low resolved. Halborn is a recognized auditing firm."
+      },
+      {
+        "url": "https://github.com/securitize-io/dstoken",
+        "shows": "Public repo securitize-io/dstoken (Apache 2.0); /audits folder contains 2025-10-10-cyfrin-securitize-dstoken-v4-2.1.pdf and 2025-10-09-Halborn-DSToken_v4_SSC.pdf; latest release v4.1.0 (Mar 12, 2026); README describes ERC1967 OZ proxy for v4."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+        "shows": "Admin address: 'No verified ABI found for 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e on chainId 1 (etherscan + sourcify both failed).' Owner address is unverified.",
+        "chain": "Ethereum",
+        "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e"
+      }
+    ],
+    "unknowns": [
+      "V2: Commit SHA pinning not performed — no bytecode diff between deployed Ethereum implementation 0x603B and the securitize-io/dstoken repository was executed; correspondence is inferred from ABI shape, not confirmed",
+      "V3: CoinFabrik audit of the older DSToken (found in search results) not fetched in this run; scope and date not confirmed; unclear if it covers the Ethereum proxy/implementation as deployed",
+      "V5: Whether the Ethereum deployment's custom-proxy pattern corresponds to DSToken v3 or an earlier commit was not confirmed by fetching a deployed-addresses JSON or audit scope document covering that exact deployment",
+      "V6: Arbitrum implementation 0xdbf6db49066784A69244d3b33Cf44C25Ec86C0F7 and Avalanche implementation 0xf93667D01c7675E2667Ee392Aa69104DF79c4Ad0 not independently fetched in this run"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/securitize-io/dstoken"],
+      "docs_url": null,
+      "audits": [
+        {
+          "firm": "Halborn",
+          "url": "https://www.halborn.com/audits/securitize/dstoken-e07b34",
+          "date": "2025-09"
+        },
+        {
+          "firm": "Cyfrin",
+          "url": "https://github.com/securitize-io/dstoken/blob/master/audits/2025-10-10-cyfrin-securitize-dstoken-v4-2.1.pdf",
+          "date": "2025-10"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": "protocol@securitize.io",
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+          "role": "contractOwner / upgrade admin of BUIDL token proxy on all assessed chains (Ethereum, Arbitrum, Avalanche)",
+          "actor_class": "unknown"
+        }
+      ],
+      "upgradeability": "upgradeable",
+      "about": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund) is a tokenized money market fund launched in March 2024 that gives qualified institutional investors on-chain exposure to U.S. Treasury bills, cash, and overnight repurchase agreements. BlackRock manages the underlying assets and BNY Mellon acts as custodian; Securitize serves as SEC-registered transfer agent, tokenization platform, and compliance layer. Investors subscribe and redeem through Securitize's permissioned platform, with on-chain BUIDL tokens representing fund shares; daily dividends are distributed as new token issuances, and transfers are restricted to wallet addresses whitelisted after KYC/AML verification."
+    }
+  }
+]

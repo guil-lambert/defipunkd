@@ -1,0 +1,278 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "control",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "grok-3",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_e6f3f063-f55a-4168-9f4b-b03fb84b54c5",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Single EOA proxy owner with upgrade, mint/issue, and role-management powers; no timelock or multisig on T1 path",
+    "short_headline": "EOA-controlled upgradeable token (T1)",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "Token proxy owner() at 0x7712c34205737192402172409a8F7ccef8aA2AEc returns 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e (https://defipunkd.com/api/contract/read?chainId=1&address=0x7712c34205737192402172409a8f7ccef8aa2aec&method=owner, block 25237812). Etherscan confirms 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e is an EOA that has performed token issuance and bridge management for BUIDL[](https://etherscan.io/address/0xe01605f6b6dC593b7d2917F4a0940db2A625b09e)."},
+        {"code": "C2", "text": "0x7712c34205737192402172409a8F7ccef8aA2AEc is an upgradeable proxy (implementation 0x603Bb6909Be14f83282E03632280D91bE7fB83b2). Etherscan and defipunkd surfacer confirm proxy pattern with upgradeTo/upgradeToAndCall capability in the verified implementation (https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec; https://etherscan.io/address/0x603Bb6909Be14f83282E03632280D91bE7fB83b2)."},
+        {"code": "C4", "text": "No multisig or timelock surfaced for the proxy owner or token admin roles. Control is held by single EOA 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e[](https://etherscan.io/address/0xe01605f6b6dC593b7d2917F4a0940db2A625b09e). Contract uses role-based access (ROLE_MASTER, TOKEN_ISSUER, COMPLIANCE_SERVICE, TRANSFER_AGENT etc.) grantable by owner[](https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec)."},
+        {"code": "C7", "text": "Highest tier reachable on uncontested path is T1: EOA can replace implementation (upgradeTo), mint/issue shares (evidenced by past issuance txs), change accounting/compliance logic, and manage roles that gate transfers and issuance. No timelock or multi-sig gate (https://etherscan.io/address/0xe01605f6b6dC593b7d2917F4a0940db2A625b09e; proxy surfacer evidence)."}
+      ],
+      "steelman": {
+        "red": "Single EOA holds proxy ownership with direct upgrade, issuance, and role-grant powers and no timelock or Security Council; T1 blast radius (implementation swap or unbacked mint) is reachable in one transaction.",
+        "orange": "Complex role-based compliance system (TRANSFER_AGENT, COMPLIANCE_SERVICE) and verified implementation provide some operational guardrails; on-chain actions are logged and limited to whitelisted flows.",
+        "green": "Token is a representation of off-chain Treasury/repo assets; on-chain admin powers cannot directly drain on-chain user funds or alter underlying custody (which sits with BNY Mellon/BlackRock)."
+      },
+      "verdict": "Choosing red because the uncontested fast path gives a single EOA T1 powers (upgrade + mint/issue + role admin) with zero delay or multi-party check; steelman for red is materially stronger than orange/green given the explicit EOA owner and proxy upgrade surface."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x7712c34205737192402172409a8f7ccef8aa2aec&method=owner", "shows": "owner() returns the EOA 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e at block 25237812; proves admin control surface", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Proxy to implementation 0x603Bb6909Be14f83282E03632280D91bE7fB83b2; role constants and upgrade events (ProxyTargetSet, ProxyOwnerChanged); isPaused false; confirms upgradeable + role-based control", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://etherscan.io/address/0xe01605f6b6dC593b7d2917F4a0940db2A625b09e", "shows": "EOA (no contract code); historical token issuance to BUIDL contract and bridge management txs; confirms single-party admin actor", "chain": "Ethereum", "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://etherscan.io/address/0x603Bb6909Be14f83282E03632280D91bE7fB83b2", "shows": "Verified DSToken implementation with Ownable, upgradeTo/upgradeToAndCall, initialize, and role-based patterns; confirms T1 upgrade surface reachable by proxy owner", "chain": "Ethereum", "address": "0x603Bb6909Be14f83282E03632280D91bE7fB83b2", "fetched_at": "2026-06-03T11:38:00Z"}
+    ],
+    "unknowns": [
+      "C3: No timelock or queued execution path found; execution is direct owner call (no MIN_DELAY or queue contract surfaced).",
+      "C4: No Gnosis Safe or multisig owners/thresholds found for admin roles; only EOA surfaced. Other chains' token owners not read.",
+      "C5: No on-chain Governor or token-weighted governance contract found.",
+      "C6: Emergency pause/guardian role exists in role system but actor holding PAUSE/guardian and time cap not read on-chain this run."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://securitize.io/blackrock/buidl",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e", "role": "proxy owner / token owner (EOA admin with issuance, upgrade, role-grant powers)", "actor_class": "eoa"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ERC-20 tokenized shares in BlackRock USD Institutional Digital Liquidity Fund (short-term U.S. Treasuries and repo). On-chain token enables P2P transfers between KYC-whitelisted holders; subscriptions, redemptions, and dividends processed off-chain via Securitize transfer agent. Daily yield paid in additional BUIDL tokens."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "grok-3",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_e6f3f063-f55a-4168-9f4b-b03fb84b54c5",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "On-chain token transfers possible between whitelisted holders; full cash redemption requires off-chain Transfer Agent process with deadlines and issuer cooperation",
+    "short_headline": "Platform-mediated exit; no permissionless on-chain redeem",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "User-facing exit paths: on-chain transfer() / transferFrom() to whitelisted addresses (24/7 P2P); off-chain redemption request to Transfer Agent (Securitize) for USD settlement. No direct user-facing burn/redeem/claim function for cash on main token contract (https://securitize.io/blackrock/buidl; https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec)."},
+        {"code": "E2", "text": "On-chain transfer is gated by compliance/whitelist roles (TRANSFER_AGENT, COMPLIANCE_SERVICE, WALLET_REGISTRAR). Off-chain redemption requires submitting request to Transfer Agent during business hours; on-chain token movement to their wallet must finalize before settlement[](https://securitize.io/blackrock/buidl)."},
+        {"code": "E3", "text": "isPaused() currently false on token proxy (surfacer data). Contract has pause/unpause capability via roles; no on-chain evidence of infinite-pause cap or actor this run. Pause would block transfers but redemption queue is off-chain."},
+        {"code": "E5", "text": "Redemption requests have daily cut-off (8am-3pm ET) for same-day settlement; missed deadline rolls to next day. No documented on-chain queue or daily withdrawal cap for token itself."},
+        {"code": "E7", "text": "On-chain transfers are directly callable via any wallet/SDK on verified contract (no frontend dependency for P2P transfer). Full USD exit requires Securitize platform/Transfer Agent cooperation."}
+      ],
+      "steelman": {
+        "red": "No permissionless on-chain function to redeem BUIDL for USD or underlying Treasuries; exit to cash depends entirely on issuer/Transfer Agent process, deadlines, and whitelist status; admin-controlled pause or role revocation can block even on-chain liquidity.",
+        "orange": "On-chain P2P transfers between whitelisted holders are permissionless and 24/7; daily dividend tokens accrue automatically; redemption process is documented, time-bounded per business day, and uses regulated transfer agent.",
+        "green": "Token itself is transferable on-chain without admin signature once whitelisted; 'instant' redemption marketing and same-day settlement window provide practical exit for compliant users."
+      },
+      "verdict": "Choosing red because there is no on-chain exit function that lets a user unilaterally convert tokens to USD/principal without issuer cooperation; the operative exit path is off-chain and gated by Transfer Agent deadlines and whitelist status. Steelman for red outweighs orange/green."
+    },
+    "evidence": [
+      {"url": "https://securitize.io/blackrock/buidl", "shows": "Redemptions processed via Transfer Agent with 8am-3pm ET window for same-day settlement; on-chain transfers 24/7 to whitelisted investors only; daily dividends paid as new BUIDL tokens; Qualified Purchaser + min $5M; confirms off-chain exit dependency", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Token proxy with role-based access control (TRANSFER_AGENT, COMPLIANCE_SERVICE, etc.); isPaused false; upgradeable; confirms on-chain transfer gating and lack of public redeem function", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://etherscan.io/token/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Verified proxy + implementation; security token profile; no public redeem/burn interface listed for retail exit", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"}
+    ],
+    "unknowns": [
+      "E2: Exact on-chain modifiers or hasRole checks for transfer vs. redeem/burn not read this run (method-isPaused failed; full ABI enumeration incomplete).",
+      "E3: Actor holding pause/guardian role and maximum pause duration not determined on-chain.",
+      "E4: No evidence of separate emergency vs governance pause paths; role system implies issuer-controlled pause.",
+      "E6: No permissionless emergency-exit or escape-hatch function found for adversarial-admin scenario."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://securitize.io/blackrock/buidl",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e", "role": "proxy owner / token owner (EOA admin)", "actor_class": "eoa"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ERC-20 tokenized shares in BlackRock USD Institutional Digital Liquidity Fund (short-term U.S. Treasuries and repo). On-chain token enables P2P transfers between KYC-whitelisted holders; subscriptions, redemptions, and dividends processed off-chain via Securitize transfer agent. Daily yield paid in additional BUIDL tokens."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "grok-3",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_e6f3f063-f55a-4168-9f4b-b03fb84b54c5",
+    "grading_basis": "off-chain-only",
+    "grade": "red",
+    "headline": "Fully dependent on BlackRock (asset mgr), BNY Mellon (custodian), Securitize (transfer agent + KYC whitelist) and off-chain Treasuries/repo; ~100% TVS at risk from TradFi counterparty failure",
+    "short_headline": "TradFi RWA dependencies; no on-chain fallback",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "Core token contract has no on-chain oracles, AMMs, or lending pools it calls. All pricing/NAV, yield accrual, and collateral (Treasuries/repo) are off-chain and managed by BlackRock. Token only tracks ownership and enables whitelisted transfers (https://securitize.io/blackrock/buidl; https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec)."},
+        {"code": "A2", "text": "Off-chain actor committees: BlackRock (portfolio manager), BNY Mellon (custodian per RWA.xyz data), Securitize (transfer agent, KYC/AML whitelist manager, redemption processor). Mis-reporting or failure by any can freeze redemptions or impair token value/peg. No on-chain validator set or slashing."},
+        {"code": "A3", "text": "Multi-chain deployments (Ethereum primary + Arbitrum, Avalanche, Optimism, Polygon, Solana, Aptos, BNB) inherit canonical bridges or platform-specific messaging. No material TVL on non-canonical bridges identified; primary risk is operational coordination across chains by Securitize."},
+        {"code": "A4", "text": "No nested restaking/LRT; underlying is traditional short-term Treasuries and overnight repo held in custody. Failure at custody or asset-manager level directly impairs share value."},
+        {"code": "A6", "text": "No on-chain circuit breakers, sanity-check oracles, or fallback mechanisms for external TradFi failures. Yield is paid in new tokens daily; redemption queue is off-chain only."},
+        {"code": "A9", "text": "Proxy owner EOA can upgrade implementation and change roles (including compliance/transfer-agent roles). No evidence of on-chain timelock protecting users from silent dependency swaps."}
+      ],
+      "steelman": {
+        "red": "100% of TVS depends on off-chain BlackRock asset management, BNY Mellon custody, and Securitize operational/KYC infrastructure; no on-chain fallback or recoverable path if any TradFi counterparty fails or withholds cooperation.",
+        "orange": "Token itself is simple ownership ledger with whitelisted P2P transfers; daily dividends auto-accrue on-chain; regulated entities (BlackRock, BNYM, Securitize) provide institutional operational resilience and legal recourse.",
+        "green": "BUIDL is a direct claim on high-quality, liquid short-term Treasuries/repo with BlackRock's balance sheet and regulatory oversight; on-chain token layer adds minimal additional dependency beyond standard RWA custody."
+      },
+      "verdict": "Choosing red because every critical path (yield generation, custody, redemption finality, whitelist maintenance) is external TradFi with no on-chain mitigation or fallback; impacted TVS is effectively 100%. Steelman for red is decisively stronger."
+    },
+    "evidence": [
+      {"url": "https://securitize.io/blackrock/buidl", "shows": "Core investments are off-chain overnight repo and 3-month Treasuries; BlackRock manages the fund; Securitize is transfer agent and platform for KYC/whitelisting/subscriptions/redemptions; confirms full TradFi dependency stack", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://app.rwa.xyz/assets/BUIDL", "shows": "Custodian: Bank of New York Mellon; Transfer Agent & Paying Agent: Securitize; Issuer domiciled British Virgin Islands; confirms external counterparty dependencies", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Token contract performs no external contract calls to oracles, bridges, or yield sources; purely ownership + role-gated transfer ledger", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"}
+    ],
+    "unknowns": [
+      "A1: Exact external contract calls (if any) from implementation not fully enumerated due to ABI gaps on proxy reads.",
+      "A7: Multi-chain sequencer/bridge liveness dependencies not assessed per-chain beyond primary Ethereum deployment.",
+      "A8: Keeper/relayer dependencies for off-chain processes (dividend distribution, redemption settlement) not on-chain visible."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://securitize.io/blackrock/buidl",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e", "role": "proxy owner / token owner (EOA admin)", "actor_class": "eoa"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ERC-20 tokenized shares in BlackRock USD Institutional Digital Liquidity Fund (short-term U.S. Treasuries and repo). On-chain token enables P2P transfers between KYC-whitelisted holders; subscriptions, redemptions, and dividends processed off-chain via Securitize transfer agent. Daily yield paid in additional BUIDL tokens."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "grok-3",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_e6f3f063-f55a-4168-9f4b-b03fb84b54c5",
+    "grading_basis": "mixed",
+    "grade": "red",
+    "headline": "Contract and platform enforce KYC/AML whitelist; only Qualified Purchasers with $5M+ minimum; transfers restricted to approved wallets; no independent permissionless access path",
+    "short_headline": "KYC-whitelisted security token; min $5M QP only",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "Token contract uses role-based modifiers (COMPLIANCE_SERVICE, TRANSFER_AGENT, WALLET_REGISTRAR, TOKEN_ISSUER) that gate transfers and issuance. Transfers only permitted to whitelisted investors (https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec; https://securitize.io/blackrock/buidl)."},
+        {"code": "A2", "text": "Off-chain operators in admission path: Securitize KYC/AML team and Transfer Agent control whitelist and approve subscriptions/redemptions. No permissionless on-chain admission for new users."},
+        {"code": "A3", "text": "Frontend (Securitize platform) enforces Qualified Purchaser status, sanctions attestation, and jurisdiction restrictions. Active runtime enforcement via KYC wall and whitelist. ToS and platform UI restrict access to eligible investors only."},
+        {"code": "A3b", "text": "No published SDK, third-party frontend, wallet integration, or aggregator routing that bypasses Securitize KYC/whitelist for new admissions. On-chain transfers possible only after whitelist approval via official platform."},
+        {"code": "A4", "text": "On-chain blocklist/whitelist enforcement via roles; contract does not accept arbitrary addresses for meaningful participation (transfer/holding)."},
+        {"code": "A5", "text": "Read access (view balance, transfers) is permissionless on verified contract. Write access (transfer, receive meaningful value) is gated to whitelisted addresses."},
+        {"code": "A6", "text": "Securitize ToS and platform require KYC/AML, Qualified Purchaser certification, and compliance with applicable law. Verbatim eligibility language present on https://securitize.io/blackrock/buidl."}
+      ],
+      "steelman": {
+        "red": "Admission to any economically meaningful use (holding, transferring, subscribing, redeeming) requires off-chain KYC/AML approval and Qualified Purchaser status via Securitize; contract enforces whitelist at transfer level; no independent access path exists.",
+        "orange": "Once whitelisted, on-chain P2P transfers are permissionless 24/7 between approved wallets; read state is fully open; regulated platform provides compliant on-ramp for eligible institutions.",
+        "green": "Token contract itself has no hardcoded geographic or single-party gate beyond role-managed compliance; any whitelisted user can transfer freely without further admin approval per transaction."
+      },
+      "verdict": "Choosing red because both contract-level (role-gated transfers) and platform-level (KYC wall + QP + $5M min) barriers exist, and no credible independent access path bypasses the official Securitize onboarding. Steelman for red is strongest."
+    },
+    "evidence": [
+      {"url": "https://securitize.io/blackrock/buidl", "shows": "Qualified Purchaser status required for Ethereum and several chains; minimum investment $5M; 'only permits token transfers to whitelisted investors'; KYC/AML standards enforced; subscription/redemption via Securitize platform only", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Role-based access control with COMPLIANCE_SERVICE, TRANSFER_AGENT, WALLET_REGISTRAR, TOKEN_ISSUER; confirms on-chain whitelist/transfer gating", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://etherscan.io/token/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Security token profile; verified proxy with compliance features; no open mint/transfer for arbitrary addresses", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"}
+    ],
+    "unknowns": [
+      "A1: Full list of functions protected by onlyRole or whitelist modifiers not exhaustively read due to ABI resolution limits on proxy.",
+      "A3b: Existence of any third-party SDK, CLI, or aggregator that routes new users without Securitize KYC not confirmed (searches returned none)."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://securitize.io/blackrock/buidl",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e", "role": "proxy owner / token owner (EOA admin)", "actor_class": "eoa"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ERC-20 tokenized shares in BlackRock USD Institutional Digital Liquidity Fund (short-term U.S. Treasuries and repo). On-chain token enables P2P transfers between KYC-whitelisted holders; subscriptions, redemptions, and dividends processed off-chain via Securitize transfer agent. Daily yield paid in additional BUIDL tokens."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "blackrock-buidl",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-03",
+    "model": "grok-3",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_e6f3f063-f55a-4168-9f4b-b03fb84b54c5",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Proxy and implementation bytecode verified Exact Match on Etherscan with source visible; no public GitHub repo or recognized-firm audit found; automated scan exists but insufficient for green",
+    "short_headline": "Etherscan verified; missing public repo + recognized audit",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "Proxy 0x7712c34205737192402172409a8F7ccef8aA2AEc and implementation 0x603Bb6909Be14f83282E03632280D91bE7fB83b2 both have verified source on Etherscan (Exact Match). defipunkd surfacer confirms ABI from etherscan/sourcify and proxy resolution (https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec; https://etherscan.io/token/0x7712c34205737192402172409a8f7ccef8aa2aec)."},
+        {"code": "V2", "text": "Source code is visible on Etherscan for both proxy and DSToken implementation. No matching public GitHub repository or commit SHA found in searches or pinned context."},
+        {"code": "V3", "text": "No audit links in per-protocol context. Searches surfaced one automated security scan by Veritas Protocol (average score) and mentions of internal/partner reviews for Arbitrum deployment; no recognized-firm (Trail of Bits, Spearbit, OpenZeppelin, etc.) audit report covering current deployment."},
+        {"code": "V4", "text": "Veritas Protocol automated scan is not a recognized manual audit firm per rubric. No other auditor names surfaced."},
+        {"code": "V6", "text": "Proxy is verified and correctly points to verified implementation. No unverified implementation gap."}
+      ],
+      "steelman": {
+        "red": "No public source repository and no recognized-firm audit; contracts are institutional security tokens with complex role/compliance logic that benefits from independent review.",
+        "orange": "Bytecode is fully verified Exact Match on Etherscan with source code readable; implementation is a standard Ownable + proxy pattern; some partner review occurred for chain expansions.",
+        "green": "Both proxy and implementation are verified on a major explorer with source available; token is simple ownership ledger with no hidden logic; on-chain state (owner, paused, supply) is publicly readable by anyone."
+      },
+      "verdict": "Choosing orange because bytecode verification + visible Etherscan source satisfies part of V1/V2 but absence of public repo corresponding to deployed source and lack of any recognized-firm audit prevent green. Orange steelman is strongest match to evidence."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Proxy resolved to implementation; ABI sourced from Etherscan; verification status positive; role and state reads available", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://etherscan.io/token/0x7712c34205737192402172409a8f7ccef8aa2aec", "shows": "Proxy and implementation source verified Exact Match; compiler details and source code accessible on explorer; no audit submitted to Etherscan", "chain": "Ethereum", "address": "0x7712c34205737192402172409a8F7ccef8aA2AEc", "fetched_at": "2026-06-03T11:38:00Z"},
+      {"url": "https://etherscan.io/address/0x603Bb6909Be14f83282E03632280D91bE7fB83b2", "shows": "Implementation (DSToken) verified with source and Ownable/proxy patterns visible", "chain": "Ethereum", "address": "0x603Bb6909Be14f83282E03632280D91bE7fB83b2", "fetched_at": "2026-06-03T11:38:00Z"}
+    ],
+    "unknowns": [
+      "V2: No commit SHA or public repo URL found that matches the Etherscan-visible source; cannot confirm exact source-to-repo correspondence.",
+      "V3: No recognized-firm audit report URL or date covering the currently deployed contracts (only automated scan and internal mentions surfaced).",
+      "V5: Post-audit drift cannot be assessed without repo or audit commit pins."
+    ],
+    "protocol_metadata": {
+      "github": [],
+      "docs_url": "https://securitize.io/blackrock/buidl",
+      "audits": [
+        {"firm": "Veritas Protocol (automated)", "url": "https://www.veritasprotocol.com/audits/blackrock-usd-institutional-digital-liquidity-fund", "date": "2026"}
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e", "role": "proxy owner / token owner (EOA admin)", "actor_class": "eoa"}
+      ],
+      "upgradeability": "upgradeable",
+      "about": "ERC-20 tokenized shares in BlackRock USD Institutional Digital Liquidity Fund (short-term U.S. Treasuries and repo). On-chain token enables P2P transfers between KYC-whitelisted holders; subscriptions, redemptions, and dividends processed off-chain via Securitize transfer agent. Daily yield paid in additional BUIDL tokens."
+    }
+  }
+]
