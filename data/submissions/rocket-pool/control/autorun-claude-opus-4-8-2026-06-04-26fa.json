@@ -1,0 +1,116 @@
+{
+  "schema_version": 4,
+  "slug": "rocket-pool",
+  "slice": "control",
+  "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-06-04",
+  "model": "claude-opus-4-8 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Protocol contract-code upgrades (T1, can replace any registered contract incl. rETH/deposit logic) are held by a 10-member Oracle DAO whose Security-Council qualification and on-chain upgrade timelock could not be verified this run.",
+  "short_headline": "oDAO holds T1 upgrades; timelock unverified",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C2",
+        "text": "Rocket Pool uses a registry-pointer upgrade pattern, not proxies: RocketStorage (0x1d8f...) stores every contract address via setAddress(bytes32,address); getDeployedStatus()=true. Replacing a registered address swaps the live implementation of fund-holding contracts, so the upgrade surface is T1 fund-critical."
+      },
+      {
+        "code": "C1",
+        "text": "RocketDAONodeTrustedUpgrade (0x9290...) exposes upgrade(string,string,string,address) and bootstrapUpgrade(...) write methods that (per its ContractUpgraded/ContractAdded events and role) write RocketStorage.setAddress, giving it authority over all registered contracts. It is gated to the Oracle DAO, not an EOA."
+      },
+      {
+        "code": "C4",
+        "text": "RocketDAONodeTrusted (0xb8e7...) reports getMemberCount()=10, getMemberMinRequired()=3, getMemberQuorumVotesRequired()=5100000000000000000 (51%), and getBootstrapModeDisabled()=true. The oDAO is the body that authorizes upgrades; it is a 10-member trusted-node set, not a 2-of-3 or single EOA."
+      },
+      {
+        "code": "C6",
+        "text": "RocketStorage.getGuardian()=0x0cCF14983364A7735d369879603930Afe10df21e. With getDeployedStatus()=true and the oDAO's bootstrap mode disabled, the guardian's bootstrap shortcut functions are no longer usable; no direct guardian storage-write path was confirmable on-chain this run."
+      },
+      {
+        "code": "C7",
+        "text": "Highest reachable tier on the upgrade path is T1: upgrade()/addContract() can replace the implementation address of any fund-holding contract (rETH, deposit pool, minipool logic) via RocketStorage.setAddress. The binding functions are upgrade(...) on 0x9290... and setAddress(bytes32,address) on RocketStorage."
+      },
+      {
+        "code": "C3",
+        "text": "Uncontested fast-path delay for an oDAO contract-upgrade proposal (asserted 7d vote-delay + 14d vote + 28d execute window on settings contract 0xAD038f...) could not be independently re-read on-chain this run; the read API returned network errors for that non-surfacer address and the surfacer URL was not allowlisted."
+      }
+    ],
+    "steelman": {
+      "red": "The contract-code upgrade authority can replace any fund-holding contract (T1) via RocketStorage.setAddress, an unbounded power over user funds.",
+      "orange": "That T1 upgrade power is held by a 10-member Oracle DAO that fails or is unverified against the Security-Council test (non-insider signer share and timelock not confirmable on-chain this run), placing a not-clearly-qualified body on a T1 path.",
+      "green": "Bootstrap mode is disabled so no guardian EOA shortcut exists, upgrades require a ≥51% quorum of a 10-member oDAO with a long documented multi-week vote+execute window providing an exit notice period."
+    },
+    "verdict": "Choosing orange because the green steel-man depends on two facts I could not verify on-chain this run — that the oDAO meets the Security-Council standard (≥50% publicly-announced non-insider signers) and that the upgrade fast path carries a ≥7-day timelock — while the on-chain reads I did obtain confirm a genuine T1 upgrade surface (RocketStorage.setAddress reachable via RocketDAONodeTrustedUpgrade.upgrade) held by a 10-member body. A T1 path held by a multisig-like body that is not confirmed to satisfy Security-Council criteria maps to orange, not green; it is not red because the authority is a 10-member 51%-quorum DAO with bootstrap shortcuts disabled, not a single EOA or 2-of-3."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+      "shows": "RocketDAONodeTrustedUpgrade ABI: write methods upgrade(string,string,string,address), bootstrapUpgrade(...), addContract via ContractAdded/ContractUpgraded events; veto/execute proposal flow. Demonstrates this contract holds protocol contract-upgrade authority (derived: it writes RocketStorage.setAddress per its role and events).",
+      "chain": "Ethereum",
+      "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "shows": "RocketStorage live reads: getDeployedStatus()=true, getGuardian()=0x0cCF14983364A7735d369879603930Afe10df21e; write surface setAddress(bytes32,address) is the registry pointer that defines every contract's live implementation address.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9",
+      "shows": "RocketDAONodeTrusted live reads pinned to block 25246395: getMemberCount()=10, getMemberMinRequired()=3, getMemberQuorumVotesRequired()=5100000000000000000 (51%), getBootstrapModeDisabled()=true. Establishes the Oracle DAO membership/quorum authorizing upgrades and that bootstrap shortcuts are disabled.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C3: oDAO contract-upgrade fast-path delay (asserted 7d vote-delay + 14d vote + 28d execute on rocketDAONodeTrustedSettingsProposals 0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0) not re-read on-chain in this run; settings address is not an allowlisted surfacer and direct /api/contract/read calls returned network errors — corroboration only.",
+    "C3-offchain: numeric upgrade-timelock constants taken from address_book prose were not re-read on-chain this run; value not re-verified, corroboration only.",
+    "C4: signer identities of the 10 oDAO members not enumerated/classified (insider vs non-insider) this run, so Security-Council qualification (>=50% non-insider, publicly announced) could not be confirmed; getMemberAt(uint256) per-index reads not performed.",
+    "C6: guardian 0x0cCF14983364A7735d369879603930Afe10df21e actor_class (EOA vs multisig) not classified on-chain this run; whether any residual guardian power reaches T1 with deployedStatus=true was not exhaustively traced.",
+    "C5: RocketDAOProtocol/RocketDAOProtocolProposal (pDAO, 0xCaC2.../0x2D62...) tokenholder-vote parameters (proposal threshold, quorum, voting period, execute delay on rocketDAOProtocolSettingsProposals 0xf6ad...) not read this run; pDAO governs parameters/treasury (T2) not code upgrades, but its timing/quorum were not verified."
+  ],
+  "protocol_metadata": {
+    "github": [],
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+        "role": "RocketDAONodeTrustedUpgrade — contract-code upgrade executor (writes RocketStorage.setAddress)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9",
+        "role": "RocketDAONodeTrusted — Oracle DAO, 10 members, 51% quorum; authorizes upgrades",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "role": "RocketStorage — registry; setAddress defines all contract implementations",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+        "role": "RocketStorage guardian",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCaC25e88276A333cF9d4196d112D93af67ef809A",
+        "role": "RocketDAOProtocol — pDAO core (parameters/treasury, not code upgrades)",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Rocket Pool is a decentralised Ethereum liquid staking protocol: users deposit ETH to mint the rETH liquid staking receipt, while node operators run minipools backed by RPL collateral. Contract logic is upgraded via a registry-pointer pattern (RocketStorage holds every contract's address), with code upgrades authorized by a 10-member Oracle DAO of trusted nodes and protocol parameters/treasury governed by a separate RPL tokenholder Protocol DAO."
+  }
+}
