@@ -10,20 +10,21 @@ import { postProcess } from "./autorun-postprocess";
 
 type QueueEntry = { slug: string; slice: SliceId };
 
-type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean; maxCost: number | null; maxFetches: number; maxSearches: number };
+type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean; maxCost: number | null; maxFetches: number; maxSearches: number; force: boolean };
 
 function parseArgs(argv: string[]): Args {
   // max-fetches default 8 (down from 12): Haiku 4.5's 200k context window is
   // tight once you add the ~16k system prompt and accumulated tool results.
   // Each web_fetch can return 5-20k tokens; 8 is a safe ceiling that still
   // allows reasonable depth. Bump via --max-fetches if Sonnet/Opus.
-  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false, maxCost: null, maxFetches: 8, maxSearches: 3 };
+  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false, maxCost: null, maxFetches: 8, maxSearches: 3, force: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count") out.count = parseInt(argv[++i] ?? "10", 10);
     else if (argv[i] === "--model") out.model = argv[++i] ?? out.model;
     else if (argv[i] === "--slice") out.slice = (argv[++i] ?? null) as SliceId | null;
     else if (argv[i] === "--slug") out.slug = argv[++i] ?? null;
     else if (argv[i] === "--postprocess") out.postprocess = true;
+    else if (argv[i] === "--force") out.force = true;
     else if (argv[i] === "--max-cost") out.maxCost = parseFloat(argv[++i] ?? "");
     else if (argv[i] === "--max-fetches") out.maxFetches = parseInt(argv[++i] ?? "8", 10);
     else if (argv[i] === "--max-searches") out.maxSearches = parseInt(argv[++i] ?? "3", 10);
@@ -43,7 +44,16 @@ async function main(): Promise<number> {
   const snapshot = loadSnapshot(root);
   const submissionsDir = join(root, "data", "submissions");
 
-  const queue = buildQueue(snapshot, submissionsDir, args.slice, args.slug).slice(0, args.count);
+  // --force bypasses the ≥3-submission gate, but only for an explicitly
+  // targeted (slug, slice) so a forced bulk run can't regenerate the whole
+  // catalogue. Ignore it (with a warning) when either filter is missing.
+  let force = args.force;
+  if (force && (args.slug === null || args.slice === null)) {
+    console.warn("--force ignored: requires both --slug and --slice");
+    force = false;
+  }
+
+  const queue = buildQueue(snapshot, submissionsDir, args.slice, args.slug, force).slice(0, args.count);
   if (queue.length === 0) {
     console.log("queue empty — nothing to do");
     return 0;
@@ -219,6 +229,7 @@ async function main(): Promise<number> {
 // the printed cost as an estimate, not a bill. Web search is $10 per 1k calls.
 const PRICING: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
   "claude-sonnet-4-6": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
+  "claude-opus-4-8": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
   "claude-opus-4-7": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
   "claude-opus-4-6": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
   "claude-opus-4-5": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
@@ -241,7 +252,7 @@ function estimateCost(
   );
 }
 
-function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string, sliceFilter: SliceId | null, slugFilter: string | null): QueueEntry[] {
+function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string, sliceFilter: SliceId | null, slugFilter: string | null, force = false): QueueEntry[] {
   const tasks: Array<QueueEntry & { priority: number; tvl: number | null; isDiscovery: boolean }> = [];
   for (const [slug, p] of Object.entries(snapshot.protocols)) {
     if (slugFilter !== null && slug !== slugFilter) continue;
@@ -263,7 +274,7 @@ function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: s
       const isDiscovery = slice === "discovery";
       if (!isDiscovery && evaluationGated) continue;
       const count = entriesBySlice.get(slice)?.length ?? 0;
-      if (count >= (isDiscovery ? 1 : 3)) continue;
+      if (!force && count >= (isDiscovery ? 1 : 3)) continue;
       tasks.push({ slug, slice, priority: count, tvl: p.tvl, isDiscovery });
     }
   }

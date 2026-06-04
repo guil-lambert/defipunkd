@@ -262,11 +262,19 @@ export function getProtocolMetadata(slug: string): ProtocolMetadata | undefined 
     // Curated assessment values always win.
     const overlays = loadOverlays(DATA_DIR);
     for (const [s, overlay] of overlays) {
-      const url = overlay.bug_bounty_url;
-      if (!url) continue;
       const existing = cachedMetadata.get(s);
-      if (existing?.bug_bounty_url) continue;
-      cachedMetadata.set(s, { ...(existing ?? {}), bug_bounty_url: url });
+      // Curated admin_addresses union into the ratchet so a human-seeded tier
+      // (e.g. Oracle DAO upgrade contracts) reaches autorun's addressBook even
+      // when no submission discovered it. mergeMetadata keeps existing values
+      // and adds the overlay's addresses that aren't already present.
+      if (overlay.admin_addresses && overlay.admin_addresses.length > 0) {
+        cachedMetadata.set(s, mergeMetadata(existing, { admin_addresses: overlay.admin_addresses }));
+      }
+      const url = overlay.bug_bounty_url;
+      if (url) {
+        const cur = cachedMetadata.get(s);
+        if (!cur?.bug_bounty_url) cachedMetadata.set(s, { ...(cur ?? {}), bug_bounty_url: url });
+      }
     }
   }
   return cachedMetadata.get(slug);
