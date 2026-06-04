@@ -1,0 +1,286 @@
+{
+  "schema_version": 4,
+  "slug": "rocket-pool",
+  "slice": "control",
+  "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-06-04",
+  "model": "GPT-5.5 Thinking",
+  "chat_url": null,
+  "grade": "orange",
+  "headline": "Rocket Pool has a long-delay registry-upgrade path, but T1 contract changes still route through the oDAO rather than broad token governance or a verified Security Council.",
+  "short_headline": "oDAO T1 upgrade path",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "RocketStorage at 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46 is live and getGuardian() returns 0x0cCF14983364A7735d369879603930Afe10df21e. RocketDAOProtocol and RocketDAONodeTrusted both read bootstrap mode disabled, so the guardian bootstrap path was not treated as an active no-delay upgrade path in this run."
+      },
+      {
+        "code": "C2",
+        "text": "Rocket Pool uses registry/EternalStorage-style upgrade indirection rather than a standard Transparent/UUPS/Beacon proxy path: RocketStorage exposes mutable registry/storage setters, RocketDAONodeTrustedProposals exposes proposalUpgrade(), and RocketDAONodeTrustedUpgrade exposes upgrade(), execute(), bootstrapUpgrade(), and veto()."
+      },
+      {
+        "code": "C3",
+        "text": "The oDAO T1 upgrade path is RocketDAONodeTrustedProposals proposalUpgrade()/vote()/execute() into RocketDAONodeTrustedUpgrade upgrade()/execute(). The oDAO timing reads return getVoteDelayTime=604800, getVoteTime=1209600, and getExecuteTime/getActionTime=2419200 seconds; the uncontested credited path is therefore at least 4233600 seconds, or 49 days."
+      },
+      {
+        "code": "C4",
+        "text": "RocketDAONodeTrusted reports 10 members, getMemberMinRequired=3, and getMemberQuorumVotesRequired=5100000000000000000. This was assessed as a committee-governance actor, not a fetched Safe; signer identities and insider/non-insider classifications were not fully verified, so it was not credited as a Security Council."
+      },
+      {
+        "code": "C5",
+        "text": "The pDAO proposal system is separate from the oDAO code-upgrade path. RocketDAOProtocolSettingsProposals reads getVoteDelayTime=604800, getVotePhase1Time=604800, getVotePhase2Time=604800, getExecuteTime=2419200, getProposalQuorum=150000000000000000, and getProposalVetoQuorum=200000000000000000; RocketDAOProtocolProposal exposes propose(), vote(), finalise(), execute(), destroy(), and overrideVote()."
+      },
+      {
+        "code": "C6",
+        "text": "RocketDAONodeTrustedUpgrade exposes veto() and an UpgradeVetoed event, indicating a veto/emergency surface, but the current veto actor membership and exact emergency scope were not fully enumerated from pinned on-chain addresses in this run."
+      },
+      {
+        "code": "C7",
+        "text": "The highest reachable tier is T1 because the oDAO proposal/upgrade surface includes proposalUpgrade() plus upgrade()/execute() and ContractUpgraded/ContractAdded events against the protocol contract registry. The no-delay bootstrapUpgrade() ABI surface exists, but deployed bootstrap-mode reads were disabled."
+      }
+    ],
+    "steelman": {
+      "red": "The red case would be a live guardian or opaque admin able to execute T1 upgrades immediately; deployed bootstrap flags read disabled and no active no-delay upgrade admin was found on the pinned path.",
+      "orange": "The orange case is that T1 registry upgrades are reachable through the oDAO committee rather than broad token governance or a verified Security Council, even though a long delay is present.",
+      "green": "The green case is the long uncontested delay, the disabled bootstrap path, and separate pDAO token-governed parameter flow; it would fit green if the T1 path were broad token governance or a verified Security Council."
+    },
+    "verdict": "Choosing orange because the evidence shows a delayed T1 upgrade path, but the controlling actor for contract-code upgrades is the oDAO committee and this run did not verify that it satisfies the Security Council standard or that T1 upgrades are executed through broad token governance."
+  },
+  "evidence": [
+    {
+      "url": "https://rocketpool.net",
+      "shows": "Capability probe succeeded; the page identifies Rocket Pool as a decentralised staking protocol providing liquid and node staking products for Ethereum."
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "shows": "RocketStorage surfacer at pinned block 25086075 shows getDeployedStatus=true, getGuardian() returning 0x0cCF14983364A7735d369879603930Afe10df21e, and mutable write methods including setAddress, setBool, setBytes, setString, and setUint.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46&block=25086075&chainId=1&method=getGuardian",
+      "shows": "RocketStorage.getGuardian() returned 0x0cCF14983364A7735d369879603930Afe10df21e at block 25086075.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46&block=25086075&chainId=1&method=getDeployedStatus",
+      "shows": "RocketStorage.getDeployedStatus() returned true at block 25086075.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1",
+      "shows": "RocketDAOProtocol surfacer shows getBootstrapModeDisabled=true and bootstrap-only write methods including bootstrapSettingAddress, bootstrapSettingBool, bootstrapSettingClaimer, bootstrapSettingMulti, bootstrapSettingUint, and bootstrapSpendTreasury.",
+      "chain": "Ethereum",
+      "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9",
+      "shows": "RocketDAONodeTrusted surfacer at pinned block 25246507 shows getBootstrapModeDisabled=true, getMemberCount=10, getMemberMinRequired=3, getMemberQuorumVotesRequired=5100000000000000000, and bootstrap-only write methods.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&block=25246507&chainId=1&method=getMemberCount",
+      "shows": "RocketDAONodeTrusted.getMemberCount() returned 10 at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&block=25246507&chainId=1&method=getMemberMinRequired",
+      "shows": "RocketDAONodeTrusted.getMemberMinRequired() returned 3 at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&block=25246507&chainId=1&method=getMemberQuorumVotesRequired",
+      "shows": "RocketDAONodeTrusted.getMemberQuorumVotesRequired() returned 5100000000000000000 at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&block=25246507&chainId=1&method=getBootstrapModeDisabled",
+      "shows": "RocketDAONodeTrusted.getBootstrapModeDisabled() returned true at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb0ec3F657ef43A615aB480FA8D5A53BF2c2f05d5",
+      "shows": "RocketDAONodeTrustedProposals surfacer at pinned block 25246507 shows proposalUpgrade, proposalSettingBool, proposalSettingUint, vote, cancel, and execute entrypoints.",
+      "chain": "Ethereum",
+      "address": "0xb0ec3F657ef43A615aB480FA8D5A53BF2c2f05d5"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+      "shows": "RocketDAONodeTrustedUpgrade surfacer at pinned block 25246507 shows write methods bootstrapUpgrade, execute, upgrade, and veto, plus ContractAdded, ContractUpgraded, UpgradePending, and UpgradeVetoed events.",
+      "chain": "Ethereum",
+      "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+      "shows": "RocketDAONodeTrustedSettingsProposals surfacer at pinned block 25246507 shows getVoteDelayTime=604800, getVoteTime=1209600, getExecuteTime=2419200, getActionTime=2419200, and getCooldownTime=172800.",
+      "chain": "Ethereum",
+      "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0&block=25246507&chainId=1&method=getVoteDelayTime",
+      "shows": "RocketDAONodeTrustedSettingsProposals.getVoteDelayTime() returned 604800 seconds at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0&block=25246507&chainId=1&method=getVoteTime",
+      "shows": "RocketDAONodeTrustedSettingsProposals.getVoteTime() returned 1209600 seconds at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0&block=25246507&chainId=1&method=getExecuteTime",
+      "shows": "RocketDAONodeTrustedSettingsProposals.getExecuteTime() returned 2419200 seconds at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0&block=25246507&chainId=1&method=getActionTime",
+      "shows": "RocketDAONodeTrustedSettingsProposals.getActionTime() returned 2419200 seconds at block 25246507.",
+      "chain": "Ethereum",
+      "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25",
+      "shows": "RocketDAOProtocolProposal surfacer at pinned block 25246510 shows pDAO proposal functions including propose, vote, finalise, execute, destroy, and overrideVote, and getTotal()=7.",
+      "chain": "Ethereum",
+      "address": "0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+      "shows": "RocketDAOProtocolSettingsProposals surfacer at pinned block 25246510 shows pDAO settings: getVoteDelayTime=604800, getVotePhase1Time=604800, getVotePhase2Time=604800, getExecuteTime=2419200, getProposalQuorum=150000000000000000, and getProposalVetoQuorum=200000000000000000.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&block=25246510&chainId=1&method=getVoteDelayTime",
+      "shows": "RocketDAOProtocolSettingsProposals.getVoteDelayTime() returned 604800 seconds at block 25246510.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&block=25246510&chainId=1&method=getVotePhase1Time",
+      "shows": "RocketDAOProtocolSettingsProposals.getVotePhase1Time() returned 604800 seconds at block 25246510.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&block=25246510&chainId=1&method=getVotePhase2Time",
+      "shows": "RocketDAOProtocolSettingsProposals.getVotePhase2Time() returned 604800 seconds at block 25246510.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&block=25246510&chainId=1&method=getExecuteTime",
+      "shows": "RocketDAOProtocolSettingsProposals.getExecuteTime() returned 2419200 seconds at block 25246510.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&block=25246510&chainId=1&method=getProposalQuorum",
+      "shows": "RocketDAOProtocolSettingsProposals.getProposalQuorum() returned 150000000000000000 at block 25246510.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&block=25246510&chainId=1&method=getProposalVetoQuorum",
+      "shows": "RocketDAOProtocolSettingsProposals.getProposalVetoQuorum() returned 200000000000000000 at block 25246510.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool",
+      "shows": "Official Rocket Pool smart-contract repository; repository description states Rocket Pool is a decentralised Ethereum liquid staking protocol."
+    },
+    {
+      "url": "https://diligence.security/audits/2021/04/rocketpool/",
+      "shows": "ConsenSys Diligence audit page for Rocket Pool dated April 2021."
+    },
+    {
+      "url": "https://dao.rocketpool.net/t/welcome-to-the-rocket-pool-forum/202",
+      "shows": "Rocket Pool DAO forum page states the forum is dedicated to governance discussions, protocol improvement proposals, and community-led initiatives."
+    }
+  ],
+  "unknowns": [
+    "C1: owner/admin/pendingOwner/governor methods were not present or not useful on several Rocket Pool registry-style contracts; control was assessed through RocketStorage.getGuardian, bootstrap-mode flags, oDAO membership/quorum reads, and deployed proposal/upgrade ABIs.",
+    "C2: exact source-level restrictions and all non-upgradable carve-outs in the registry-upgrade mechanism were not re-verified from a pinned commit in this run.",
+    "C3: exact source-level use of getExecuteTime versus getActionTime in the oDAO post-vote upgrade path was not reconstructed from a pinned commit; both read as 2419200 seconds, so the assessment credits the conservative 604800+1209600+2419200 uncontested delay.",
+    "C4: oDAO member identities and insider/non-insider classifications were not fully enumerated; therefore the oDAO was not credited as a Security Council.",
+    "C5: pDAO proposer eligibility/proposal-threshold semantics beyond the proposal bond/quorum/veto-quorum/timing constants were not fully determined from on-chain reads.",
+    "C6: RocketDAONodeTrustedUpgrade exposes veto and UpgradeVetoed, but the current veto actor membership and exact emergency scope were not fully enumerated from pinned on-chain addresses.",
+    "C7: exact callable payload set for pDAO proposals was not decoded from proposal payload history; pDAO was classified only as parameter/treasury governance based on pinned role context and deployed ABI shape."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/rocket-pool/rocketpool"
+    ],
+    "docs_url": "https://docs.rocketpool.net",
+    "audits": [
+      {
+        "firm": "ConsenSys Diligence",
+        "url": "https://diligence.security/audits/2021/04/rocketpool/",
+        "date": "2021-04"
+      }
+    ],
+    "governance_forum": "https://dao.rocketpool.net",
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x0cCF14983364A7735d369879603930Afe10df21e",
+        "role": "RocketStorage guardian returned by getGuardian; bootstrap-mode paths read disabled in this run",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+        "role": "RocketDAONodeTrusted / oDAO committee; 10 members, min required 3, quorum raw 5100000000000000000",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb0ec3F657ef43A615aB480FA8D5A53BF2c2f05d5",
+        "role": "oDAO proposal entrypoint exposing proposalUpgrade, vote, and execute",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+        "role": "oDAO registry-upgrade executor exposing upgrade, execute, bootstrapUpgrade, and veto",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+        "role": "oDAO proposal timing/settings contract",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25",
+        "role": "pDAO proposal engine for protocol-parameter and treasury proposals",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+        "role": "pDAO proposal timing/quorum settings contract",
+        "actor_class": "governance"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Rocket Pool lets ETH holders stake into the protocol and receive rETH, a liquid staking receipt that accrues staking rewards and can be redeemed or used elsewhere. Node operators supply lower-capital validator stakes while the protocol pairs them with pooled ETH, with governance and oracle machinery managing upgrades, parameters, and network reporting."
+  }
+}
