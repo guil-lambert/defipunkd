@@ -1,0 +1,164 @@
+{
+  "schema_version": 4,
+  "slug": "rocket-pool",
+  "slice": "control",
+  "snapshot_generated_at": "2026-06-01T11:27:13.878Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-06-04",
+  "model": "claude-sonnet-4-6",
+  "chat_url": "https://claude.ai/share/f63e5422-a15e-4bc9-9d0d-7e17c50f92ea",
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "Security Council (team guardian EOA, sole member) can make immediate T2 parameter changes with no enforced delay; T1 upgrade path is well-protected at 21 days via 10-member oDAO",
+  "short_headline": "Immediate T2 via team Security Council EOA",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "RocketStorage.getGuardian() returns 0x0cCF14983364A7735d369879603930Afe10df21e (team deployer EOA) at block 25239337. Bootstrap mode is permanently disabled (getBootstrapModeDisabled=true) on both RocketDAOProtocol v1 (0x0429) and v3 (0xCaC25), blocking all onlyBootstrapMode entrypoints. However, per RPIP-33 'To begin with, the current pDAO guardian SHALL be the sole member' of the Security Council; the guardian's Security Council membership was initialized before bootstrap disable and persists."
+      },
+      {
+        "code": "C2",
+        "text": "Rocket Pool uses an EternalStorage ('RocketStorage') upgrade pattern — no traditional UUPS/Transparent proxy. Upgrades replace contract addresses by writing RocketStorage.setAddress() via RocketDAONodeTrustedUpgrade (0x9290). The contract itself is not a proxy; all contracts resolve peers via RocketStorage.getAddress(). Bootstrap mode being disabled prevents guardian-initiated bootstrapUpgrade(). Contract upgrades now require oDAO vote only."
+      },
+      {
+        "code": "C3",
+        "text": "Execution paths: (1) Contract upgrades: oDAO member calls RocketDAONodeTrustedProposals.proposalUpgrade() → vote delay 7 days (getVoteDelayTime=604800s) → oDAO voting period 14 days (getVoteTime=1209600s) → any member calls execute() on RocketDAONodeTrustedUpgrade → writes RocketStorage.setAddress(). Uncontested fast path = 21 days. Execute window = 28 days after vote. pDAO can call veto() on RocketDAONodeTrustedUpgrade but veto itself requires 21-day pDAO process. (2) Protocol parameter changes: pDAO submits proposal → 7-day vote delay (getVoteDelayTime=604800s) → 7-day phase 1 vote (getVotePhase1Time=604800s) → 7-day phase 2 vote (getVotePhase2Time=604800s) → execute. Uncontested fast path = 21 days. (3) Security Council parameter changes: team guardian EOA (sole SC member) submits + votes → quorum met (1-of-1 = 100%) → immediately executed with no enforced delay beyond any internal vote period (RPIP-33 minimum is >= 1 day per security.proposal.vote.time, but on-chain value not verified this run; marked C5-SC-vote-time-offchain)."
+      },
+      {
+        "code": "C4",
+        "text": "Oracle DAO: getMemberCount()=10, getMemberQuorumVotesRequired()=5100000000000000000 (5.1 in WAD = 51% of 10 members, requiring 6 of 10 yes-votes in practice). getBootstrapModeDisabled()=true (team cannot add/remove oDAO members unilaterally). Members are invited-only ecosystem organizations; news sources identify Etherscan, Beaconchain, Lighthouse, Nimbus, Bankless, Coinbase Ventures among historical members, but current specific 10 addresses not verified on-chain this run (getMemberAt() returned 400; recorded as C4-oDAO-identities). Security Council: sole member is team guardian EOA per RPIP-33 initial setup; no on-chain read of Security Council contract address or membership was performed this run (C6-SC-members)."
+      },
+      {
+        "code": "C5",
+        "text": "oDAO upgrade quorum: 51% (5100000000000000000 WAD from on-chain read, verified at block 25246395). pDAO quorum: 15% (getProposalQuorum=150000000000000000 WAD, verified at block 25246510). pDAO veto quorum: 20% (getProposalVetoQuorum=200000000000000000 WAD). Security Council quorum: per RPIP-33 'security.members.quorum >= 51%' — with 1 member, the guardian's vote alone achieves quorum. Security Council vote time minimum is >= 1 day per RPIP-33 parameter table but the deployed value was not read on-chain (C5-SC-vote-time-offchain)."
+      },
+      {
+        "code": "C6",
+        "text": "Emergency powers: Security Council (team guardian EOA) can immediately change all parameters marked '*' in RPIP-33 parameter table: deposit.enabled, deposit.assign.enabled, minipool.bond.reduction.enabled, network.submit.balances.enabled, network.submit.rewards.enabled, node.registration.enabled, node.smoothing.pool.registration.enabled, node.deposit.enabled, node.vacant.minipools.enabled, auction.lot.create.enabled, auction.lot.bidding.enabled. These include disabling new deposits (blocks new rETH minting) and disabling balance submissions (freezes rETH exchange rate appreciation). Critically, the Security Council CANNOT pause rETH redemptions, upgrade contracts, drain vault, or change accounting math — all are T2 at most. The RPIP-33 spec confirms 'the current pDAO guardian SHALL be the sole member' of the Security Council at launch, with expansion via pDAO governance proposal (a 21-day process)."
+      },
+      {
+        "code": "C7",
+        "text": "Power tier assessment: (T1) Contract upgrades via oDAO 21-day path — T1 reachable (can replace contract implementations that interact with user funds) but with 21-day delay and 10-member oDAO. (T2) Protocol parameters via pDAO 21-day path — T2 with 21-day delay. (T2) Security Council immediate changes — T2 reachable by team guardian EOA (sole SC member) with effectively 0-1 day delay: can disable deposits and freeze rETH rate accumulation but cannot drain funds, pause exits, or upgrade contracts. BINDING FUNCTION: RocketDAOProtocolSettingsDeposit.setSettingBool('deposit.enabled', false) via Security Council, and RocketDAOProtocolSettingsNetwork.setSettingBool('network.submit.balances.enabled', false) via Security Council. Grade is set by T2 reachable with <7-day delay via Security Council."
+      }
+    ],
+    "steelman": {
+      "red": "The Security Council sole member is a team-controlled EOA — not even a multisig — on a path that can immediately freeze rETH appreciation and block all new deposits, with no on-chain veto mechanism against Security Council actions; a single key compromise would be instantly catastrophic for new depositors.",
+      "orange": "The Security Council (1-of-1 team guardian EOA, failing all Security Council criteria) can immediately execute T2 parameter changes (disable deposits, freeze balance submissions) with effectively zero meaningful delay; the T1 path is well-protected at 21 days via the 10-member oDAO but the guardian's unilateral T2 power without a timelock keeps the score in orange.",
+      "green": "Bootstrap mode is permanently disabled on-chain, stripping the team of all bootstrap upgrade powers; T1 contract upgrades require 21-day oDAO consensus from 10 independent ecosystem organizations; pDAO T2 governance also requires 21 days; Security Council T2 actions can only pause new activities and cannot drain existing user funds or block rETH redemptions, so existing users are never at imminent risk."
+    },
+    "verdict": "Choosing orange because the Security Council — whose sole member is the team guardian EOA (0x0cCF14983364A7735d369879603930Afe10df21e), which fails all Security Council criteria as a single EOA — sits on a T2 path with effectively no enforced delay (RPIP-33 minimum of >=1 day internally, not verified on-chain). The specific functions reachable are setSettingBool('deposit.enabled', false) and setSettingBool('network.submit.balances.enabled', false), which are T2 (blocking new deposits and freezing rETH exchange rate appreciation). While the green steel-man is compelling — Security Council cannot steal funds or block exits — the rubric grades on what the contract permits, and an untimelocked T2 path via a sole-EOA actor that is not a Security Council fails the 'T2 reachable with ≥7 days' criterion for green. The T1 path via the 10-member oDAO (21-day minimum) is credibly protected, supporting the orange rather than red classification."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "shows": "RocketStorage surfacer at block 25239337: getGuardian()=0x0cCF14983364A7735d369879603930Afe10df21e, getDeployedStatus()=true. Contract has setAddress(bytes32,address) write method used by upgrade executor.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1",
+      "shows": "RocketDAOProtocol v1 at block 25239337: getBootstrapModeDisabled()=true — bootstrap mode permanently disabled, blocking onlyBootstrapMode entrypoints for the guardian.",
+      "chain": "Ethereum",
+      "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xCaC25e88276A333cF9d4196d112D93af67ef809A",
+      "shows": "RocketDAOProtocol v3 (post-Houston) at block 25246552: getBootstrapModeDisabled()=true. Has bootstrapSecurityInvite() and bootstrapSecurityKick() (both behind onlyBootstrapMode, so now locked).",
+      "chain": "Ethereum",
+      "address": "0xCaC25e88276A333cF9d4196d112D93af67ef809A",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9",
+      "shows": "RocketDAONodeTrusted at block 25246395: getMemberCount()=10, getMemberQuorumVotesRequired()=5100000000000000000 (51% in WAD = need 6 of 10 votes), getBootstrapModeDisabled()=true. Confirms oDAO has 10 members and 51% quorum.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+      "shows": "RocketDAONodeTrustedSettingsProposals at block 25246507: getVoteDelayTime()=604800 (7 days), getVoteTime()=1209600 (14 days), getExecuteTime()=2419200 (28 days). This defines the oDAO upgrade timelock: 7-day delay + 14-day vote period = 21-day uncontested fast path.",
+      "chain": "Ethereum",
+      "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+      "shows": "RocketDAOProtocolSettingsProposals (pDAO) at block 25246510: getVoteDelayTime()=604800 (7d), getVotePhase1Time()=604800 (7d), getVotePhase2Time()=604800 (7d), getExecuteTime()=2419200 (28d), getProposalQuorum()=150000000000000000 (15%), getProposalVetoQuorum()=200000000000000000 (20%). Defines pDAO 21-day uncontested fast path and 15% quorum.",
+      "chain": "Ethereum",
+      "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+      "shows": "RocketDAONodeTrustedUpgrade v2 at block 25246394: getTotal()=1 (one upgrade proposal executed). Has upgrade(string,string,string,address) write method (the contract upgrade executor) and veto(uint256) write method (pDAO veto path). Confirms EternalStorage upgrade pattern writing to RocketStorage.setAddress().",
+      "chain": "Ethereum",
+      "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xb0ec3F657ef43A615aB480FA8D5A53BF2c2f05d5",
+      "shows": "RocketDAONodeTrustedProposals at block 25246507: version=1. Has proposalUpgrade(string,string,string,address) write method — the oDAO member entrypoint for submitting upgrade proposals.",
+      "chain": "Ethereum",
+      "address": "0xb0ec3F657ef43A615aB480FA8D5A53BF2c2f05d5",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25",
+      "shows": "RocketDAOProtocolProposal v2 at block 25246510: getTotal()=7 (7 pDAO proposals created). Has two-phase voting (getPhase1End, getPhase2End) and execute/finalise functions. Confirms active pDAO governance.",
+      "chain": "Ethereum",
+      "address": "0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://rpips.rocketpool.net/RPIPs/RPIP-33",
+      "shows": "RPIP-33 (passed 2023-12-20) defines Security Council: sole initial member is 'the current pDAO guardian'; Security Council can immediately change parameters marked '*' (deposit.enabled, network.submit.balances.enabled, node.deposit.enabled etc.); these are T2 (disable new activities) not T1 (no fund drainage/exit blocking possible). Parameter table documents all Security Council-reachable settings and guardrails.",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://dao.rocketpool.net/t/protocol-dao-security-council/3050",
+      "shows": "Forum post from June 2024 confirms: 'Until we agree on how to appoint a security council, the guardian (controlled by the team) will be the sole member.' Lists exact Security Council powers: disable deposit pool, disable new minipools, disable bond reductions, disable balance/rewards submissions. Confirms Security Council expansion requires pDAO governance process.",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&method=getMemberCount&block=25246395",
+      "shows": "On-chain read confirming oDAO getMemberCount()=10 at block 25246395 (blockHash 0x0b24a26c6c1b4a2b0dd1fc82018942e127650a3aae855291c9f6e5ff866b77fb).",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+      "fetched_at": "2026-06-04T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "C4-oDAO-identities: getMemberAt(uint256) on RocketDAONodeTrusted (0xb8e783) returned 400 errors — current 10 oDAO member addresses and organizational identities not verified on-chain this run; cannot confirm insider/non-insider composition to assess Security Council criteria",
+    "C6-SC-members: RocketDAOProtocolSecurity contract address not in address_book and not discovered on-chain this run; Security Council membership and quorum settings not directly read",
+    "C5-SC-vote-time-offchain: Security Council proposal.vote.time actual deployed value not read on-chain this run; RPIP-33 specifies minimum >= 1 day but current configured value unverified",
+    "C1-guardian-SC-active: Whether guardian EOA remains the sole Security Council member or has been supplemented via pDAO vote was not verified via on-chain read of RocketDAOProtocolSecurity contract this run",
+    "C2-immutable-contracts: Whether RocketVault and RocketTokenRETH are protected from oDAO setAddress() replacement (as noted in pre-Houston analysis) was not verified against current deployed contract code this run"
+  ],
+  "protocol_metadata": {
+    "github": ["https://github.com/rocket-pool/rocketpool"],
+    "docs_url": "https://docs.rocketpool.net",
+    "audits": [
+      { "firm": "Sigma Prime", "url": "https://rocketpool.net/files/sigma-prime-audit.pdf", "date": "2021" },
+      { "firm": "Consensys Diligence", "url": "https://consensys.net/diligence/audits/2021/04/rocketpool", "date": "2021-04" },
+      { "firm": "Trail of Bits", "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf", "date": "2021" }
+    ],
+    "governance_forum": "https://dao.rocketpool.net",
+    "voting_token": { "chain": "Ethereum", "address": "0xb4efd85c19999d84251304bda99e90b92300bd93", "symbol": "RPL" },
+    "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      { "chain": "Ethereum", "address": "0x0cCF14983364A7735d369879603930Afe10df21e", "role": "RocketStorage guardian and Security Council sole initial member (team deployer EOA; bootstrap mode disabled but SC membership persists per RPIP-33)", "actor_class": "eoa" },
+      { "chain": "Ethereum", "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "role": "RocketStorage — immutable EternalStorage key-value registry; root of all contract address resolution and upgrade indirection", "actor_class": "governance" },
+      { "chain": "Ethereum", "address": "0xb8e783882b11ff4f6cef3c501ea0f4b960152cc9", "role": "RocketDAONodeTrusted — Oracle DAO governance contract; 10 members, 51% quorum (6 of 10)", "actor_class": "governance" },
+      { "chain": "Ethereum", "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10", "role": "RocketDAONodeTrustedUpgrade — oDAO upgrade executor; writes RocketStorage.setAddress() for contract upgrades; has veto() for pDAO override", "actor_class": "governance" },
+      { "chain": "Ethereum", "address": "0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25", "role": "RocketDAOProtocolProposal — pDAO proposal engine; RPL-weighted 2-phase voting with 21-day fast path", "actor_class": "governance" }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Rocket Pool is a decentralized Ethereum liquid staking protocol where users deposit any amount of ETH to receive rETH, a token that automatically accrues staking rewards over time. Node operators contribute a minimum 8 ETH bond alongside pooled user ETH to run Ethereum validators, earning consensus rewards plus commission. The protocol uses two governance layers: an Oracle DAO (oDAO) of 10 permissioned ecosystem organizations (e.g., Etherscan, Lighthouse, Bankless) for operational duties and contract upgrades via a 21-day voting process, and a Protocol DAO (pDAO) of RPL token-weighted node operators for parameter and treasury changes via another 21-day two-phase process. Upgrades replace contract addresses in an EternalStorage registry rather than using traditional proxy patterns."
+  }
+}
