@@ -17,6 +17,20 @@ export const OverlaySchema = z
     forked_from: z.array(z.number()).nullable(),
     is_dead: z.boolean().nullable(),
     bug_bounty_url: z.string().nullable(),
+    // Curated admin/governance addresses. These are unioned into the ratchet
+    // (addressBook) that autorun feeds to the prompt, so a human can seed a
+    // tier the models couldn't discover on-chain (e.g. Oracle DAO upgrade
+    // contracts) and let the next run verify it directly.
+    admin_addresses: z
+      .array(
+        z.object({
+          chain: z.string(),
+          address: z.string(),
+          role: z.string(),
+          actor_class: z.enum(["eoa", "multisig", "timelock", "governance", "unknown"]),
+        }),
+      )
+      .nullable(),
   })
   .partial()
   .strict();
