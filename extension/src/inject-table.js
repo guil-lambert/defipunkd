@@ -36,12 +36,13 @@
         cell.style.paddingRight = "48px";
         cell.appendChild(badge);
       } else {
-        let nameBlock = a;
-        const parent = a.parentElement;
-        if (parent && parent !== a && /\bchains?\b/i.test(parent.textContent || "")) nameBlock = parent;
-        badge.style.marginLeft = "auto";
-        if (nameBlock.parentNode) nameBlock.parentNode.insertBefore(badge, nameBlock.nextSibling);
-        else a.appendChild(badge);
+        // Inline contexts (e.g. the "Competitors" list): nest the badge INSIDE
+        // the name link so it hugs that protocol's name. A separate sibling
+        // would pick up the flex row-gap on both sides and float ambiguously
+        // between two names. The badge stops click propagation, so it opens
+        // DeFiPunk'd without triggering the link's own navigation.
+        badge.style.marginLeft = "4px";
+        a.appendChild(badge);
       }
     }
   }
