@@ -21,12 +21,17 @@ export function errorResponse(status: number, body: ApiError): Response {
   });
 }
 
-export function jsonResponse(body: unknown, cacheControl: string): Response {
+export function jsonResponse(
+  body: unknown,
+  cacheControl: string,
+  extraHeaders?: Record<string, string>,
+): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status: 200,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": cacheControl,
+      ...extraHeaders,
     },
   });
 }
