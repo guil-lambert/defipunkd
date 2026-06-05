@@ -20,11 +20,81 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
   verifiability:
     "Whether anyone outside the team can independently verify what the code does: open-source status, audit quality and scope, bytecode-to-source correspondence at the deployed address, and whether post-audit changes were themselves reviewed.",
 };
+
+// Plain-language version of the checklist each contributor works through per
+// slice (codes C1–C7, E1–E7, A1–A9, V1–V6 in the pinned prompt) plus the
+// green/red endpoints of the grading rubric.
+const SLICE_CRITERIA: Record<string, { checks: string[]; green: string; red: string }> = {
+  control: {
+    checks: [
+      "Who holds the admin / owner / governor keys on the live contracts — an EOA, a multisig, or on-chain governance.",
+      "How the contracts can be upgraded (proxy pattern, or immutable) and who controls the proxy admin.",
+      "How long the delay is between a privileged action being proposed and executed — the timelock, measured on the fastest uncontested path.",
+      "Every multisig that can touch the protocol: signer count, threshold, and whether signers are insiders.",
+      "For on-chain governance: proposal threshold, voting period, quorum, and the timelock between queue and execution.",
+      "Whether a separate emergency or guardian role can move faster than the main upgrade path.",
+      "The worst thing each privileged path can do — from replacing fund-holding code (most severe) down to routine operations.",
+    ],
+    green: "The most dangerous powers either can't touch user funds, or sit behind a ≥7-day delay plus a credible security council or broad on-chain governance.",
+    red: "A single EOA or a 2-of-3 multisig can replace fund-holding code instantly, with no timelock.",
+  },
+  "ability-to-exit": {
+    checks: [
+      "Every way a user gets funds out: withdraw, redeem, burn, claim, requestWithdrawal, exit.",
+      "Whether each exit path can be paused, and who holds the pause.",
+      "The maximum pause duration, and whether an uncapped or indefinite pause is reachable.",
+      "Whether emergency pauses and governance pauses are separate, each with its own time cap and actor.",
+      "For queued redemptions: maximum queue length, daily withdrawal caps, and whether the queue itself can be paused.",
+      "Whether a forced-exit or escape hatch exists for the case where admins turn adversarial.",
+      "Whether exit is callable directly on-chain, without the project's own frontend.",
+    ],
+    green: "Anyone can exit permissionlessly; pauses are absent, narrowly scoped, or capped at ≤7 days; already-finalized exits can never be frozen.",
+    red: "Exit needs an admin's signature, finalized claims can be frozen indefinitely, there is no on-chain exit at all, or a single EOA / 2-of-3 multisig can pause exits with no time cap.",
+  },
+  autonomy: {
+    checks: [
+      "Every outside contract the protocol calls or reads — oracles, price feeds, pools, lending markets, yield wrappers — and what breaks if one fails.",
+      "Off-chain committees reporting data in (oracle sets, guardians, exit-bus signers): their size, quorum, and what mis-reporting could do.",
+      "Bridges or cross-chain messaging carrying material value, and who operates them.",
+      "Layered or restaked collateral, and whether a failure deep in the chain reaches user principal.",
+      "What safety nets exist (sanity checks, circuit breakers, fallback oracles, withdrawal queues) — and whether they're actually live on-chain today, not just proposed.",
+      "Reliance on keepers, relayers, or bots (liquidators, compounders, solvers) and what degrades if nobody runs them.",
+      "Whether governance can quietly swap in a new external dependency without giving users a window to exit.",
+    ],
+    green: "No outside failure can cost users their principal or unclaimed yield; every critical dependency has a live fallback; governance can't introduce new dependencies without an exit window.",
+    red: "An outside failure can cause theft or principal loss — e.g. a single-source oracle with no fallback, or governance hot-swapping the oracle with no timelock.",
+  },
+  "open-access": {
+    checks: [
+      "Whether user entry/exit functions carry a whitelist, allowlist, or KYC check in the contract itself.",
+      "Whether any off-chain operator's approval is required to admit a user action.",
+      "Whether at least one independent way in exists — a public SDK, a third-party frontend, a wallet integration, or an aggregator — that doesn't depend on the official site.",
+      "Whether the contracts screen addresses against an on-chain sanctions or blocklist.",
+      "The difference between read access (anyone can view state) and write access (transacting).",
+      "What the official site's terms and geo-restrictions actually say — recorded as context, not as the grade driver.",
+    ],
+    green: "No contract-level whitelist or KYC, no operator gatekeeping, and at least one independent access path exists. Frontend geo-blocking and terms of service are noted as context, not penalized.",
+    red: "The contract itself gates entry/exit by whitelist or KYC, admission needs a single operator or small committee with no replacement procedure, or an on-chain blocklist is controlled by one party.",
+  },
+  verifiability: {
+    checks: [
+      "Whether the deployed bytecode is verified on the block explorer — both the proxy and its implementation if it's a proxy.",
+      "Whether the verified source corresponds to a public GitHub repo.",
+      "What audits exist: auditor name, date, and exactly which contracts or commit were in scope.",
+      "Whether the auditors are recognized firms.",
+      "Whether the deployed code has drifted in material ways since the last audit without a follow-up review.",
+      "For proxies: whether the implementation — not just the proxy shell — is verified.",
+    ],
+    green: "Bytecode is verified, a matching public repo exists, and at least one recognized firm has audited the currently-deployed contracts (with little drift, or the drift was re-audited).",
+    red: "Bytecode is unverified (or the proxy is verified but its implementation isn't), there is no audit, or there is no public repo.",
+  },
+};
 ---
 <Base title="Methodology · DeFiPunk'd">
   <SideNav contentMaxWidth={800} links={[
     { href: "#data-source", label: "Data source" },
     { href: "#risk-pizza", label: "Risk pizza" },
+    { href: "#slice-criteria", label: "What each slice checks" },
     { href: "#how-slices-are-graded", label: "How slices are graded" },
     { href: "#cex", label: "CEX special case" },
     { href: "#tiers", label: "Tier badges" },
@@ -73,31 +143,23 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
       </ul>
     </div>
 
-    <h2 id="how-slices-are-graded">How slices are graded today</h2>
+    <h2 id="slice-criteria">What each slice checks</h2>
     <p>
-      A slice earns its color from one of three sources: a deterministic heuristic on DeFiLlama signals, the CEX special case, or a DEFI@home quorum. Heuristics grade every protocol on every build; DEFI@home grades land per (slug, slice) as contributors and the autorun bot submit them.
+      Every assessment works through a fixed checklist per slice — the same questions, in the same order, pinned into the prompt. Here is what each one looks for, in plain language, with the two endpoints of the grading scale.
     </p>
-
-    <h3>Heuristic-graded slices</h3>
-    <p><strong>Verifiability</strong> — coarse first-pass on raw DeFiLlama signals:</p>
-    <ul>
-      <li><strong class="green">green</strong> — protocol has a GitHub repo <em>and</em> at least one audit.</li>
-      <li><strong class="orange">orange</strong> — one but not the other.</li>
-      <li><strong class="red">red</strong> — neither.</li>
-    </ul>
-    <p>An audit count is only a coarse first pass — auditor quality, report scope, and whether post-audit changes were reviewed matter far more than the integer. A DEFI@home quorum captures exactly those factors, and a thorough Verifiability assessment overrides the heuristic when ≥3 model runs agree.</p>
-
-    <p><strong>Autonomy</strong> — category + opportunistic <code>forkedFrom</code>:</p>
-    <ul>
-      <li><strong class="red">red</strong> — protocol category is <em>Liquid Staking</em>, <em>RWA Lending</em>, or one of the bridge categories (<em>Bridge</em>, <em>Canonical Bridge</em>, <em>Cross Chain Bridge</em>, <em>Bridge Aggregator</em>). These categories carry unavoidable external-protocol, validator, or counterparty risk by construction.</li>
-      <li><strong class="orange">orange</strong> — DeFiLlama records a non-empty <code>forkedFrom</code> lineage. DeFiLlama's fork-lineage data is largely paywalled, so this signal currently covers only a handful of protocols.</li>
-      <li><strong class="gray">gray</strong> — neither signal fires.</li>
-    </ul>
-
-    <h3>Slices with no heuristic</h3>
-    <p>
-      <strong>Control</strong>, <strong>Ability to exit</strong>, and <strong>Open Access</strong> have no automated heuristic. They stay gray until a DEFI@home quorum earns a grade. Open Access in particular is not a signal DeFiLlama carries in a usable form — it demands reading the project's own docs and frontend, plus on-chain checks for whitelist-gated entry points.
-    </p>
+    {PIZZA_SLICES.map((s) => {
+      const c = SLICE_CRITERIA[s.id];
+      return c ? (
+        <details class="slice-criteria">
+          <summary><strong>{s.label}</strong></summary>
+          <ul>
+            {c.checks.map((item) => <li>{item}</li>)}
+          </ul>
+          <p class="grade-line"><strong class="green">Green</strong> — {c.green}</p>
+          <p class="grade-line"><strong class="red">Red</strong> — {c.red}</p>
+        </details>
+      ) : null;
+    })}
 
     <h2 id="cex">CEX special case</h2>
     <p>
@@ -218,6 +280,21 @@ const SLICE_DESCRIPTIONS: Record<string, string> = {
     border-bottom: 1px solid var(--surface-raised);
   }
   .muted { color: var(--text-muted); font-size: 0.9rem; }
+  .slice-criteria {
+    border: 1px solid var(--surface-raised);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 0.75rem 0;
+  }
+  .slice-criteria summary {
+    cursor: pointer;
+    font-size: 1.05rem;
+    padding: 0.25rem 0;
+  }
+  .slice-criteria[open] summary { margin-bottom: 0.5rem; }
+  .slice-criteria ul { margin: 0.5rem 0; }
+  .slice-criteria li { padding: 0.2rem 0; }
+  .grade-line { margin: 0.4rem 0 0; font-size: 0.95rem; }
   .green { color: var(--grade-green); }
   .orange { color: var(--grade-orange); }
   .red { color: var(--grade-red); }
