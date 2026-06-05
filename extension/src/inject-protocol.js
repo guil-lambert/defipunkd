@@ -4,7 +4,7 @@
 // Also wires the SPA observer that drives every surface.
 (function () {
   "use strict";
-  const { lookup, currentProtocolSlug, claim, observe } = globalThis.DPKC;
+  const { lookup, getDetail, currentProtocolSlug, claim, observe } = globalThis.DPKC;
   const { renderBadge, renderStreamlined } = globalThis.DPK;
 
   // Heuristics (tweak here if DeFiLlama changes their markup).
@@ -37,7 +37,10 @@
   }
 
   // --- surface 3: streamlined block inside "Protocol Information" ---
-  function injectStreamlined(slug, record) {
+  // Rendered first from the lightweight index (pizza + tier + risk-matrix grades),
+  // then upgraded in place once the live detail arrives (adds per-slice headlines +
+  // family tabs). `isDetail` marks the richer version so we never downgrade it.
+  function injectStreamlined(slug, record, isDetail) {
     const headings = document.querySelectorAll("h1, h2, h3, h4");
     let infoCard = null;
     for (const el of headings) {
@@ -47,17 +50,27 @@
       }
     }
     if (!infoCard) return;
-    if (!claim(infoCard, "stream")) return;
-    infoCard.appendChild(renderStreamlined(record, slug));
+    const existing = infoCard.querySelector(":scope > .dpk-streamlined");
+    if (existing) {
+      // Keep the detail version; skip re-rendering the index version over it.
+      if (!isDetail || existing.getAttribute("data-dpk-detail") === "1") return;
+      existing.remove();
+    }
+    const node = renderStreamlined(record, slug);
+    if (isDetail) node.setAttribute("data-dpk-detail", "1");
+    infoCard.appendChild(node);
   }
 
   function injectProtocol() {
     const slug = currentProtocolSlug();
     if (!slug) return;
-    const record = lookup(slug);
-    if (!record) return;
-    injectHeaderBadge(slug, record);
-    injectStreamlined(slug, record);
+    const idx = lookup(slug);
+    if (!idx) return;                 // not an assessed protocol — do nothing
+    injectHeaderBadge(slug, idx);     // badge only needs tier + slices (index has them)
+    injectStreamlined(slug, idx, false); // paint immediately from the index (offline-safe)
+    getDetail(slug).then((detail) => {
+      if (detail) injectStreamlined(slug, detail, true); // enrich: headlines + family tabs
+    });
   }
 
   // Single observer drives both the table and protocol surfaces.

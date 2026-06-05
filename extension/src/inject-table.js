@@ -16,11 +16,11 @@
       // Skip our own elements and links without a text label (e.g. logo links).
       if (a.closest(".dpk-badge") || a.closest(".dpk-panel") || a.closest(".dpk-streamlined")) continue;
       if (!a.textContent || !a.textContent.trim()) continue;
-      if (!claim(a, "tablebadge")) continue;
 
       const slug = slugFromHref(a.getAttribute("href"));
       const record = lookup(slug);
       if (!record) continue;
+      if (!claim(a, "tablebadge")) continue;
 
       const badge = renderBadge(record, slug, 28);
       // Right-align: pin the pizza to the right edge of the Name cell, vertically
