@@ -3,7 +3,7 @@
 A throwaway **demo** Chrome extension that overlays DeFiPunk'd decentralization
 assessments — the 5-slice "risk pizza" (Control · Ability to exit · Autonomy ·
 Open Access · Verifiability) and the tier medal — directly onto defillama.com,
-to show the DeFiLlama team what an integration could look like.
+to show what an integration could look like.
 
 ## What it injects
 
