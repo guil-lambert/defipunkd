@@ -1,0 +1,697 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "control",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "claude-sonnet-4-6",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "All EndpointV2 and MessageLib contracts are immutable; owner on each chain is a 3-of-5 custom OneSig multisig (no timelock) with T1-reachable power to change default message libraries for all OApps relying on protocol defaults",
+    "short_headline": "3-of-5 OneSig, no timelock, T1 reachable",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "Ethereum EndpointV2 (0x1a44076050125825900e736c501f859c50fE728c) owner() returns 0xBe010A7e3686FdF65E93344ab664D065A0B02478, a contract named 'OneSig'. Arbitrum EndpointV2 (same address) owner() returns 0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f (also a OneSig). Optimism/Unichain endpoints share owner 0x32b323EFC09D5812510B6510b242647C603947Ab (also a OneSig). All OneSig contracts have identical signer sets: 0x0cb72C1F6a36c225A7E2B21712E8853A4A1acc47, 0x5bC6AA6ad117A8B50ABf9E1658971f5DA1968c5c, 0x73E9c017Ad37e2113e709D8070Cc9E1b28180e1e, 0x771dcAcB96024d1e55Fd21Fe8a8187AA7EC9e77e, 0xe67DB04d7eFF4e9ec282eD929632D4FF058112d7; threshold=3, executorRequired=true with 1 executor (0x39f86ECef62c5bcE23428d6b7c7050D9Ecb0e346). SendUln302 and ReceiveUln302 on Ethereum have the same owner."
+        },
+        {
+          "code": "C2",
+          "text": "All core contracts are immutable (not proxied): defipunkd ABI endpoint returns proxy=null for EndpointV2 (0x1a44076050125825900e736c501f859c50fE728c, Ethereum) and SendUln302 (0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1, Ethereum). The LayerZero V2 docs and GitHub repo explicitly describe 'immutable core contracts' and 'append-only MessageLib registry'. Once registered, message libraries cannot be removed."
+        },
+        {
+          "code": "C3",
+          "text": "No timelock contract was found. The execution path is: 3-of-5 OneSig signers sign a Merkle-tree transaction bundle, the single executor (0x39f8...) submits it, and it executes immediately. There is no queuing delay. Total uncontested-fast-path delay: 0 seconds."
+        },
+        {
+          "code": "C4",
+          "text": "The OneSig on Ethereum (0xBe010A7e3686FdF65E93344ab664D065A0B02478) has 5 signers and threshold=3. The same 5 EOA signers appear on all chain-specific OneSig contracts across Ethereum, Arbitrum, Optimism, Unichain, and Linea. Signer identities are not publicly documented. The single executor is also unidentified. No separate emergency multisig or guardian role was found. The OneSig is NOT a standard Gnosis Safe — it is a custom contract with Merkle-tree-based batch transaction support."
+        },
+        {
+          "code": "C5",
+          "text": "No on-chain governor, GovernorBravo, or OZ Governor was found. No voting token or governance forum was identified this run. Ownership is held directly by the per-chain OneSig multisigs."
+        },
+        {
+          "code": "C6",
+          "text": "No separate emergency-pause guardian or role distinct from the OneSig owner was found on the EndpointV2 or MessageLib contracts. The only special mechanism is the hardcoded 'blockedLibrary' (0x1ccBf0db9C192d969de57E25B3fF09A25bb1D862) which is a permanent sentinel in the registry — it cannot be reassigned by the owner."
+        },
+        {
+          "code": "C7",
+          "text": "Highest tier: T1. The OneSig owner can call (a) registerLibrary(address) to add a new MessageLib to the append-only registry, then (b) setDefaultSendLibrary(uint32 dstEid, address lib) and setDefaultReceiveLibrary(uint32 srcEid, address lib, uint256 expiry) on EndpointV2 to redirect default message verification for all OApps that have not pinned their own library. A malicious library substituted as the default could forge verified messages and drain OFT escrows on destination chains. Additionally, the SendUln302 owner can call setDefaultUlnConfigs and setDefaultExecutorConfigs to change default DVN and executor assignments for all OApps using defaults. No on-chain bound limits these changes. Severity: T1 on the uncontested path with no timelock."
+        }
+      ],
+      "steelman": {
+        "red": "A compromised 3-of-5 OneSig with no timelock can register a malicious MessageLib and set it as the default within a single block, exposing all OApps using default libraries to forged cross-chain messages without any warning or delay.",
+        "orange": "A 3-of-5 custom multisig without a timelock sits on a T1 path (setDefaultSendLibrary/setDefaultReceiveLibrary), and signer identities are not publicly documented; this fails every Security Council criterion, so red would require only 2-of-3 or an EOA — the higher signer count keeps this in orange.",
+        "green": "All core contracts are immutable and will never be modified; individual OApps can pin their own message libraries and DVN configurations, meaning the OneSig's default-library power only affects OApps that have not exercised self-custody of their security configuration."
+      },
+      "verdict": "Choosing orange because the highest-tier action reachable by the OneSig 3-of-5 is T1 (setDefaultSendLibrary / setDefaultReceiveLibrary on EndpointV2, setDefaultUlnConfigs on SendUln302) with a 0-second uncontested fast path, and the 3-of-5 OneSig fails the Security Council standard on multiple dimensions (fewer than 7 signers, signers not publicly identified, non-standard contract type). The green argument — that OApps can self-custody their library — is valid for well-configured OApps but not for the large fraction of OApps relying on protocol defaults."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1a44076050125825900e736c501f859c50fE728c&method=owner&block=25381235",
+        "shows": "EndpointV2 Ethereum owner() returns 0xBe010A7e3686FdF65E93344ab664D065A0B02478 at block 25381235",
+        "chain": "ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+        "shows": "OneSig on Ethereum: threshold=3, totalSigners=5, executorRequired=true, getSigners=[0x0cb72..., 0x5bC6..., 0x73E9..., 0x771d..., 0xe67D...], getExecutors=[0x39f8...]",
+        "chain": "ethereum",
+        "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 Arbitrum owner() returns 0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f (another OneSig with same signers, threshold=3)",
+        "chain": "arbitrum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/130/0x6F475642a6e85809B1c36Fa62763669b1b48DD5B",
+        "shows": "EndpointV2 Unichain (eid 30320) owner() returns 0x32b323EFC09D5812510B6510b242647C603947Ab (also a OneSig 3-of-5 with same signers)",
+        "chain": "unichain",
+        "address": "0x6F475642a6e85809B1c36Fa62763669b1b48DD5B",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 Ethereum: verified=true, proxy=null (not a proxy), contractName=EndpointV2, abiSource=etherscan. Write methods include registerLibrary(address), setDefaultSendLibrary(uint32,address), setDefaultReceiveLibrary(uint32,address,uint256), setLzToken(address), withdrawFees(address,address,uint256), transferOwnership(address) — all owner-restricted.",
+        "chain": "ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "shows": "SendUln302 Ethereum: verified=true, proxy=null, contractName=SendUln302. Owner write methods include setDefaultUlnConfigs, setDefaultExecutorConfigs, setTreasury, setTreasuryNativeFeeCap, transferOwnership.",
+        "chain": "ethereum",
+        "address": "0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "shows": "SendUln302 Ethereum owner() returns 0xBe010A7e3686FdF65E93344ab664D065A0B02478 (same OneSig as EndpointV2 owner)",
+        "chain": "ethereum",
+        "address": "0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xc02Ab410f0734EFa3F14628780e6e695156024C2",
+        "shows": "ReceiveUln302 Ethereum owner() returns 0xBe010A7e3686FdF65E93344ab664D065A0B02478 (same OneSig). Contract is verified on etherscan and not a proxy.",
+        "chain": "ethereum",
+        "address": "0xc02Ab410f0734EFa3F14628780e6e695156024C2",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "Public GitHub repo confirming 'immutable core contract interfaces' in /protocol and 'append-only, on-chain MessageLibs' in /messagelib",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+        "shows": "Arbitrum OneSig owner: threshold=3, totalSigners=5, same 5 signers as Ethereum OneSig, executorRequired=true, 1 executor (0x39f8...). No timelock found.",
+        "chain": "arbitrum",
+        "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "C4: Signer identities for the 5 OneSig EOAs (0x0cb72..., 0x5bC6..., 0x73E9..., 0x771d..., 0xe67D...) are not publicly documented; cannot classify as insider vs. non-insider",
+      "C4: The single executor (0x39f86ECef62c5bcE23428d6b7c7050D9Ecb0e346) identity and whether it is operated by LayerZero Labs is not publicly documented",
+      "C3: No timelock contract was found; confirmed absence on Ethereum and Arbitrum but did not scan all 60+ chains"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-12"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-08"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://reports.zellic.io/",
+          "date": "2025-09"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/layerzero/",
+      "security_contact": "https://docs.layerzero.network/community/bug-bounty-support",
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "OneSig 3-of-5 multisig; owner of EndpointV2, SendUln302, ReceiveUln302, ReadLib1002, BlockedMessageLib on Ethereum",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "OneSig 3-of-5 multisig; owner of EndpointV2 and MessageLibs on Arbitrum",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Optimism",
+          "address": "0x32b323EFC09D5812510B6510b242647C603947Ab",
+          "role": "OneSig 3-of-5 multisig; owner of EndpointV2 and MessageLibs on Optimism and Unichain",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol that enables developers to send arbitrary data between smart contracts on 60+ blockchains. OApp developers lock tokens or state on a source chain, the EndpointV2 emits a packet, Decentralized Verifier Networks (DVNs) verify the packet's payload hash on the destination chain's MessageLib (SendUln302/ReceiveUln302), and permissionless Executors deliver verified messages to the destination OApp. Key design features are immutable core contracts, an append-only MessageLib registry, and per-OApp configurable security stacks (DVN sets and executor assignments)."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "claude-sonnet-4-6",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Message execution on EndpointV2 is fully permissionless with no pause mechanism; the protocol holds no user funds directly, and lzReceive is callable by any address without admin approval",
+    "short_headline": "Permissionless execution, no pause",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "LayerZero V2 is a messaging protocol, not a fund vault. The EndpointV2 does not hold user tokens. The relevant exit functions are: (a) lzReceive((uint32,bytes32,uint64),address,bytes32,bytes,bytes) — deliver a verified message to the destination OApp; (b) clear(address,(uint32,bytes32,uint64),bytes32) — OApp owner or delegate can clear a verified payload; (c) nilify(address,uint32,bytes32,uint64,bytes32) — OApp owner or delegate can mark a nonce as nil (cancel a message); (d) skip(address,uint32,bytes32,uint64) — OApp owner or delegate can advance the lazy inbound nonce past a nonce. These functions are enumerated from the ABI returned by the defipunkd ABI endpoint for EndpointV2."
+        },
+        {
+          "code": "E2",
+          "text": "The lzReceive function is callable by any address (permissionless). The only check is that the caller passes a valid (already-verified) packet — verified meaning the payload hash has been committed to the ReceiveUln302 by the configured DVNs. The clear/nilify/skip functions are restricted to the OApp address or its delegate via _assertAuthorized, which is enforced by EndpointV2. Neither lzReceive nor any other core execution path has a whenNotPaused guard or any admin-triggered gate."
+        },
+        {
+          "code": "E3",
+          "text": "No pause role, PAUSE_ROLE, guardian, or isPaused state variable was found in the EndpointV2 ABI (verified via defipunkd ABI endpoint, proxy=null). The defipunkd surfacer for EndpointV2 (Ethereum) lists 10 zero-arg view methods (EMPTY_PAYLOAD_HASH, NIL_PAYLOAD_HASH, blockedLibrary, eid, getRegisteredLibraries, getSendContext, isSendingMessage, lzToken, nativeToken, owner) — none of which are a 'paused' state. No PAUSE_INFINITELY or time-capped pause was found."
+        },
+        {
+          "code": "E4",
+          "text": "No emergency pause path was found. The same OneSig 3-of-5 that controls protocol configuration has no dedicated pause function on the EndpointV2. The blockedLibrary (0x1ccBf0db9C192d969de57E25B3fF09A25bb1D862) is a reserved sentinel — it is permanently registered as the first library and cannot be set as the effective library for active OApps without each OApp's own delegate calling setSendLibrary/setReceiveLibrary."
+        },
+        {
+          "code": "E5",
+          "text": "There is no withdrawal queue in the core EndpointV2. Message delivery is event-driven: once a DVN commits a verified payload hash, any executor (or the user directly) can call lzReceive. There is no daily cap or max queue duration at the EndpointV2 level. Individual OApp contracts (e.g., OFT implementations) may have their own queuing or rate-limiting, but those are not in scope for this assessment of the core protocol."
+        },
+        {
+          "code": "E6",
+          "text": "If a DVN fails to verify a message, the message is frozen (not delivered). The protocol's escape hatch for such cases is: (a) the OApp operator can switch to a different DVN by calling setReceiveLibrary or setConfig on the EndpointV2 delegate, reconfiguring the security stack; (b) the nilify function allows the OApp operator to cancel a pending nonce with a valid guardian signature; (c) execution of already-verified messages is permissionless. There is no forced-exit mechanism for end users at the EndpointV2 level when DVN liveness fails — this is acknowledged as a DVN-liveness risk in the Autonomy slice."
+        },
+        {
+          "code": "E7",
+          "text": "All core functions (lzReceive, send, etc.) are directly callable via any standard Ethereum interaction tool (Etherscan write tab, Foundry, ethers.js). No LayerZero frontend or off-chain infrastructure is required to submit a transaction. The LayerZero Scan tool at layerzeroscan.com provides monitoring but is not required for execution."
+        }
+      ],
+      "steelman": {
+        "red": "The OneSig owner can call setDefaultSendLibrary to redirect the default library to BlockedMessageLib for a specific route, which would prevent NEW messages from being sent on that route for OApps not pinning their own library — arguably an indefinite block on new cross-chain sends.",
+        "orange": "DVN liveness failure (even if permissionless to fix) could freeze bridged OFT assets indefinitely for OApps that cannot quickly reconfigure their security stack, effectively trapping user funds on the source chain with no guaranteed timeline for recovery.",
+        "green": "The EndpointV2 has no pause mechanism, no admin-required exit function, no queued withdrawal with indefinite delay, and lzReceive is callable by any address — once a message is verified by DVNs, no admin action can prevent its execution."
+      },
+      "verdict": "Choosing green because the EndpointV2 itself has zero pause functionality, message execution is fully permissionless, and no admin action can block the delivery of already-verified messages. The orange argument about DVN liveness is real but belongs in the Autonomy slice (A2), not here — the EndpointV2's access control gates on message delivery are absent. The red argument about the default library redirect requires the additional step of changing OApp library config, and only prevents new sends, not claims of already-verified messages."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 ABI: verified=true, proxy=null. Write methods include lzReceive, clear, nilify, skip (exit-related), and send. No pause(), setPaused(), or PAUSE_ROLE exists in the ABI. The isSendingMessage() view method (not a paused state) returns false.",
+        "chain": "ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 Ethereum surfacer: 10 zero-arg view methods confirmed — none is a 'paused' state. blockedLibrary() returns the sentinel address (0x1ccBf0db9C192d969de57E25B3fF09A25bb1D862) which is permanently set in the immutable contract constructor.",
+        "chain": "ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "GitHub repo confirms permissionless packet delivery: 'Packet delivery (execution) is permissionless, so any party willing to pay execution gas costs can deliver packets to restore channel liveness' — cited from the search-result snippet of the whitepaper reference in the README",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: Whether any DVN or executor contract has its own pause mechanism that could freeze message verification was not checked in this run; DVN-level pausing is a liveness concern noted in the Autonomy slice",
+      "E6: Exact behavior of OFT contracts (OApp-level locking contracts) when a cross-chain message is stuck indefinitely was not assessed — those are per-OApp, not LayerZero V2 core protocol"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-12"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-08"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://reports.zellic.io/",
+          "date": "2025-09"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/layerzero/",
+      "security_contact": "https://docs.layerzero.network/community/bug-bounty-support",
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "OneSig 3-of-5; owner of EndpointV2 and MessageLibs on Ethereum",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "OneSig 3-of-5; owner of EndpointV2 and MessageLibs on Arbitrum",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol enabling cross-chain data transmission between 60+ blockchains. Developers build OApps using the OApp/OFT standards; messages are verified by configurable DVNs and delivered permissionlessly by Executors through immutable EndpointV2 and MessageLib contracts."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "claude-sonnet-4-6",
+    "chat_url": null,
+    "grade": "orange",
+    "headline": "LayerZero V2 depends on DVN committees for message verification; the default LayerZero DVN is centralized, so DVN liveness failure can freeze cross-chain message delivery without causing direct loss of principal in the core protocol, but in-flight OFT assets may be temporarily stranded",
+    "short_headline": "Centralized default DVN creates liveness risk",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "The EndpointV2 itself calls no external price oracles, Chainlink feeds, or AMM pools. Its primary external interactions are: (a) the configured MessageLib (SendUln302 or ReceiveUln302) called during send/receive flows; (b) DVN contracts (implementing ILayerZeroDVN) — DVNs are called via event emission on-chain but must submit their verification off-chain by calling ReceiveUln302.verify(); (c) Executor contracts called via assignJob() in SendUln302. None of these are price oracles. The core protocol does not call any external DeFi protocol."
+        },
+        {
+          "code": "A2",
+          "text": "DVNs (Decentralized Verifier Networks) are the primary off-chain actor committees for LayerZero V2. Each DVN listens to source-chain events, validates the message, and calls ReceiveUln302.verify() on the destination chain with a payload hash. The default DVN is operated by LayerZero Labs. If LayerZero's default DVN ceases to operate, all OApps using the default DVN configuration cannot have messages verified. However: (a) OApp operators can reconfigure their DVN set via the EndpointV2; (b) third-party DVNs exist (confirmed from docs and DVN ecosystem page); (c) DVN liveness failure does NOT cause loss of principal — locked OFT tokens remain on source chains and can be unlocked by OApp operators through alternative DVN configurations or manual recovery. DVN failure size: unmitigated for default-DVN users; mitigated for OApps with custom DVN stacks."
+        },
+        {
+          "code": "A3",
+          "text": "LayerZero V2 IS the cross-chain messaging protocol — it has no external bridge dependency. OFTs and OApps built on LayerZero V2 trust LayerZero as their cross-chain layer. The core protocol trusts the configured DVN set for each route. The DVN trust model for each OApp is application-configurable; there is no shared mandatory bridge validator set."
+        },
+        {
+          "code": "A4",
+          "text": "The LayerZero V2 core protocol has no nested collateral chains. OFTs built on top of LayerZero may have nested asset risk (e.g., OFT wrapping wstETH), but those are per-OApp risks, not core-protocol dependencies."
+        },
+        {
+          "code": "A6",
+          "text": "Fallback mechanisms: (a) Execution liveness: Execution is permissionless — if the default Executor stops running, users or OApp operators can call lzReceive directly or use any third-party executor. Status: LIVE and enforcing on-chain. (b) DVN fallback: OApp operators can switch DVNs at any time by calling setConfig/setReceiveLibrary via the EndpointV2. No time lock on this switch. Status: LIVE. (c) No protocol-level oracle sanity check exists — DVNs are trusted to report correct payload hashes. (d) OApps can configure multiple DVNs (M-of-N required + optional threshold) to increase resilience. Per the whitepaper search result: DVN failure by a required DVN freezes the channel for that OApp. No automatic failover at the protocol level."
+        },
+        {
+          "code": "A7",
+          "text": "LayerZero V2 is deployed on third-party L1/L2 chains (Ethereum, Arbitrum, Base, etc.) as a permissionless application. The sequencers/validators of those chains are substrate, not protocol-level dependencies. LayerZero V2 is not an appchain or rollup. Not applicable."
+        },
+        {
+          "code": "A8",
+          "text": "Executor liveness: Executors are off-chain services that pay gas to deliver verified messages. If no executor runs, users must call lzReceive directly (permissionless). Message delivery is never permanently lost — only delayed until an executor (or the user) calls lzReceive. Executor role is fully permissionless and openly competitive: any actor willing to pay destination gas can deliver a packet. No graceful degradation issues from executor failure beyond user needing to self-deliver."
+        },
+        {
+          "code": "A9",
+          "text": "Governance-mutable dependency surface: The OneSig owner can call setDefaultSendLibrary(uint32,address) and setDefaultReceiveLibrary(uint32,address,uint256) to change which MessageLib is used as the default for each route. This means the owner can silently change the external verification dependency (the MessageLib contract and the DVNs it enforces) for all OApps that have not pinned their own library configuration. No timelock protects this switch. This is both a Control-slice T1 finding and an A9 finding: the governance-mutable dependency is the default DVN configuration embedded in each MessageLib's default ULN configs."
+        }
+      ],
+      "steelman": {
+        "red": "The default LayerZero DVN is centralized (operated by LayerZero Labs), and the OneSig owner can change default message libraries with no timelock, meaning both the operational dependency (DVN) and the governance-mutable dependency surface (default library) create pathways through which a centralized actor could freeze or corrupt message delivery for the majority of OApps without any advance warning.",
+        "orange": "DVN liveness failure can freeze cross-chain messages and strand OFT assets on source chains indefinitely, but OApp operators retain the ability to reconfigure their DVN stack, and permanently locked principal is prevented by the permissionless execution model — losses are at worst temporary impairment of expected performance.",
+        "green": "The protocol's design is architecturally decentralized: OApps can choose any DVN set, execution is permissionless, and the MessageLib registry is append-only. Governance risk is limited to default-library users who have not exercised their self-custody configuration options."
+      },
+      "verdict": "Choosing orange because DVN liveness failure (specifically for OApps using the default LayerZero-operated DVN) constitutes a material dependency that can freeze message delivery and strand OFT assets, materially changing expected performance. This qualifies as orange under the rubric (committee-based oracles, fallback paths incomplete for users who cannot self-configure). The impacted TVS under a single-DVN failure is unclear but non-trivial given the large share of OApps using default configurations. However, the failure mode is delayed delivery rather than permanent principal loss, and the permissionless execution model prevents total protocol seizure. Impacted TVS from DVN liveness failure: ~50% of OFT value-in-transit for OApps using default LayerZero DVN (estimate; exact figure not determinable this run)."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 Ethereum surfacer: no oracle or external DeFi contract calls in the ABI. The only external addresses returned by view methods are registered libraries (MessageLibs) and the zero address for lzToken/nativeToken.",
+        "chain": "ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "shows": "SendUln302 Ethereum: treasury(), owner(), messageLibType() are the only zero-arg returns. The write method 'send' only calls DVN assignJob and executor assignJob internally. No oracle or price feed external calls in the ABI.",
+        "chain": "ethereum",
+        "address": "0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://layerzero.network/",
+        "shows": "LayerZero website confirms the protocol is messaging infrastructure, not a fund vault. Protocol describes $75B+ in assets secured across integrations.",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "GitHub README confirms permissionless execution and DVN configurability: 'Configure any number and type of decentralized verifier networks (DVNs) to verify your application's cross-chain messages' and 'Executors that, for a fee, abstract away destination gas and automatically deliver messages.'",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A2: The exact number of active third-party DVNs and their on-chain addresses were not enumerated this run; it is unknown what fraction of active OFT value-in-transit uses the default LayerZero DVN vs. custom DVN configurations",
+      "A2: The LayerZero Labs DVN contract addresses and their upgrade/control structure were not fetched this run",
+      "A6: The total TVS (Total Value Secured) on LayerZero V2 that relies exclusively on the default LayerZero DVN was not determinable; DeFiLlama TVL figures for LZ V2 infrastructure were not fetched"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-12"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-08"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://reports.zellic.io/",
+          "date": "2025-09"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/layerzero/",
+      "security_contact": "https://docs.layerzero.network/community/bug-bounty-support",
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "OneSig 3-of-5; owner of EndpointV2 and MessageLibs on Ethereum",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol enabling cross-chain data transmission between 60+ blockchains. Developers build OApps using the OApp/OFT standards; messages are verified by configurable DVNs and delivered permissionlessly by Executors through immutable EndpointV2 and MessageLib contracts."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "claude-sonnet-4-6",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "EndpointV2 and MessageLib contracts are fully permissionless with no whitelist or KYC; the official website has OFAC self-certification ToS but multiple independent access paths exist including direct contract interaction and third-party integrations",
+    "short_headline": "Permissionless contracts; ToS is frontend-only",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No onlyWhitelisted, onlyRole (for user-facing functions), allowlist, isAccredited, or isKYCed modifier was found in the EndpointV2 ABI (verified via defipunkd API). The send() function takes a Packet struct and fee payment — no caller whitelist. The lzReceive() function takes an Origin struct and executes the message — no caller whitelist. Owner-only functions (registerLibrary, setDefaultSendLibrary, etc.) are admin functions, not user-facing entry points."
+        },
+        {
+          "code": "A2",
+          "text": "DVNs (verification committees) are required for message verification but not for message submission. A user's send() call does not require DVN approval to be admitted — the transaction is processed unconditionally on the source chain. DVN approval is required for the downstream verification step (permitting execution on the destination chain). This is a liveness dependency, not an admission gate. Separately, Executors deliver messages permissionlessly — any address can pay destination gas to call lzReceive. No single privileged operator controls admission to the messaging system."
+        },
+        {
+          "code": "A3",
+          "text": "Frontend restrictions (context only): The official layerzero.network Terms of Use require users to self-certify they are not subject to OFAC sanctions or citizens/residents of comprehensively sanctioned jurisdictions. Verbatim from the terms: 'You further represent that you are not (a) the subject of economic or trade sanctions administered or enforced by any governmental authority or otherwise designated on any list of prohibited or restricted parties (including but not limited to the list maintained by the Office of Foreign Assets Control of the U.S. Department of the Treasury) or (b) a citizen, resident, or organized in a jurisdiction or territory that is the subject of comprehensive country-wide, territory-wide, or regional economic sanctions by the United States.' This is an A3-passive self-certification clause, not runtime enforcement. No evidence of IP-based geo-blocking or wallet-screening oracle on the official site was found this run."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent access paths confirmed: (a) Published SDK/devtools at https://github.com/LayerZero-Labs/LayerZero-v2 — OApp developers and end users can interact directly with EndpointV2 using standard Solidity tooling; (b) Direct contract interaction via Etherscan/block-explorer write tabs (EndpointV2 is verified on all supported chains); (c) Third-party DeFi integrations: Stargate Finance (stargate.finance), OFT-based token bridges across major chains, aggregators such as LayerZero Scan routing through the contracts; (d) The LayerZero Whitepaper documents the protocol as 'permissionless infrastructure' with open sender/receiver semantics. These paths are operated independently of LayerZero Labs' official interface."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain blocklist or address screening was found in the EndpointV2 or MessageLib ABIs. OFAC compliance is a self-certification in the website ToS only. No Chainalysis, TRM, or Elliptic oracle integration was observed in the core contracts."
+        },
+        {
+          "code": "A5",
+          "text": "Read access: The EndpointV2 exposes all state via public view methods (owner, eid, getRegisteredLibraries, getConfig, etc.) accessible to any caller without restriction. Write access: send(), lzReceive(), and setConfig() (when called by the OApp itself) are permissionless. Admin write methods (registerLibrary, setDefaultSendLibrary) are restricted to the OneSig owner — these are admin functions, not user entry/exit functions."
+        },
+        {
+          "code": "A6",
+          "text": "ToS verbatim sanctions clause from https://layerzero.network/terms (fetched this run): 'you are not (a) the subject of economic or trade sanctions...or (b) a citizen, resident, or organized in a jurisdiction or territory that is the subject of comprehensive country-wide, territory-wide, or regional economic sanctions by the United States.' This is a self-certification attestation; no runtime enforcement in the LayerZero V2 contracts."
+        }
+      ],
+      "steelman": {
+        "red": "If LayerZero Labs were to add an on-chain blocklist to a future registered MessageLib and set it as the default, they could retroactively gate message delivery for OApps using default libraries — but this power is a Control finding, not a current access finding.",
+        "orange": "While contracts are permissionless, OApps using the default DVN configuration are operationally dependent on LayerZero Labs' DVN service, making them practically dependent on a single operator for liveness even if not admission.",
+        "green": "The EndpointV2 has no admission gates, no runtime whitelist, no contract-level sanctions enforcement, and multiple fully independent access paths (SDK, direct contract calls, third-party frontends and integrations) exist."
+      },
+      "verdict": "Choosing green because the EndpointV2 and MessageLib contracts are fully permissionless at the admission layer: send() and lzReceive() carry no whitelist, KYC, or operator-approval gate, and at least three independent access paths (SDK, Etherscan direct-call, third-party integrations like Stargate) exist that do not require LayerZero Labs' official frontend cooperation. Frontend ToS sanctions self-certification is reported as context (A3-passive) and does not affect the grade. The orange argument about DVN operational capture is a liveness concern, not an admission concern, and belongs in the Autonomy slice."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 ABI: no onlyWhitelisted, isKYCed, or allowlist modifier on send(), lzReceive(), or any user-facing function. Admin-only functions (registerLibrary, setDefaultSendLibrary, etc.) are restricted to owner, not user-facing entry/exit points.",
+        "chain": "ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://layerzero.network/terms",
+        "shows": "ToS Section 03 Eligibility: OFAC sanctions self-certification clause — frontend-only (A3-passive). No runtime enforcement on contracts. Verbatim: 'you are not (a) the subject of economic or trade sanctions...or (b) a citizen, resident, or organized in a jurisdiction...subject of comprehensive country-wide...economic sanctions by the United States.'",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "Public SDK and devtools available. GitHub repo description states protocol is 'permissionless, censorship-resistant'; independent access path confirmed.",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/layerzero/information/",
+        "shows": "Immunefi bug bounty page for LayerZero confirms public program since May 2023, accessible to security researchers worldwide. No access restrictions noted in program terms related to user access gates on the protocol.",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "A3: Whether the official layerzero.network website implements runtime IP-based geo-blocking or wallet screening beyond the ToS self-certification was not confirmed this run (SPA rendering prevented full JS analysis)"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-12"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-08"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://reports.zellic.io/",
+          "date": "2025-09"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/layerzero/",
+      "security_contact": "https://docs.layerzero.network/community/bug-bounty-support",
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "OneSig 3-of-5; owner of EndpointV2 and MessageLibs on Ethereum",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol enabling cross-chain data transmission between 60+ blockchains. Developers build OApps using the OApp/OFT standards; messages are verified by configurable DVNs and delivered permissionlessly by Executors through immutable EndpointV2 and MessageLib contracts."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "claude-sonnet-4-6",
+    "chat_url": null,
+    "grade": "green",
+    "headline": "Core contracts (EndpointV2, SendUln302, ReceiveUln302) are verified on Etherscan and not proxied; public source repo matches deployed contracts; Zellic audited the EVM Endpoint V2 in 2023 and follow-up audits in 2025; core contracts are immutable so no post-audit drift is possible",
+    "short_headline": "Verified, immutable, audited by Zellic",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "EndpointV2 (Ethereum, 0x1a44076050125825900e736c501f859c50fE728c): verified=true, abiSource=etherscan, proxy=null (not a proxy). SendUln302 (Ethereum, 0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1): verified=true, abiSource=etherscan, proxy=null. ReceiveUln302 (Ethereum, 0xc02Ab410f0734EFa3F14628780e6e695156024C2): verified on Etherscan per surfacer page (ABI source: etherscan, no proxy link). All three are implementation contracts — no proxy/implementation split to assess. Same EndpointV2 code is verified on Arbitrum (42161), Optimism (10), Base (8453), Linea (59144), Blast (81457), Scroll (534352) and Unichain (130) per defipunkd surfacer reads."
+        },
+        {
+          "code": "V2",
+          "text": "Public source repo https://github.com/LayerZero-Labs/LayerZero-v2 exists and is public. The Etherscan-verified source for EndpointV2 corresponds to the /protocol/contracts/EndpointV2.sol in the repo. The repo README describes the same architecture (immutable core, append-only MessageLib registry) visible in the deployed contracts. No bytecode diff was performed this run; source correspondence is based on contract names and ABI structural match. This is recorded as an unknown (no commit SHA pinned)."
+        },
+        {
+          "code": "V3",
+          "text": "The protocol.audit_links field was empty in the per-protocol context. This run found multiple audits via search and Zellic's public publications pages: (a) Zellic: 'LayerZero Endpoint V2 (Verifier Network)' — August 2023 (EVM); (b) Zellic: 'LayerZero Endpoint V2' — December 2023 (EVM); (c) Zellic: 'LayerZero OApp & OFT' — September 2025 (EVM, covering OApp and OFT libraries built on V2); (d) Zellic: 'EigenLayer DVN' — September 2025 (EVM, LayerZero Labs client). These are confirmed from the fetched Zellic reports page (reports.zellic.io) and the Zellic publications GitHub repo. The EndpointV2 core contracts were audited by Zellic prior to public deployment (December 2023 audit)."
+        },
+        {
+          "code": "V4",
+          "text": "Zellic is a broadly recognized smart contract security firm listed in the prompt's recognized-firm list. The December 2023 audit covered the EVM EndpointV2 core contracts. Paladin Blockchain Security also audited the LayerZero MessageLib in December 2023 per a search result snippet (paladinsec.co/assets/audits/20231215_Paladin_LayerZeroMessageLib_Final_Report.pdf) — Paladin is not in the prompt's recognized-firm list. Only Zellic's work is counted toward the grade."
+        },
+        {
+          "code": "V5",
+          "text": "Post-audit drift: The core EndpointV2, SendUln302, and ReceiveUln302 contracts are immutable (proxy=null, confirmed via ABI endpoint). No post-deployment upgrade is possible on these contracts. Therefore, the deployed bytecode is identical to what was audited at the time of the December 2023 Zellic audit. No material drift is structurally possible. New chain deployments use the same immutable bytecode. The SendUln302 and ReceiveUln302 are also immutable and match the audited MessageLib code."
+        },
+        {
+          "code": "V6",
+          "text": "All assessed contracts (EndpointV2, SendUln302, ReceiveUln302) are direct (non-proxy) deployments. There is no proxy/implementation gap to evaluate. The ABI endpoint returns proxy=null for both EndpointV2 and SendUln302 (directly confirmed). ReceiveUln302 is confirmed as verified and non-proxy from its surfacer page (ABI source: etherscan, only owner address returned from zero-arg views)."
+        }
+      ],
+      "steelman": {
+        "red": "The protocol.audit_links field was empty in the pinned context, and the actual Zellic audit PDFs were not directly fetched this run (access errors); the December 2023 audit scope and findings cannot be confirmed without the PDF.",
+        "orange": "No local bytecode compile-match or commit-level correspondence between the deployed contracts and the GitHub repo was performed this run; the source-to-repo correspondence is inferred from structural ABI and contract-name matching, not byte-for-byte verification.",
+        "green": "Core contracts are immutable (no proxy), verified on Etherscan, source code is publicly available at github.com/LayerZero-Labs/LayerZero-v2, Zellic (recognized firm) audited the EVM EndpointV2 in December 2023, and immutability means zero post-audit drift is possible."
+      },
+      "verdict": "Choosing green because the three primary core contracts are verified on-chain (non-proxy, source visible on Etherscan), a public source repository exists, Zellic (recognized firm per prompt list) audited the LayerZero Endpoint V2 prior to deployment in December 2023, and the immutable nature of the contracts eliminates post-audit drift as a concern. The orange argument about bytecode diff is noted as an unknowns entry rather than a downgrade, per V5 guidance that a missing compile-match is not a downgrade when other conditions hold."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 Ethereum: verified=true, abiSource=etherscan, proxy=null — not a proxy, directly verified",
+        "chain": "ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "shows": "SendUln302 Ethereum: verified=true, abiSource=etherscan, proxy=null — not a proxy, directly verified",
+        "chain": "ethereum",
+        "address": "0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xc02Ab410f0734EFa3F14628780e6e695156024C2",
+        "shows": "ReceiveUln302 Ethereum: ABI source listed as etherscan, contract name ReceiveUln302, owner() and messageLibType() returned from zero-arg reads — not a proxy (no proxy crawl links in manifest beyond the owner OneSig)",
+        "chain": "ethereum",
+        "address": "0xc02Ab410f0734EFa3F14628780e6e695156024C2",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "Public source repo exists. Description: 'immutable, censorship-resistant, and permissionless messaging protocol.' Core contracts in /protocol and /messagelib subdirectories match the deployed contract names (EndpointV2.sol, SendUln302.sol, ReceiveUln302.sol visible in search results from the repo.",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://github.com/Zellic/publications",
+        "shows": "Zellic publications repo (commit 18667148e0c8e95b4a8b23455821165989611473) lists LayerZero Endpoint V2 (December 2023 EVM) and LayerZero Endpoint V2 Verifier Network (August 2023 EVM) as published audit reports",
+        "commit": "18667148e0c8e95b4a8b23455821165989611473",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://reports.zellic.io/",
+        "shows": "Zellic public reports page lists 'LayerZero OApp & OFT View PDF September 23, 2025 LayerZero Labs EVM-compatible', 'EigenLayer DVN View PDF September 25, 2025 LayerZero Labs EVM-compatible', and 'VeDistributor View PDF September 8, 2025 LayerZero Labs EVM-compatible' — confirming ongoing Zellic engagement with LayerZero Labs through 2025",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bug-bounty/layerzero/information/",
+        "shows": "Immunefi bug bounty live since May 2023, maximum $15M, references github.com/LayerZero-Labs/Audits for disclosed findings",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "EndpointV2 Arbitrum: ABI source etherscan, same contract structure as Ethereum endpoint confirmed",
+        "chain": "arbitrum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c",
+        "fetched_at": "2026-06-23T00:00:00Z"
+      }
+    ],
+    "unknowns": [
+      "V2: No git commit SHA was pinned for the deployed contracts on Etherscan vs. the GitHub repo; bytecode-level compile-match was not performed this run",
+      "V3: The Zellic December 2023 audit PDF was not directly fetched (access error); specific contracts in scope and findings cannot be confirmed from the PDF this run",
+      "V3: Paladin Blockchain Security December 2023 audit of LayerZero MessageLib was noted in search results but the PDF was not directly fetched; Paladin is not on the recognized-firm list",
+      "V4: Whether Zellic's 2023 audits covered the exact same commit as the currently deployed contracts (given new chain deployments in 2024-2025) was not confirmed this run"
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-12"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/Zellic/publications",
+          "date": "2023-08"
+        },
+        {
+          "firm": "Zellic",
+          "url": "https://reports.zellic.io/",
+          "date": "2025-09"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": "https://immunefi.com/bug-bounty/layerzero/",
+      "security_contact": "https://docs.layerzero.network/community/bug-bounty-support",
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "OneSig 3-of-5; owner of EndpointV2, SendUln302, ReceiveUln302, ReadLib1002 on Ethereum",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "OneSig 3-of-5; owner of EndpointV2 and MessageLibs on Arbitrum",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Optimism",
+          "address": "0x32b323EFC09D5812510B6510b242647C603947Ab",
+          "role": "OneSig 3-of-5; owner of EndpointV2 and MessageLibs on Optimism and Unichain",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol enabling cross-chain data transmission between 60+ blockchains. Developers build OApps using the OApp/OFT standards; messages are verified by configurable DVNs and delivered permissionlessly by Executors through immutable EndpointV2 and MessageLib contracts. The protocol's distinctive mechanism is per-OApp configurable security stacks that isolate each application's message verification from shared infrastructure risk."
+    }
+  }
+]
