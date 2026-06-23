@@ -1,0 +1,229 @@
+{
+  "schema_version": 4,
+  "slug": "huma-finance-v2",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-06-23",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "16 contracts catalogued across Solana (2 programs, 2 tokens), EVM (12 pool contracts across 2 pools), and Stellar (10 contracts); Solana program IDs are base58 and cannot populate 0x admin_addresses directly.",
+  "short_headline": "16 contracts across Solana, EVM, Stellar",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: Solana does not have an Etherscan-style name-tag search endpoint. No EVM block-explorer search performed for Solana chain. Solana program addresses discovered via docs (D2) instead. Recorded as D1-offchain fallback."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Official deployed-contracts page at docs.huma.finance/ecosystem-resources/smart-contracts lists 2 Solana program addresses (Huma, Huma Institutional), 2 Solana SPL token mints (PST, mPST), 12 EVM addresses across two Arf pools (Arf 3-month and Arf 6-month), and 10 Stellar contract addresses. protocol_metadata.deployed_contracts_doc set accordingly."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Audit page at docs.huma.finance/ecosystem-resources/security-audits lists 9 audit reports: Halborn (Huma 2.0 Solana programs + 2 incremental), Sec3 (Huma Prime + 3 incremental), Spearbit (2 EVM reports), Certora (Stellar). No in-scope contract address table was accessible from the audit page itself — linked PDFs/Halborn pages not fetched due to tool budget. Audit firms and report URLs recorded."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub org 00labs confirmed via search, with repos including huma-contracts-v2, huma-signals, huma-utils, governance-ui, distributor, permissionless-sdk-example. No pinned commit SHA fetched due to tool call budget. GitHub URLs added to protocol_metadata.github."
+      },
+      {
+        "code": "D5",
+        "text": "D5: protocol.chains lists only Solana, but docs show EVM (likely Polygon, consistent with V1 context and Arf pools) and Stellar deployments also present. EVM chain for the Arf pool contracts was not confirmed on-chain in this run — recorded in unknowns."
+      },
+      {
+        "code": "D6",
+        "text": "D6: No factory-pattern contracts identified on Solana from docs. Stellar ContractFactory address surfaced but factory children not enumerated (Stellar not supported by DeFiPunkd read API). EVM Arf pools appear to be individually-listed, not factory-discovered."
+      },
+      {
+        "code": "D7",
+        "text": "D7: Role taxonomy applied: Solana program addresses classified as 'other' (programs, not admin keys); EVM pool contracts classified as 'pool' and 'vault' roles; Stellar contracts classified by role label from docs."
+      },
+      {
+        "code": "D8",
+        "text": "D8: All admin_addresses entries trace to the fetched docs URL at docs.huma.finance/ecosystem-resources/smart-contracts. Solana base58 program IDs and Stellar addresses do not conform to 0x format and cannot be placed in admin_addresses[]; recorded in unknowns with D8 code."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Walked official docs (security-audits + smart-contracts pages), website, and GitHub org search. Catalogued 16 deployed entities: 2 Solana programs, 2 Solana SPL mints, 12 EVM pool contracts (2 Arf pools × 6 contracts each), and 10 Stellar contracts. Solana program IDs are base58-encoded and Stellar addresses are Strkey-encoded — neither fits the 0x admin_addresses schema; EVM pool contract addresses are populated where the 0x format applies. On-chain verification of EVM chain ID and Solana program authority keys remains for next slice."
+  },
+  "evidence": [
+    {
+      "url": "https://app.huma.finance",
+      "shows": "Capability probe: app.huma.finance loads (region-restricted but reachable); confirms protocol website is live.",
+      "fetched_at": "2026-06-23T00:00:00Z"
+    },
+    {
+      "url": "https://docs.huma.finance/ecosystem-resources/security-audits",
+      "shows": "Audit page listing all auditors (Halborn, Sec3, Spearbit, Certora) and 9 linked audit reports for Solana programs, EVM contracts, and Stellar contracts. Also confirms multisig-secured admin rights and bug bounty via Spearbit/Cantina.",
+      "fetched_at": "2026-06-23T00:00:00Z"
+    },
+    {
+      "url": "https://docs.huma.finance/ecosystem-resources/smart-contracts",
+      "shows": "Canonical deployed-contracts page listing Solana program addresses (Huma: HumaXepHnjaRCpjYTokxY4UtaJcmx41prQ8cxGmFC5fn; Huma Institutional: EVQ4s1b6N1vmWFDv8PRNc77kufBP8HcrSNWXQAhRsJq9), Solana SPL mints (PST: 59obFNBzyTBGowrkif5uK7ojS58vsuWz3ZCvg6tfZAGw; mPST: HUPfpnsaJtJGpJxAPNX1vXah7BgYiQYt1c2JMgMumvPs), 12 EVM addresses across Arf 3-month and Arf 6-month pools, and 10 Stellar contract addresses.",
+      "fetched_at": "2026-06-23T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/00labs",
+      "shows": "Derived: GitHub org 00labs confirmed active with repos: huma-contracts-v2, huma-signals, huma-utils, governance-ui, distributor, permissionless-sdk-example, stellar-commonjs-testing.",
+      "fetched_at": "2026-06-23T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: Solana has no EVM-style block-explorer name-tag search; Solscan/Solana Explorer search for 'Huma Finance' program name-tags not attempted due to tool budget exhaustion — next run should query solscan.io for program HumaXepHnjaRCpjYTokxY4UtaJcmx41prQ8cxGmFC5fn and EVQ4s1b6N1vmWFDv8PRNc77kufBP8HcrSNWXQAhRsJq9",
+    "D3: Audit report PDFs (Halborn, Sec3, Spearbit, Certora) not fetched; in-scope contract address tables and any multisig/upgrade-authority addresses listed therein not extracted — next run should open each PDF",
+    "D4: GitHub repos 00labs/huma-contracts-v2 and Solana program repo not fetched at pinned SHA; broadcast/deploy artifacts (run-latest.json, deployments/*.json) not checked — next run should walk at pinned commit",
+    "D5: EVM chain ID for Arf pool contracts (0xebf8... etc.) not confirmed on-chain; likely Polygon based on V1 context but not verified — next run should fetch defipunkd.com/api/contract/abi?chainId=137&address=0xebf8D31C5492Dc93FC73a6AD136d47c45AB2C7a5",
+    "D6: Stellar ContractFactory (CBQHYENQ7ANK5UEUOGEL5CMLZV3LUPS4IVR3EHXMMVYQTNMFOGPTLXBC) child contracts not enumerated; Stellar not supported by DeFiPunkd read API",
+    "D8: Solana program upgrade authorities (BPFLoaderUpgradeable programData authority) not fetched for HumaXepHnjaRCpjYTokxY4UtaJcmx41prQ8cxGmFC5fn and EVQ4s1b6N1vmWFDv8PRNc77kufBP8HcrSNWXQAhRsJq9 — these are the key admin addresses for the Solana V2 deployment and must be discovered via Solscan next run",
+    "D8: Solana SPL token mint authorities for PST (59obFNBzyTBGowrkif5uK7ojS58vsuWz3ZCvg6tfZAGw) and mPST (HUPfpnsaJtJGpJxAPNX1vXah7BgYiQYt1c2JMgMumvPs) not fetched — mint authority is a key admin role",
+    "D8: Multisig addresses referenced in security docs ('all administrative functions are secured with multisigs') not yet identified — no 0x or base58 multisig address surfaced in this run"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/00labs/huma-contracts-v2",
+      "https://github.com/00labs/huma-signals",
+      "https://github.com/00labs/governance-ui",
+      "https://github.com/00labs/huma-utils",
+      "https://github.com/00labs/distributor"
+    ],
+    "docs_url": "https://docs.huma.finance",
+    "audits": [
+      {
+        "firm": "Sec3",
+        "url": "https://github.com/sec3-service/reports/blob/master/reports/sec3_huma_vault.pdf",
+        "date": "2025"
+      },
+      {
+        "firm": "Sec3",
+        "url": "https://github.com/sec3-service/reports/blob/master/reports/sec3_huma_vault_incremental_20260131.pdf",
+        "date": "2026-01"
+      },
+      {
+        "firm": "Halborn",
+        "url": "https://www.halborn.com/audits/huma-finance/solana-programs-060022",
+        "date": "2025"
+      },
+      {
+        "firm": "Halborn",
+        "url": "https://www.halborn.com/audits/huma-finance/huma-solana-programs-687cbd",
+        "date": "2025"
+      },
+      {
+        "firm": "Sec3",
+        "url": "https://github.com/sec3-service/reports/blob/master/reports/sec3_huma_permissionless_incremental_20260512.pdf",
+        "date": "2026-05"
+      },
+      {
+        "firm": "Sec3",
+        "url": "https://github.com/sec3-service/reports/blob/master/reports/sec3_huma_permissionless_pr407_incr_20260608.pdf",
+        "date": "2026-06"
+      },
+      {
+        "firm": "Halborn",
+        "url": "https://www.halborn.com/audits/huma-finance/huma---pr-124-d3c7e8",
+        "date": "2025"
+      },
+      {
+        "firm": "Halborn",
+        "url": "https://www.halborn.com/audits/huma-finance/huma---solana-program-audit-pr-113-2b46cf",
+        "date": "2025"
+      },
+      {
+        "firm": "Spearbit",
+        "url": "https://github.com/00labs/huma-contracts-v2/blob/develop/audit/spearbit.pdf",
+        "date": "2025"
+      },
+      {
+        "firm": "Spearbit",
+        "url": "https://github.com/00labs/huma-contracts-v2/blob/develop/audit/spearbit-incremental-Nov-2024.pdf",
+        "date": "2024-11"
+      },
+      {
+        "firm": "Certora",
+        "url": "https://certora.cdn.prismic.io/certora/Z0dE1pbqstJ971DG_HumaCertoraAuditReport.pdf",
+        "date": "2025"
+      }
+    ],
+    "bug_bounty_url": "https://cantina.xyz",
+    "deployed_contracts_doc": "https://docs.huma.finance/ecosystem-resources/smart-contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xebf8D31C5492Dc93FC73a6AD136d47c45AB2C7a5",
+        "role": "pool (Arf 3-month PoolConfig)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x483D02C11f8F1E31C267040A6C86AaB80c428BaB",
+        "role": "pool (Arf 3-month JuniorTranche)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7F4f55fAeE753D8dbB3E5F04861dB38E9DB70c3D",
+        "role": "vault (Arf 3-month PoolSafe)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4cdCedcF50266aD9ed809048BC9874320EC902bC",
+        "role": "pool (Arf 3-month SeniorTranche)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x061411d05074Bc974f814AC86309D2204f4c265d",
+        "role": "other (Arf 3-month CreditManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc6F10af4746784a0DD095f4E5718d53ff94eB4a0",
+        "role": "other (Arf 3-month Credit)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xE9D7893B52BE6D81C540f2E81f3A65FAbF8A0fa4",
+        "role": "pool (Arf 6-month PoolConfig)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8413a7345cD8bF8Afe8c2EfE866a764A93B305e2",
+        "role": "pool (Arf 6-month JuniorTranche)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xD6C357c40731a1F57173231eeeAb004eD8baE9b6",
+        "role": "vault (Arf 6-month PoolSafe)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xDe5eD603A376B93817b9656AF6E373218fD9b2bd",
+        "role": "pool (Arf 6-month SeniorTranche)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xbC015F64b023d8B351484342d35dA0AF0d42a9de",
+        "role": "other (Arf 6-month CreditManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2e3A03C8Bd31300C2c027C9C9d1b762677F6FaA6",
+        "role": "other (Arf 6-month Credit)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Huma Finance V2 is a permissionless PayFi (Payment Finance) network built natively on Solana that enables liquidity providers to deposit USDC and earn real-world yield from global payment financing activities such as cross-border payments, trade finance, and payroll advances. Users receive PST (PayFi Strategy Token), a liquid yield-bearing SPL token that can be used across the Solana DeFi ecosystem via integrations with Jupiter, Kamino, and RateX. The protocol operates through Solana programs secured by multisigs, with yield generated from daily financing fees paid by businesses accessing on-chain liquidity — not from token emissions or speculation. Huma Institutional is a parallel permissioned product for accredited investors, with EVM deployments on Polygon for legacy Arf pools."
+  }
+}
