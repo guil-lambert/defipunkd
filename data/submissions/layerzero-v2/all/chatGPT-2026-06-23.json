@@ -1,0 +1,693 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "control",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "gpt-5.5-thinking",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "LayerZero V2 Endpoint defaults are controlled by 3-of-5 OneSig owner contracts with no on-chain timelock observed.",
+    "short_headline": "3-of-5 owner, no delay observed",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "The assessed Ethereum EndpointV2 owner is 0xBe010A7e3686FdF65E93344ab664D065A0B02478. Arbitrum and Unichain EndpointV2 surfacers show separate OneSig owners at 0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f and 0x32b323EFC09D5812510B6510b242647C603947Ab."
+        },
+        {
+          "code": "C2",
+          "text": "The assessed EndpointV2 is not evidenced as a proxy in the fetched reads, but it has owner-controlled mutable configuration: MessageLibManager exposes onlyOwner functions to register libraries and set default send and receive libraries."
+        },
+        {
+          "code": "C3",
+          "text": "The observed fast path is OneSig threshold signatures plus executor execution. The Ethereum OneSig threshold is 3 and totalSigners is 5; no on-chain timelock constant was observed in the fetched OneSig surface."
+        },
+        {
+          "code": "C4",
+          "text": "The Ethereum, Arbitrum, and Unichain OneSig contracts expose the same threshold shape, 3-of-5 signers, and executorRequired=true. The signer real-world identities were not verified, so these multisigs do not meet the Security Council standard."
+        },
+        {
+          "code": "C5",
+          "text": "No on-chain Governor or token-voting path was found in fetched evidence for the assessed EndpointV2 control path. The operative owner path is OneSig."
+        },
+        {
+          "code": "C6",
+          "text": "No separate emergency guardian was verified. The relevant emergency-like surface is the owner-configurable message library path, including default library controls and the presence of BlockedMessageLib in registered libraries."
+        },
+        {
+          "code": "C7",
+          "text": "The highest reachable tier is treated as T1/T2 for the assessed messaging core because the owner can register and set default message libraries, which can affect default cross-chain message verification and delivery for OApps using defaults. The path is controlled by a 3-of-5 OneSig with no observed on-chain delay."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that a small multisig can change default message libraries without an observed timelock, which is a high-blast-radius control path for a bridge/messaging protocol.",
+        "orange": "The orange case is strongest: the path is not a single EOA or 2-of-3, but it is still a 3-of-5 multisig that fails the Security Council standard and controls economically or fund-critical messaging configuration without a verified exit window.",
+        "green": "The green case is that EndpointV2 code appears immutable rather than proxy-upgradeable, and OApps can configure their own libraries instead of relying on protocol defaults."
+      },
+      "verdict": "Choosing orange because T1/T2 messaging configuration control is reachable through a 3-of-5 OneSig path with no on-chain delay observed; it is not red because the controlling actor is not a single EOA, not a 2-of-3 multisig, and the core code itself was not shown to be proxy-upgradeable."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Ethereum EndpointV2 surfacer, owner() returning 0xBe010A7e3686FdF65E93344ab664D065A0B02478, registered libraries including BlockedMessageLib, SendUln302, ReceiveUln302, and ReadLib1002, and write methods including registerLibrary, setDefaultSendLibrary, setDefaultReceiveLibrary, setLzToken, recoverToken, and transferOwnership.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0x1a44076050125825900e736c501f859c50fE728c&block=25381235&chainId=1&method=owner",
+        "shows": "Content-pinned owner() read for Ethereum EndpointV2 returning 0xBe010A7e3686FdF65E93344ab664D065A0B02478.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+        "shows": "Ethereum OneSig surfacer showing executorRequired=true, executor 0x39f86ECef62c5bcE23428d6b7c7050D9Ecb0e346, five signers, threshold 3, totalSigners 5, and write method executeTransaction.",
+        "chain": "Ethereum",
+        "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xBe010A7e3686FdF65E93344ab664D065A0B02478&block=25381236&chainId=1&method=threshold",
+        "shows": "Content-pinned Ethereum OneSig threshold() read returning 3.",
+        "chain": "Ethereum",
+        "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xBe010A7e3686FdF65E93344ab664D065A0B02478&block=25381236&chainId=1&method=totalSigners",
+        "shows": "Content-pinned Ethereum OneSig totalSigners() read returning 5.",
+        "chain": "Ethereum",
+        "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0xBe010A7e3686FdF65E93344ab664D065A0B02478&block=25381236&chainId=1&method=getSigners",
+        "shows": "Content-pinned Ethereum OneSig getSigners() read returning five signer addresses.",
+        "chain": "Ethereum",
+        "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Arbitrum EndpointV2 surfacer showing owner() returning 0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f.",
+        "chain": "Arbitrum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      },
+      {
+        "url": "https://defipunkd.com/address/42161/0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+        "shows": "Arbitrum OneSig surfacer showing executorRequired=true, five signers, threshold 3, totalSigners 5, and executeTransaction.",
+        "chain": "Arbitrum",
+        "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f"
+      },
+      {
+        "url": "https://defipunkd.com/address/130/0x6F475642a6e85809B1c36Fa62763669b1b48DD5B",
+        "shows": "Unichain EndpointV2 surfacer showing owner() returning 0x32b323EFC09D5812510B6510b242647C603947Ab.",
+        "chain": "Unichain",
+        "address": "0x6F475642a6e85809B1c36Fa62763669b1b48DD5B"
+      },
+      {
+        "url": "https://defipunkd.com/address/130/0x32b323EFC09D5812510B6510b242647C603947Ab",
+        "shows": "Unichain OneSig surfacer showing executorRequired=true, five signers, threshold 3, totalSigners 5, and executeTransaction.",
+        "chain": "Unichain",
+        "address": "0x32b323EFC09D5812510B6510b242647C603947Ab"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol",
+        "shows": "Source shows onlyOwner functions registerLibrary, setDefaultSendLibrary, setDefaultReceiveLibrary, and setDefaultReceiveLibraryTimeout, while OApp-specific library selection uses _assertAuthorized(_oapp)."
+      },
+      {
+        "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+        "shows": "Official deployed-contracts documentation describes EndpointV2 as the primary entrypoint for cross-chain communications and configuration management, with SendUln302, ReceiveUln302, LZ Executor, Dead DVN, and BlockedMessageLib roles."
+      },
+      {
+        "url": "https://etherscan.io/address/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Etherscan code page shows EndpointV2 source code verified as an exact match.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      }
+    ],
+    "unknowns": [
+      "C1: Base EndpointV2 owner() read failed in the fetched surfacer due RPC rate limiting, and most chains in the address book were not individually re-read.",
+      "C3: No MIN_DELAY or timelock-style constant was found on the assessed OneSig owner contracts, but any off-chain signing policy delay was not verified.",
+      "C4: OneSig signer identities and insider versus non-insider classification were not verified.",
+      "C5: No Governor path was found in fetched evidence; proposal threshold, voting period, quorum, and queue-to-execute delay are therefore not determined for any off-chain or token governance process that may exist.",
+      "C6: Emergency-only roles beyond the EndpointV2 owner-configured library path were not exhaustively checked across all message libraries and chains."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-13"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12"
+        },
+        {
+          "firm": "OtterSec",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-14"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Unichain",
+          "address": "0x32b323EFC09D5812510B6510b242647C603947Ab",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol. Applications send cross-chain messages through EndpointV2, with send and receive message libraries, DVNs, and executors used for verification and delivery. The distinctive mechanism is configurable cross-chain messaging rather than a single canonical liquidity bridge."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "gpt-5.5-thinking",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "No canonical user withdrawal surface was identified on EndpointV2; OApp-level exits were not assessed.",
+    "short_headline": "Exit surface not determined",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "The assessed EndpointV2 write surface includes send, clear, burn, nilify, recoverToken, and message-library configuration functions, but no withdraw, redeem, claim, requestWithdrawal, or exit function was identified on the EndpointV2 surfacer."
+        },
+        {
+          "code": "E2",
+          "text": "EndpointV2 source shows send is external payable, clear requires OApp authorization through _assertAuthorized(_oapp), and recoverToken plus setLzToken are onlyOwner."
+        },
+        {
+          "code": "E7",
+          "text": "Direct contract interaction is visible through surfacer and Etherscan write-method listings, but that does not establish a user-facing exit path because the LayerZero core is a messaging endpoint rather than a custody vault."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Choosing unknown because the assessed EndpointV2 does not expose a canonical custody exit function, while LayerZero-connected asset bridges and OApps can have separate withdrawal, claim, mint, burn, or unlock semantics that were not assessed in this run."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Ethereum EndpointV2 write-method surface lists burn, clear, lzCompose, lzReceive, nilify, recoverToken, registerLibrary, send, setConfig, setDefaultReceiveLibrary, setDefaultReceiveLibraryTimeout, setDefaultSendLibrary, setDelegate, setLzToken, setReceiveLibrary, setReceiveLibraryTimeout, setSendLibrary, skip, transferOwnership, and verify.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol",
+        "shows": "EndpointV2 source shows send(...) external payable, clear(...) authenticating the OApp, and onlyOwner controls for setLzToken and recoverToken."
+      },
+      {
+        "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+        "shows": "Official documentation describes EndpointV2 as the primary entrypoint for cross-chain communications and configuration management, not as a canonical asset vault."
+      }
+    ],
+    "unknowns": [
+      "E1: No user-facing withdraw, redeem, claim, requestWithdrawal, or exit function was located on assessed EndpointV2, but exits for OApps, OFTs, Stargate-style assets, or app-specific bridges were not enumerated.",
+      "E2: Access modifiers and pause guards for OApp-level exit functions were not assessed.",
+      "E3: Pause role holders for any app-level request-placement or claim-finalized funds flow were not identified.",
+      "E4: Governance versus emergency pause semantics for OApp-level exits were not assessed.",
+      "E5: Finalized funds claimability under pause could not be determined because no canonical finalized-funds claim function was identified on EndpointV2.",
+      "E6: Insolvency, buffer, queue, or rate-limit constraints are not applicable to the assessed EndpointV2 itself but may exist in asset bridge applications using LayerZero.",
+      "E7: Direct contract access was observed for EndpointV2, but direct exit access could not be classified without selecting a concrete OApp or token bridge."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-13"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12"
+        },
+        {
+          "firm": "OtterSec",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-14"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Unichain",
+          "address": "0x32b323EFC09D5812510B6510b242647C603947Ab",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol. Applications send cross-chain messages through EndpointV2, with send and receive message libraries, DVNs, and executors used for verification and delivery. The distinctive mechanism is configurable cross-chain messaging rather than a single canonical liquidity bridge."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "gpt-5.5-thinking",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "unknown",
+    "headline": "LayerZero V2 depends on DVNs, executors, and configurable message libraries, but the live dependency quorum and fallback model were not fully verified.",
+    "short_headline": "External dependencies unresolved",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A3",
+          "text": "Official docs and repository text describe LayerZero V2 as a cross-chain messaging protocol using configurable DVNs and executors, with SendUln302 and ReceiveUln302 message libraries and an LZ Executor contract."
+        },
+        {
+          "code": "A8",
+          "text": "The repository states that executors deliver messages for a fee, which implies a relayer/executor dependency for automatic delivery."
+        },
+        {
+          "code": "A9",
+          "text": "EndpointV2 owner-controlled defaults can change message libraries, so part of the dependency surface is governance or admin mutable."
+        }
+      ],
+      "steelman": null,
+      "verdict": "Choosing unknown because the fetched evidence establishes real external dependencies, DVNs, executors, message libraries, and owner-configurable defaults, but not enough on-chain evidence was collected to classify the live quorum, fallback, censorship, degradation, and mutability properties across the deployed network."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "Repository README describes LayerZero V2 as an omnichain interoperability protocol where applications can configure any number of Decentralized Verifier Networks and where executors deliver messages for a fee."
+      },
+      {
+        "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+        "shows": "Official deployed-contracts documentation describes EndpointV2, SendUln302, ReceiveUln302, LZ Executor, Dead DVN, and Blocked Message Library roles."
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol",
+        "shows": "MessageLibManager source shows owner-controlled default send and receive library settings and OApp-authorized per-app library selection."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Ethereum EndpointV2 surfacer shows registered libraries and the owner-controlled write-method surface for configuring message libraries.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      }
+    ],
+    "unknowns": [
+      "A1: External contract calls and live dependencies were not exhaustively enumerated across EndpointV2, message libraries, DVNs, executors, and all chains.",
+      "A2: DVN committee size, quorum, signer membership, fault threshold, and selection process were not read from live contracts in this run.",
+      "A3: The bridge or messaging trust model was identified at a high level, but the exact default verifier set and quorum for each route were not verified on-chain.",
+      "A4: Nested collateral or asset custody dependencies are not applicable to EndpointV2 itself, but OApp and token bridge dependencies were not assessed.",
+      "A5: DeFiLlama forkedFrom or clone metadata was not fetched or verified.",
+      "A6: Fallback, circuit-breaker, timeout, and blocked-library behavior were only partially identified; their exact operational limits were not fully verified.",
+      "A7: Sequencer, appchain, and chain-specific liveness dependencies were not assessed for all supported chains.",
+      "A8: Executor permissionlessness, censorship resistance, and user fallback to manual execution were not fully verified.",
+      "A9: The mutability and governance of dependency configuration across every deployed endpoint and route were not fully assessed."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-13"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12"
+        },
+        {
+          "firm": "OtterSec",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-14"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Unichain",
+          "address": "0x32b323EFC09D5812510B6510b242647C603947Ab",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol. Applications send cross-chain messages through EndpointV2, with send and receive message libraries, DVNs, and executors used for verification and delivery. The distinctive mechanism is configurable cross-chain messaging rather than a single canonical liquidity bridge."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "gpt-5.5-thinking",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "EndpointV2 send is externally callable, and the official materials describe the protocol as permissionless public-blockchain infrastructure.",
+    "short_headline": "Permissionless contract entry",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "EndpointV2 source shows send(...) is external payable. The fetched code did not show an owner whitelist on this send entry point."
+        },
+        {
+          "code": "A2",
+          "text": "Executors and DVNs are dependencies for delivery and verification, but the fetched send entry point itself is not evidenced as operator-gated."
+        },
+        {
+          "code": "A3",
+          "text": "The official website describes LayerZero as permissionless infrastructure, and the repository describes the protocol as immutable, censorship-resistant, and permissionless messaging infrastructure."
+        },
+        {
+          "code": "A3b",
+          "text": "An independent contract path is available through public contracts: Etherscan and DeFiPunkd expose EndpointV2 read/write surfaces, and source shows direct send(...) access."
+        },
+        {
+          "code": "A4",
+          "text": "No contract-level sanctions or address blocklist was identified in the fetched EndpointV2 send path. The official terms impose site/legal eligibility restrictions, including sanctions restrictions, but those are not evidenced as a smart-contract gate."
+        },
+        {
+          "code": "A5",
+          "text": "The assessed EndpointV2 public write-method surface includes send, and the source marks send as external payable."
+        },
+        {
+          "code": "A6",
+          "text": "LayerZero terms restrict use of the Site by sanctioned persons or jurisdictions, while separately describing the Protocol as source-available software running on public distributed blockchains."
+        }
+      ],
+      "steelman": {
+        "red": "The red case would require evidence of contract-level allowlists, KYC, sanctions blocks, or operator-only user entry points; that was not found for EndpointV2 send.",
+        "orange": "The orange case is that website terms restrict certain users and message execution depends on infrastructure such as executors and DVNs, which can affect practical access.",
+        "green": "The green case is strongest: the core send function is external payable, official materials describe the protocol as permissionless public-blockchain infrastructure, and no protocol-level whitelist was found in the assessed send path."
+      },
+      "verdict": "Choosing green because the assessed contract-level user entry point send(...) is externally callable without a fetched whitelist gate, while the observed restrictions are site/legal terms rather than a protocol-enforced access control."
+    },
+    "evidence": [
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol",
+        "shows": "EndpointV2 source shows send(...) external payable and owner-only controls only for functions such as setLzToken and recoverToken."
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Ethereum EndpointV2 surfacer lists public write methods including send and administrative methods separately.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      },
+      {
+        "url": "https://layerzero.network/",
+        "shows": "Official website describes LayerZero as permissionless infrastructure for issuing, connecting, and expanding assets, products, or ideas across blockchains."
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "Repository README describes LayerZero V2 as an immutable, censorship-resistant, and permissionless messaging protocol for blockchains."
+      },
+      {
+        "url": "https://layerzero.network/terms",
+        "shows": "Terms include eligibility and sanctions restrictions for use of the Site, and separately describe the Protocol as source-available software running on public distributed blockchains."
+      },
+      {
+        "url": "https://etherscan.io/address/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Etherscan exposes the verified EndpointV2 contract page and public contract interaction surface.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      }
+    ],
+    "unknowns": [
+      "A1: Only the assessed EndpointV2 send path was reviewed; all possible user-facing functions across all chains and OApps were not exhaustively checked.",
+      "A4: A full repository-wide and all-contract sanctions or blocklist grep was not performed; the statement is limited to the fetched EndpointV2 send path."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-13"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12"
+        },
+        {
+          "firm": "OtterSec",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-14"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Unichain",
+          "address": "0x32b323EFC09D5812510B6510b242647C603947Ab",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol. Applications send cross-chain messages through EndpointV2, with send and receive message libraries, DVNs, and executors used for verification and delivery. The distinctive mechanism is configurable cross-chain messaging rather than a single canonical liquidity bridge."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "gpt-5.5-thinking",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Core contracts are verified and public source exists, but audit-to-deployment coverage and post-audit drift were not pinned.",
+    "short_headline": "Verified code, audit drift unknown",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Ethereum EndpointV2 and the Ethereum OneSig owner contract both show Etherscan source-code verification as exact matches."
+        },
+        {
+          "code": "V2",
+          "text": "LayerZero-Labs/LayerZero-v2 is a public GitHub repository, and fetched source files include EndpointV2.sol and MessageLibManager.sol, but no specific commit SHA was pinned or locally compile-matched in this run."
+        },
+        {
+          "code": "V3",
+          "text": "The official LayerZero-Labs/Audits repository includes an Endpoint V2 - EVM / EndpointV2 folder listing multiple Dec 2023 audit PDFs, including reports named for Zellic, Certora, OtterSec, Paladin, Blockian, CMichel, and Windhustler."
+        },
+        {
+          "code": "V4",
+          "text": "At least some audit firms listed in the official audits repository, including Zellic and Certora, are recognized security review firms; individual PDF contents and scopes were not opened and verified in this run."
+        },
+        {
+          "code": "V5",
+          "text": "Audit reports listed are dated Dec 2023, while the assessment date is 2026-06-22. Post-audit drift between reviewed source and the deployed verified contracts was not established."
+        },
+        {
+          "code": "V6",
+          "text": "The assessed Ethereum EndpointV2 is a verified direct contract in fetched evidence, and the owner read provenance did not identify a proxy implementation; however, proxy and implementation status for all chain deployments and auxiliary contracts was not exhaustively checked."
+        }
+      ],
+      "steelman": {
+        "red": "The red case is that the pinned protocol context recorded no audit links and this run did not pin an exact commit or compile reproduction for the deployed bytecode.",
+        "orange": "The orange case is strongest: verified deployed source and public repos exist, and official audit folders were discovered, but exact audit scope, commit coverage, and drift to current deployed contracts remain unresolved.",
+        "green": "The green case is that EndpointV2 and OneSig are verified exact-match contracts, the source repository is public, and multiple EndpointV2 audit reports are publicly listed in an official LayerZero-Labs audit repository."
+      },
+      "verdict": "Choosing orange because the core verified-source and official audit repository evidence is meaningful, but the run did not verify audit PDF contents, exact reviewed commits, deployment coverage across chains, or post-audit drift."
+    },
+    "evidence": [
+      {
+        "url": "https://etherscan.io/address/0x1a44076050125825900e736c501f859c50fE728c",
+        "shows": "Etherscan shows EndpointV2 source code verified as an exact match.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      },
+      {
+        "url": "https://etherscan.io/address/0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+        "shows": "Etherscan shows OneSig source code verified as an exact match.",
+        "chain": "Ethereum",
+        "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478"
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "shows": "LayerZero-Labs/LayerZero-v2 is a public repository and links to Audit Reports."
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol",
+        "shows": "Public EndpointV2.sol source in the LayerZero V2 repository."
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol",
+        "shows": "Public MessageLibManager.sol source in the LayerZero V2 repository."
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/Audits",
+        "shows": "Official LayerZero-Labs/Audits repository is public."
+      },
+      {
+        "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+        "shows": "Endpoint V2 - EVM / EndpointV2 audit folder lists multiple Dec 2023 PDF reports, including EndpointV2-Zellic-13DEC2023.pdf, EndpointV2-Certora-DEDC2023.pdf, EndpointV2-Ottersec 14DEC2023.pdf, EndpointV2-Paladin-15DEC2023.pdf, EndpointV2-Blockian-13DEC2023.pdf, EndpointV2-CMichel-13DEC2023.pdf, and EndpointV2-Windhustler-15DEC2023.pdf."
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?address=0x1a44076050125825900e736c501f859c50fE728c&block=25381235&chainId=1&method=owner",
+        "shows": "Content-pinned EndpointV2 owner read includes ABI provenance and no proxy implementation in the fetched read metadata.",
+        "chain": "Ethereum",
+        "address": "0x1a44076050125825900e736c501f859c50fE728c"
+      }
+    ],
+    "unknowns": [
+      "V2: No exact Git commit SHA was pinned for the deployed verified EndpointV2 source in this run.",
+      "V2: Local compilation and bytecode reproduction were not performed.",
+      "V3: Audit PDFs were discovered in an official repository, but the PDFs were not opened, screenshotted, or parsed, so exact scope, commit, findings, and remediation status remain unverified.",
+      "V5: Post-audit drift between Dec 2023 audit material and contracts live at the 2026-06-22 assessment date was not determined.",
+      "V6: Proxy and implementation status was not exhaustively checked for all LayerZero V2 deployments, message libraries, executors, DVNs, and owner contracts across every chain in the address book."
+    ],
+    "protocol_metadata": {
+      "github": [
+        "https://github.com/LayerZero-Labs/LayerZero-v2",
+        "https://github.com/LayerZero-Labs/Audits"
+      ],
+      "docs_url": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "audits": [
+        {
+          "firm": "Zellic",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-13"
+        },
+        {
+          "firm": "Certora",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12"
+        },
+        {
+          "firm": "OtterSec",
+          "url": "https://github.com/LayerZero-Labs/Audits/tree/main/audits/Endpoint%20V2%20-%20EVM/EndpointV2",
+          "date": "2023-12-14"
+        }
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.layerzero.network/v2/deployments/deployed-contracts",
+      "admin_addresses": [
+        {
+          "chain": "Ethereum",
+          "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Arbitrum",
+          "address": "0x9A3cE220D17a92dd4DF9766ceE48fDd0c448bA4f",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        },
+        {
+          "chain": "Unichain",
+          "address": "0x32b323EFC09D5812510B6510b242647C603947Ab",
+          "role": "EndpointV2 owner / OneSig 3-of-5 signer contract",
+          "actor_class": "multisig"
+        }
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an omnichain messaging protocol. Applications send cross-chain messages through EndpointV2, with send and receive message libraries, DVNs, and executors used for verification and delivery. The distinctive mechanism is configurable cross-chain messaging rather than a single canonical liquidity bridge."
+    }
+  }
+]
