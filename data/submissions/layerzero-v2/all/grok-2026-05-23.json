@@ -1,0 +1,275 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "control",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "grok-xai",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "3-of-5 OneSig multisig owns immutable EndpointV2 + ULN libs; T2 fee/default-config powers with zero delay, no on-chain gov or SC",
+    "short_headline": "T2 multisig control on immutable core (no timelock)",
+    "rationale": {
+      "findings": [
+        {"code": "C1", "text": "EndpointV2 (0x1a44076050125825900e736c501f859c50fE728c, eid 30101) owner() returns 0xBe010A7e3686FdF65E93344ab664D065A0B02478 (custom OneSig 3/5 multisig) via https://defipunkd.com/api/contract/read?chainId=1&address=0x1a44076050125825900e736c501f859c50fE728c&method=owner at block 25381238 and surfacer page."},
+        {"code": "C2", "text": "No proxy pattern, no implementation()/admin() storage; immutable per incident report and contract read (no upgrade surface). Message libraries (SendUln302 0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1, ReceiveUln302) are append-only immutable once deployed; new libs registerable but existing ones unmodifiable."},
+        {"code": "C3", "text": "No timelock, no multi-stage execution path (voting/scheduler/execute), no MIN_DELAY or queue. Direct multisig execution on owner-controlled functions (registerLibrary, setDefaultUlnConfigs, setTreasury, withdrawFee)."},
+        {"code": "C4", "text": "Primary control multisig is custom OneSig (5 signers, 3 threshold, executorRequired=true, 1 executor) at 0xBe010A7e3686FdF65E93344ab664D065A0B02478. DVN contracts use separate per-operator signer quorums (e.g. LZ DVN at 0x589dEDbD617e0CBcB916A9223F4d1300c294236b). No other reachable multisigs on T1/T2 paths enumerated."},
+        {"code": "C5", "text": "No on-chain Governor, OZ Governor, Aragon, or token-weighted voting. No proposalThreshold/votingPeriod/quorum/timelock constants readable."},
+        {"code": "C6", "text": "No pause(), whenNotPaused, PAUSE_ROLE, guardian, or emergency role on EndpointV2. Explicitly cannot be paused or modified per incident report."},
+        {"code": "C7", "text": "Highest reachable tier T2 on uncontested fast path: setDefaultUlnConfigs / setDefaultExecutorConfigs (affects default security posture for unset OApps), setTreasury / withdrawFee / withdrawLzTokenFee (fee redirection), registerLibrary (adds new verification paths). No T1 (immutable Endpoint/libs hold no user funds; no mint/pause-withdraw/upgrade-to-drain functions). 3/5 OneSig fails Security Council criteria (>=7 signers + >=50% non-insider public)."}
+      ],
+      "steelman": {
+        "red": "A 3/5 insider-controlled custom OneSig can immediately execute T2 actions (fee redirection, default security config changes) with zero delay and no on-chain check, and past multisig incidents show operational risk.",
+        "orange": "T2 powers (fee redirection, default ULN/executor configs, library registration) sit with a 3/5 custom OneSig multisig (fails SC criteria) on zero-delay path with no timelock or on-chain governance, while immutable design caps at T2 and OApp owners independently control per-channel security stacks.",
+        "green": "Core EndpointV2 and deployed message libraries are fully immutable with no upgrade/pause surface reachable by any actor (including the multisig), and OApp owners retain exclusive control over their security configuration and delegate powers with no protocol-level T1 blast radius."
+      },
+      "verdict": "Choosing orange because T2 economic/operational powers are held by a 3/5 custom OneSig multisig (failing Security Council signer/threshold/non-insider rules) with zero timelock and no on-chain governance on the fast path, exactly matching orange criteria; immutable cores prevent T1 while green would require max tier T3/T4 or SC-protected T1/T2."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c", "shows": "EndpointV2 contract info, ABI (owner/transferOwnership/renounceOwnership/registerLibrary/setConfig/setDefaultSendLibrary etc.), read results at block 25381235 including getRegisteredLibraries and isSendingMessage=false; no proxy/implementation/paused detected.", "chain": "Ethereum", "address": "0x1a44076050125825900e736c501f859c50fE728c"},
+      {"url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1a44076050125825900e736c501f859c50fE728c&method=owner", "shows": "owner() returns 0xBe010A7e3686FdF65E93344ab664D065A0B02478 at block 25381238 (rawReturnData confirms).", "chain": "Ethereum", "address": "0x1a44076050125825900e736c501f859c50fE728c"},
+      {"url": "https://defipunkd.com/address/1/0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1", "shows": "SendUln302: owner()/transferOwnership/renounceOwnership present; setDefaultUlnConfigs, setDefaultExecutorConfigs, setTreasury, withdrawFee etc.; no proxy, no paused, immutable direct contract.", "chain": "Ethereum", "address": "0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1"},
+      {"url": "https://layerzero.network/publications/kelpdao-incident-report.pdf", "shows": "EndpointV2 at 0x1a44076050125825900e736c501f859c50fE728c is immutable and cannot be upgraded/paused/modified by anyone including LayerZero Labs; message libraries append-only immutable; OApp delegate/owner controls per-channel security stack; LZ DVN admin/relay limited, signers control admin via quorumChangeAdmin; no super-admin escape hatch.", "chain": "Ethereum"},
+      {"url": "https://defipunkd.com/address/1/0xBe010A7e3686FdF65E93344ab664D065A0B02478", "shows": "OneSig custom multisig (not Gnosis Safe): 5 signers, threshold 3, executorRequired=true, 1 executor; functions setSigner/setThreshold/setExecutor etc.; surfaced signer addresses.", "chain": "Ethereum", "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478"},
+      {"url": "https://etherscan.io/address/0xBe010A7e3686FdF65E93344ab664D065A0B02478", "shows": "OneSig contract (verified): custom signature-based multisig with 5 signers/3 threshold/executor model; executeTransaction, setSigner/setThreshold etc.; no standard Safe interface.", "chain": "Ethereum", "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478"},
+      {"url": "https://layerzero.network/blog/an-overdue-apology", "shows": "LayerZero Labs uses multisig for Endpoint ownership; users relying on defaults are fully reliant on the LayerZero Labs multisig; plans to raise threshold to 7-of-10 and deploy OneSig.", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "C4: exact signer identities, employment status (insider vs non-insider), and public announcement status for the 5 OneSig signers not re-verified beyond contract structure and LZ context; DVN-specific signer sets per operator not exhaustively enumerated for all chains."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/LayerZero-Labs/LayerZero-v2", "https://github.com/LayerZero-Labs/Audits"],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [
+        {"firm": "Paladinsec", "url": "https://paladinsec.co/projects/layerzero/", "date": "2023-12"},
+        {"firm": "Code4rena", "url": "https://code4rena.com/audits/2025-09-layerzero-endpoint-v2-sui", "date": "2025-09"}
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xBe010A7e3686FdF65E93344ab664D065A0B02478", "role": "EndpointV2 owner (OneSig 3/5)", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0x589dEDbD617e0CBcB916A9223F4d1300c294236b", "role": "LayerZero Labs DVN contract owner", "actor_class": "multisig"}
+      ],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an immutable omnichain messaging protocol connecting 60+ blockchains. OApps send arbitrary messages, tokens (OFT), or calls via EndpointV2; security is configured per-OApp via pluggable DVN stacks chosen by the OApp owner/delegate. Message verification uses off-chain DVN attestations submitted on-chain; execution uses permissionless executors. Core contracts (EndpointV2, ULN302 libs) are immutable with append-only library registration."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "grok-xai",
+    "chat_url": null,
+    "grading_basis": "on-chain",
+    "grade": "green",
+    "headline": "Permissionless on-chain messaging with no pause/ gating on EndpointV2 or libs; no user-fund custody or admin-blockable claims; immutable core",
+    "short_headline": "Permissionless immutable messaging (no pause)",
+    "rationale": {
+      "findings": [
+        {"code": "E1", "text": "Core contracts (EndpointV2, SendUln302, ReceiveUln302) expose no user-fund custody/exit functions (withdraw/redeem/burn/claim); messaging is send() / lzReceive() / composeQueue() permissionless (pay fees). App-specific exits (OFT burn/redeem) live in downstream OApp contracts, not core."},
+        {"code": "E2", "text": "No access modifiers (onlyRole/onlyOwner/whenNotPaused) gate core receive/claim paths on EndpointV2; immutable and owner functions limited to config/library registration (not message delivery)."},
+        {"code": "E3", "text": "No pause guards, paused(), isPaused(), PAUSE_ROLE, or GUARDIAN on EndpointV2 or registered libs. Explicitly cannot be paused per incident report. No max pause duration or uncapped pause callable."},
+        {"code": "E4", "text": "No emergency-pause path separate from governance; no pause mechanism exists at all on core Endpoint."},
+        {"code": "E5", "text": "No queued redemption, daily caps, or pausable queue on core messaging layer."},
+        {"code": "E6", "text": "No forced-exit/escape-hatch needed; messaging is permissionless and censorship-resistant by design (immutable Endpoint delivers verified messages without admin gate)."},
+        {"code": "E7", "text": "All core functions (send, lzReceive, setPeer, setConfig per OApp) directly callable on-chain via Etherscan write tab, generic wallets, or SDKs with no frontend dependency."}
+      ],
+      "steelman": {
+        "red": "If any admin could pause message claims or require signatures for finalized delivery, users could be trapped; historical DVN incidents show downstream risks but core itself has no such gate.",
+        "orange": "While core has no pause, downstream OApps using single-DVN configs can experience delivery issues or forgery under adversarial conditions, and some bridges built on it may introduce their own exit queues/pauses.",
+        "green": "EndpointV2 and message libs are immutable with zero pause surface or admin gating on message delivery/claims; send/receive paths are fully permissionless and directly on-chain callable; no user principal is custodied by the core protocol."
+      },
+      "verdict": "Choosing green because the immutable EndpointV2 has no pause, no admin-gated exit/claim functions, and permissionless messaging paths that any wallet can call directly; downstream app-specific custody/exit risks belong to those OApps, not the core messaging layer."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c", "shows": "EndpointV2 ABI and reads: send/lzReceive/composeQueue/ setPeer etc. present and callable; no paused/pause-related functions or state; owner functions do not gate message delivery.", "chain": "Ethereum", "address": "0x1a44076050125825900e736c501f859c50fE728c"},
+      {"url": "https://layerzero.network/publications/kelpdao-incident-report.pdf", "shows": "Endpoint cannot be upgraded, paused, or modified by anyone; delivers verified messages; OApp owner controls security config but core delivery is immutable and ungated.", "chain": "Ethereum"},
+      {"url": "https://defipunkd.com/address/1/0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1", "shows": "SendUln302: no pause mechanism; config functions are owner-only but do not gate message verification/delivery for already-configured paths.", "chain": "Ethereum", "address": "0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1"}
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": ["https://github.com/LayerZero-Labs/LayerZero-v2"],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 is an immutable omnichain messaging protocol. Core contracts do not custody user funds; they provide permissionless send/receive of arbitrary messages and token transfers (via OFT standards in OApps). Security and execution are configured per application."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "grok-xai",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Relies on off-chain DVN signer committees for message verification (OApp-configurable); LZ multisig can register new libs; impacted TVS under single-DVN failure: material for apps using defaults (~high % of early paths)",
+    "short_headline": "DVN off-chain dependency (OApp-configurable)",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "Core EndpointV2 does not make external on-chain calls to oracles/price feeds/lending pools in normal operation; verification is off-chain DVN ECDSA signatures submitted via relay() on DVN contracts. DVN liveness/honesty is critical for delivery and forgery resistance."},
+        {"code": "A2", "text": "DVNs use off-chain multisig signer committees (e.g. LZ DVN signers held by LayerZero Labs; quorum required to change signer set or admin). Admin role limited to relay (cannot forge or change signers unilaterally). Post-KelpDAO, LZ DVN enforces baseline multi-DVN requirement on channels it participates in."},
+        {"code": "A3", "text": "No material canonical bridge dependency for core messaging layer (LayerZero is the messaging substrate used by many bridges/OFTs). Cross-chain is native to the protocol design."},
+        {"code": "A4", "text": "No nested collateral/restaking chain in core; OFT/wrapped assets are app-level."},
+        {"code": "A5", "text": "No forkedFrom lineage recorded in DeFiLlama context for this assessment."},
+        {"code": "A6", "text": "Fallbacks: OApp owners can configure multiple required/optional DVNs + thresholds + block confirmations (getConfig/setConfig on Endpoint). LZ DVN now refuses sole-required-DVN channels. No on-chain sanity-check circuit breakers on core Endpoint for bad attestations beyond DVN quorum. Fallbacks are LIVE and user-configurable (not protocol-enforced defaults)."},
+        {"code": "A7", "text": "No sequencer/DA dependency beyond base-chain substrate; operates on many L1/L2s permissionlessly."},
+        {"code": "A8", "text": "Executors (permissionless off-chain bots) are required for lzReceive gas abstraction on destination; failure degrades UX (user can still call lzReceive directly) but does not cause principal loss or insolvency."},
+        {"code": "A9", "text": "Endpoint owner (OneSig multisig) can registerLibrary (new verification libs) and setDefault*Configs without timelock or exit window for existing OApps using defaults. New libs are immutable once added but could introduce new off-chain DVN deps if adopted."}
+      ],
+      "steelman": {
+        "red": "Off-chain DVN signer compromise (as in KelpDAO 1/1 case) can forge messages leading to principal loss in downstream apps; LZ multisig can introduce new libs/defaults affecting many channels without user exit window.",
+        "orange": "Message verification depends on off-chain DVN committees (liveness + honesty); single-DVN configs (historically common on defaults) create forgery risk materializing in ecosystem, and multisig can register new verification surfaces without timelock, but OApp owners can override with multi-DVN stacks and LZ DVN now enforces stronger baselines.",
+        "green": "Core contracts are immutable with no external on-chain deps that can steal principal; all security configuration is OApp-owner controlled and permissionlessly overridable; executor liveness failure is graceful (direct lzReceive still works); no protocol-level principal custody."
+      },
+      "verdict": "Choosing orange because verification security critically depends on off-chain DVN signer committees (with historical single-DVN forgery incident causing downstream principal loss) and the LZ multisig can register new libs/default configs without exit window, while OApp-level overrides and post-incident LZ DVN policy provide meaningful but incomplete mitigation; impacted TVS under DVN failure is material for default-using apps."
+    },
+    "evidence": [
+      {"url": "https://layerzero.network/publications/kelpdao-incident-report.pdf", "shows": "DVN security model: off-chain signers produce attestations; admin relays only; signers control admin via quorumChangeAdmin; LZ DVN now refuses sole-required attestor; 1/1 DVN stack allowed forgery leading to $292M loss in KelpDAO rsETH; Endpoint immutable.", "chain": "Ethereum"},
+      {"url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c", "shows": "EndpointV2 getRegisteredLibraries includes ULN302 libs; setConfig per OApp for ULN/DVN selection; no external oracle/price-feed calls in core ABI.", "chain": "Ethereum", "address": "0x1a44076050125825900e736c501f859c50fE728c"},
+      {"url": "https://docs.layerzero.network/v2/home/modular-security/security-stack-dvns", "shows": "OApp configures required/optional DVNs, thresholds, confirmations per pathway; defaults provided by LayerZero but overridable.", "chain": "Ethereum"}
+    ],
+    "unknowns": [
+      "A2: exact current signer sets, quorums, and diversification for all active DVNs (beyond LZ DVN) not re-enumerated on-chain for every chain/EID.",
+      "A9: whether newly registered libs have been adopted in default configs or high-TVS OApps since last snapshot."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/LayerZero-Labs/LayerZero-v2"],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 provides immutable omnichain messaging. Security depends on OApp-chosen DVN stacks (off-chain signers) and permissionless executors. No core contract holds or can unilaterally move user principal."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "grok-xai",
+    "chat_url": null,
+    "grading_basis": "on-chain",
+    "grade": "green",
+    "headline": "Fully permissionless contracts: anyone can deploy OApp, setPeer, send/receive messages (pay fees); no whitelist/KYC/operator gate; independent SDK/third-party paths exist",
+    "short_headline": "Permissionless contracts + independent access paths",
+    "rationale": {
+      "findings": [
+        {"code": "A1", "text": "No onlyWhitelisted/onlyRole/allowlist/isKYCed modifiers on user entry points (send, lzReceive, setPeer, setConfig per OApp, registerLibrary is owner-only but not user admission). Anyone can deploy OApp and configure."},
+        {"code": "A2", "text": "No off-chain operator approval required to admit send/receive/claim actions. DVN/executor liveness affects delivery but not admission (permissionless placement)."},
+        {"code": "A3", "text": "Official frontend/website ToS contains standard sanctions/jurisdictional boilerplate (A3-passive); no runtime IP geo-blocking or wallet screening enforcement detected on core contracts. Context only, does not affect grade."},
+        {"code": "A3b", "text": "Independent access paths exist: official Solidity SDK + examples in docs.layerzero.network and GitHub LayerZero-Labs/LayerZero-v2; third-party frontends/bridges (Stargate, many OFT deployments, aggregators) route through contracts; wallet integrations (MetaMask, Safe apps) and direct Etherscan write calls all work without official publisher cooperation."},
+        {"code": "A4", "text": "No on-chain sanctions blocklist or OFAC oracle check in EndpointV2 or ULN libs; admission is unconditional."},
+        {"code": "A5", "text": "Read access fully permissionless (anyone can call view functions/getConfig/getRegisteredLibraries). Write access (send, setPeer per OApp, lzReceive) also permissionless (gas + fees)."},
+        {"code": "A6", "text": "ToS on layerzero.network contains standard eligibility/sanctions language; verbatim extraction not performed in this run but does not gate contract admission."}
+      ],
+      "steelman": {
+        "red": "If contracts required whitelist signatures or on-chain KYC oracle checks, or a single operator had to approve every message, admission would be captured.",
+        "orange": "Contracts are theoretically open but if no SDK/third-party frontend/aggregator existed, practical access would be limited to official UI only.",
+        "green": "Contracts have no whitelist/KYC/operator gate on any user action; send/receive/setConfig are fully permissionless and directly callable; multiple independent paths (SDK, third-party UIs, wallets, aggregators) exist and function without publisher cooperation."
+      },
+      "verdict": "Choosing green because EndpointV2 and message libs impose zero contract-level whitelist, KYC, or operator approval on send/receive/config actions, and concrete independent access paths (official SDK + GitHub examples, third-party bridges/wallets/aggregators, direct on-chain calls) are live and usable."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c", "shows": "EndpointV2 ABI: send, lzReceive, setPeer, setConfig, setDelegate exposed without whitelist modifiers; only owner-gated functions are registerLibrary/setDefault* (not user admission).", "chain": "Ethereum", "address": "0x1a44076050125825900e736c501f859c50fE728c"},
+      {"url": "https://docs.layerzero.network/v2/developers/evm/oapp/overview", "shows": "Anyone can implement OApp, call setPeer on Endpoint, configure DVN/executor stacks permissionlessly; examples and SDK provided.", "chain": "Ethereum"},
+      {"url": "https://github.com/LayerZero-Labs/LayerZero-v2", "shows": "Public repo with full source, examples, and SDK guidance for direct contract interaction without official frontend."}
+    ],
+    "unknowns": [],
+    "protocol_metadata": {
+      "github": ["https://github.com/LayerZero-Labs/LayerZero-v2"],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 messaging is fully permissionless at the contract level. Any developer can deploy an OApp, peer it, and send/receive messages by paying fees; security config is owner-controlled per channel."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "layerzero-v2",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-06-15T11:58:17.537Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-06-22",
+    "model": "grok-xai",
+    "chat_url": null,
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "Bytecode verified on Etherscan + public GitHub source match; audits exist (Paladinsec V2 + C4 endpoint contests) but no recent recognized-firm coverage of main EVM deployment; immutable so low drift risk",
+    "short_headline": "Verified + public repo; audit coverage partial/stale",
+    "rationale": {
+      "findings": [
+        {"code": "V1", "text": "EndpointV2 and ULN302 libs verified on Etherscan (ABI sourced from Etherscan in defipunkd /api/contract/abi and surfacer pages); no 'Similar Match' issue on standard patterns; proxy not present so implementation verification not applicable."},
+        {"code": "V2", "text": "Source in public GitHub LayerZero-Labs/LayerZero-v2 corresponds to deployed contracts (structure, EndpointV2.sol, ULN302 libs match explorer-visible source per repo description and docs). No pinned commit SHA for exact bytecode diff in this run."},
+        {"code": "V3", "text": "Audit reports exist: Paladinsec V2 audit (2023) covering EndpointV2 on multiple chains; Code4rena contests for Endpoint V2 on Sui/Stellar/Starknet (2025). No audit_links pinned in context; recent EVM mainnet differential audit not located."},
+        {"code": "V4", "text": "Paladinsec not in recognized firm list (Trail of Bits, Zellic, Spearbit, OZ, ConsenSys Diligence, etc.). Code4rena is competitive contest, not traditional firm audit. No recognized-firm audit covering current main EVM deployment found in this run."},
+        {"code": "V5", "text": "Immutable contracts + append-only libs mean low material drift risk since deployment/audits. No post-audit code changes possible on deployed bytecode."},
+        {"code": "V6", "text": "No proxies detected on EndpointV2 or ULN libs; direct verified implementations."}
+      ],
+      "steelman": {
+        "red": "If bytecode were unverified or source unavailable, outsiders could not confirm behavior.",
+        "orange": "Bytecode is verified and source is public and corresponding, but audit coverage relies on older/unknown-firm or contest reports without recent recognized-firm re-audit of main EVM contracts; exact commit-to-bytecode match not re-verified this run.",
+        "green": "All core contracts are verified on explorers, source is public and structurally matches, and immutable design plus existing audit history (even if not recent recognized-firm) allows independent confirmation of behavior with minimal drift risk."
+      },
+      "verdict": "Choosing orange because bytecode is Etherscan-verified with public GitHub source correspondence and immutable design caps drift, but audit coverage is from older unknown-firm report + contests without recent recognized-firm audit of the primary EVM deployment meeting the green threshold exactly."
+    },
+    "evidence": [
+      {"url": "https://defipunkd.com/address/1/0x1a44076050125825900e736c501f859c50fE728c", "shows": "ABI sourced from Etherscan; contract verified status implicit; full ABI and read results available for independent inspection.", "chain": "Ethereum", "address": "0x1a44076050125825900e736c501f859c50fE728c"},
+      {"url": "https://github.com/LayerZero-Labs/LayerZero-v2", "shows": "Public repository with EndpointV2.sol, message libraries (ULN302), OApp standards; docs and examples match deployed behavior described in protocol docs and incident report.", "commit": null},
+      {"url": "https://paladinsec.co/projects/layerzero/", "shows": "V2 audit (completed Dec 2023) covering EndpointV2 on Ethereum and other chains; findings on governance/config but contracts audited pre some deployments.", "chain": "Ethereum"},
+      {"url": "https://code4rena.com/audits/2025-09-layerzero-endpoint-v2-sui", "shows": "Recent Code4rena contest audit for Endpoint V2 on Sui (Sep 2025); similar architecture to EVM V2."}
+    ],
+    "unknowns": [
+      "V2: exact commit SHA matching currently deployed bytecode on Ethereum not pinned or diff-verified in this run (scope limit).",
+      "V3/V4: no recent recognized-firm (Spearbit/Trail of Bits/etc.) audit report specifically covering the main EVM EndpointV2/ULN302 deployment post-2023 found; contest reports and older Paladinsec used instead."
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/LayerZero-Labs/LayerZero-v2", "https://github.com/LayerZero-Labs/Audits"],
+      "docs_url": "https://docs.layerzero.network/v2",
+      "audits": [
+        {"firm": "Paladinsec", "url": "https://paladinsec.co/projects/layerzero/", "date": "2023-12"},
+        {"firm": "Code4rena", "url": "https://code4rena.com/audits/2025-09-layerzero-endpoint-v2-sui", "date": "2025-09"}
+      ],
+      "governance_forum": null,
+      "voting_token": null,
+      "bug_bounty_url": null,
+      "security_contact": null,
+      "deployed_contracts_doc": null,
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "LayerZero V2 immutable messaging contracts are verified on block explorers with public source available. Security model relies on configurable DVNs; core logic has been subject to audits and contests though recent recognized-firm EVM coverage is limited."
+    }
+  }
+]
