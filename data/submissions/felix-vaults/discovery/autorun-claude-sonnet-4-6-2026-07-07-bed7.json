@@ -1,0 +1,110 @@
+{
+  "schema_version": 4,
+  "slug": "felix-vaults",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-06-22T11:48:08.916Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-07-07",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "Felix Vaults (HyperEVM): architecture and audits catalogued from GitHub and docs; 0 on-chain addresses retrieved — addresses/ folder and block explorer inaccessible this run.",
+  "short_headline": "Architecture mapped; no addresses recovered",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: HyperEVM has no standard block explorer in the defipunkd-supported list (Hyperliquid L1 / HyperEVM is not among the 13 supported chainIds). The purrsec.com or hyperliquid-specific explorer was not in the supported explorer list and could not be queried via defipunkd read API. No name-tag search performed. Recorded in unknowns."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Felix GitBook docs at https://usefelix.gitbook.io/docs confirmed as the docs URL. No deployed-contracts sub-page was returned in the fetched doc root; the addresses/ folder at https://github.com/felixprotocol/felix-contracts/tree/main/addresses was visible in the GitHub repo listing but returned a permission error on direct fetch. protocol_metadata.deployed_contracts_doc set to the GitBook root pending a successful fetch of the addresses sub-page."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Three Sigma executed a focused audit of Felix's price-feed module (KHYPEPriceFeed.sol, WSTHYPEPriceFeed.sol) between 23–25 July 2025, reported at https://cdn.sanity.io/files/qoqld077/staging/2ab17653dbda99177f8f0aac2fa86ffd19088a00.pdf. Fetch of that PDF returned a permission error — no in-scope addresses extracted. IQ.wiki search result mentions earlier audits by Dedaub and Coinspect (pre-mainnet, testnet era, March 2025). Neither Dedaub nor Coinspect audit URLs were recovered. All three recorded in unknowns."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub repo https://github.com/felixprotocol/felix-contracts confirmed public with an addresses/ folder and a broadcast/ (Foundry broadcast) folder visible in the root listing. Direct fetch of the addresses/ folder sub-tree returned a permission error. No addresses/hyperevm-mainnet.json or broadcast run-latest.json was accessible this run. README references MULTI_SIG_WALLET and PROXY_ADMIN_OWNER as deploy-time parameters, and names AdminController as the owner/proxy-admin of all system contracts. Contract list derived from README: CollateralRegistry, feUSDToken, BorrowerOperations (per branch), TroveManager (per branch), StabilityPool (per branch), SortedTroves (per branch), ActivePool (per branch), DefaultPool (per branch), CollSurplusPool (per branch), GasPool (per branch), TroveNFT (per branch), AdminController, HintHelpers, MultiTroveGetter, WHYPEPriceFeed, KHYPEPriceFeed, WSTHYPEPriceFeed, and a MockInterestRouter (to be replaced). All are derived from README text — no 0x addresses sourced."
+      },
+      {
+        "code": "D5",
+        "text": "D5: Protocol.chains = [Hyperliquid L1]. HyperEVM is the single EVM deployment target. No multi-chain enumeration needed. HyperEVM chainId (998 or 999 per community sources) is not among the 13 defipunkd-supported chainIds — on-chain reads via defipunkd API are unavailable for this chain. Recorded in unknowns."
+      },
+      {
+        "code": "D6",
+        "text": "D6: CollateralRegistry is a factory-equivalent top-level contract mapping collateral tokens to TroveManager addresses (branches). Confirmed collateral branches from README and audit scope: WHYPE, UBTC (README), kHYPE, wstHYPE (Three Sigma scope). No enumeration view callable without a supported chainId and a known CollateralRegistry address. Recorded in unknowns."
+      },
+      {
+        "code": "D7",
+        "text": "D7: Role taxonomy applied to all contract types from README: CollateralRegistry (factory/router), feUSDToken (token), BorrowerOperations (other — user-facing operations), TroveManager (other — liquidations/redemptions), StabilityPool (vault), AdminController (admin/timelock — centralized governance with propose/apply timelock), MULTI_SIG_WALLET (multisig — referenced in deploy script), PROXY_ADMIN_OWNER (proxy_admin). No 0x addresses available to populate admin_addresses[]."
+      },
+      {
+        "code": "D8",
+        "text": "D8: Zero 0x addresses retrieved from any fetched source. No admin_addresses[] entries populated. All role assignments remain unanchored to on-chain addresses and are not placed in admin_addresses[]."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery blocked at address-retrieval stage: the GitHub addresses/ folder returned a permission error, the Three Sigma PDF was blocked, and HyperEVM is not among the 13 defipunkd-supported chainIds so no on-chain read API calls could be made. Architecture and audit metadata were successfully catalogued from the GitHub README and Three Sigma case study. No 0x addresses were recovered from any fetched source, so admin_addresses[] is empty and grade must remain unknown. Next run should attempt: (1) raw.githubusercontent.com fetch of addresses/hyperevm-mainnet.json, (2) HyperEVM-compatible block explorer search for 'Felix', (3) Dedaub and Coinspect audit report URLs."
+  },
+  "evidence": [
+    {
+      "url": "https://www.usefelix.xyz",
+      "shows": "Felix Protocol official website confirmed live; describes Felix as a modern financial account powered by stablecoins on Hyperliquid, offering spot equities, perpetual futures, yield on stablecoins, and borrow/lend against equities and crypto.",
+      "fetched_at": "2026-07-07T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/felixprotocol/felix-contracts",
+      "shows": "Confirmed public GitHub repo at felixprotocol/felix-contracts. README documents: (1) full contract architecture including CollateralRegistry, feUSDToken, BorrowerOperations, TroveManager, StabilityPool, SortedTroves, ActivePool, DefaultPool, CollSurplusPool, GasPool, TroveNFT, AdminController, HintHelpers, MultiTroveGetter, and price feed contracts; (2) Transparent Proxy design with AdminController as proxy admin owner; (3) AdminController implements propose/apply timelock for parameter changes and upgrades; (4) deploy script references MULTI_SIG_WALLET and PROXY_ADMIN_OWNER; (5) addresses/ folder and broadcast/ folder visible in repo root; (6) collateral branches include WHYPE and UBTC; (7) protocol is a fork of Liquity V2 with admin-controlled mutable parameters (MCR, CCR, MaxCapDebt, InterestRouter, SP yield %).",
+      "fetched_at": "2026-07-07T00:00:00Z"
+    },
+    {
+      "url": "https://threesigma.xyz/case-studies/lending/felix-protocol",
+      "shows": "Three Sigma case study confirms: audit of Felix price-feed module (KHYPEPriceFeed.sol 119 nSLOC, WSTHYPEPriceFeed.sol 79 nSLOC) conducted 23–25 July 2025; 2 medium severity findings (3S-Felix-M01: implicit USDC peg dependency in HYPE/USD pricing; 3S-Felix-M02: deviation thresholds too broad); both addressed in commit #398ca73; audit report PDF at https://cdn.sanity.io/files/qoqld077/staging/2ab17653dbda99177f8f0aac2fa86ffd19088a00.pdf.",
+      "fetched_at": "2026-07-07T00:00:00Z"
+    },
+    {
+      "url": "https://usefelix.gitbook.io/docs",
+      "shows": "Felix GitBook documentation root confirmed at usefelix.gitbook.io/docs; lists products: CDP Market (feUSD), Vanilla Markets, Spot Equities, Perpetual Futures. Confirms Felix Vaults as part of the broader Felix Protocol suite on Hyperliquid.",
+      "fetched_at": "2026-07-07T00:00:00Z"
+    },
+    {
+      "url": "https://iq.wiki/wiki/felix-protocol",
+      "shows": "IQ.wiki article (search result) confirms: Felix mainnet launched April 8-9 2025; audits conducted by Dedaub and Coinspect pre-mainnet (March 2025); TVL reached $265M by June 5 2025, $1B+ deposits by September 9 2025; protocol incorporates mint caps, admin controls, emergency pause; co-founded by Charlie Ambrose (background at Anthias.xyz).",
+      "chain": "Hyperliquid L1"
+    },
+    {
+      "url": "https://defillama.com/protocol/felix",
+      "shows": "DeFiLlama search result confirms Felix protocol has four sub-products tracked: Felix CDP, Felix Vaults, Felix USDhl, Felix Perps — all on Hyperliquid.",
+      "chain": "Hyperliquid L1"
+    }
+  ],
+  "unknowns": [
+    "D1: No supported block explorer for HyperEVM/Hyperliquid L1 in the defipunkd chainId list (supported: 1,10,56,130,137,324,8453,42161,43114,59144,81457,534352,11155111). Cannot perform name-tag search. HyperEVM-native explorers (e.g. purrsec.com) were not fetchable from allowed URLs this run.",
+    "D2: addresses/ subfolder at https://github.com/felixprotocol/felix-contracts/tree/main/addresses returned permission error; no deployed-contracts page URL confirmed. deployed_contracts_doc set to GitBook root only.",
+    "D3: Three Sigma audit PDF https://cdn.sanity.io/files/qoqld077/staging/2ab17653dbda99177f8f0aac2fa86ffd19088a00.pdf returned permission error — no in-scope addresses extracted. Dedaub and Coinspect audit URLs not recovered from any fetched source.",
+    "D4: broadcast/run-latest.json and addresses/hyperevm-mainnet.json not accessible this run — no deployed 0x addresses recovered from GitHub artifacts.",
+    "D5: HyperEVM chainId not in defipunkd supported list; on-chain reads via /api/contract/read or /api/safe/owners unavailable for this chain. Zero on-chain addresses surfaced.",
+    "D6: CollateralRegistry branch enumeration not possible without supported chainId and known CollateralRegistry address. Branches inferred from docs: WHYPE, UBTC, kHYPE, wstHYPE — no TroveManager addresses recovered.",
+    "D8: Zero 0x addresses retrieved from any fetched source — all role assignments are architecture-derived from README text only and cannot be placed in admin_addresses[]."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/felixprotocol/felix-contracts"
+    ],
+    "docs_url": "https://usefelix.gitbook.io/docs",
+    "audits": [
+      {
+        "firm": "Three Sigma",
+        "url": "https://cdn.sanity.io/files/qoqld077/staging/2ab17653dbda99177f8f0aac2fa86ffd19088a00.pdf",
+        "date": "2025-07"
+      }
+    ],
+    "deployed_contracts_doc": "https://usefelix.gitbook.io/docs",
+    "admin_addresses": [],
+    "upgradeability": "upgradeable",
+    "about": "Felix Protocol is a DeFi lending and yield suite running on Hyperliquid's HyperEVM layer, forked from Liquity V2 with additional admin controls. Users can deposit collateral assets (WHYPE, UBTC, kHYPE, wstHYPE) to mint the USD-pegged stablecoin feUSD via a CDP mechanism (Troves), or supply and borrow assets at variable rates via Vanilla lending pools. Felix Vaults are curated yield-bearing vaults that deploy deposited assets into on-chain strategies on HyperEVM. The protocol uses Transparent Proxies with an AdminController that enforces a propose/apply timelock for parameter changes (MCR, CCR, MaxCapDebt, interest router, SP yield) and contract upgrades, and references a multisig wallet as a key governance actor."
+  }
+}
