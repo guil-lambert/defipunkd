@@ -1,0 +1,131 @@
+I'll conduct a systematic discovery assessment for Lorenzo sUSD1+. Let me start with the capability probe and then work through the mandatory checklist.I found a vault address `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` on Ethereum (chainId=1) from the Twitter/X post. Let me now fetch the docs/deployments page and check BscScan for the protocol.I found a vault address `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` on Ethereum from the X post. Now let me fetch the DeFiLlama page and the Ethereum contract to learn more, and also try the app page to find BSC contract addresses.Excellent! DeFiLlama has a very useful link to GitHub adapters. The DeFiLlama methodology page links to `https://github.com/DefiLlama/DefiLlama-Adapters/blob/main/projects/lorenzo-susd1plus/index.js`. Let me fetch that to get contract addresses, and also the app URL that has the vault address.I've exhausted my fetch calls. Let me now compile the discovery JSON based on all information gathered.
+
+**Evidence ledger check:**
+
+1. **Website fetch** (https://lorenzo-protocol.xyz/home) — succeeded. Shows protocol description, sUSD1+ product, GitHub/Docs links in footer. ✅
+2. **Web search** (Lorenzo sUSD1+ deployed contracts) — returned X post with vault address `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` on Ethereum chainId=1, Medium posts about BSC mainnet launch, CoinGecko BANK token address `0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf`. ✅
+3. **DeFiLlama fetch** (https://defillama.com/protocol/lorenzo-susd1+) — succeeded. Shows BSC has $157.09M TVL, Ethereum has $135.86, links to GitHub adapters. ✅
+4. **BSC search** — returned unrelated results, no Lorenzo-specific BscScan address page. ❌
+
+**Key findings:**
+- One vault address on Ethereum: `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` (from X post, linked as the sUSD1+ OTF vault with chainId=1)
+- BANK governance token on BSC: `0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf` (from CoinGecko)
+- The protocol primarily has TVL on BSC ($157M) but BSC contract addresses weren't surfaced by any fetched source
+- GitHub adapter links were blocked (github.com not in allowlist for web_fetch)
+- No audit links found
+- No docs deployment page found
+- DeFiLlama adapter code was unreachable
+
+**D8 check:** The Ethereum vault address `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` was found in the X post (snippet appeared in search result at index 8-2 and 8-7). The BANK token address `0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf` appeared in CoinGecko search result at index 2-2. Both are snippet-only sightings — I could not fetch the block explorer pages directly. Per D8 rules, snippet-only sightings go in unknowns[] with D8 code, NOT in admin_addresses[]. However, the X post snippet is direct and clear with the full address, and the CoinGecko snippet is also clear. I'll include them as evidence from search results but flag as D8 unverified via on-chain fetch.
+
+```json
+{
+  "schema_version": 4,
+  "slug": "lorenzo-susd1+",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-07-13T09:20:06.022Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-08-04",
+  "model": "claude-opus-4-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "2 candidate addresses discovered (1 Ethereum vault, 1 BSC governance token); no deployment doc, no audit, no on-chain reads completed; BSC core contracts remain unidentified.",
+  "short_headline": "2 addresses found; BSC core unresolved",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: BscScan name-tag search for 'Lorenzo' returned unrelated results; no Lorenzo-tagged BSC contract addresses surfaced. Etherscan direct fetch was blocked (not in allowlist). One Ethereum vault address 0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 appeared in an X post snippet referencing app.lorenzo-protocol.xyz with chainId=1."
+      },
+      {
+        "code": "D2",
+        "text": "D2: protocol.website (https://lorenzo-protocol.xyz/home) fetched successfully; footer links to Documentation and GitHub but no canonical deployed-contracts page URL was present in the rendered content. No docs.lorenzo-protocol.xyz page was reachable (blocked by allowlist after not appearing in prior fetches)."
+      },
+      {
+        "code": "D3",
+        "text": "D3: protocol.audit_links is empty (none recorded). No audit PDFs were surfaced from website fetch or search results. Zero audit addresses extracted."
+      },
+      {
+        "code": "D4",
+        "text": "D4: protocol.github is null (none recorded). DeFiLlama methodology page links to https://github.com/DefiLlama/DefiLlama-Adapters/blob/main/projects/lorenzo-susd1plus/index.js but fetch of that URL was blocked (github.com not in this-run allowlist). No deployment artifacts retrieved."
+      },
+      {
+        "code": "D5",
+        "text": "D5: Two chains — Binance (BSC, chainId=56) and Ethereum (chainId=1). DeFiLlama confirms BSC TVL ~$157M and Ethereum TVL ~$135. BSC contract addresses: zero addresses surfaced from BscScan search or docs. Ethereum: one vault address candidate from X post snippet."
+      },
+      {
+        "code": "D6",
+        "text": "D6: No factory contracts identified this run; factory enumeration not possible without primary contract addresses."
+      },
+      {
+        "code": "D7",
+        "text": "D7: One vault address (Ethereum) and one token address (BSC BANK governance token) tentatively classified. Both are D8-flagged snippet-only sightings pending on-chain verification."
+      },
+      {
+        "code": "D8",
+        "text": "D8: Both discovered addresses are snippet-only from search results; no block-explorer page was successfully fetched for either address. Placed in unknowns[] per D8 rule; admin_addresses[] contains no entries from these snippets."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery walk covered: website (fetched), DeFiLlama protocol page (fetched), web search (2 queries). One Ethereum vault address and one BSC BANK token address were found only in search snippets — neither was verified via a fetched block-explorer or DeFiPunkd API call. The $157M TVL resides primarily on BSC but all BSC core contract addresses remain unidentified. Grade unknown pending on-chain address verification."
+  },
+  "evidence": [
+    {
+      "url": "https://lorenzo-protocol.xyz/home",
+      "shows": "Official website of Lorenzo Protocol; confirms sUSD1+ product (~$80.79M issued per page at time of prior snapshot, 7.22% APY); lists BNB Chain and Ethereum as target chains; footer references Documentation, Audits, GitHub pages; no deployed contract addresses shown.",
+      "fetched_at": "2026-08-04T00:00:00Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/lorenzo-susd1+",
+      "shows": "DeFiLlama confirms Lorenzo sUSD1+ TVL $157.09M on BSC and $135.86 on Ethereum; category=Yield; methodology links to DefiLlama-Adapters GitHub (index.js) and dimension-adapters (fees/lorenzo-susd1). Protocol described as sUSD1+ value-accruing stablecoin backed by USD1/USDT/USDC deposits.",
+      "fetched_at": "2026-08-04T00:00:00Z"
+    },
+    {
+      "url": "https://x.com/LorenzoProtocol/status/1973276726974386672",
+      "shows": "X post from @LorenzoProtocol references app URL containing vaultId=0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 with chainId=1 (Ethereum), indicating this is the sUSD1+ OTF vault on Ethereum; also references bridge between BNB Chain and Ethereum. Snippet-only — block-explorer page not fetched.",
+      "chain": "Ethereum",
+      "address": "0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972"
+    },
+    {
+      "url": "https://www.coingecko.com/en/coins/lorenzo-protocol",
+      "shows": "CoinGecko lists BANK token contract address 0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf (implied BSC deployment per context). Describes Lorenzo Protocol as institutional-grade on-chain asset management platform with OTF model. Snippet-only — not a fetched block-explorer page.",
+      "chain": "Binance",
+      "address": "0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf"
+    },
+    {
+      "url": "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed",
+      "shows": "Lorenzo Medium post confirms sUSD1+ launched on BNB mainnet; users deposit USD1/USDT/USDC minimum 50 units to receive sUSD1+; funds held in secure custody off-chain; trading activity off-chain; first deployed on BSC. No contract addresses in snippet.",
+      "chain": "Binance"
+    }
+  ],
+  "unknowns": [
+    "D1: Etherscan name-tag search for Lorenzo on Ethereum blocked (URL not in allowlist after not appearing in prior search results); no Ethereum block-explorer page fetched this run",
+    "D1: BscScan name-tag search returned unrelated results; zero Lorenzo-tagged addresses surfaced from BSC explorer",
+    "D2: Canonical deployed-contracts documentation page not found; docs.lorenzo-protocol.xyz fetch blocked (URL not in allowlist); no deployed_contracts_doc URL verified this run",
+    "D3: No audit PDFs or audit links surfaced; audit_links field is empty in protocol context; zero addresses from audit scope",
+    "D4: DefiLlama-Adapters index.js (https://github.com/DefiLlama/DefiLlama-Adapters/blob/main/projects/lorenzo-susd1plus/index.js) blocked by allowlist; no deployment artifacts read this run",
+    "D5: BSC chain — zero core contract addresses surfaced from any fetched source; $157M TVL unattributed to specific contract addresses",
+    "D6: No factory addresses identified; factory enumeration skipped",
+    "D8: 0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 (Ethereum vault) — snippet-only sighting from X post; block-explorer page not fetched; role and actor_class unverified on-chain",
+    "D8: 0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf (BSC BANK token) — snippet-only sighting from CoinGecko; block-explorer page not fetched; role and actor_class unverified on-chain"
+  ],
+  "protocol_metadata": {
+    "github": null,
+    "docs_url": null,
+    "audits": [],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Binance",
+      "address": "0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf",
+      "symbol": "BANK"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Lorenzo Protocol is an institutional-grade on-chain asset management platform that issues sUSD1+, a non-rebasing yield-accruing token. Users deposit major stablecoins (USD1, USDT, or USDC) into the USD1+ On-chain Traded Fund (OTF) and receive sUSD1+ whose value appreciates via NAV growth. Yield is generated through a mix of CeFi quantitative (delta-neutral) strategies, real-world asset collateral, and DeFi lending — executed off-chain by a professional trading team under institutional custody. The protocol primarily operates on BNB Chain with a bridge to Ethereum, and takes a 5% performance fee on positive yields before updating the on-chain NAV."
+  }
+}
+```
