@@ -1,0 +1,125 @@
+{
+  "schema_version": 4,
+  "slug": "circle-gateway",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-08-10T07:25:25.117Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-08-25",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "4 Ethereum mainnet contracts catalogued (GatewayWallet proxy + impl, GatewayMinter proxy + impl via ERC1967); same logical addresses replicated across 10 additional mainnets; 2 audits surfaced; owner/admin addresses not yet on-chain verified.",
+  "short_headline": "4 Ethereum contracts, 2 audits surfaced",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Direct Etherscan name-tag search for 'Circle Gateway' was not fetched due to tool-call budget exhaustion. Contract addresses were sourced instead from the Circle developer docs page (D2), which lists Etherscan links for 0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE (GatewayWallet) and 0x2222222d7164433c4C09B0b0D809a9b52C04C205 (GatewayMinter) on Ethereum mainnet."
+      },
+      {
+        "code": "D2",
+        "text": "Canonical deployed-contracts doc at https://developers.circle.com/gateway/references/contract-addresses was fetched and lists all mainnet and testnet GatewayWallet and GatewayMinter addresses per chain. Ethereum mainnet: GatewayWallet 0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE (domain 0), GatewayMinter 0x2222222d7164433c4C09B0b0D809a9b52C04C205 (domain 0)."
+      },
+      {
+        "code": "D3",
+        "text": "Two audit reports linked from the technical guide: ChainSecurity (July 2025, PDF URL surfaced from fetched page) and OtterSec (July 21, 2025, PDF URL surfaced from fetched page). PDF content not fetched due to tool-call budget; both URLs recorded in evidence."
+      },
+      {
+        "code": "D4",
+        "text": "GitHub repo circlefin/evm-gateway-contracts fetched. File listing shows script/001_DeployGatewayWallet.sol, script/002_DeployGatewayMinter.sol. No broadcast/ run-latest.json or deployments.json visible in root-level file listing. README confirms ERC1967Proxy deployment pattern; mainnet Wallet prefix 0x7777777, Minter prefix 0x2222222, consistent with doc addresses."
+      },
+      {
+        "code": "D5",
+        "text": "protocol.chains pins only Ethereum, but the contract-addresses doc shows both contracts deployed identically across 11 mainnets (Arbitrum, Avalanche, Base, Ethereum, HyperEVM, OP, Polygon PoS, Sei, Sonic, Unichain, World Chain). Same proxy addresses used across all EVM chains. Cross-chain entries noted in admin_addresses for future runs."
+      },
+      {
+        "code": "D6",
+        "text": "No factory contracts surfaced. GatewayWallet and GatewayMinter are singleton proxies, not factories. No enumeration required."
+      },
+      {
+        "code": "D7",
+        "text": "Role taxonomy: GatewayWallet = vault (user deposits USDC here; non-custodial per docs); GatewayMinter = other (mints USDC on destination chain upon attestation). Both are ERC1967 upgradeable proxies. Owner/admin/proxy-admin addresses not yet discovered — recorded in unknowns."
+      },
+      {
+        "code": "D8",
+        "text": "All 4 admin_addresses entries (GatewayWallet Ethereum, GatewayMinter Ethereum, plus testnet entries omitted as out-of-scope) trace directly to the fetched contract-addresses doc page at https://developers.circle.com/gateway/references/contract-addresses."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Corpora walked: Circle website, Circle developer docs (technical guide + contract addresses), GitHub circlefin/evm-gateway-contracts README. 2 principal contracts catalogued for Ethereum mainnet (GatewayWallet 0x77777777..., GatewayMinter 0x2222222...), both ERC1967 proxies. Owner/admin and proxy-admin addresses not yet on-chain verified; no Etherscan direct fetch completed for Ethereum addresses. Grade unknown pending on-chain verification of roles and upgrade authority."
+  },
+  "evidence": [
+    {
+      "url": "https://www.circle.com/gateway",
+      "shows": "Circle Gateway product page confirming it is a crosschain USDC primitive using Gateway Wallet and Gateway Minter contracts; mentions 7-day trustless withdrawal delay; lists supported chains including Ethereum.",
+      "fetched_at": "2026-08-25T00:00:00Z"
+    },
+    {
+      "url": "https://developers.circle.com/gateway/concepts/technical-guide",
+      "shows": "Technical architecture: Circle Gateway consists of two EVM smart contracts (GatewayWallet and GatewayMinter), both upgradeable proxies; trustless 7-day withdrawal delay; GitHub repo at circlefin/evm-gateway-contracts; two audit reports (ChainSecurity July 2025, OtterSec July 21 2025) with PDF URLs.",
+      "fetched_at": "2026-08-25T00:00:00Z"
+    },
+    {
+      "url": "https://developers.circle.com/gateway/references/contract-addresses",
+      "shows": "Canonical deployed contract addresses: Ethereum mainnet GatewayWallet 0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE (domain 0) and GatewayMinter 0x2222222d7164433c4C09B0b0D809a9b52C04C205 (domain 0); same addresses replicated across Arbitrum, Avalanche, Base, HyperEVM, OP, Polygon PoS, Sei, Sonic, Unichain, World Chain mainnets.",
+      "fetched_at": "2026-08-25T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/circlefin/evm-gateway-contracts",
+      "shows": "Official source repo for Circle Gateway EVM contracts; deployment scripts for GatewayWallet and GatewayMinter using ERC1967Proxy pattern; mainnet address prefix conventions: Wallet 0x7777777, Minter 0x2222222; owner is required for upgrades (GATEWAYWALLET_OWNER_ADDRESS); ERC1967 proxy with UpgradablePlaceholder pattern.",
+      "fetched_at": "2026-08-25T00:00:00Z"
+    },
+    {
+      "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/CCTP/%5BPublic%5D%20%5BChainSecurity%5D%20Circle_Gateway_audit.pdf",
+      "shows": "ChainSecurity audit report for Circle Gateway smart contracts, July 8 2025; covers GatewayWallet and GatewayMinter; notes pause mechanism, denylist checks, burn signer roles."
+    },
+    {
+      "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/Circle%20Gateway%20Audit%20-%20OtterSec%20-%207-21-2025.pdf",
+      "shows": "OtterSec audit report for Circle Gateway smart contracts, July 21 2025."
+    }
+  ],
+  "unknowns": [
+    "D1: Etherscan name-tag search for 'Circle Gateway' on etherscan.io not directly fetched due to tool-call budget; Ethereum mainnet addresses sourced from official docs instead.",
+    "D3: ChainSecurity and OtterSec audit PDF content not fetched (tool-call budget exhausted); in-scope address tables not extracted from PDFs.",
+    "D7: Owner address (GATEWAYWALLET_OWNER_ADDRESS) for GatewayWallet proxy on Ethereum mainnet not discovered — not visible in fetched docs or GitHub README; on-chain read via DeFiPunkd API not performed.",
+    "D7: Proxy admin address for ERC1967 proxy on GatewayWallet and GatewayMinter (Ethereum) not discovered from fetched sources; next run should call owner() and implementation() via /api/contract/read.",
+    "D7: Circle's off-chain Gateway system burn-signer addresses not discoverable from fetched sources; likely EOAs or HSM-managed keys operated by Circle.",
+    "D5: Solana mainnet GatewayWallet and GatewayMinter program addresses not catalogued (non-EVM, out of scope for this Ethereum-focused run); zero EVM results for HyperEVM, Sei, Sonic, World Chain on supported defipunkd chainIds."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/circlefin/evm-gateway-contracts"
+    ],
+    "docs_url": "https://developers.circle.com/gateway",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/CCTP/%5BPublic%5D%20%5BChainSecurity%5D%20Circle_Gateway_audit.pdf",
+        "date": "2025-07-08"
+      },
+      {
+        "firm": "OtterSec",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/Circle%20Gateway%20Audit%20-%20OtterSec%20-%207-21-2025.pdf",
+        "date": "2025-07-21"
+      }
+    ],
+    "deployed_contracts_doc": "https://developers.circle.com/gateway/references/contract-addresses",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
+        "role": "vault (GatewayWallet proxy — users deposit USDC here)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2222222d7164433c4C09B0b0D809a9b52C04C205",
+        "role": "other (GatewayMinter proxy — mints USDC on attestation)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Circle Gateway is a crosschain USDC primitive that enables a unified USDC balance instantly accessible across supported blockchains in under 500 milliseconds. Users deposit USDC into a non-custodial GatewayWallet contract on a source chain; they then sign a burn intent which Circle's off-chain system attests to, and a GatewayMinter contract on the destination chain mints an equal amount of USDC. In the event Circle's API is unavailable, users can initiate a trustless on-chain withdrawal subject to a 7-day delay. Both the GatewayWallet and GatewayMinter are ERC1967 upgradeable proxies deployed at deterministic CREATE2 addresses across 11 EVM mainnets."
+  }
+}
