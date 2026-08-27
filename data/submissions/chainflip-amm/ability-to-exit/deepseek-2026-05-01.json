@@ -1,0 +1,149 @@
+{
+  "schema_version": 3,
+  "slug": "chainflip-amm",
+  "slice": "ability-to-exit",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "claude-sonnet-4-5",
+  "chat_url": "https://chat.deepseek.com/share/2r6yio6i15ra4whze7",
+  "grade": "red",
+  "headline": "Governance Key (3-of-6 multisig) can activate Safe Mode Red, indefinitely pausing all swap payouts, LP withdrawals, and staking-claim egress with no documented time cap or auto-expiry.",
+  "short_headline": "All exits pausable indefinitely by 3-of-6",
+  "rationale": {
+    "findings": [
+      {
+        "code": "E1",
+        "text": "Chainflip exit functions operate via egress (broadcasting signed transactions from vaults), not via user-called contract functions. Exit paths: (a) swap output egress — automatic after swap processing; (b) LP withdrawal egress — LP requests withdrawal on State Chain, Authority Set signs and broadcasts payout; (c) FLIP redemption via StateChainGateway — user submits redemption certificate signed by 100-of-150 validators, then claims after a 2-day delay; (d) Vault contract has swap-initiation functions (xSwap, etc.) but no user-facing withdraw/redeem function — all outbound fund movement is validator-signed egress."
+      },
+      {
+        "code": "E2",
+        "text": "All egress (swap payouts, LP withdrawals, staking claims) is gated by the validator network's 100-of-150 threshold signature. The Safe Mode pallet can halt all egress at the State Chain level. In full Red Safe Mode: 'No Egress transactions are processed (No swap payouts, no LP withdrawals, and no new staking claims will be processed).' The StateChainGateway FLIP redemption has an additional governance freeze ability: 'the Governance key to suspend the State Chain Gateway from executing redemptions, or register new ones.' Vault contracts can be 'frozen out of band by the Governance Council' preventing validator egress signing."
+      },
+      {
+        "code": "E3",
+        "text": "Safe Mode is activated 'by instigation of the Governance key' — a 3-of-6 multisig held by the Chainflip Labs Security Council (6 members, 3 required). No maximum pause duration is documented. The docs say 'temporarily agree to halt' but specify no auto-expiry, block-count cap, or time-bound on Safe Mode Red. Exiting Safe Mode requires 'a governance extrinsic' — meaning the Governance Key must actively deactivate it. There is no permissionless or validator-only mechanism to unilaterally exit Safe Mode."
+      },
+      {
+        "code": "E4",
+        "text": "EMERGENCY PATH: Governance Key (3-of-6 multisig) can activate Safe Mode Amber (specific functions disabled) or Red (all egress halted). No documented time cap on either. GOVERNANCE CHECK: The Community Key (5-of-9 multisig, 9 independent non-Labs members, 5 required to sign) has no power to activate or deactivate Safe Mode but serves as a check: 'it is required to allow the Governance Key to use the more powerful security and governance features.' Additionally, Vault contracts can be individually frozen by the Governance Council out-of-band, separate from Safe Mode."
+      },
+      {
+        "code": "E5",
+        "text": "FLIP redemptions via the StateChainGateway have a documented queue with: (a) a 2-day delay between registering a claim and executing it; (b) an expiry of 144 hours (6 days) from registration — 'unexecuted redemptions expire after 144 hours.' This means FLIP claims cannot be paused indefinitely by gateway freeze; they expire. However, swap payouts and LP withdrawals through regular egress have no such expiry protection — they simply stop processing during Safe Mode Red with no timeout."
+      },
+      {
+        "code": "E6",
+        "text": "An emergency recovery path exists: 'Within the Contract Vaults, the Community Council can call a function that authorises the Governance Council to withdraw all funds in the vault.' This is a dual-key mechanism (Community Key + Governance Key) for adversarial-admin recovery. However, this is not a permissionless escape hatch available to individual users — it requires both councils to cooperate. There is no user-initiated forced-exit mechanism."
+      },
+      {
+        "code": "E7",
+        "text": "Exit functions are not user-callable on-chain in the traditional sense. Swap outputs and LP withdrawals are processed by the validator network signing egress transactions — users cannot force these on-chain. FLIP redemptions require calling the StateChainGateway contract which can be done directly (e.g. via Etherscan). Vault swap initiation (xSwap) is directly callable on the Vault contract. The docs confirm Vault contracts 'can be called directly without using the provided RPCs.'"
+      }
+    ],
+    "steelman": {
+      "red": "The Governance Key — a 3-of-6 multisig controlled by Chainflip Labs insiders — can activate Safe Mode Red which indefinitely halts ALL egress (swap payouts, LP withdrawals, staking claims) with no documented auto-expiry, time cap, or permissionless deactivation path; this means a coordinated 3 signers can permanently block all user fund exits.",
+      "orange": "Safe Mode requires validator agreement ('Validators... agree to halt') not just Governance Key action, the Community Key (5-of-9 independent members) provides a check-and-balance on the most powerful governance features, and FLIP redemptions have a hard 144-hour expiry even during gateway freezes, so governance cannot permanently trap all funds.",
+      "green": "During normal operation all exits are processed permissionlessly by the decentralized 100-of-150 validator network without any admin signature requirement; Safe Mode is an emergency-only mechanism requiring validator consensus and is designed to be temporary with a documented community-key-governed recovery path for adversarial scenarios."
+    },
+    "verdict": "Choosing red because the Governance Key (3-of-6 multisig) can instigate Safe Mode Red which explicitly and indefinitely pauses all egress transactions — including swap payouts and LP withdrawals — with no documented time cap, auto-expiry, or permissionless deactivation mechanism. The docs (governance-and-security page, lines 165-170) confirm that in full Red Safe Mode 'No Egress transactions are processed (No swap payouts, no LP withdrawals, and no new staking claims will be processed).' While the Community Key provides a check on the most extreme actions, it cannot prevent or reverse Safe Mode activation. The 144-hour expiry on FLIP redemptions is a meaningful but narrow protection that does not cover the primary exit paths for swappers and LPs. This matches the red criterion: 'ANY actor (including governance) can pause CLAIMS of finalized exits indefinitely.'"
+  },
+  "evidence": [
+    {
+      "url": "https://docs.chainflip.io/protocol/governance-and-security",
+      "shows": "Safe Mode Red halts all egress (swap payouts, LP withdrawals, staking claims) with no documented time cap; Governance Key is 3-of-6 multisig; Community Key is 5-of-9 multisig; Vault freeze mechanism; StateChainGateway 2-day delay and 144-hour expiry on FLIP redemptions; Community Key emergency vault withdrawal authorization",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/protocol/egress-broadcasting-funds",
+      "shows": "Egress is the generic process for sending funds out of the protocol: swap output, LP collateral withdrawal, FLIP redemption from StateChainGateway. Controlled by threshold signature ceremonies (FROST, 100-of-150 validators). No permissionless user exit path exists for swap/LP funds.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/lp/how-to-provide-liquidity",
+      "shows": "LP withdrawal process: LPs request asset withdrawals specifying destination address; Authority Set deducts gas fees, creates transaction, broadcasts to external chain. Exit is validator-mediated, not user-initiated on-chain.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/protocol/how-swapping-works",
+      "shows": "Swaps are fire-and-forget: user deposits into deposit channel or vault, network witnesses, processes in JIT AMM, and egresses output to destination. No user-claimable exit function; output delivery is entirely validator-mediated.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/brokers/broker-vault-swaps",
+      "shows": "Vault contract swap initiation is directly callable on-chain. Payload expiry is 'indefinite' for vault swap transactions. This confirms the Vault smart contract is user-facing for deposits but exit remains validator-mediated egress.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/token/0x826180541412d574cf1336d22c0c0a287822678a",
+      "shows": "FLIP token contract on Ethereum mainnet — the ERC20 utility token used for staking and State Chain account funding. Verified contract at address 0x826180541412d574cf1336d22c0c0a287822678a.",
+      "chain": "Ethereum",
+      "address": "0x826180541412d574cf1336d22c0c0a287822678a",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/chainflip-io/chainflip-eth-contracts",
+      "shows": "Ethereum smart contracts repo: StateChainGateway holds staked FLIP, Vault holds exchange funds, KeyManager handles signature verification. State Chain nodes control funds via threshold signature scheme. Confirms architecture where exits are validator-mediated.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/",
+      "shows": "Chainflip is a cross-chain DEX using a Just-In-Time AMM, proof-of-stake validator network (up to 150 validators), and TSS/MPC vaults for native cross-chain swaps. Supports BTC, ETH, USDC, DOT, SOL, and more.",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "E3: Safe Mode duration cap — docs say 'temporarily' but no max block count, time limit, or auto-expiry documented. Could not locate on-chain constant for Safe Mode maximum duration in the backend repo or docs.",
+    "E6: Individual user forced-exit — no permissionless escape hatch found for individual users. The Community-Key-authorized vault withdrawal requires both councils to cooperate; not usable by individual depositors/LPs.",
+    "E7: Vault contract address on Etherscan — unable to locate a verified mainnet Vault contract address. The FLIP token and StateChainGateway are known but the Vault contract address was not found in public documentation or search results."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/chainflip-io/chainflip-backend",
+      "https://github.com/chainflip-io/chainflip-eth-contracts"
+    ],
+    "docs_url": "https://docs.chainflip.io/",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/trailofbits/publications/blob/master/reviews/2023-04-chainflip-securityreview.pdf",
+        "date": "2023-04"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/Chainflip_Backend_-_Zellic_Audit_Report.pdf",
+        "date": "2023"
+      },
+      {
+        "firm": "Kudelski",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/Multisig-Kudelski-Q1-2022.pdf",
+        "date": "2022-Q1"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x826180541412d574cf1336d22c0c0a287822678a",
+      "symbol": "FLIP"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Chainflip",
+        "address": "Governance Key",
+        "role": "Governance Council — activates Safe Mode, freezes vaults, manages upgrades",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Chainflip",
+        "address": "Community Key",
+        "role": "Community Council — required for most powerful governance actions, check on Governance Key",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Chainflip is a cross-chain decentralized exchange that enables native asset swaps (BTC, ETH, SOL, DOT, USDC, and more) without wrapped tokens or synthetic assets. It uses a Just-In-Time AMM where liquidity providers place limit and range orders that are matched against incoming swap deposits in each block, eliminating MEV through batch auction settlement. The protocol runs on its own Substrate-based State Chain secured by up to 150 permissionless proof-of-stake validators who collectively control cross-chain vaults via a 100-of-150 FROST threshold signature scheme — meaning no single party custodies user funds. Users initiate swaps either by requesting a deposit channel address or by calling the Vault smart contract directly, and the network automatically witnesses the deposit, processes the swap against LP liquidity, and broadcasts the output to the user's destination address."
+  }
+}
