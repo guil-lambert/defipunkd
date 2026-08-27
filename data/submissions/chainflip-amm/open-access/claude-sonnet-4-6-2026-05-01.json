@@ -1,0 +1,153 @@
+{
+  "schema_version": 3,
+  "slug": "chainflip-amm",
+  "slice": "open-access",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-05-01",
+  "model": "claude-sonnet-4-6",
+  "chat_url": "https://claude.ai/share/b2bf8b66-a08b-4caa-adb7-1ec7fbc412d9",
+  "grade": "green",
+  "headline": "No contract-level whitelist or KYC on user entry/exit; official ToS carries passive sanctions and jurisdiction clauses only, with no verified active geo-blocking or wallet screening; multiple independent access paths documented",
+  "short_headline": "No user allowlists or geofences",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "The Ethereum Vault contract (0xF5e10380213880111522dd0efD3dbb45b9f62Bcc) exposes user-facing swap entry points xSwapNative, xSwapToken, xCallNative, and xCallToken with no onlyWhitelisted, onlyRole, allowlist, KYC, or accredited-investor modifier in the ABI. The only restriction on addGasNative/addGasToken is onlyNotSuspended (a global pause guard), which is not a per-user whitelist. Validator-called batch functions (allBatch, transfer, etc.) require a FROST Schnorr SigData payload from the 150-validator authority set, but these are not user-facing admission functions."
+      },
+      {
+        "code": "A2",
+        "text": "Swap initiation is permissionless for users: depositing to a deterministically computed deposit channel address or calling xSwapNative/xSwapToken on the Vault requires no prior operator approval. The 150-validator FROST network witnesses deposits and broadcasts settlements (liveness dependency), but does not gate admission of the initial user transaction. Each function class: deposit-channel deposit — unconditional; xSwapNative/xSwapToken direct vault call — unconditional; egress settlement — requires validator quorum (liveness, not admission). Liveness dependency noted for the dependencies slice."
+      },
+      {
+        "code": "A3",
+        "text": "The official swap frontend at swap.chainflip.io is operated by Crosschain Association. ToS section 1.6 states 'We may implement controls to restrict access the Services…from certain jurisdictions' and prohibits VPN circumvention. ToS section 1.7 prohibits use by persons subject to a sanctions regime. No active enforcement mechanism was observed during this run: no block banner text, no HTTP 451 response, no named third-party wallet screening provider (Chainalysis, TRM, Elliptic) was identified in the fetched page source. These clauses are A3-passive — standard DeFi boilerplate describing a compliance policy, not an observed runtime enforcement mechanism."
+      },
+      {
+        "code": "A3b",
+        "text": "A3b-i: swap.chainflip.io is the primary official UI operated by Crosschain Association under its ToS. A3b-ii (independent paths not bound by the official ToS): (1) Direct EVM contract call — documented by Chainflip at docs.chainflip.io/brokers/vault-swaps-api/evm with Typescript SDK examples, fully permissionless; (2) Chainflip JavaScript SDK (chainflip-sdk-monorepo) — documented and open-source, usable without the official frontend; (3) Third-party aggregator frontends — Rango V2, LI.FI Diamond, and Squid Router are visible as callers of xSwapNative on Etherscan within the last 24 hours, confirming active independent integrations. These A3b-ii paths are multiple and well-documented."
+      },
+      {
+        "code": "A4",
+        "text": "No on-chain OFAC blocklist or address screening oracle (e.g., Chainalysis on-chain oracle) was identified in the Vault or KeyManager contracts. The ToS-level sanctions prohibition (section 1.7) is off-chain policy only. The govWithdraw function in the Vault ABI allows governance to withdraw tokens in an emergency but is not a per-user admission gate."
+      },
+      {
+        "code": "A5",
+        "text": "Read access: scan.chainflip.io block explorer is public and permissionless — any address's swap history and pool state are visible without authentication. Write access (swap initiation): xSwapNative, xSwapToken, xCallNative, xCallToken are callable by any Ethereum address without prior whitelisting, as confirmed by the verified Vault ABI. StateChainGateway funding (FLIP staking) requires ERC-20 approve+transfer but no whitelist."
+      },
+      {
+        "code": "A6",
+        "text": "ToS located at swap.chainflip.io/terms, operated by Crosschain Association. Verbatim key clauses: Section 1.6: 'We may not make all Services available in all markets and jurisdictions, and may restrict or prohibit use of the Services in certain markets or jurisdictions…We may implement controls to restrict access the Services (including, without limitation, automated technological controls and restrictions) from certain jurisdictions…You must not attempt in any way to circumvent any such restriction, including by use of any virtual private network to obfuscate your location.' Section 1.7: 'You are prohibited from using any of the Services if you and/or…are subject to a sanctions regime (including sanctions administered or enforced by the United Nations or other relevant sanctions authorities).' Section 1.9.1 acknowledges 'the Interface…is only one of multiple means of accessing the Chainflip Protocol.'"
+      }
+    ],
+    "steelman": {
+      "red": "The official swap UI is operated by a single legal entity (Crosschain Association) whose ToS explicitly reserves the right to implement automated geo-blocking controls and prohibits VPN circumvention, which, if actively enforced, would constitute an operator-gated admission path with no documented on-chain remedy.",
+      "orange": "ToS section 1.6 explicitly threatens automated geo-blocking from certain jurisdictions, and while no active enforcement was confirmed in this run's static fetch, the absence of a live block banner from a static fetch does not conclusively rule out runtime IP-level enforcement for specific regions.",
+      "green": "The Vault contract admits any Ethereum address unconditionally on xSwapNative/xSwapToken with no whitelist or KYC modifier; multiple independent A3b-ii access paths (direct SDK, LI.FI, Rango, Squid) are actively used; and no active geo-blocking or wallet screening was observed on the official frontend, leaving only A3-passive ToS boilerplate that does not meet the evidentiary floor for an A3-active finding."
+    },
+    "verdict": "Choosing green because: (1) the Ethereum Vault contract has no user-facing whitelist or KYC modifier on any swap entry function, confirmed from the verified on-chain ABI; (2) the swap admission path requires zero operator approval from the user side; (3) the official ToS carries only A3-passive clauses (sanctions self-certification, VPN prohibition, jurisdiction reservation) with no confirmed A3-active runtime enforcement meeting the evidentiary floor of a block banner, HTTP 451, named screening provider, or incident report; and (4) multiple well-documented and actively-used A3b-ii alternative access paths exist (direct SDK, LI.FI, Rango, Squid), reinforcing green even if the official frontend were later found to enforce geo-blocking."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xf5e10380213880111522dd0efd3dbb45b9f62bcc",
+      "shows": "Chainflip Ethereum Vault mainnet contract (0xF5e10380213880111522dd0efD3dbb45b9f62Bcc): verified source code; ABI shows xSwapNative, xSwapToken, xCallNative, xCallToken as public permissionless entry points with no whitelist modifier; 200K+ transactions confirming active use from diverse EOAs and aggregator contracts",
+      "chain": "Ethereum",
+      "address": "0xF5e10380213880111522dd0efD3dbb45b9f62Bcc",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://swap.chainflip.io/terms",
+      "shows": "Official ToS operated by Crosschain Association; section 1.6 reserves right to geo-block and prohibits VPN circumvention (A3-passive); section 1.7 sanctions prohibition (A3-passive); section 1.9.1 acknowledges the Interface is 'only one of multiple means of accessing the Chainflip Protocol'",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/protocol/supported-chains-assets/mainnet-addresses",
+      "shows": "Official canonical list of mainnet contract addresses: Ethereum Vault 0xF5e10380213880111522dd0efD3dbb45b9f62Bcc, StateChainGateway 0x6995Ab7c4D7F4B03f467Cf4c8E920427d9621DBd, KeyManager 0xcd351d3626Dc244730796A3168D315168eBf08Be; Arbitrum Vault 0x79001a5e762f3bEFC8e5871b42F6734e00498920",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/brokers/vault-swaps-api/evm",
+      "shows": "Documented A3b-ii alternative access path: direct EVM Vault contract call with Typescript SDK examples; no account registration or operator approval required; confirms permissionless direct-contract interaction is officially supported and documented",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/chainflip-io/chainflip-backend/security",
+      "shows": "Self-hosted bug bounty program with security contact security@chainflip.io; covers Rust backend, Solidity smart contracts, and web applications; rewards in FLIP tokens at Chainflip Labs' discretion",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/chainflip-io/chainflip-eth-contracts",
+      "shows": "Chainflip Ethereum smart contracts repository; Vault and StateChainGateway source code; no user-facing whitelist or allowlist logic identified",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://chainflip.io/legal-notice",
+      "shows": "Legal notice for Chainflip Labs GmbH (Berlin); legal entity information; no ToS on this page",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.chainflip.io/protocol/governance-and-security",
+      "shows": "Protocol governance and security documentation reference; confirms validator-set governance model"
+    },
+    {
+      "url": "https://github.com/chainflip-io/security",
+      "shows": "Chainflip Labs security repo with bug bounty policy; security contact security@chainflip.io; safe-return governance address 0x38a4BCC04f5136e6408589A440F495D7AD0F34DB",
+      "fetched_at": "2026-05-01T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "A3-active: could not verify active runtime geo-blocking or wallet screening from a static frontend fetch of swap.chainflip.io — the SPA rendered only a minimal shell; live enforcement (e.g., from a US IP) could not be confirmed or ruled out from a static fetch alone",
+    "A4: no on-chain sanctions blocklist found in contracts, but presence or absence of off-chain IP-level OFAC screening integrated into the frontend API could not be fully confirmed from a static fetch"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/chainflip-io/chainflip-backend",
+      "https://github.com/chainflip-io/chainflip-eth-contracts",
+      "https://github.com/chainflip-io/chainflip-sdk-monorepo"
+    ],
+    "docs_url": "https://docs.chainflip.io",
+    "audits": [
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/2023-04-TrailOfBits-securityreview.pdf",
+        "date": "2023-04"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/Chainflip_Backend_-_Zellic_Audit_Report.pdf",
+        "date": "2023"
+      },
+      {
+        "firm": "Kudelski Security",
+        "url": "https://github.com/chainflip-io/chainflip-backend/blob/main/audits/Multisig-Kudelski-Q1-2022.pdf",
+        "date": "2022-01"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x826180541412D574cf1336d22c0C0a287822678A",
+      "symbol": "FLIP"
+    },
+    "bug_bounty_url": "https://github.com/chainflip-io/security",
+    "security_contact": "security@chainflip.io",
+    "deployed_contracts_doc": "https://docs.chainflip.io/protocol/supported-chains-assets/mainnet-addresses",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xcd351d3626Dc244730796A3168D315168eBf08Be",
+        "role": "KeyManager — stores aggregate FROST key for 150-validator authority set; controls access to Vault funds",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6995Ab7c4D7F4B03f467Cf4c8E920427d9621DBd",
+        "role": "StateChainGateway — manages FLIP staking and validator bond; governed by validator authority set",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Chainflip is a decentralised cross-chain exchange that enables native asset swaps (BTC, ETH, SOL, USDC and others) without wrapping or bridging, using a 150-validator proof-of-stake network that controls multi-chain Vault contracts via a 100-of-150 FROST threshold signature scheme. Users initiate swaps by depositing to deterministically generated deposit channel addresses or by calling the Vault smart contract directly; the protocol's Just-in-Time AMM (modelled on Uniswap v3 but executed virtually on the Chainflip State Chain) settles trades and batches on-chain egress. The FLIP token is used to bond validators and is partially burned from swap fees."
+  }
+}
