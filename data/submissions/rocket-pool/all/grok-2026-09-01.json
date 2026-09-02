@@ -1,0 +1,717 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "control",
+    "snapshot_generated_at": "2026-08-31T12:37:29.910Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-09-01",
+    "model": "Grok 4.6",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_4101df1e-eb3a-41fe-b2f8-15ac420e9264",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "T1 implementation swaps sit with a 10-member invite-only oDAO after a 7-day on-chain delay; pDAO is token-weighted but cannot replace code.",
+    "short_headline": "oDAO upgrades after 7 days",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "RocketStorage 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46 getGuardian() returns 0x0cCF14983364A7735d369879603930Afe10df21e at block 25884704. rocketDAOProtocol 0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1 getBootstrapModeDisabled() is true; RocketDAONodeTrusted 0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9 getBootstrapModeDisabled() is also true. Guardian bootstrap setting/upgrade entrypoints are therefore disabled on both DAO cores. Neither contract exposes owner()/admin() in the merged ABI; address resolution is via RocketStorage keys."
+        },
+        {
+          "code": "C2",
+          "text": "Upgrade mechanism is a storage-pointer hub, not a typical Transparent/UUPS proxy admin. rocketDAONodeTrustedUpgrade 0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10 is verified and exposes upgrade(), execute(), bootstrapUpgrade(), and veto(). Official contracts-usage docs state rocketVault and rocketTokenRETH are not upgradeable; remaining named network contracts are replaced by writing a new address into immutable RocketStorage. Governance contracts themselves are latest-contract pointers in that registry, so they are also replaceable by the same oDAO upgrade path."
+        },
+        {
+          "code": "C3",
+          "text": "Code-upgrade fast path: an oDAO member submits an on-chain upgrade proposal on rocketDAONodeTrustedProposals 0xb0ec3F657ef43A615aB480FA8D5A53BF2c2f05d5; rocketDAONodeTrustedSettingsProposals 0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0 reports getVoteDelayTime=604800s (7d), getVoteTime=1209600s (14d), getExecuteTime=2419200s (28d), getActionTime=2419200s, getCooldownTime=172800s. Official docs state a 7-day wait before voting and that a 51% oDAO consensus concludes the vote, after which any member may execute. Uncontested minimum from submission to executable is therefore the 7-day vote delay (plus however long is needed to gather 51% yes votes inside the 14-day window). Parameter/treasury path is separate: pDAO engine 0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25 with rocketDAOProtocolSettingsProposals 0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81 getVoteDelayTime=604800, getVotePhase1Time=604800, getVotePhase2Time=604800, getExecuteTime=2419200, getChallengePeriod=1800."
+        },
+        {
+          "code": "C4",
+          "text": "The reachable T1 controller is RocketDAONodeTrusted 0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9, a custom committee (not a Gnosis Safe): getMemberCount()=10, getMemberMinRequired()=3, getMemberQuorumVotesRequired()=5100000000000000000 (51%) at block 25884705. getMemberAt(0)=0xB3A533098485bede3Cb7fA8711AF84FE0bb1e0aD. Membership is invite-only by existing members (official oDAO docs). GMC 0x6efD08303F42EDb68F2D6464BCdCA0824e1C813a and IMC 0xb867EA3bBC909954d737019FEf5AB25dFDb38CB9 are documented management-committee wallets off the upgrade path (T4 grants/incentives). Current insider vs non-insider split of all 10 oDAO seats was not re-enumerated on-chain this run."
+        },
+        {
+          "code": "C5",
+          "text": "pDAO is on-chain (Houston) rather than GovernorBravo: any node with voting power may propose on 0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25. Settings at 0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81: getProposalQuorum=150000000000000000 (15%), getProposalVetoQuorum=200000000000000000 (20%), two 7-day vote phases after a 7-day delay. Voting power is staked RPL on node accounts (official node-staking docs). pDAO scope on the pinned RocketDAOProtocol 0xCaC25e88276A333cF9d4196d112D93af67ef809A is parameters and treasury, not implementation swaps."
+        },
+        {
+          "code": "C6",
+          "text": "Houston docs describe a pDAO-elected Security Council that can pause protocol functions quickly; official RPIP-71 / forum discussion state the council is designed not to pause rETH burns/withdrawals. Protocol-DAO guardian bootstrap is disabled on-chain (C1). This run did not locate a live mainnet Security Council membership count or Safe owners page, so emergency-actor identity and pause time cap are not fully pinned."
+        },
+        {
+          "code": "C7",
+          "text": "Highest tier on the uncontested upgrade path is T1: rocketDAONodeTrustedUpgrade.upgrade() / execute() can replace the implementation address of deposit-pool, minipool/megapool, network-balances, and other fund-routing contracts via RocketStorage. pDAO setting paths are T2 (deposit.enabled, fees with some RPIP guardrails, treasury spend). GMC/IMC are T4. T3 covers pDAO self-settings (quorum, vote times)."
+        }
+      ],
+      "steelman": {
+        "red": "A 10-member invite-only committee can replace implementations that hold or route user ETH, which is T1, and if the 7-day delay were treated as social rather than binding the path would be red.",
+        "orange": "T1 is reachable, but only after a measured 7-day on-chain vote delay and a 51% vote of 10 oDAO members — not an EOA or 2-of-3 — and that committee fails the Security Council bar (invite-only; current signer publicity/independence not fully verified).",
+        "green": "The 7-day delay plus on-chain oDAO vote and a separately token-weighted pDAO for parameters could be read as T1-with-exit-window through active governance."
+      },
+      "verdict": "Choosing orange because the binding T1 function is oDAO upgrade()/execute() on 0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10 after getVoteDelayTime=604800, which clears the no-timelock/EOA red bar but does not meet the green bar of broad token-weighted upgrade authority or a fully attested Security Council."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46&method=getGuardian",
+        "shows": "RocketStorage.getGuardian() returns 0x0cCF14983364A7735d369879603930Afe10df21e at block 25884704.",
+        "chain": "ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1&method=getBootstrapModeDisabled",
+        "shows": "rocketDAOProtocol bootstrap mode is disabled (true) at block 25884706.",
+        "chain": "ethereum",
+        "address": "0x0429Cdd8cEACe24d4dC2B97Ce22A780a407dF0e1",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&method=getMemberCount",
+        "shows": "oDAO member count is 10 at block 25884705.",
+        "chain": "ethereum",
+        "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&method=getMemberMinRequired",
+        "shows": "oDAO minimum required members is 3.",
+        "chain": "ethereum",
+        "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&method=getMemberQuorumVotesRequired",
+        "shows": "oDAO quorum raw value is 5100000000000000000 (51%).",
+        "chain": "ethereum",
+        "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&method=getBootstrapModeDisabled",
+        "shows": "oDAO bootstrap mode is disabled (true).",
+        "chain": "ethereum",
+        "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&method=getMemberAt&args=0",
+        "shows": "oDAO member index 0 is 0xB3A533098485bede3Cb7fA8711AF84FE0bb1e0aD.",
+        "chain": "ethereum",
+        "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+        "shows": "oDAO proposal settings: getVoteDelayTime=604800, getVoteTime=1209600, getExecuteTime=2419200, getActionTime=2419200, getCooldownTime=172800, version=1.",
+        "chain": "ethereum",
+        "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&method=getVoteDelayTime",
+        "shows": "pDAO getVoteDelayTime=604800 at block 25884704.",
+        "chain": "ethereum",
+        "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&method=getVotePhase1Time",
+        "shows": "pDAO getVotePhase1Time=604800.",
+        "chain": "ethereum",
+        "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&method=getVotePhase2Time",
+        "shows": "pDAO getVotePhase2Time=604800.",
+        "chain": "ethereum",
+        "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&method=getExecuteTime",
+        "shows": "pDAO getExecuteTime=2419200.",
+        "chain": "ethereum",
+        "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&method=getProposalQuorum",
+        "shows": "pDAO getProposalQuorum=150000000000000000 (15%).",
+        "chain": "ethereum",
+        "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81&method=getProposalVetoQuorum",
+        "shows": "pDAO getProposalVetoQuorum=200000000000000000 (20%).",
+        "chain": "ethereum",
+        "address": "0xf6ad771dfB1cd10c66F688E251b5E5c21cbfDF81",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+        "shows": "Upgrade executor ABI is verified and includes upgrade, execute, bootstrapUpgrade, and veto.",
+        "chain": "ethereum",
+        "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/odao/proposals",
+        "shows": "Official oDAO proposal docs: 7-day wait on Mainnet before voting; 51% quorum concludes the vote; any member can execute an approved proposal, including contract upgrades.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://rocketpool.net/governance/process",
+        "shows": "Official governance process: oDAO raises an on-chain upgrade proposal with a 7-day delay for review, then executes if oDAO consensus is reached.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/protocol/contracts-usage",
+        "shows": "Docs list rocketVault as internal and not upgradeable and rocketTokenRETH as not upgradeable; other network contracts are resolved from RocketStorage.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/protocol/contracts-integrations",
+        "shows": "Official deployed-address list including oDAO/pDAO contracts and GMC/IMC committee wallets on Mainnet.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/odao/overview",
+        "shows": "oDAO membership is invite-only; duties include proposing/voting on core protocol modifications and contract upgrades.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      }
+    ],
+    "unknowns": [
+      "C4: full 10-member address list and insider vs non-insider classification not completed this run beyond getMemberAt(0)",
+      "C6: live Security Council member set, threshold, and pause-duration cap not read on-chain this run",
+      "C1: actor_class of guardian 0x0cCF14983364A7735d369879603930Afe10df21e (EOA vs Safe) not confirmed via /api/safe/owners"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/rocket-pool/rocketpool", "https://github.com/rocket-pool/smartnode", "https://github.com/rocket-pool/RPIPs"],
+      "docs_url": "https://docs.rocketpool.net",
+      "audits": [
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-audit-saturn-1.pdf", "date": "2026-02"},
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf", "date": "2024-09"},
+        {"firm": "Trail of Bits", "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf", "date": "2021-09"},
+        {"firm": "ConsenSys Diligence", "url": "https://consensys.net/diligence/audits/2021/04/rocketpool", "date": "2021-04"}
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {"chain": "Ethereum", "address": "0xD33526068D116cE69F19A9ee46F0bd304F21A51f", "symbol": "RPL"},
+      "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "role": "RocketStorage immutable registry / upgrade indirection root", "actor_class": "unknown"},
+        {"chain": "Ethereum", "address": "0x0cCF14983364A7735d369879603930Afe10df21e", "role": "RocketStorage guardian (bootstrap disabled)", "actor_class": "unknown"},
+        {"chain": "Ethereum", "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9", "role": "oDAO committee (10 members, 51% quorum) — contract upgrades", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10", "role": "oDAO registry-upgrade executor", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0xb0ec3F657ef43A615aB480FA8D5A53BF2c2f05d5", "role": "oDAO proposal entrypoint", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x2D627A50Dc1C4EDa73E42858E8460b0eCF300b25", "role": "pDAO proposal engine (parameters/treasury)", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0xCaC25e88276A333cF9d4196d112D93af67ef809A", "role": "RocketDAOProtocol pDAO core", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x6efD08303F42EDb68F2D6464BCdCA0824e1C813a", "role": "GMC grants committee wallet", "actor_class": "multisig"},
+        {"chain": "Ethereum", "address": "0xb867EA3bBC909954d737019FEf5AB25dFDb38CB9", "role": "IMC incentives committee wallet", "actor_class": "multisig"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Rocket Pool lets users deposit ETH into a shared staking pool and receive rETH, a value-accruing liquid staking token, or run permissionless node operators that bond ETH (and optionally RPL) to operate validators. Matching ETH from the deposit pool is assigned to minipools or Saturn megapools; rETH can be burned back to ETH when the deposit pool has collateral, or sold on DEXes. Protocol parameters are set by a staked-RPL pDAO; contract-address upgrades are executed by the invite-only Oracle DAO."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-08-31T12:37:29.910Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-09-01",
+    "model": "Grok 4.6",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_4101df1e-eb3a-41fe-b2f8-15ac420e9264",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "rETH.burn and node-operator beacon exits are permissionless; no pause() on rETH, and protocol-rate liquidity—not an admin gate—is the binding constraint.",
+    "short_headline": "Permissionless burn, no pause",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Liquid-staker exits: RocketTokenRETH.burn(uint256) on 0xae78736Cd615f374D3085123A210448E74Fc6393; deposit-pool recycle paths feed that collateral. Node-operator exits: beacon voluntary exit then minipool close / megapool withdrawal as documented in node-staking withdraw docs; RPL unstake via rocketpool node withdraw-rpl after a 28-day lock from last stake. Secondary-market exit via Uniswap/Balancer/CowSwap is documented as the fallback when the deposit pool lacks ETH."
+        },
+        {
+          "code": "E2",
+          "text": "rETH ABI contains burn, transfer, approve and no paused/whenNotPaused/onlyRole modifiers on those functions. rocketDepositPool (current listed 0xCE15294273CFb9D9b628F4D61636623decDF4fdC and Atlas 0xDD3f50F8A6CafbE9b31a427582963f465E745AF8) expose deposit() and various recycle/withdraw-excess methods but no pause(). Deposit intake is separately gated by pDAO setting deposit.enabled (currently true on 0x227BE8dD01DF8ad9BED0178e4F8cEC2996C5c365)."
+        },
+        {
+          "code": "E3",
+          "text": "No PAUSE_ROLE / paused() method exists on the verified rETH or deposit-pool ABIs inspected. pDAO can flip deposit.enabled (blocks new ETH→rETH, not burns). getDepositEnabled()=true at block 25884713."
+        },
+        {
+          "code": "E4",
+          "text": "Houston Security Council is documented as a fast pause for deposits / intra-protocol movement, not for rETH burns. RPIP-71 text fetched this run states the protocol so far avoids pausing rETH burns and validator-balance distribution. Guardian bootstrap that historically could pause-like settings is disabled on-chain."
+        },
+        {
+          "code": "E5",
+          "text": "Protocol-rate rETH→ETH requires ETH in the rETH/deposit-pool collateral. getTotalCollateral() on rETH returned 34225702442 wei at block 25884717 — de minimis instant inventory. Official liquid-staking docs say that if the pool cannot cover a burn, users should sell rETH on a DEX. No documented numeric maximum wait for protocol-rate liquidity; Ethereum validator-exit queue is the underlying refill source."
+        },
+        {
+          "code": "E6",
+          "text": "No special admin-signed escape hatch is required. Holders can transfer or sell rETH on any DEX without protocol cooperation. Node operators exit via the beacon-chain voluntary-exit primitive, which is substrate, then call protocol close/distribute functions."
+        },
+        {
+          "code": "E7",
+          "text": "burn() is on the verified rETH contract and callable from Etherscan write / any wallet. Node operators use the published Smartnode CLI (github.com/rocket-pool/smartnode). Official UI at stake.rocketpool.net is not required."
+        }
+      ],
+      "steelman": {
+        "red": "If an actor could pause rETH.burn indefinitely, or if exit required an admin signature, the slice would be red — but no such function was present on the verified rETH ABI.",
+        "orange": "Protocol-rate burns depend on deposit-pool collateral that is currently near-zero and on validator exits that can exceed 7 days, so users are often pushed to DEX liquidity rather than a guaranteed 7-day protocol queue.",
+        "green": "Exit functions are permissionless, rETH has no pause guard, claims of a burn are not admin-gated, and independent on-chain/DEX/CLI paths exist."
+      },
+      "verdict": "Choosing green because E1–E3 show permissionless burn() with no pause() on 0xae78736Cd615f374D3085123A210448E74Fc6393, E4–E6 show that liquidity and beacon-exit timing are not an admin claim-freeze, and E7 confirms frontend independence; the empty collateral buffer is a UX constraint, not a pause."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xae78736cd615f374d3085123a210448e74fc6393",
+        "shows": "Verified RocketTokenRETH ABI includes burn and mint; no pause or owner methods.",
+        "chain": "ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xae78736cd615f374d3085123a210448e74fc6393",
+        "shows": "Etherscan: RocketTokenRETH verified, not a proxy, compiler v0.7.6, burn(uint256) present.",
+        "chain": "ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xCE15294273CFb9D9b628F4D61636623decDF4fdC",
+        "shows": "Current listed RocketDepositPool ABI includes deposit, withdrawCredit, recycle* and no pause.",
+        "chain": "ethereum",
+        "address": "0xCE15294273CFb9D9b628F4D61636623decDF4fdC",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x227BE8dD01DF8ad9BED0178e4F8cEC2996C5c365&method=getDepositEnabled",
+        "shows": "getDepositEnabled() is true at block 25884713.",
+        "chain": "ethereum",
+        "address": "0x227BE8dD01DF8ad9BED0178e4F8cEC2996C5c365",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xae78736cd615f374d3085123a210448e74fc6393&method=getTotalCollateral",
+        "shows": "rETH getTotalCollateral()=34225702442 wei at block 25884717 (near-zero instant protocol inventory).",
+        "chain": "ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/liquid-staking/overview",
+        "shows": "Protocol burn only works when the staking pool has ETH; otherwise users are told to trade rETH on a DEX such as Uniswap.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/liquid-staking/via-rp",
+        "shows": "Official unstaking UI documents Protocol route vs CoW Swap route; protocol unstake disabled when liquidity is insufficient.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/node-staking/withdraw",
+        "shows": "Node-operator exit is voluntary beacon exit, wait for EL withdrawal, then close minipool; RPL withdraw has a 28-day lock after staking.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://rpips.rocketpool.net/RPIPs/RPIP-71",
+        "shows": "RPIP-71 states the protocol avoids pausing rETH burns and distribution of validator balances.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      }
+    ],
+    "unknowns": [
+      "E3: Security Council pause selectors and any on-chain max pause duration were not read from a live SC contract this run",
+      "E5: no documented numeric maximum wait for protocol-rate rETH liquidity; beacon exit-queue length not measured this run"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/rocket-pool/rocketpool", "https://github.com/rocket-pool/smartnode", "https://github.com/rocket-pool/RPIPs"],
+      "docs_url": "https://docs.rocketpool.net",
+      "audits": [
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-audit-saturn-1.pdf", "date": "2026-02"},
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf", "date": "2024-09"}
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {"chain": "Ethereum", "address": "0xD33526068D116cE69F19A9ee46F0bd304F21A51f", "symbol": "RPL"},
+      "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9", "role": "oDAO committee", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x227BE8dD01DF8ad9BED0178e4F8cEC2996C5c365", "role": "pDAO deposit settings (deposit.enabled)", "actor_class": "governance"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Rocket Pool lets users deposit ETH into a shared staking pool and receive rETH, or run permissionless node operators that bond ETH to operate validators. rETH is burned back to ETH when the deposit pool holds collateral, or sold on DEXes."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-08-31T12:37:29.910Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-09-01",
+    "model": "Grok 4.6",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_4101df1e-eb3a-41fe-b2f8-15ac420e9264",
+    "grading_basis": "mixed",
+    "grade": "orange",
+    "headline": "A 10-member oDAO must report beacon balances that set the rETH rate; ~100% of liquid-staking TVS reprices if that committee mis-reports.",
+    "short_headline": "oDAO balance oracle is material",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Core external calls/trusts: Ethereum Deposit Contract / beacon state (substrate, excluded); rocketNetworkBalances 0x1D9F14C6Bfd8358b589964baD8665AdD248E9473 submitBalances/executeUpdateBalances written by oDAO watchtowers, which feeds rETH getExchangeRate; rocketNetworkPrices for RPL price/effective stake; no Chainlink/Pyth latestAnswer on the inspected rETH or deposit-pool ABIs. Downstream Aave/Compound rETH oracles are out of scope."
+        },
+        {
+          "code": "A2",
+          "text": "oDAO is a 10-member invite-only reporter set (getMemberCount=10, getNodeConsensusThreshold=510000000000000000 / 51%, getSubmitBalancesEnabled=true). Duties include submitting network balances, RPL prices, minipool scrub checks, and rewards Merkle trees to IPFS. Coordinated mis-reporting of _totalEth/_rethSupply can move the rETH exchange rate. Permissionless node operators number in the thousands per official materials and are bonded; that operator set is treated as diversified substrate-plus-bond, not a 3-operator LST. oDAO itself is the material committee."
+        },
+        {
+          "code": "A3",
+          "text": "Core user flow (ETH↔rETH on Ethereum mainnet) does not require a bridge. Official token list shows rETH representations on Arbitrum, Optimism, Base, etc.; those are wrapped assets for holders who opt into a foreign chain and were not measured as a material share of protocol TVS this run."
+        },
+        {
+          "code": "A4",
+          "text": "rETH is a first-level receipt over Ethereum validators plus node-operator bonds. There is no restaking/LRT nesting in the core contracts inspected. RockSolid rETH Vault is a separate strategy wrapper advertised on the marketing site; its TVS share was not measured and is treated as an opt-in satellite."
+        },
+        {
+          "code": "A6",
+          "text": "LIVE: oDAO 51% consensus threshold on balance submissions (getNodeConsensusThreshold read on-chain); node-operator ETH+RPL bonds absorb some validator failure before rETH holders. getMaxRethDelta exists on network settings (sanity bound) but its live value was not read this run. No second-opinion oracle was observed. Fallback status of max-reth-delta therefore not counted as proven mitigation."
+        },
+        {
+          "code": "A7",
+          "text": "Protocol is an L1 Ethereum application, not an app-rollup; no protocol-owned sequencer."
+        },
+        {
+          "code": "A8",
+          "text": "oDAO watchtowers must submit balances/prices/rewards; if they stop, exchange-rate updates and rewards distribution stall (performance/yield), they do not seize keys. Assignment of deposit-pool ETH to validators can be keeper-assisted (maybeAssignDeposits is permissionless on the deposit-pool ABI). Node software is operator-run."
+        },
+        {
+          "code": "A9",
+          "text": "oDAO upgrade() can point RocketStorage keys at new network-balances or price contracts, i.e. it can change the reporter surface, but only via the control-slice upgrade path with a 7-day delay — not a silent no-timelock oracle swap parameter on rETH itself. pDAO can toggle getSubmitBalancesEnabled. That mutability is gated by the same DAO delays, not an instant admin key."
+        }
+      ],
+      "steelman": {
+        "red": "If 6 of 10 oDAO members publish a false totalEth/rethSupply pair they can dilute rETH principal, which is a committee oracle with protocol-wide blast radius and no second feed.",
+        "orange": "The same committee needs 51% consensus, members are publicly known infrastructure operators, bonds exist, and failure of permissionless node operators is diversified — so the realistic loss mode is mis-pricing / stalled updates rather than unilateral theft.",
+        "green": "If oDAO reports were treated as unforgeable mirrors of beacon state with no additional trust, autonomy would be green; they are not."
+      },
+      "verdict": "Choosing orange because A2/A1 show a live 10-member balance oracle that can reprice ~100% of rETH TVS, which is Stage-1 rather than Stage-0 (no single EOA feed, 51% threshold LIVE) or Stage-2 (the dependency is still material). Module weighting: core liquid-staking/rETH + node-operator minipool/megapool set holds ~100% of tracked protocol TVS (~$1.3b DeFiLlama / ~318k rETH); RockSolid vault TVS share unknown and not allowed to move the grade."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x1D9F14C6Bfd8358b589964baD8665AdD248E9473",
+        "shows": "rocketNetworkBalances ABI exposes submitBalances and executeUpdateBalances of totalEth, stakingEth, rethSupply.",
+        "chain": "ethereum",
+        "address": "0x1D9F14C6Bfd8358b589964baD8665AdD248E9473",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x67Fd03a5095197D1aD1F932BC55E022C420b1153&method=getNodeConsensusThreshold",
+        "shows": "getNodeConsensusThreshold=510000000000000000 (51%) at block 25884712.",
+        "chain": "ethereum",
+        "address": "0x67Fd03a5095197D1aD1F932BC55E022C420b1153",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x67Fd03a5095197D1aD1F932BC55E022C420b1153&method=getSubmitBalancesEnabled",
+        "shows": "getSubmitBalancesEnabled=true.",
+        "chain": "ethereum",
+        "address": "0x67Fd03a5095197D1aD1F932BC55E022C420b1153",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9&method=getMemberCount",
+        "shows": "oDAO has 10 members.",
+        "chain": "ethereum",
+        "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/odao/overview",
+        "shows": "oDAO watchtowers relay beacon information that contracts cannot read; membership is invite-only.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0xae78736cd615f374d3085123a210448e74fc6393&method=totalSupply",
+        "shows": "rETH totalSupply ≈ 317859.17 rETH at block 25884712.",
+        "chain": "ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defillama.com/protocol/rocket-pool",
+        "shows": "DeFiLlama TVL $1.304b, category Liquid Staking, chain Ethereum, forkedFrom empty.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/protocol/contracts-integrations",
+        "shows": "Official list of network-balances, network-prices, and multi-chain rETH token addresses.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      }
+    ],
+    "unknowns": [
+      "A1: live getMaxRethDelta value not read this run",
+      "A3: TVS share of bridged/wrapped rETH on L2s not measured",
+      "A4: RockSolid vault TVS share and its extra dependencies not inspected",
+      "A6: whether getMaxRethDelta is LIVE-enforcing on current balances submissions not confirmed beyond ABI presence"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/rocket-pool/rocketpool"],
+      "docs_url": "https://docs.rocketpool.net",
+      "audits": [
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-audit-saturn-1.pdf", "date": "2026-02"}
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {"chain": "Ethereum", "address": "0xD33526068D116cE69F19A9ee46F0bd304F21A51f", "symbol": "RPL"},
+      "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9", "role": "oDAO reporter + upgrade committee", "actor_class": "governance"},
+        {"chain": "Ethereum", "address": "0x1D9F14C6Bfd8358b589964baD8665AdD248E9473", "role": "rocketNetworkBalances (oDAO-reported)", "actor_class": "governance"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Rocket Pool is a decentralised Ethereum liquid staking protocol. Users mint rETH against pooled ETH that is matched with bonded node operators; the rETH/ETH rate is updated from oDAO-submitted network balances."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-08-31T12:37:29.910Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-09-01",
+    "model": "Grok 4.6",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_4101df1e-eb3a-41fe-b2f8-15ac420e9264",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Contracts admit any address to deposit, burn, transfer rETH, or register as a node; official ToS is frontend-only and independent CLI/DEX paths exist.",
+    "short_headline": "Permissionless contracts plus DEX/CLI",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "Inspected user-facing ABIs (RocketTokenRETH, RocketDepositPool) have no onlyWhitelisted / isKYCed / allowlist modifiers. deposit() and burn() are public aside from value/liquidity checks and the pDAO deposit.enabled flag, which is a protocol switch rather than a per-address whitelist. oDAO membership is invite-only but that is an operator-committee role, not admission to stake or hold rETH."
+        },
+        {
+          "code": "A2",
+          "text": "Deposit and burn do not require an off-chain operator signature to be admitted. oDAO submissions affect rate updates and rewards (liveness/autonomy), not admission of a user's deposit or transfer. Node registration is documented as permissionless for anyone who posts the bond."
+        },
+        {
+          "code": "A3",
+          "text": "A3-passive: Rocket Pool Terms of Use (rocketpool.net/files/terms-of-service.pdf) apply to the Site operated by Rocket Pool Pty, require age of majority (at least 18), require compliance with applicable law including AML/CTF, and state 'We reserve the right to limit the availability of the site to any person, geographic area or jurisdiction we so desire'. A3-active runtime geo-blocking or wallet screening on stake.rocketpool.net was not observed in the fetched pages."
+        },
+        {
+          "code": "A3b",
+          "text": "Independent paths: published Smartnode CLI (github.com/rocket-pool/smartnode); direct contract calls via Etherscan; DEX routing on Uniswap, Balancer, Curve, CowSwap listed on the official integrations page; lending markets (Aave) hold rETH. These are separate from the official stake.rocketpool.net UI."
+        },
+        {
+          "code": "A4",
+          "text": "No on-chain OFAC/sanctions blocklist function appears in the rETH or deposit-pool ABIs inspected."
+        },
+        {
+          "code": "A5",
+          "text": "Read access is fully public (view methods, Etherscan). Write access for stake/unstake/transfer is address-permissionless; write access for oDAO reporting is member-gated."
+        },
+        {
+          "code": "A6",
+          "text": "Verbatim from the fetched Terms of Use: 'We reserve the right to limit the availability of the site to any person, geographic area or jurisdiction we so desire and/or to terminate your access to and use of the site, at any time and in our sole discretion.' And: 'you are at least 18 years old or the age of majority where you reside, whichever is older'. And: 'You will comply with all applicable domestic and international laws... including, without limitation, any relevant and applicable anti-money laundering and anti-terrorist financing laws'. The Terms explicitly bind the Site, described as a front-end to the decentralised protocol."
+        }
+      ],
+      "steelman": {
+        "red": "Red would require a contract-level whitelist or a single operator who must approve deposits; neither is present on rETH or the deposit pool.",
+        "orange": "Orange would apply if the only practical path were the official UI; the published CLI and multiple DEX/lending integrations contradict operational capture.",
+        "green": "Contracts are admission-permissionless and at least one independent A3b path exists, so frontend ToS cannot move the grade off green."
+      },
+      "verdict": "Choosing green because A1/A2/A4 show no contract whitelist or on-chain blocklist for user entry/exit and A3b documents CLI plus Uniswap/Balancer/CowSwap/Aave routes that do not need the publisher."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xae78736cd615f374d3085123a210448e74fc6393",
+        "shows": "rETH ABI: public burn/transfer/approve; no whitelist methods.",
+        "chain": "ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0xCE15294273CFb9D9b628F4D61636623decDF4fdC",
+        "shows": "Deposit pool ABI exposes public deposit() without allowlist methods.",
+        "chain": "ethereum",
+        "address": "0xCE15294273CFb9D9b628F4D61636623decDF4fdC",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/protocol/contracts-integrations",
+        "shows": "Official integrations table lists Uniswap, Balancer, Curve, CowSwap, 1inch, Aave and others for rETH.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://docs.rocketpool.net/liquid-staking/overview",
+        "shows": "Docs state you do not need to get rETH from Rocket Pool directly; holding rETH from any source accrues staking yield.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://github.com/rocket-pool/smartnode",
+        "shows": "Public Smartnode CLI repository for direct node and protocol interaction.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://rocketpool.net/files/terms-of-service.pdf",
+        "shows": "Terms of Use for the Site (Rocket Pool Pty): age 18+/majority, AML/CTF compliance, and reserved right to limit site availability by person or jurisdiction.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://rocketpool.net/",
+        "shows": "Official site describes permissionless liquid staking from 0.01 ETH and links stake.rocketpool.net; no KYC banner in the fetched homepage content.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      }
+    ],
+    "unknowns": [
+      "A3: runtime IP geo-block or wallet-screening behavior of stake.rocketpool.net not instrumented this run",
+      "A6: full OFAC country list is not present as a verbatim clause in the extracted ToS pages; only AML/jurisdiction-limitation language was quoted"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/rocket-pool/rocketpool", "https://github.com/rocket-pool/smartnode"],
+      "docs_url": "https://docs.rocketpool.net",
+      "audits": [],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {"chain": "Ethereum", "address": "0xD33526068D116cE69F19A9ee46F0bd304F21A51f", "symbol": "RPL"},
+      "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [],
+      "upgradeability": "mixed",
+      "about": "Anyone can mint or buy rETH or run a bonded node without protocol KYC. The official website ToS governs the publisher frontend only."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "rocket-pool",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-08-31T12:37:29.910Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-09-01",
+    "model": "Grok 4.6",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_4101df1e-eb3a-41fe-b2f8-15ac420e9264",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Core contracts are Etherscan-verified with a public rocket-pool/rocketpool repo and a recognized-firm Saturn 1 audit from February 2026.",
+    "short_headline": "Verified code, recent Sigma Prime",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "defipunkd /api/contract/abi reports verified=true, abiSource=etherscan, implementation=null for RocketStorage, rETH, oDAO, pDAO proposal engine, deposit-pool addresses, network settings, and the upgrade executor. Etherscan pages for RocketStorage and rETH show 'Contract Source Code Verified', compiler v0.7.6, not proxies."
+        },
+        {
+          "code": "V2",
+          "text": "Canonical Solidity repo is https://github.com/rocket-pool/rocketpool (master HEAD sha fef41a4f7cf99d7d66313c0ba04deb8ba2dabf88 dated 2026-04-17, message 'Merge branch master into master-merge-v1.4'). File layout (contracts/contract/...) matches explorer-visible names (RocketStorage, RocketTokenRETH, RocketDAOProtocolSettingsDeposit). No independent bytecode diff was run this run."
+        },
+        {
+          "code": "V3",
+          "text": "Pinned plus fetched audits: Trail of Bits 2021-09, ConsenSys Diligence 2021-04, Sigma Prime Houston hotfix 2024-09 (commit 6f07f2a), Sigma Prime Saturn 1 2026-02. Immunefi listing also names Cantina 2025-12 and Bailsec 2026-01 Saturn 1 reports on rocketpool.net/files/audits/. Saturn 1 is within 6 months of analysis_date 2026-09-01."
+        },
+        {
+          "code": "V4",
+          "text": "Recognized firms covering current-era code: Sigma Prime (Saturn 1 and Houston) and historically ConsenSys Diligence and Trail of Bits. Cantina and Bailsec Saturn reports exist but those firms are outside the rubric recognition list, so they are corroboration only."
+        },
+        {
+          "code": "V5",
+          "text": "Forum post 'Verifying 1.4 contract upgrade' discusses post-audit deltas between audit commits and tagged v1.4. This run did not sample that diff for material accounting/access-control changes, so drift is recorded as an unknown rather than a downgrade."
+        },
+        {
+          "code": "V6",
+          "text": "Inspected addresses report proxy.implementation=null; rETH and RocketStorage are verified as standalone contracts. Storage-pointer upgrades replace whole contract addresses rather than ERC1967 implementations; each replacement is a separately verified contract in the official address list."
+        }
+      ],
+      "steelman": {
+        "red": "Red would require unverified bytecode or no public repo or no audits; none of those hold.",
+        "orange": "Orange would fit if Saturn 1 had only unknown-firm audits or if material unaudited drift were demonstrated; Sigma Prime reviewed Saturn 1 in February 2026 and drift content was not sampled.",
+        "green": "Verified explorer sources, a matching public repo, and a recognized-firm audit of the current major release satisfy the green bar even without a local compile-match."
+      },
+      "verdict": "Choosing green because V1/V6 show verified non-proxy bytecode on the core addresses, V2 shows a public repo whose HEAD was fetched, and V3/V4 show a Sigma Prime Saturn 1 report dated February 2026 covering the current generation of contracts."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/api/contract/abi?chainId=1&address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "shows": "RocketStorage verified=true, abiSource=etherscan, proxy.implementation=null.",
+        "chain": "ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0x1d8f8f00cfa6758d7be78336684788fb0ee0fa46",
+        "shows": "Etherscan Contract Source Code Verified for RocketStorage, compiler v0.7.6, audits listed (Sigma Prime, Consensys, Trail of Bits 2021).",
+        "chain": "ethereum",
+        "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://etherscan.io/address/0xae78736cd615f374d3085123a210448e74fc6393",
+        "shows": "Etherscan verified RocketTokenRETH, not a proxy, compiler v0.7.6.",
+        "chain": "ethereum",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://api.github.com/repos/rocket-pool/rocketpool/commits/master",
+        "shows": "master HEAD sha fef41a4f7cf99d7d66313c0ba04deb8ba2dabf88 at 2026-04-17T02:35:15Z.",
+        "commit": "fef41a4f7cf99d7d66313c0ba04deb8ba2dabf88",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://github.com/rocket-pool/rocketpool",
+        "shows": "Public GPL-3.0 Solidity repo for the protocol contracts.",
+        "commit": "fef41a4f7cf99d7d66313c0ba04deb8ba2dabf88",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://rocketpool.net/files/audits/sigma-prime-audit-saturn-1.pdf",
+        "shows": "Sigma Prime Saturn 1 review: 1 high / 4 medium findings; scope is rocket-pool/rocketpool Saturn 1 contracts.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf",
+        "shows": "Sigma Prime Houston hotfix review, September 2024, assessed at commit 6f07f2a.",
+        "commit": "6f07f2a",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      },
+      {
+        "url": "https://immunefi.com/bounty/rocketpool/information/",
+        "shows": "Immunefi bounty max $150,000 and a dated audit catalogue including Sigma Prime Saturn 1 (5 Feb 2026), Bailsec and Cantina Saturn 1, Houston, Atlas, Redstone.",
+        "fetched_at": "2026-09-01T20:05:00Z"
+      }
+    ],
+    "unknowns": [
+      "V2: no local compile or bytecode-match against fef41a4f7cf99d7d66313c0ba04deb8ba2dabf88",
+      "V5: material vs non-material content of post-Saturn-audit git delta not sampled",
+      "V3: Cantina and Bailsec Saturn PDFs listed on Immunefi were not opened page-by-page this run beyond the catalogue"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/rocket-pool/rocketpool", "https://github.com/rocket-pool/smartnode", "https://github.com/rocket-pool/RPIPs"],
+      "docs_url": "https://docs.rocketpool.net",
+      "audits": [
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-audit-saturn-1.pdf", "date": "2026-02"},
+        {"firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-houston-hotfix-review.pdf", "date": "2024-09"},
+        {"firm": "Trail of Bits", "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf", "date": "2021-09"},
+        {"firm": "ConsenSys Diligence", "url": "https://consensys.net/diligence/audits/2021/04/rocketpool", "date": "2021-04"}
+      ],
+      "governance_forum": "https://dao.rocketpool.net",
+      "voting_token": {"chain": "Ethereum", "address": "0xD33526068D116cE69F19A9ee46F0bd304F21A51f", "symbol": "RPL"},
+      "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+      "security_contact": null,
+      "deployed_contracts_doc": "https://docs.rocketpool.net/protocol/contracts-integrations",
+      "admin_addresses": [
+        {"chain": "Ethereum", "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "role": "RocketStorage", "actor_class": "unknown"}
+      ],
+      "upgradeability": "mixed",
+      "about": "Rocket Pool is an Ethereum liquid staking protocol with publicly verified contracts in the rocket-pool/rocketpool repository and a multi-year audit series culminating in Sigma Prime's Saturn 1 review."
+    }
+  }
+]
