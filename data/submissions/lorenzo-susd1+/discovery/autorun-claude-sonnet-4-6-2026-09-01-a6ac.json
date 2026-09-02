@@ -1,0 +1,136 @@
+I'll start with Step 0 capability probes and then systematically work through the discovery checklist.Good, the website fetch succeeded. Now let me look for the docs/deployments page and do BNB/Ethereum explorer searches.I found the BANK token contract address from CoinGecko: `0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf`. Let me now fetch the Lorenzo docs for the deployed contracts page and the BscScan page for sUSD1+.Excellent! CoinGecko confirms BANK token contract on BNB Chain: `0x3aee7602b612de36088f3ffed8c8f10e86ebf2bf`. It also shows the docs at `https://docs.lorenzo-protocol.xyz/` and the BscScan explorer link. Now let me fetch the BscScan page for BANK token and the Lorenzo docs to find sUSD1+ contract address.The docs GitBook returned a minimal page. Let me try fetching the DeFiPunkd ABI endpoint for the BANK token to get on-chain data, and also try the BscScan search handler for Lorenzo.I've exhausted my fetch calls. Let me compile all the evidence I have gathered and produce the discovery JSON. Here's what I've found:
+
+**Evidence summary:**
+1. **Website** (`https://lorenzo-protocol.xyz/home`) — fetched successfully. Describes sUSD1+ as a yield-bearing token product with $80.79M issued, 7.22% APY, built on Lorenzo's OTF model. Docs and GitHub linked from footer.
+2. **CoinGecko** (`https://www.coingecko.com/en/coins/lorenzo-protocol`) — fetched successfully. Confirms:
+   - BANK token on BNB Chain: `0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF`
+   - BscScan explorer link: `https://bscscan.com/token/0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF`
+   - Docs URL: `https://docs.lorenzo-protocol.xyz/`
+   - GitHub hinted from website footer
+   - CertIK security score: 90.29%
+3. **Docs** (`https://docs.lorenzo-protocol.xyz/`) — fetched but returned a minimal GitBook page (noindex, nofollow), no addresses surfaced.
+4. **Search results** — Confirmed sUSD1+ is a BSC-deployed non-rebasing yield-bearing token; users deposit USDC/USDT/USD1 and receive sUSD1+. No specific sUSD1+ contract address appeared in search results (only BANK token address was found). BscScan fetch failed. GitHub URL not recorded (no specific repo URL appeared in searches). No audit PDFs found.
+
+**Key addresses found:**
+- BANK token (BNB Chain): `0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF` — from CoinGecko (confirmed)
+- sUSD1+ token contract: not surfaced in any fetch
+- Admin/owner/proxy addresses: not surfaced
+
+**D-code status:**
+- D1: BscScan fetch failed (BNB chain explorer); search returned only BANK token address
+- D2: Docs URL found (`https://docs.lorenzo-protocol.xyz/`) but GitBook returned minimal content — no deployed contracts page found
+- D3: No audit PDFs found (no `protocol.audit_links`; CertIK mentioned but no report URL with addresses)
+- D4: No GitHub repo URL found (website footer links "GitHub" but URL not surfaced)
+- D5: Ethereum chain — no addresses surfaced
+- D6: No factory addresses to enumerate
+- D7: One token address (BANK) catalogued with role "token"
+- D8: All addresses in admin_addresses[] trace to CoinGecko fetch
+
+```json
+{
+  "schema_version": 4,
+  "slug": "lorenzo-susd1+",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-08-31T12:37:29.910Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-09-01",
+  "model": "claude-opus-4-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "1 contract catalogued on BNB Chain (BANK governance token); sUSD1+ token contract, admin/proxy/owner addresses, and GitHub repo not surfaced this run.",
+  "short_headline": "1 contract found; sUSD1+ address unknown",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: BscScan direct fetch failed (network error); search results surfaced the BANK token contract address (0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF on BNB Chain) from CoinGecko. No sUSD1+ token address appeared. Ethereum chain (D5): zero addresses surfaced."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Docs URL https://docs.lorenzo-protocol.xyz/ was fetched but returned a minimal GitBook shell page (noindex, nofollow) with no deployed contract addresses. No '/deployments' or '/addresses' sub-page found."
+      },
+      {
+        "code": "D3",
+        "text": "D3: No audit PDFs listed in protocol.audit_links. CoinGecko page references a CertIK security score (90.29%) and links to a CertIK Skynet audit report, but that URL was not fetched this run. No in-scope contract addresses extracted."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub URL referenced in the website footer as a link labelled 'GitHub' but no canonical repo URL appeared in any fetched page body or search result snippet. GitHub repo not fetchable this run."
+      },
+      {
+        "code": "D5",
+        "text": "D5: Ethereum chain — zero addresses surfaced from any source fetched or searched this run. D5: BNB Chain — only BANK token address found. sUSD1+ contract not found on either chain."
+      },
+      {
+        "code": "D6",
+        "text": "D6: No factory addresses surfaced; cannot enumerate child pools/vaults."
+      },
+      {
+        "code": "D7",
+        "text": "D7: One address classified: BANK token (role: token, actor_class: unknown) on BNB Chain. All other roles (owner, proxy_admin, timelock, guardian, factory, vault) unknown."
+      },
+      {
+        "code": "D8",
+        "text": "D8: BANK token address traces to CoinGecko fetch (evidence index 0). sUSD1+ contract address was sighted in search snippet context but no specific 0x address appeared in any fetched body — not added to admin_addresses[]."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Website probe succeeded; CoinGecko fetch succeeded and yielded BANK token address on BNB Chain. Docs GitBook returned a minimal shell with no addresses. BscScan fetch failed. No GitHub repo URL, no audit PDFs, no sUSD1+ contract address, and no admin/owner/proxy/timelock addresses were surfaced. One address catalogued."
+  },
+  "evidence": [
+    {
+      "url": "https://lorenzo-protocol.xyz/home",
+      "shows": "Official website confirms sUSD1+ as a yield-bearing token product ($80.79M issued, 7.22% APY) built on BNB Chain via Lorenzo's OTF model. Footer links to Docs, GitHub, and Audits sections — no addresses shown.",
+      "fetched_at": "2026-09-01T00:00:00Z"
+    },
+    {
+      "url": "https://www.coingecko.com/en/coins/lorenzo-protocol",
+      "shows": "Confirms BANK governance/utility token contract address 0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF on BNB Chain; BscScan explorer link for BANK; docs URL https://docs.lorenzo-protocol.xyz/; CertIK security score 90.29%; TVL ~$554M; sUSD1+ product described.",
+      "chain": "BNB Chain",
+      "address": "0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF",
+      "fetched_at": "2026-09-01T00:00:00Z"
+    },
+    {
+      "url": "https://docs.lorenzo-protocol.xyz/",
+      "shows": "GitBook shell page returned (noindex, nofollow) — no contract addresses, no deployed contracts page found.",
+      "fetched_at": "2026-09-01T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: BscScan direct fetch for BANK token (https://bscscan.com/token/0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF) failed with network error — on-chain name-tag neighbors (proxy admin, owner, multisig) not retrieved",
+    "D1: sUSD1+ token contract address not surfaced from BscScan search or any fetched page on BNB Chain",
+    "D2: No deployed contracts documentation page found — docs.lorenzo-protocol.xyz returned a minimal GitBook shell with no address tables; deployed_contracts_doc cannot be set",
+    "D3: CertIK audit report URL (coingecko.certik-skynet.com/redirect?project=lorenzo-protocol) not fetched this run; in-scope contract addresses unknown",
+    "D4: GitHub repository URL not surfaced in any fetched page body or search snippet; cannot walk deployment artifacts",
+    "D5: Ethereum chain — zero addresses surfaced from any source; whether sUSD1+ or any Lorenzo contract is deployed on Ethereum unconfirmed",
+    "D6: No factory address surfaced; child vault/pool enumeration not possible",
+    "D7: Owner, proxy_admin, timelock, guardian, multisig roles all unknown — no admin addresses found",
+    "D8: sUSD1+ token contract address referenced in search context but no 0x address appeared in any fetched body — cannot add to admin_addresses[]"
+  ],
+  "protocol_metadata": {
+    "github": null,
+    "docs_url": "https://docs.lorenzo-protocol.xyz/",
+    "audits": null,
+    "governance_forum": null,
+    "voting_token": {
+      "chain": "BNB Chain",
+      "address": "0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF",
+      "symbol": "BANK"
+    },
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "BNB Chain",
+        "address": "0x3AeE7602b612de36088F3ffEd8c8f10E86EbF2bF",
+        "role": "token (governance/utility)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Lorenzo Protocol is an institutional-grade on-chain asset management platform that packages yield strategies into tokenized On-chain Traded Funds (OTFs). Users deposit stablecoins (USDC, USDT, USD1) to receive sUSD1+, a non-rebasing yield-bearing token whose price accrues value from quantitative trading, real-world assets, and DeFi strategies. The protocol automates NAV calculation, rebalancing, and settlement via smart contracts, and also offers BTC liquid staking products (stBTC, enzoBTC) and yield vaults. BANK is the governance and utility token used for voting, staking, and revenue sharing across the ecosystem."
+  }
+}
+```
