@@ -1,0 +1,223 @@
+{
+  "schema_version": 4,
+  "slug": "rocket-pool",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-08-10T07:25:25.117Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-08-20",
+  "model": "claude-opus-4-6",
+  "chat_url": "https://claude.ai/share/cf6b4ff5-ed3a-4476-944a-8e1f6adda5fd",
+  "grading_basis": "mixed",
+  "grade": "orange",
+  "headline": "No third-party oracle, bridge or wrapper dependencies anywhere in the contract set; the only external-reporting risk is the 10-member oDAO that sets rETH's exchange rate, rate-limited on-chain to a per-update rETH-ratio delta cap (~1-2% of ~374.5k ETH rETH TVS per update window) with rETH and the vault permanently non-upgradeable.",
+  "short_headline": "oDAO rate oracle, capped per update",
+  "rationale": {
+    "findings": [
+      {
+        "code": "A1",
+        "text": "No external price-feed or AMM dependency exists in the production contract set. A case-insensitive grep across contracts/contract and contracts/interface at tag v1.4 (commit fb7d9c42) for chainlink, uniswap, pyth, redstone, latestAnswer, latestRoundData and aggregator returned zero matches, as did a grep for hardcoded `address constant/immutable = 0x...` externals (derived from repo inspection at the pinned SHA). The only Uniswap reference in the tree is contracts/thirdparty/UniswapOracleMock, a test mock. RPL's price is not read from an on-chain venue: RocketNetworkPrices.getRPLPrice() returns a value pushed into RocketNetworkSnapshots by oDAO submitPrices consensus, not by calling an external pool."
+      },
+      {
+        "code": "A1",
+        "text": "The one genuinely external contract read is the EIP-4788 beacon-block-roots predeploy, staticcalled by BeaconStateVerifier (contracts/contract/util/BeaconStateVerifier.sol line 125, address supplied as a constructor immutable documented in-source as 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02). This is an Ethereum protocol predeploy and therefore substrate under this slice's guardrail, not a third-party dependency. Note as a maintenance consequence (derived): the verifier also hardcodes fork slots as constructor parameters, so a beacon-chain hard fork requires a governance-driven contract replacement rather than a parameter change."
+      },
+      {
+        "code": "A2",
+        "text": "The Oracle DAO is the sole reporter of the values that price rETH. Deployed RocketDAONodeTrusted at 0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9 reads getMemberCount()=10, getMemberQuorumVotesRequired()=5100000000000000000 (51%), getMemberMinRequired()=3, getBootstrapModeDisabled()=true at block 25778186. RocketNetworkBalances.submitBalances is gated `onlyTrustedNode` and applies the update once calcBase*submissionCount/getMemberCount() >= getNodeConsensusThreshold(), i.e. 6 of 10 members at the source default of 51% (derived from the threshold arithmetic at commit fb7d9c42 line 109). The same 6-of-10 path drives RocketNetworkPrices.submitPrices (RPL price, which sets node RPL collateral ratios) and RocketRewardsPool.submitRewardSnapshot (the Merkle allocation of each rewards interval). Mis-reporting on submitBalances changes rETH's mint and burn exchange rate directly; mis-reporting on submitRewardSnapshot misallocates one interval of unclaimed yield, bounded by `require(totalRewardsRPL <= getPendingRPLRewards())` and `require(totalRewardsETH <= smoothingPoolBalance + getPendingVoterShare())`."
+      },
+      {
+        "code": "A2",
+        "text": "Node-operator and validator risk falls on the mitigated path described in this slice: Rocket Pool's operator set is permissionless and bonded (operators post ETH plus RPL and run their own validators), so it is not a small curated committee. Separately, oDAO members post an RPL bond (getMemberRPLBondAmount is on the deployed committee ABI) and are removable by pDAO proposal and by on-chain challenge (actionChallengeMake/actionChallengeDecide in RocketDAONodeTrustedActions at commit fb7d9c42). The oDAO's coercive powers over operators are separately capped: minipool scrub penalty is a fixed 2.4 ETH constant, and megapool MEV-theft penalties require a per-penalty maximum (getMaximumEthPenalty) plus a rolling 7-day running-total cap. These reduce a node's own bond, not rETH holders' principal."
+      },
+      {
+        "code": "A3",
+        "text": "No bridge or cross-chain messaging dependency exists in the L1 contract set: the v1.4 tree contains no bridge, endpoint, adapter or messaging contract, and no non-Ethereum chain is in the pinned protocol.chains. rETH representations exist on L2s (an OP Mainnet rETH address surfaced in search), but nothing in the L1 protocol calls or trusts them, and no user flow of the L1 protocol routes through a bridge. Materiality of L2 rETH TVL was not verified this run and is logged in unknowns."
+      },
+      {
+        "code": "A4",
+        "text": "The collateral chain is depth-1 and involves no third-party receipt token. rETH is backed by ETH staked directly on Ethereum's beacon chain; RocketTokenRETH at 0xae78736Cd615f374D3085123A210448E74Fc6393 reports getExchangeRate()=1169905281654818538 and totalSupply()=320132918084868744550713 at block 25793869 (~374,500 ETH of rETH-backed value, derived). The protocol wraps no LST, LRT, ERC-4626 vault or lending receipt, so there is no nested-collateral propagation path. Note that getCollateralRate()=0 and getTotalCollateral()=1 wei at that block: the rETH contract itself holds effectively no standing ETH buffer, so instant burns draw on deposit-pool liquidity (an ability-to-exit concern, recorded here only because it bounds how much a mispriced rate could actually extract)."
+      },
+      {
+        "code": "A5",
+        "text": "Fork lineage not established: DeFiLlama's forkedFrom field was not fetched this run, and the repo README/tree gave no fork indication. Logged in unknowns rather than asserted either way."
+      },
+      {
+        "code": "A6",
+        "text": "Two on-chain guardrails constrain the A2 balance-submission risk, and both are assessed LIVE (derived, see below). RocketNetworkBalances._updateBalances at commit fb7d9c42 enforces (i) a minimum interval, `minimumTimestamp = lastTimestamp + (frequency * 95 / 100)` with revert 'Not enough time has passed' (line 140-141), and (ii) an RPIP-61 per-update cap on the rETH ratio, `maxChange = currentRatio * getMaxRethDelta() / calcBase` with revert 'Change exceeds maximum' (lines 150-156). The source default is `network.max.reth.balance.delta` = 0.02 ether (2%) with `network.submit.balances.frequency` = 1 days, and the pDAO setter enforces a floor of 1% and a frequency band of 1 hour to 7 days. Activation basis (derived, not a direct read): the deployed RocketDAONodeTrustedUpgrade at 0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10 returns version()=2 at block 25793884 with a veto/getVetoed/getEnd ABI; at tag v1.3.1 that contract is version 1 and RocketNetworkBalances is version 3 with no getMaxRethDelta reference, whereas at tag v1.4 it is version 2 alongside RocketNetworkBalances version 4 carrying the cap. Since Rocket Pool registers an upgrade set atomically through this contract, the deployed set is v1.4. The current on-chain parameter values were not read and are logged in unknowns; the setter floor means the cap is at least 1% regardless, but the setter imposes no ceiling."
+      },
+      {
+        "code": "A6",
+        "text": "Additional LIVE fallbacks: the security council can flip `network.submit.balances.enabled`, `network.submit.prices.enabled` and `network.submit.rewards.enabled` (allow-list set in RocketDAOProtocolSettingsSecurity at commit fb7d9c42), which halts a misbehaving oracle rather than correcting it; and rETH's backing accounting cannot be relocated, because RocketDAONodeTrustedUpgrade._upgradeContract hard-reverts on rocketVault, rocketTokenRETH, rocketTokenRPL, rocketTokenRPLFixedSupply, casperDeposit and rocketMinipoolPenalty (lines 116-121). Unmitigated residue: nothing corrects an already-accepted bad balance submission other than a subsequent submission, itself subject to the same per-update cap."
+      },
+      {
+        "code": "A7",
+        "text": "Not applicable. Rocket Pool is deployed on Ethereum L1 and is not its own L2/L3 appchain; there is no protocol-operated sequencer or DA layer. Ethereum liveness is substrate under this slice's guardrail."
+      },
+      {
+        "code": "A8",
+        "text": "Off-chain actor liveness is required for yield accrual but not for principal safety. If oDAO daemons stop submitting, rETH's exchange rate freezes at its last value (getExchangeRate reads stored balances only) and rewards intervals stop being finalised — a graceful degradation, since no position becomes liquidatable and no debt accrues. Deposit assignment is permissionless (RocketDepositPool.assignDeposits / maybeAssignDeposits are callable by any caller through the latest contract path at commit fb7d9c42), and megapool validator state is proven permissionlessly against EIP-4788 roots rather than by a privileged relayer. There is no liquidation-bot dependency anywhere in the contract set."
+      },
+      {
+        "code": "A9",
+        "text": "Governance cannot silently swap an external dependency, because there is no external dependency address to swap (A1). The nearest equivalent — the oDAO registering a new or replacement contract into RocketStorage that could itself call an untrusted third party — is time-bounded on-chain: an oDAO upgrade proposal must clear getVoteDelayTime()=604800 (7 days) plus getVoteTime()=1209600 (14 days) on RocketDAONodeTrustedSettingsProposals at 0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0 (block 25793878), and only then does RocketDAONodeTrustedUpgrade.upgrade() open a further `getUpgradeDelay()` window (source default 7 days, RPIP-60) during which the security council can veto at a 33% quorum before any trusted node may call execute(). getTotal()=1 on the deployed upgrade contract, i.e. exactly one upgrade proposal has been raised through this path. The guardian bootstrap bypass is closed: getBootstrapModeDisabled()=true on the oDAO. Users therefore have a ≥7-day exit window against any registry change, and rETH itself can never be replaced."
+      },
+      {
+        "code": "A9",
+        "text": "Scope note per this slice's A9 limit: the oDAO's general ability to replace contract implementations is a control-slice finding and is not counted here. Only the timelock/exit-window question above is treated as autonomy-relevant."
+      }
+    ],
+    "steelman": {
+      "red": "A 6-of-10 oDAO quorum is the sole source of the network ETH balance that sets rETH's mint and burn rate, so a colluding quorum could ratchet the rate upward and burn rETH against deposit-pool ETH for more than it is worth — loss of principal, not merely of unclaimed yield, from an actor outside any single user's control.",
+      "orange": "That same path is rate-limited on-chain by an RPIP-61 per-update rETH-ratio delta cap and a ~95%-of-frequency minimum interval, the rETH and vault contracts are permanently non-upgradeable, submissions can be halted by the security council, and any registry change carries a ≥7-day vetoable window — so an external-reporting failure is bounded per update, publicly observable, and recoverable rather than an instant drain.",
+      "green": "The production contracts read no third-party oracle, AMM, bridge, vault or wrapper at all — zero matches for chainlink/pyth/uniswap/latestAnswer and no hardcoded external addresses at v1.4 — and the only external staticcall is Ethereum's own EIP-4788 predeploy, so on a strict external-contract reading there is nothing outside the substrate whose failure reaches user funds."
+    },
+    "verdict": "Choosing orange because the green steel-man collapses on A2 and the red steel-man overstates A6. Green would require that no external failure can cost principal or unclaimed yield; but the 10-member oDAO at 0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9 (getMemberCount=10, 51% quorum) is the only writer of the balance that RocketTokenRETH prices against, and a bad submission mis-prices every mint and burn while a bad reward snapshot misallocates an interval of yield — that is a real principal-and-yield vector, not merely degraded performance. Red would require it to be unbounded or unmitigated; it is neither, because RocketNetworkBalances._updateBalances at commit fb7d9c42 reverts any submission moving the rETH ratio by more than getMaxRethDelta() (source default 2%, pDAO floor 1%) or arriving before 95% of the submission frequency has elapsed, rETH and rocketVault are hard-blocked from upgrade in RocketDAONodeTrustedUpgrade._upgradeContract, and the deployed upgrade contract reads version()=2 with the RPIP-60 veto ABI, which pins the deployed set to tag v1.4 where that cap exists. Impacted TVS: ~1-2% of the ~374,500 ETH backing rETH (320,132.9 rETH at a 1.1699 rate, block 25793869) per update window, i.e. roughly 3,700-7,500 ETH, and even that is capped in practice by deposit-pool liquidity available to burn against, since the rETH contract itself held getTotalCollateral()=1 wei; a sustained undetected 6-of-10 collusion compounding at the cap for a week would reach roughly 13%, which is why this is not green. Module weighting: this is a single-chain L1 protocol with one shared oracle path — the liquid-staking core (deposit pool, rETH, oDAO balance oracle) is ~100% of TVS and grades orange, and the validator layer splits between legacy minipools and Saturn megapools (split unmeasured, logged in unknowns) but both sit under the identical submitBalances path and identical guardrails, so no sub-module grades worse than the core and the weighted overall is orange."
+  },
+  "evidence": [
+    {
+      "url": "https://defipunkd.com/address/1/0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+      "shows": "Deployed RocketDAONodeTrusted state at block 25778186: getMemberCount()=10, getMemberQuorumVotesRequired()=5100000000000000000, getMemberMinRequired()=3, getBootstrapModeDisabled()=true, version()=1; ABI includes getMemberRPLBondAmount and getMemberIsChallenged. Establishes the A2 committee size, quorum and bonding.",
+      "chain": "Ethereum",
+      "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9",
+      "fetched_at": "2026-08-20T04:05:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xae78736cd615f374d3085123a210448e74fc6393",
+      "shows": "Deployed RocketTokenRETH at block 25793869: getExchangeRate()=1169905281654818538, totalSupply()=320132918084868744550713, getCollateralRate()=0, getTotalCollateral()=1, version()=1. Basis for the derived ~374,500 ETH rETH TVS figure and for the note that instant burns draw on deposit-pool liquidity.",
+      "chain": "Ethereum",
+      "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+      "fetched_at": "2026-08-20T04:03:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+      "shows": "Deployed RocketDAONodeTrustedUpgrade at block 25793884: version()=2, getTotal()=1, with veto(uint256)/getVetoed(uint256)/getEnd(uint256) on the ABI. This version-2-with-veto shape is the pin used to derive that the deployed contract set is tag v1.4 rather than v1.3.1.",
+      "chain": "Ethereum",
+      "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10",
+      "fetched_at": "2026-08-20T04:10:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+      "shows": "Deployed RocketDAONodeTrustedSettingsProposals at block 25793878: getVoteDelayTime()=604800, getVoteTime()=1209600, getExecuteTime()=2419200, getCooldownTime()=172800, getActionTime()=2419200. Establishes the on-chain time bound preceding any oDAO registry change (A9).",
+      "chain": "Ethereum",
+      "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0",
+      "fetched_at": "2026-08-20T04:08:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/api/contract/read?chainId=1&address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46&method=getGuardian&block=25778186",
+      "shows": "Block-pinned read of RocketStorage.getGuardian() returning 0x0cCF14983364A7735d369879603930Afe10df21e at block 25778186 (blockHash 0x2988d764be86d3fe2b03e3b2675a30256ef2d3e45e00cb4dd566f485f3edc799), with raw calldata and rawReturnData. Confirms the guardian address recorded in protocol_metadata.admin_addresses.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "fetched_at": "2026-08-20T04:01:00Z"
+    },
+    {
+      "url": "https://defipunkd.com/address/1/0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "shows": "RocketStorage surfacer: getDeployedStatus()=true, full EternalStorage ABI (getAddress(bytes32)/setAddress(bytes32,address), setGuardian, no zero-arg contract-address getters). Documents why address resolution for rocketNetworkBalances could not be performed through the read API this run.",
+      "chain": "Ethereum",
+      "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46",
+      "fetched_at": "2026-08-20T04:00:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool/blob/fb7d9c428dc3dddc3fbd3e634e3cb365655df89e/contracts/contract/network/RocketNetworkBalances.sol",
+      "shows": "submitBalances gated onlyTrustedNode with consensus applied at calcBase*submissionCount/getMemberCount() >= getNodeConsensusThreshold(); _updateBalances enforces minimumTimestamp = lastTimestamp + frequency*95/100 ('Not enough time has passed') and the RPIP-61 cap maxChange = currentRatio * getMaxRethDelta() / calcBase ('Change exceeds maximum'). Contract version = 4.",
+      "commit": "fb7d9c428dc3dddc3fbd3e634e3cb365655df89e",
+      "fetched_at": "2026-08-20T04:17:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool/blob/fb7d9c428dc3dddc3fbd3e634e3cb365655df89e/contracts/contract/dao/protocol/settings/RocketDAOProtocolSettingsNetwork.sol",
+      "shows": "Deploy-time defaults network.consensus.threshold = 0.51 ether, network.submit.balances.frequency = 1 days, network.max.reth.balance.delta = 0.02 ether (annotated RPIP-61); setSettingUint guards require the delta >= 0.01 ether, the frequency within 1 hour to 7 days, and the consensus threshold >= 0.51 ether. Contract version = 4.",
+      "commit": "fb7d9c428dc3dddc3fbd3e634e3cb365655df89e",
+      "fetched_at": "2026-08-20T04:17:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool/blob/fb7d9c428dc3dddc3fbd3e634e3cb365655df89e/contracts/contract/dao/node/RocketDAONodeTrustedUpgrade.sol",
+      "shows": "upgrade() sets endTime = block.timestamp + RocketDAOProtocolSettingsSecurity.getUpgradeDelay(); veto() is callable only by rocketDAOSecurityUpgrade; execute() requires state Succeeded and a trusted-node caller; _upgradeContract hard-reverts for rocketVault, rocketTokenRETH, rocketTokenRPL, rocketTokenRPLFixedSupply, casperDeposit and rocketMinipoolPenalty. Contract version = 2, matching the deployed version() read.",
+      "commit": "fb7d9c428dc3dddc3fbd3e634e3cb365655df89e",
+      "fetched_at": "2026-08-20T04:17:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool/blob/fb7d9c428dc3dddc3fbd3e634e3cb365655df89e/contracts/contract/dao/protocol/settings/RocketDAOProtocolSettingsSecurity.sol",
+      "shows": "Defaults upgrade.delay = 7 days and upgradeveto.quorum = 0.33 ether (both annotated RPIP-60), plus the security-council allow-list including network.submit.balances.enabled, network.submit.prices.enabled and network.submit.rewards.enabled — the A6 halt path.",
+      "commit": "fb7d9c428dc3dddc3fbd3e634e3cb365655df89e",
+      "fetched_at": "2026-08-20T04:17:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool/blob/fb7d9c428dc3dddc3fbd3e634e3cb365655df89e/contracts/contract/rewards/RocketRewardsPool.sol",
+      "shows": "submitRewardSnapshot is onlyTrustedNode and executes on the same consensus-threshold test; totals are bounded by require(totalRewardsRPL <= getPendingRPLRewards()) and require(totalRewardsETH <= smoothingPoolBalance + getPendingVoterShare()), so oDAO mis-reporting can misallocate but not inflate an interval's rewards.",
+      "commit": "fb7d9c428dc3dddc3fbd3e634e3cb365655df89e",
+      "fetched_at": "2026-08-20T04:17:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool/blob/fb7d9c428dc3dddc3fbd3e634e3cb365655df89e/contracts/contract/megapool/RocketMegapoolPenalties.sol",
+      "shows": "penalise() is onlyTrustedNode and requires _amount <= getMaximumEthPenalty(), with a penaltyMaximumPeriod of 7 days used for a running-total cap — bounding the Saturn megapool module's oDAO coercion surface against node bonds.",
+      "commit": "fb7d9c428dc3dddc3fbd3e634e3cb365655df89e",
+      "fetched_at": "2026-08-20T04:17:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/rocketpool/blob/fb7d9c428dc3dddc3fbd3e634e3cb365655df89e/contracts/contract/network/RocketNetworkPrices.sol",
+      "shows": "getRPLPrice() reads RocketNetworkSnapshots.latestValue for the network.prices.rpl key, written only via submitPrices/executeUpdatePrices under oDAO consensus — confirming RPL pricing is committee-reported rather than read from an external AMM or feed (A1).",
+      "commit": "fb7d9c428dc3dddc3fbd3e634e3cb365655df89e",
+      "fetched_at": "2026-08-20T04:17:00Z"
+    },
+    {
+      "url": "https://github.com/rocket-pool/RPIPs/blob/f803802fb8f0cfeabbfcad20fa4a67d0783cd197/RPIPs/RPIP-61.md",
+      "shows": "RPIP-61 'Balance Submission Guardrail', status Final, vote passed 2024-08-22: limits how much the oDAO can change the rETH exchange rate per update, states the limit is a pDAO parameter with a floor the Security Council cannot change, and states the pre-guardrail worst case (a compromised oDAO changing the rate arbitrarily within one block). Provides the design intent behind the A6 cap.",
+      "commit": "f803802fb8f0cfeabbfcad20fa4a67d0783cd197",
+      "fetched_at": "2026-08-20T04:16:00Z"
+    },
+    {
+      "url": "https://immunefi.com/bounty/rocketpool",
+      "shows": "Live Rocket Pool bug bounty, max $150,000, live since 2021-09-08, last updated 2026-08-19, 77 assets in scope; page lists the full audit history including Cantina (2025-12-22), Bailsec (2026-01-29) and Sigma Prime (2026-02-05) Saturn 1 reviews, which corroborates that a Saturn 1 (v1.4) release is the current one.",
+      "fetched_at": "2026-08-20T04:14:00Z"
+    },
+    {
+      "url": "https://docs.rocketpool.net/overview/contracts-usage",
+      "shows": "Canonical documentation site resolves and serves the Rocket Pool docs hub (protocol / liquid staking / node staking sections); the specific contracts-usage path did not resolve to a contracts page, so no deployed-address doc could be confirmed.",
+      "fetched_at": "2026-08-20T04:06:00Z"
+    },
+    {
+      "url": "https://rocketpool.net",
+      "shows": "Capability-probe fetch of the pinned protocol website; returns the canonical description of Rocket Pool as a decentralised staking protocol providing liquid and node staking products for Ethereum. Basis for protocol_metadata.about.",
+      "fetched_at": "2026-08-20T03:58:00Z"
+    }
+  ],
+  "unknowns": [
+    "A1: could not resolve the deployed rocketNetworkBalances, rocketNetworkPrices, rocketDAOProtocolSettingsNetwork, rocketDAOProtocolSettingsSecurity or rocketDepositPool addresses. RocketStorage exposes only getAddress(bytes32), and https://defipunkd.com/api/contract/read?chainId=1&address=0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46&method=getAddress&args=<key> returned HTTP 400 for bytes32 arguments in three variants (0x-prefixed with &block, 0x-prefixed without &block, unprefixed); zero-arg reads on the same contract succeeded, so the failure is specific to bytes32 argument handling. No surfacer is pinned for these contracts. Next run should pin surfacers for them.",
+    "A2: the identities of the 10 oDAO members were not enumerated. getMemberAt(uint256) takes a uint argument the read API does support, but member identity is a control-slice question and was not pulled this run.",
+    "A6: the current on-chain values of network.max.reth.balance.delta, network.submit.balances.frequency and network.consensus.threshold were not read, only the v1.4 constructor defaults (2%, 1 day, 51%) and the setter bounds. The setter enforces a 1% floor on the delta but no ceiling, so a pDAO proposal could in principle have widened the guardrail well beyond 2% without violating any on-chain constraint. This is the single largest gap in the orange verdict.",
+    "A6: the activation status of the RPIP-61 guardrail is derived, not directly read. It rests on deployed RocketDAONodeTrustedUpgrade version()=2 matching tag v1.4 (where RocketNetworkBalances is version 4 and carries getMaxRethDelta) versus tag v1.3.1 (version 1 / version 3, no cap), plus the assumption that Rocket Pool registers an upgrade set atomically. A direct read of the deployed rocketNetworkBalances version() would settle it.",
+    "A3: whether rETH representations on L2s hold material TVL was not verified; an OP Mainnet rETH address appeared only in a search snippet and was not fetched or measured, and no L1 contract references it.",
+    "A5: DeFiLlama's forkedFrom field was not fetched this run, so fork lineage is undetermined in either direction.",
+    "A8: the split of staked ETH between legacy minipools and Saturn megapools was not measured, so the TVS weighting between those two validator sub-modules is stated as sharing one oracle path rather than as numeric shares.",
+    "A9: getUpgradeDelay() and upgradeveto.quorum were not read on-chain (settings address unresolved, see A1), so the ≥7-day exit window rests on the v1.4 source default of 7 days rather than a live read; getVoteDelayTime and getVoteTime preceding it were read on-chain and total 21 days regardless."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/rocket-pool/rocketpool",
+      "https://github.com/rocket-pool/RPIPs"
+    ],
+    "docs_url": "https://docs.rocketpool.net",
+    "audits": [
+      { "firm": "Trail of Bits", "url": "https://github.com/trailofbits/publications/blob/master/reviews/RocketPool.pdf", "date": "2021-04-30" },
+      { "firm": "Consensys Diligence", "url": "https://consensys.io/diligence/audits/2023/12/rocket-pool-houston/", "date": "2023-11-30" },
+      { "firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-audit-houston.pdf", "date": "2024-02-29" },
+      { "firm": "ChainSafe", "url": "https://rocketpool.net/files/audits/chainsafe-audit-houston.pdf", "date": "2024-03-31" },
+      { "firm": "Cantina", "url": "https://rocketpool.net/files/audits/cantina-audit-saturn-1.pdf", "date": "2025-12-22" },
+      { "firm": "Bailsec", "url": "https://rocketpool.net/files/audits/bailsec-audit-saturn-1.pdf", "date": "2026-01-29" },
+      { "firm": "Sigma Prime", "url": "https://rocketpool.net/files/audits/sigma-prime-audit-saturn-1.pdf", "date": "2026-02-05" }
+    ],
+    "governance_forum": "https://dao.rocketpool.net",
+    "voting_token": null,
+    "bug_bounty_url": "https://immunefi.com/bounty/rocketpool",
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      { "chain": "Ethereum", "address": "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46", "role": "RocketStorage EternalStorage registry; root of all contract-address resolution, getDeployedStatus()=true", "actor_class": "unknown" },
+      { "chain": "Ethereum", "address": "0x0cCF14983364A7735d369879603930Afe10df21e", "role": "RocketStorage guardian returned by getGuardian(); bootstrap paths gated by oDAO getBootstrapModeDisabled()=true", "actor_class": "unknown" },
+      { "chain": "Ethereum", "address": "0xb8e783882b11Ff4f6Cef3C501EA0f4b960152cc9", "role": "RocketDAONodeTrusted (oDAO) committee — 10 bonded members, 51% quorum; sole submitter of network balances, RPL price and reward snapshots", "actor_class": "governance" },
+      { "chain": "Ethereum", "address": "0x9290AA076a2F1418a4E414E3D83AE03cA8E1ad10", "role": "RocketDAONodeTrustedUpgrade v2 — registry upgrade executor with security-council veto and post-approval upgrade delay", "actor_class": "timelock" },
+      { "chain": "Ethereum", "address": "0xAD038f8994a6bd51C8A72D3721CEd83401D4d2b0", "role": "RocketDAONodeTrustedSettingsProposals — oDAO proposal timing (7-day vote delay, 14-day vote, 28-day execute window)", "actor_class": "governance" }
+    ],
+    "upgradeability": "mixed",
+    "about": "Users stake ETH and receive rETH, a non-rebasing receipt whose ETH value rises as the protocol's validators earn consensus and execution rewards; rETH can be burned back to ETH on-chain subject to deposit-pool liquidity. The distinctive mechanism is that the ETH is staked through permissionless, bonded node operators who post their own ETH plus RPL collateral rather than through a curated operator whitelist, with Saturn-era megapools letting one operator run many validators under a single contract. Because validator balances are not natively visible to the EVM, a 10-member bonded Oracle DAO reports the network's total ETH balance and rETH supply on a 51% consensus, and that report is what sets the rETH exchange rate. Contracts are resolved dynamically through an immutable RocketStorage registry, so most modules are replaceable by governance while the rETH token, the vault and the RPL tokens are permanently excluded from upgrade."
+  }
+}
