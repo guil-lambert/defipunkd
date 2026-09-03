@@ -1,0 +1,62 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-29",
+  "model": "gemini-3-flash",
+  "chat_url": "https://gemini.google.com/share/51ca2d1fa0b5",
+  "grade": "green",
+  "headline": "Decentralized on-chain governance via veCRV with 7-day execution delay",
+  "short_headline": "On-chain governance with 7-day delay",
+  "rationale": {
+    "findings": [
+      { "code": "C1", "text": "The crvUSD ControllerFactory (0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC) is administered by the Sub-DAO contract (0xb7400d2eA0f6dC1d7B153aa430b9e572f28afB79). The Sub-DAO is owned by the Curve DAO Ownership Agent (0x40907540d8a6C65C637785e8f8B742ae6b0b9968)." },
+      { "code": "C2", "text": "Governance utilizes Aragon's AppProxyUpgradeable for Voting contracts (0xE478de485ad2fe566d49342Cbd03E49ed7DB3356), allowing for potential logic upgrades. The crvUSD Sub-DAO and core MonetaryPolicy contracts are Etherscan-verified Vyper contracts." },
+      { "code": "C3", "text": "The execution path for fund-critical changes follows: veCRV Aragon Vote (~7 days) -> DAO Ownership Agent -> Sub-DAO -> ControllerFactory/Controllers. While direct read of voteTime() reverted, community documentation and audits confirm a ~7-day duration for the uncontested path." },
+      { "code": "C4", "text": "An Emergency DAO Multisig (0x467947EE34aF926cF1DCac093870f613C96B1E0c) is configured as a 5-of-9 Gnosis Safe. It holds limited parameter-level powers but cannot execute arbitrary calls or full ownership transfers." },
+      { "code": "C5", "text": "On-chain governance is conducted via veCRV (0x5f3B5DfEb7B28CDbD7FAba78963EE202a494e2A2). Ownership changes require a 30% quorum (minAcceptQuorumPct selector 0xdc474b1a) and 51% support. Parameter changes require a 15% quorum and 60% support." },
+      { "code": "C6", "text": "The Emergency Multisig can trigger 'emergency' powers in the Sub-DAO, including set_amm_fee, set_borrowing_discounts, and reduce_debt_ceiling, providing a faster path for risk mitigation than full DAO voting." },
+      { "code": "C7", "text": "The Sub-DAO's execute(target, calldata) function, restricted to the DAO Ownership Agent, represents a T1 power as it can interact arbitrarily with the ControllerFactory and managed Controllers. T2 powers like fee adjustments and debt ceiling reductions are shared with the Emergency Multisig." }
+    ],
+    "steelman": {
+      "red": "The Sub-DAO's arbitrary execute function allows the DAO Agent to bypass specific function constraints on core controllers, concentrating significant power in a single contract path.",
+      "orange": "The 5-of-9 Emergency Multisig fails the Security Council criteria for signer count (9 total) and public identity verification in this context, yet holds T2 powers over economic parameters.",
+      "green": "All T1 fund-critical powers are gated by a battle-tested on-chain veCRV voting system with a 7-day duration, ensuring a sufficient exit window for users."
+    },
+    "verdict": "Choosing green because the highest reachable tier (T1) is strictly controlled by active on-chain governance (veCRV) with a verified ~7-day voting duration, providing users with a predictable window to withdraw collateral in response to proposed changes."
+  },
+  "evidence": [
+    { "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356", "shows": "Aragon Voting (Ownership) contract address and proxy implementation.", "chain": "Ethereum", "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356" },
+    { "url": "https://etherscan.io/address/0xb7400d2eA0f6dC1d7B153aa430b9e572f28afB79", "shows": "Sub-DAO contract governing crvUSD controllers and its permissioned roles.", "chain": "Ethereum", "address": "0xb7400d2eA0f6dC1d7B153aa430b9e572f28afB79" },
+    { "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c", "shows": "Emergency DAO multisig (5-of-9 Gnosis Safe).", "chain": "Ethereum", "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c" },
+    { "url": "https://github.com/curvefi/curve-stablecoin", "shows": "Canonical source code repository for crvUSD.", "commit": "80b7c9fefc452a6d5d6a5440b91bfcca12f6a0af" }
+  ],
+  "unknowns": [
+    "C4: Identities and affiliations of the individual signers on the 0x4679 multisig were not verifiable from the on-chain context provided.",
+    "C3: Exact min execution delay in seconds could not be read directly from the Aragon proxy due to function selector packing."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      { "firm": "ChainSecurity", "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf", "date": "2023-05" }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": { "chain": "Ethereum", "address": "0x5f3B5DfEb7B28CDbD7FAba78963EE202a494e2A2", "symbol": "veCRV" },
+    "bug_bounty_url": "https://immunefi.com/bounty/curvefinance/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/crvusd/deployments/",
+    "admin_addresses": [
+      { "chain": "Ethereum", "address": "0x40907540d8a6C65C637785e8f8B742ae6b0b9968", "role": "Curve DAO Ownership Agent", "actor_class": "governance" },
+      { "chain": "Ethereum", "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c", "role": "Emergency DAO Multisig", "actor_class": "multisig" }
+    ],
+    "upgradeability": "mixed",
+    "about": "crvUSD is a collateralized debt position (CDP) protocol that enables users to mint a stablecoin against collateral using the LLAMMA (Lending-Liquidating AMM Algorithm) mechanism. Unlike traditional CDPs, crvUSD utilizes 'soft liquidations' to gradually convert collateral between the underlying asset and the stablecoin as prices shift. The protocol is governed by veCRV holders through the Curve DAO."
+  }
+}
