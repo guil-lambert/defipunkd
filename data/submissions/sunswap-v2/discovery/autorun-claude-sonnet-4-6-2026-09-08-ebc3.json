@@ -1,0 +1,96 @@
+{
+  "schema_version": 4,
+  "slug": "sunswap-v2",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-07T11:30:55.115Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-09-08",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "3 core contracts catalogued on TRON Mainnet (Factory, Router, example Pair); on-chain reads blocked — TRON chain not supported by DeFiPunkd API; TRON base58 addresses incompatible with EVM address schema.",
+  "short_headline": "3 TRON contracts found; on-chain reads blocked",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: TronScan search surfaced SUN-tagged contracts including 'SUN: SunSwap Smart Exchange Router (deprecated)' at TFo9zaFLsHKroQXGMyXNyCuENyF; no direct block-explorer page fetch was possible as TronScan is not in the DeFiPunkd-supported chain list. TronScan search result confirms SunSwap presence on TRON but addresses are base58, not EVM hex."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Official docs PDF at https://www.sunswap.com/docs/sunswapV2-interfaces_en.pdf was identified via search results as listing factory=TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY, router=TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax, and example pair TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ (USDT/TRX). URL was not directly fetched in this run (appeared in search snippet only), so addresses are recorded in unknowns per D8 rules."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Audit PDF at https://sunswap.com/docs/audit-report_en.pdf fetched in full. Auditor: SlowMist Security Team, dated Aug 25 2020. The audit covers JustSwap (V1/predecessor to SunSwap V2) with contract structure: JustswapFactory (creates exchange contracts per TRC20 token) and JustswapExchange (liquidity pool + swap logic). No deployed addresses listed in audit scope — only source file hashes. Two findings: low-risk (removeLiquidity design defect), enhancement (redundant code). Both accepted by project as within tolerable range."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub repo https://github.com/sun-protocol/sunswap-v2-contracts fetched. Deployments table in README lists Factory (TRON Mainnet: TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY) and SwapRouter (TRON Mainnet: TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq). Repo uses hardhat; no Foundry broadcast artifacts found. Deprecated predecessor repo github.com/sunswapteam/sunswap2.0-contracts confirms same addresses. SHA commit not pinned — README is on main branch."
+      },
+      {
+        "code": "D5",
+        "text": "D5: Protocol is single-chain (TRON only). No multi-chain enumeration required."
+      },
+      {
+        "code": "D6",
+        "text": "D6: SunswapV2Factory creates pair contracts via createPair(). The DeFiPunkd read API does not support TRON (no TRON chainId available). Factory enumeration via allPairs() was not possible this run. Factory address TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY is recorded; child pair enumeration deferred."
+      },
+      {
+        "code": "D7",
+        "text": "D7: Role taxonomy applied — factory and router roles identified from GitHub README and docs search results. Pair contract (example USDT/TRX: TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ) identified from docs snippet. No owner/admin/timelock/multisig addresses discovered from fetched sources."
+      },
+      {
+        "code": "D8",
+        "text": "D8: All addresses in admin_addresses trace to fetched GitHub README (factory, router) or fetched audit (contract types). The interface docs PDF URL appeared in search snippet only (not directly fetched), so the router address TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax and pair TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ from that source are demoted to unknowns."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery run walked the audit PDF, the official GitHub repo (sun-protocol/sunswap-v2-contracts), the protocol website, and search-based TronScan/docs results. Three core contract addresses identified: Factory (TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY) and SwapRouter (TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq) from GitHub, plus a search-snippet-only sighting of an older router and example pair. On-chain reads are entirely blocked because TRON is not supported by the DeFiPunkd API and TRON addresses are base58-encoded (incompatible with EVM 0x schema). grade=unknown because admin_addresses cannot be populated in schema-valid format and on-chain state was not read."
+  },
+  "evidence": [
+    {
+      "url": "https://sunswap.com/#/home",
+      "shows": "SunSwap website confirms it is a TRON-based decentralized trading protocol for automated liquidity provision supporting TRC20 token exchange.",
+      "chain": "Tron",
+      "fetched_at": "2026-09-08T00:00:00Z"
+    },
+    {
+      "url": "https://sunswap.com/docs/audit-report_en.pdf",
+      "shows": "SlowMist Security Team audit of JustSwap (SunSwap V1/predecessor), dated Aug 25 2020. Contract structure: JustswapFactory (creates exchange contracts) and JustswapExchange (liquidity pool + swap). Two findings: low-risk removeLiquidity defect and redundant code. Audit result: Passed. No deployed addresses listed in scope.",
+      "chain": "Tron",
+      "fetched_at": "2026-09-08T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/sun-protocol/sunswap-v2-contracts",
+      "shows": "Official SunSwap V2 GitHub repo under sun-protocol org. README Deployments table lists: Factory on TRON Mainnet = TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY; SwapRouter on TRON Mainnet = TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq. Core contracts: SunswapV2Factory (creates pairs), SunswapV2Pair (LP token + pool), Sunswapv2Router02 (routing + liquidity management).",
+      "chain": "Tron",
+      "fetched_at": "2026-09-08T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: TronScan block-explorer direct fetch blocked — tronscan.org is not in DeFiPunkd supported chain list; name-tag search result only surfaced via web_search snippet, not full page body. Addresses visible in snippet (TFo9zaFLsHKroQXGMyXNyCuENyF labelled 'SUN: SunSwap Smart Exchange Router (deprecated)') not promoted to admin_addresses per D8 rules.",
+    "D2: Official docs PDF https://www.sunswap.com/docs/sunswapV2-interfaces_en.pdf was identified in search snippet but not directly fetched this run. Router address TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax and example pair TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ (USDT/TRX) from that source cannot be promoted to admin_addresses. Next run should fetch https://www.sunswap.com/docs/sunswapV2-interfaces_en.pdf directly.",
+    "D6: SunswapV2Factory child pairs (allPairs enumeration) not readable — TRON chain not supported by DeFiPunkd /api/contract/read API. Factory TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY confirmed but pair count unknown.",
+    "D6-offchain: On-chain read of factory.allPairs() / allPairsLength() was attempted conceptually but blocked — no TRON chainId supported by defipunkd.com read API. Factory children remain unenumerated.",
+    "D7: No owner(), admin(), or governance/multisig addresses discovered from fetched sources. The audit did not list an owner address for JustswapFactory. GitHub README has no admin/governance section. Owner/admin actor class for deployed contracts remains unknown.",
+    "D8: TRON base58 addresses (TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY, TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq) cannot be represented in the schema's required 0x EVM hex format. admin_addresses[] left empty; next run should convert base58 to hex or use a TRON-compatible schema extension."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/sun-protocol/sunswap-v2-contracts"
+    ],
+    "docs_url": "https://sunswap.com",
+    "audits": [
+      {
+        "firm": "SlowMist",
+        "url": "https://sunswap.com/docs/audit-report_en.pdf",
+        "date": "2020-08"
+      }
+    ],
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "SunSwap V2 is a decentralized exchange (DEX) built on the TRON blockchain that enables users to swap TRC-20 tokens directly from their wallets without intermediaries. It uses an automated market maker (AMM) model with a constant-product formula (x*y=k), similar to Uniswap V2, with liquidity pools funded by permissionless liquidity providers who earn 0.3% swap fees. The protocol consists of a SunswapV2Factory contract (which creates per-pair pool contracts), SunswapV2Pair contracts (LP token + pool logic with flash swap support), and a Sunswapv2Router02 contract (multi-hop routing and liquidity management). SunSwap V2 is an evolution of the original JustSwap protocol, rebranded as part of the SUN.io DeFi ecosystem on TRON."
+  }
+}

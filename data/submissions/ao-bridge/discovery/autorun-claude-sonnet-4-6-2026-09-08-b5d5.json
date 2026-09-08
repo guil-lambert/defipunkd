@@ -1,0 +1,125 @@
+{
+  "schema_version": 4,
+  "slug": "ao-bridge",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-07T11:30:55.115Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-09-08",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "5 addresses catalogued on Ethereum: 1 UUPS-proxy deposit contract holding ~$32.5M stETH, 1 implementation contract, 1 deployer EOA, 1 bridge-overplus caller, 1 stETH token; owner/aoDistributionWallet/refunder addresses not yet read on-chain.",
+  "short_headline": "5 addresses found, owner unresolved",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Etherscan name-tag search surfaced 0xfE08D40Eee53d64936D3128838867c867602665c labelled 'AO: Mint via stETH'; holds 13,122 stETH (~$32.5M) as of 2026-09-08; 14,630 total transactions; proxy is ERC1967 pattern."
+      },
+      {
+        "code": "D2",
+        "text": "Protocol website (ao.arweave.net) renders a minimal landing page with no deployed-contracts listing page found; no docs.ao.arweave.net or equivalent URL surfaced. deployed_contracts_doc set to null."
+      },
+      {
+        "code": "D3",
+        "text": "No audit_links provided in per-protocol context. Mirror article (June 13 2024) states contracts were 'extensively audited' and are 'a minor modification of MorpheusAI deposit contracts', but no PDF or firm name was linked in the fetched source."
+      },
+      {
+        "code": "D4",
+        "text": "protocol.github is empty; no GitHub repository was surfaced from the website fetch or search results. Cannot walk deployment artifacts."
+      },
+      {
+        "code": "D5",
+        "text": "protocol.chains = [Ethereum] only. Blockscan cross-chain info on Etherscan shows the same address 0xfE08D40... exists on BscScan (LDOGE dust, ~$12k), but this appears to be airdropped tokens at the same address, not a protocol deployment. No separate BNB Chain bridge deployment confirmed."
+      },
+      {
+        "code": "D6",
+        "text": "No factory pattern identified. The Distribution contract is a single monolithic pool contract (not a factory). No enumeration needed."
+      },
+      {
+        "code": "D7",
+        "text": "Role taxonomy: proxy=vault/pool (stETH deposit); implementation=other (logic only); deployer=other (EOA creator); bridge-overplus-caller=other (automation or admin); stETH token=token. Key privileged roles (owner, aoDistributionWallet, refunderAddress/fallbackAddress) not yet resolved — flagged in unknowns."
+      },
+      {
+        "code": "D8",
+        "text": "All 5 addresses in admin_addresses[] trace to fetched Etherscan pages or fetched Mirror article. aoDistributionWallet, refunderAddress, and fallbackAddress are not yet resolved and are excluded from admin_addresses[] with D8-coded unknowns entries."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Walked Etherscan (name-tag search + direct contract page), Mirror article (official OASF announcement), and protocol website. 5 addresses catalogued. The primary stETH deposit contract (UUPS proxy + Distribution implementation) is confirmed on Ethereum Mainnet with ~$32.5M TVL. Three privileged role addresses (owner, aoDistributionWallet, refunderAddress) require on-chain reads that could not be performed this run due to no pinned surfacer URLs; they are flagged for next-run resolution."
+  },
+  "evidence": [
+    {
+      "url": "https://ao.arweave.net/",
+      "shows": "Protocol website confirmed live; minimal landing page, no deployed-contracts listing found",
+      "fetched_at": "2026-09-08T00:00:00Z"
+    },
+    {
+      "url": "https://mirror.xyz/0x1EE4bE8670E8Bd7E9E2E366F530467030BE4C840/-UWra0q0KWecSpgg2-c37dbZ0lnOMEScEEkabVm9qaQ",
+      "shows": "Official OASF announcement (June 13 2024) confirming 0xfE08D40Eee53d64936D3128838867c867602665c as the stETH pre-bridge deposit contract; OASF holds eject-only privilege; contracts are a modification of MorpheusAI deposit contracts; described as audited and trustless",
+      "fetched_at": "2026-09-08T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xfE08D40Eee53d64936D3128838867c867602665c",
+      "shows": "Etherscan confirms label 'AO: Mint via stETH'; ERC1967Proxy with implementation at 0x76488832A88475AF0aC223d8FD4d053177A012cc; creator 0x62d0528BE6AE78570bFB523cEa610854a6d11f28; holds 13,122.4 stETH (~$32.5M); 14,630 transactions; still active as of 2026-09-08; 'Bridge Overplus' called by 0x1816f6ef183Fa4Bb155bBdaA92f02D77CA7801b8",
+      "chain": "Ethereum",
+      "address": "0xfE08D40Eee53d64936D3128838867c867602665c",
+      "fetched_at": "2026-09-08T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x76488832A88475AF0aC223d8FD4d053177A012cc",
+      "shows": "Implementation contract named 'Distribution'; UUPS upgradeable (upgradeTo/upgradeToAndCall/removeUpgradeability/isNotUpgradeable); OwnableUpgradeable (owner()/transferOwnership()/renounceOwnership()); key functions: ejectStakedFunds (callable by owner or refunderAddress), bridgeOverplus (sends overplus stETH to aoDistributionWallet), stake, withdraw; creator 0x62d0528BE6AE78570bFB523cEa610854a6d11f28; no transactions on this address (logic-only)",
+      "chain": "Ethereum",
+      "address": "0x76488832A88475AF0aC223d8FD4d053177A012cc",
+      "fetched_at": "2026-09-08T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D2: No canonical deployed-contracts documentation page found on ao.arweave.net or any docs subdomain",
+    "D3: Audit firm name and report PDF not surfaced; Mirror article claims contracts are 'extensively audited' but no link provided",
+    "D4: No GitHub repository found; protocol.github is empty and no repo surfaced from website or search",
+    "D5: BNB Chain same-address presence appears to be airdropped dust tokens, not a protocol deployment — needs confirmation",
+    "D8: owner() return value not read on-chain this run (no pinned surfacer URL); needs next-run DeFiPunkd read at 0xfE08D40Eee53d64936D3128838867c867602665c",
+    "D8: aoDistributionWallet address not read on-chain this run; needs next-run DeFiPunkd read",
+    "D8: refunderAddress (fallbackAddress / c9/ca slots) not read on-chain this run; needs next-run DeFiPunkd read",
+    "D8: isNotUpgradeable flag value not read on-chain this run; needed to determine if UUPS upgrade path is still active"
+  ],
+  "protocol_metadata": {
+    "audits": [],
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xfE08D40Eee53d64936D3128838867c867602665c",
+        "role": "vault (stETH pre-bridge deposit contract, ERC1967 UUPS proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x76488832A88475AF0aC223d8FD4d053177A012cc",
+        "role": "other (Distribution logic implementation contract)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x62d0528BE6AE78570bFB523cEa610854a6d11f28",
+        "role": "other (contract deployer / creator EOA)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1816f6ef183Fa4Bb155bBdaA92f02D77CA7801b8",
+        "role": "other (bridge overplus caller — triggers yield collection to aoDistributionWallet)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+        "role": "token (stETH — deposit token held by vault)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "AO Bridge is the Ethereum-side pre-bridge deposit contract for the AO decentralized supercomputer built on Arweave. Users deposit stETH (Lido staked ETH) into the contract and receive AO token rewards proportional to their share of total deposited assets; the native stETH yield is forwarded to AO ecosystem development organizations via bridgeOverplus. Depositors retain full withdrawal rights over their principal at any time, while the Open Access Supercomputing Foundation (OASF) holds a single emergency-eject privilege to return tokens to their owners in a security incident. The contract is an ERC1967 UUPS proxy wrapping a Distribution logic contract derived from MorpheusAI deposit contracts."
+  }
+}
