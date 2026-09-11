@@ -1,0 +1,57 @@
+{
+  "schema_version": 3,
+  "slug": "crvusd",
+  "slice": "autonomy",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-29",
+  "model": "gemini-3-flash",
+  "chat_url": "https://gemini.google.com/share/37e0820a3a4d",
+  "grade": "green",
+  "headline": "8-day governance exit window and LLAMMA soft-liquidation protect TVS from external failures",
+  "short_headline": "8-day exit window; soft-liquidation mitigates oracles",
+  "rationale": {
+    "findings": [
+      { "code": "A1", "text": "The protocol relies on external PriceAggregator (0x18672b1b...) and collateral-specific AMM price_oracle() calls to determine solvency and interest rates." },
+      { "code": "A2", "text": "An emergency 5-of-9 Gnosis Safe (0x467947EE...) has restricted powers via the Sub-DAO to adjust parameters like fees and monetary policy, but cannot mint tokens or access user principal." },
+      { "code": "A3", "text": "Core collateral includes external bridged or custodial assets such as WBTC (0x4e595413...), tBTC (0x1C91da02...), and wstETH (0x100dAa78...), introducing underlying dependency on BitGo, Threshold, and Lido respectively." },
+      { "code": "A4", "text": "Nested collateral risk exists for wstETH (Lido) and frxUSD (Frax), where failure of the underlying yield-bearing mechanism could impair specific isolated markets." },
+      { "code": "A6", "text": "The LLAMMA (AMM) mechanism (e.g., 0x16811950...) acts as a live, on-chain soft-liquidation fallback that continuously rebalances collateral, reducing reliance on discrete oracle reports or atomic liquidators." },
+      { "code": "A7", "text": "The protocol is deployed on Ethereum L1, inheriting its substrate liveness without additional sequencer or DA committee dependencies." },
+      { "code": "A8", "text": "Liquidations (liquidate()) and PegKeeper updates (update()) are permissionless functions that can be called by any off-chain keeper or arbitrageur." },
+      { "code": "A9", "text": "Critical external dependencies like the PriceAggregator and MonetaryPolicy are mutable only by the DAO Agent (0x40907540...), which is governed by Aragon Voting (0xE478de48...) requiring a 7-day vote plus a 1-day execution delay, providing an 8-day exit window for users." }
+    ],
+    "steelman": {
+      "red": "The protocol's reliance on custodial assets like WBTC and bridged assets like tBTC means a failure of external third-party custodians could cause unrecoverable principal loss for users in those markets.",
+      "orange": "Reliance on external price feeds via the PriceAggregator could lead to erroneous liquidations if reports are manipulated, though the 8-day governance window provides a path to recovery.",
+      "green": "The combination of the LLAMMA soft-liquidation mechanism and a mandatory 8-day Aragon governance delay ensures that users can exit before any malicious or faulty external dependency change takes effect."
+    },
+    "verdict": "Choosing green because the protocol implements an 8-day governance exit window (7-day vote + 1-day delay) for all critical dependency swaps (A9), and the unique LLAMMA mechanism provides continuous on-chain mitigation for oracle failures (A6)."
+  },
+  "evidence": [
+    { "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC", "shows": "ControllerFactory admin is the Sub-DAO (0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79)", "chain": "Ethereum", "address": "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC", "fetched_at": "2026-04-29T20:30:00Z" },
+    { "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968", "shows": "DAO Agent is the admin for PriceAggregator and MonetaryPolicy", "chain": "Ethereum", "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968", "fetched_at": "2026-04-29T20:30:00Z" },
+    { "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c", "shows": "Emergency DAO multisig is a 5-of-9 Gnosis Safe", "chain": "Ethereum", "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c", "fetched_at": "2026-04-29T20:30:00Z" },
+    { "url": "https://github.com/curvefi/curve-stablecoin", "shows": "Core logic for LLAMMA and Controller implementations", "commit": "80b7c9fefc452a6d5d6a5440b91bfcca12f6a0af" }
+  ],
+  "unknowns": [],
+  "protocol_metadata": {
+    "github": [ "https://github.com/curvefi/curve-stablecoin", "https://github.com/curvefi/curve-dao-contracts" ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      { "firm": "ChainSecurity", "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf", "date": "2023-05" }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": { "chain": "Ethereum", "address": "0x5f3B5DfEb7B28CDbD7FAba78963EE202a494e2A2", "symbol": "veCRV" },
+    "bug_bounty_url": "https://immunefi.com/bounty/curvefinance/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/crvusd/deployments/",
+    "admin_addresses": [
+      { "chain": "Ethereum", "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968", "role": "Curve DAO Ownership Agent", "actor_class": "governance" },
+      { "chain": "Ethereum", "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c", "role": "Emergency DAO Multisig", "actor_class": "multisig" },
+      { "chain": "Ethereum", "address": "0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79", "role": "Sub-DAO", "actor_class": "governance" }
+    ],
+    "upgradeability": "mixed",
+    "about": "crvUSD is a CDP-based stablecoin that utilizes the LLAMMA (Lending-Liquidating AMM Algorithm) mechanism to soft-liquidate collateral. This approach allows users to maintain collateral exposure during volatility by continuously rebalancing assets rather than suffering discrete liquidation events. It is governed by the Curve DAO with a dual-control structure for emergency actions."
+  }
+}
