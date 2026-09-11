@@ -1,0 +1,127 @@
+{
+  "schema_version": 3,
+  "slug": "curve-llamalend",
+  "slice": "control",
+  "snapshot_generated_at": "2026-04-27T08:19:52.420Z",
+  "prompt_version": 12,
+  "analysis_date": "2026-04-29",
+  "model": "gemini-3.1-pro",
+  "chat_url": "https://gemini.google.com/share/3c4688dded05",
+  "grade": "orange",
+  "headline": "Core markets are immutable, but critical economic parameters can be modified with 0-delay by an emergency multisig.",
+  "short_headline": "7-day DAO; 0-delay T2 multisig",
+  "rationale": {
+    "findings": [
+      {
+        "code": "C1",
+        "text": "The OneWayLendingFactory (0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0) is administered by the Sub-DAO contract (0xb7400d2eA0f6dC1d7B153aa430b9e572f28afB79), which is owned by the main Curve DAO Ownership Agent (0x40907540d8a6C65c637785e8f8B742ae6b0b9968)."
+      },
+      {
+        "code": "C2",
+        "text": "Existing markets (Controllers, AMMs, and Vaults) are generally immutable and lack pause or upgrade functions. The Sub-DAO can set new implementation addresses for future markets via Factory functions amm_impl (0x041622b5) and controller_impl (0x168819c0), but cannot modify the logic of active positions."
+      },
+      {
+        "code": "C3",
+        "text": "The uncontested fast path for high-tier changes through the DAO is 7 days (604,800 seconds), defined by the Aragon Voting Ownership duration (0xE478de485ad2fe566d49342Cbd03E49ed7DB3356). There is no subsequent timelock stage between the vote passing and execution via the DAO Agent."
+      },
+      {
+        "code": "C4",
+        "text": "A 5-of-9 Emergency Multisig (0x467947EE34aF926cF1DCac093870f613C96B1E0c) holds privileged roles. While it meets quorum requirements for a Security Council (55%), its signers are not publicly verified as non-insiders in the provided context, precluding a green rating."
+      },
+      {
+        "code": "C5",
+        "text": "Curve DAO on-chain governance uses veCRV (0x5f3B5DfEb7B28CDbD7FAba78963EE202a494e2A2). Ownership votes (0xE478de485ad2fe566d49342Cbd03E49ed7DB3356) require a 30% quorum (0xdc474b1a) and 51% support (0xfad167ab) with a 7-day voting period."
+      },
+      {
+        "code": "C6",
+        "text": "The Emergency Multisig has the power to execute T2 functions (set_amm_fee, set_monetary_policy, and reduce_debt_ceiling) via the Sub-DAO with 0-delay, providing an emergency response path that bypasses the 7-day DAO vote."
+      },
+      {
+        "code": "C7",
+        "text": "The highest tier reachable on existing markets is T2 (Economically Material). T1 (Fund-Critical) powers, such as draining collateral or blocking withdrawals, are not reachable via the admin interfaces of the Controller or AMM (verified on-chain)."
+      }
+    ],
+    "steelman": {
+      "red": "The emergency multisig's 0-delay power to set monetary policy could be used to extract value from borrowers by spiking interest rates to confiscatory levels without any exit window.",
+      "orange": "The presence of an emergency multisig with 0-delay authority over material economic parameters (T2) like fees and interest rates, combined with lack of verified signer transparency, represents a centralized risk vector.",
+      "green": "LlamaLend's architecture is effectively immutable for existing users; since the DAO and multisig cannot drain collateral or replace implementations of live markets, the protocol is structurally protected against T1-level administrative malice."
+    },
+    "verdict": "Orange is assigned because economically material (T2) parameters, specifically interest rate policies and AMM fees, can be modified instantly by a 5-of-9 multisig that does not meet the defined Security Council transparency standards. While the immutability of the core fund-holding contracts (T1) is a significant security feature, the 0-delay fast path for economic extraction dictates an orange risk profile."
+  },
+  "evidence": [
+    {
+      "url": "https://etherscan.io/address/0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+      "shows": "OneWayLendingFactory: admin() returns the LlamaLend Sub-DAO (0xb7400d2eA0f6dC1d7B153aa430b9e572f28afB79), confirming Factory is governed by Sub-DAO not the deployer EOA.",
+      "chain": "Ethereum",
+      "address": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0"
+    },
+    {
+      "url": "https://etherscan.io/address/0xb7400d2eA0f6dC1d7B153aa430b9e572f28afB79",
+      "shows": "LlamaLend Sub-DAO Agent: owner is the main Curve DAO Ownership Agent (0x40907540d8a6C65c637785e8f8B742ae6b0b9968), and Emergency Multisig (0x467947EE34aF926cF1DCac093870f613C96B1E0c) holds T2 fast-path roles.",
+      "chain": "Ethereum",
+      "address": "0xb7400d2eA0f6dC1d7B153aa430b9e572f28afB79"
+    },
+    {
+      "url": "https://etherscan.io/address/0xE478de485ad2fe566d49342Cbd03E49ed7DB3356",
+      "shows": "Curve Aragon Voting Ownership: voteTime=604800s (7-day), minAcceptQuorumPct=30%, supportRequiredPct=51%, no subsequent timelock between vote pass and Agent execution.",
+      "chain": "Ethereum",
+      "address": "0xE478de485ad2fe566d49342Cbd03E49ed7DB3356"
+    },
+    {
+      "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+      "shows": "Emergency DAO Multisig: deployed as a 5-of-9 Gnosis Safe with T2 fast-path authority (set_amm_fee, set_monetary_policy, reduce_debt_ceiling) and 0-delay execution via the Sub-DAO.",
+      "chain": "Ethereum",
+      "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c"
+    }
+  ],
+  "unknowns": [
+    "C4: Signer identities for the Emergency DAO Multisig (0x467947EE34aF926cF1DCac093870f613C96B1E0c) are not verified as non-insiders.",
+    "C7: Explicit on-chain bounds for the set_monetary_policy function were not cited, which could elevate the power from T2 to T1 if interest rates are effectively uncapped."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/curvefi/curve-stablecoin",
+      "https://github.com/curvefi/curve-contract",
+      "https://github.com/curvefi/curve-dao-contracts",
+      "https://github.com/curvefi/curve-aragon-voting"
+    ],
+    "docs_url": "https://docs.curve.finance/",
+    "audits": [
+      {
+        "firm": "ChainSecurity",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Lending%20Security%20Audit%20Report.pdf",
+        "date": "2024-05-14"
+      },
+      {
+        "firm": "MixBytes",
+        "url": "https://docs.curve.finance/pdf/audits/Curve%20Stablecoin%20%28crvUSD%29%20Security%20Audit%20Report.pdf",
+        "date": "2023-05-10"
+      }
+    ],
+    "governance_forum": "https://gov.curve.fi/",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0x5f3B5DfEb7B28CDbD7FAba78963EE202a494e2A2",
+      "symbol": "veCRV"
+    },
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/curve-finance/",
+    "security_contact": "security@curve.fi",
+    "deployed_contracts_doc": "https://docs.curve.finance/lending/deployed-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "role": "DAO Ownership Agent",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0c",
+        "role": "Emergency Multisig",
+        "actor_class": "multisig"
+      }
+    ],
+    "upgradeability": "mixed",
+    "about": "Curve LlamaLend is an isolated lending market framework utilizing the LLAMMA (Lending-Liquidating AMM) mechanism. It allows for one-way lending where collateral is algorithmically traded across a price range during liquidations, providing a 'soft-liquidation' experience that reduces the frequency of hard liquidation events and potential loss of user funds."
+  }
+}
