@@ -1,0 +1,101 @@
+{
+  "schema_version": 4,
+  "slug": "bittensor-dtao",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-09-29",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "0 EVM contract addresses catalogued; dTAO is a native Substrate runtime pallet on the Bittensor chain, which has no EVM block-explorer support and no ss58 addresses expressible in the DeFiPunkd address schema.",
+  "short_headline": "No EVM addresses; native Substrate pallet",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: No EVM block-explorer supported for the Bittensor chain (protocol.chains = 'Bittensor'). DeFiPunkd supports chainIds 1/10/56/130/137/324/8453/42161/43114/59144/81457/534352/11155111 — none of which is the Bittensor Subtensor chain. Etherscan search surfaced wTAO (0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44) as a Bittensor-branded Ethereum token, but this is a cross-chain wrapped token unrelated to the dTAO AMM pallet."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Official docs at bittensor.com/docs do not list a 'deployed contracts' page because dTAO has no EVM deployments. The network page documents RPC endpoints (wss://entrypoint-finney.opentensor.ai:443 for mainnet) and chain architecture but no contract addresses. No deployed_contracts_doc URL exists."
+      },
+      {
+        "code": "D3",
+        "text": "D3: No audit links were pinned in protocol.audit_links and no audit PDFs were surfaced from the fetched docs, GitHub repo README, or search results for dTAO specifically. No audit addresses can be extracted."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub monorepo at https://github.com/RaoFoundation/subtensor fetched. The dTAO AMM functionality lives in pallets/subtensor/ as a Rust/FRAME pallet — no Foundry broadcast JSON, no hardhat-deploy artifacts, no deployments.json with EVM addresses exist. The swap/AMM logic is compiled into the wasm runtime, not deployed as an EVM contract. No commit SHA pinned (branch-level view retrieved)."
+      },
+      {
+        "code": "D5",
+        "text": "D5: protocol.chains lists only 'Bittensor' (one chain). No multi-chain EVM enumeration applicable. The Bittensor Subtensor chain is its own L1 using Substrate; it does have an EVM sub-layer (Frontier) but the dTAO AMM pools are native substrate state, not EVM contracts."
+      },
+      {
+        "code": "D6",
+        "text": "D6: No factory contract addresses identified. dTAO pools are created via substrate extrinsics (subnet registration), not via EVM factory contracts. Each subnet's alpha-TAO pool is a state entry in the subtensor pallet, not a deployed contract. No /api/contract/read call possible."
+      },
+      {
+        "code": "D7",
+        "text": "D7: No EVM-compatible admin_addresses discovered. Governance of the Bittensor chain uses a Senate (a small group of delegates holding ss58 coldkeys) as described in search results, but ss58 addresses cannot be represented in the DeFiPunkd address schema (0x hex). Substrate sudo/council pallet keys are not enumerable from fetched sources."
+      },
+      {
+        "code": "D8",
+        "text": "D8: No addresses meet the ratchet integrity requirement (each must trace to ≥1 fetched URL). wTAO on Ethereum (0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44) was snippet-surfaced from Etherscan search but is a wrapped bridge token not part of the dTAO AMM on the Bittensor chain itself; recorded in unknowns for downstream verification."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery blocked: Bittensor dTAO is implemented as a native Substrate FRAME pallet on the Bittensor Subtensor chain, not as EVM smart contracts. No hex (0x) contract addresses exist for the dTAO DEX functionality. The DeFiPunkd API only supports EVM chains, and the Bittensor chain uses Substrate ss58 addresses, making on-chain address discovery via supported block explorers impossible. Two corpora were walked (bittensor.com and github.com/RaoFoundation/subtensor) plus search results; 0 EVM addresses catalogued for dTAO."
+  },
+  "evidence": [
+    {
+      "url": "https://www.bittensor.com",
+      "shows": "Capability probe success: bittensor.com website loaded. Confirms protocol website is live. Links to docs at bittensor.com/docs.",
+      "fetched_at": "2026-09-29T00:00:00Z"
+    },
+    {
+      "url": "https://www.bittensor.com/docs",
+      "shows": "Official Bittensor documentation landing page. Confirms docs structure: SDK, CLI, transactions, queries. No deployed contract addresses page listed. References Substrate-based chain architecture.",
+      "fetched_at": "2026-09-29T00:00:00Z"
+    },
+    {
+      "url": "https://www.bittensor.com/docs/concepts/network",
+      "shows": "Documents Bittensor network architecture: Substrate-based subtensor chain, per-subnet alpha-TAO liquidity pools implemented as chain state (not EVM contracts), mainnet RPC endpoint wss://entrypoint-finney.opentensor.ai:443, ss58 key architecture. Confirms dTAO pools are native substrate state.",
+      "fetched_at": "2026-09-29T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/RaoFoundation/subtensor",
+      "shows": "Primary Bittensor monorepo (formerly opentensor/subtensor). Contains pallets/subtensor/ FRAME pallet implementing dTAO swap/AMM, precompiles/ for EVM bridge, sdk/python/ for Python SDK. No EVM deployment artifacts (no broadcast JSON, no hardhat-deploy). Confirms dTAO is a native Substrate pallet, not an EVM contract.",
+      "fetched_at": "2026-09-29T00:00:00Z"
+    },
+    {
+      "url": "https://docs.bittensor.com/dynamic-tao/dtao-faq",
+      "shows": "dTAO FAQ: Dynamic TAO was deployed as a Bittensor main network runtime upgrade on February 13, 2025, approved by senate vote. Governance changes require new proposals and senate votes. Confirms dTAO is a chain-level upgrade, not a separately deployed contract.",
+      "fetched_at": "2026-09-29T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: No supported block explorer for the Bittensor Subtensor chain exists in DeFiPunkd's chainId list. Bittensor uses taostats.io as its explorer (https://taostats.io) but this is not an EVM explorer and no hex contract addresses can be extracted from it for dTAO pallets.",
+    "D1: wTAO Ethereum token (0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44) surfaced via Etherscan snippet but not fetched in this run; may be an official Opentensor Foundation wrapped token or third-party bridge — requires verification in a future run before inclusion in admin_addresses.",
+    "D2: No deployed_contracts_doc URL found; dTAO has no EVM deployment manifest. Substrate chain state (pool accounts, sudo key, council/senate multisig ss58 addresses) cannot be expressed as 0x addresses.",
+    "D3: No audit reports found for dTAO. The February 2025 mainnet upgrade was described as approved by senate vote after development/testing, but no linked security audit PDF was surfaced from any fetched source.",
+    "D4: GitHub monorepo commit SHA not pinned (branch-level view only). Content-addressed citation not possible without a pinned SHA.",
+    "D5: Bittensor chain ss58 admin/governance addresses (Sudo key, Technical Committee, Senate delegate coldkeys) not discoverable via EVM-compatible block explorers. taostats.io or Polkadot.js-based explorer would be needed.",
+    "D6: No factory contract enumeration possible; per-subnet alpha-TAO pools are substrate storage entries, not deployed EVM contracts. Pool enumeration would require Substrate RPC calls (e.g., subtensor.getAllSubnets() or similar), not EVM read methods.",
+    "D7: Senate/governance actor class for the Bittensor chain cannot be determined from fetched EVM-compatible sources. Senate is described as 'a small group of delegates' with upgrade authority but individual ss58 addresses are not in fetched documents.",
+    "D8-offchain: On-chain read attempts blocked — DeFiPunkd /api/contract/read endpoint only supports EVM chains; no Bittensor chainId available. All evidence is off-chain (docs + GitHub). grading_basis set to mixed."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/RaoFoundation/subtensor",
+      "https://github.com/opentensor/bittensor"
+    ],
+    "docs_url": "https://www.bittensor.com/docs",
+    "audits": [],
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Bittensor dTAO (Dynamic TAO) is a February 2025 runtime upgrade to the Bittensor Subtensor blockchain — a Substrate-based L1 chain — that replaces centralized root-network emission control with a per-subnet constant-product AMM market. Each subnet receives its own alpha token, and stakers swap TAO for alpha via a Uniswap-style x*y=k pool embedded in the chain's native pallet storage, with token price determined by the TAO/alpha ratio. Users stake TAO into a subnet's pool to earn alpha and a share of subnet emissions, and can unstake by reversing the swap; there are no EVM smart contracts to interact with — all operations are Substrate extrinsics signed with ss58 coldkeys or hotkeys via the bittensor Python SDK or btcli CLI."
+  }
+}
