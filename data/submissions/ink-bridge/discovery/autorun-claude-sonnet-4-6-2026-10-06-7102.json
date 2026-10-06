@@ -1,0 +1,294 @@
+{
+  "schema_version": 4,
+  "slug": "ink-bridge",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-10-06",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "34 contracts catalogued on Ethereum and Ink L2; 13 core OP Stack bridge/control contracts on Ethereum plus 21 L2 predeploys; governance held by SuperchainProxyAdminOwner (2-of-2 multisig of OpFoundation 5/7 + Optimism Security Council 10/13) with no upgrade delay.",
+  "short_headline": "34 contracts across Ethereum + Ink L2",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: Block-explorer name-tag search not directly performed via Etherscan searchHandler (fetch limit reached); L2Beat provided equivalent contract enumeration with Etherscan links for all Ethereum-side contracts. Ink chain uses Blockscout (explorer.inkonchain.com), not a supported L2Beat block-explorer for direct search. Key contracts surfaced: L1StandardBridge 0x88FF1e5b602916615391F55854588EFcBB7663f0, OptimismPortal2 0x5d66C1782664115999C47c9fA5cd031f495D3e4F, ProxyAdmin 0xd56045E68956FCe2576E680c95a4750cf8241f79, SuperchainProxyAdminOwner 0x5a0Aae59D09fccBdDb6C6CcEB07B7279367C3d2A."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Official deployments doc fetched at https://docs.inkonchain.com/useful-information/contracts. Contains full Ethereum Mainnet L1 contract table (13 entries) and Ink Mainnet L2 predeploy table (17 entries). set protocol_metadata.deployed_contracts_doc to this URL."
+      },
+      {
+        "code": "D3",
+        "text": "D3: No audit_links provided in per-protocol context. No dedicated Ink Bridge audit PDF was discovered via docs or L2Beat. L2Beat references OP Stack security reviews (Spearbit fault-proofs audit) but these are Optimism-level audits, not Ink-specific. Recording as unknown."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub org is https://github.com/inkonchain (confirmed via website fetch). No deployment artifacts repo was explicitly linked in docs. The superchain-registry config is referenced at https://github.com/ethereum-optimism/superchain-registry/blob/main/superchain/configs/mainnet/ink.toml (from L2Beat) but not fetched this run due to fetch limit. Recording as partially unknown."
+      },
+      {
+        "code": "D5",
+        "text": "D5: protocol.chains is Ethereum only (the canonical bridge's L1 side). L2 (Ink chain, chainId 57073) is the counterpart; its predeploys are enumerated from docs. No additional chains in scope. Ink Sepolia testnet contracts also listed in docs but marked out-of-scope for mainnet discovery."
+      },
+      {
+        "code": "D6",
+        "text": "D6: OptimismMintableERC20Factory on L1 (0xA8B389A82e088b164cD03230e900980CcED34d29) and L2 (0x4200000000000000000000000000000000000012) are factories for bridged ERC20 tokens. Individual child token contracts are not enumerable without on-chain read calls not performed this run. DisputeGameFactory (0x10d7B35078d3baabB96Dd45a9143B94be65b12CD) creates dispute game instances dynamically. Cap notice: child game/token enumeration deferred to control slice."
+      },
+      {
+        "code": "D7",
+        "text": "D7: Role taxonomy applied to all admin_addresses entries. Key actors: SuperchainProxyAdminOwner (2-of-2 governance multisig, admin over all proxy contracts), OpFoundationUpgradeSafe (5/7 multisig, member of governance), Optimism Security Council (10/13 multisig, member of governance), ProxyAdmin (proxy_admin), Sequencer EOA (batcher)."
+      },
+      {
+        "code": "D8",
+        "text": "D8: All addresses in admin_addresses[] trace to https://docs.inkonchain.com/useful-information/contracts or https://l2beat.com/layer2s/projects/ink, both fetched this run. No snippet-only sightings remain in admin_addresses[]."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery run walked three corpora (inkonchain.com/bridge, official docs, L2Beat) and catalogued 34 contracts: 13 Ethereum-side OP Stack contracts (bridge, portal, config, dispute system, admin) and 21 Ink L2 predeploys. All addresses sourced from fetched pages. grade=unknown as discovery slices carry no red/orange/green rubric."
+  },
+  "evidence": [
+    {
+      "url": "https://inkonchain.com/bridge",
+      "shows": "Protocol website confirms Ink is an OP Stack L2 built by Kraken (Payward Inc.), GitHub org https://github.com/inkonchain, bridge UI powered by Relay, and lists partner bridge apps. Sentry release SHA 1a26d34b019e10330fa75df842649193132c7b72 visible in meta-baggage.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-10-06T00:00:00Z"
+    },
+    {
+      "url": "https://docs.inkonchain.com/useful-information/contracts",
+      "shows": "Official Ink contract address table: L1 Ethereum Mainnet (13 contracts incl. L1StandardBridge 0x88ff1e5b602916615391f55854588efcbb7663f0, OptimismPortal 0x5d66c1782664115999c47c9fa5cd031f495d3e4f, ProxyAdmin 0xd56045E68956FCe2576E680c95a4750cf8241f79, SystemConfig 0x62c0a111929fa32cec2f76adba54c16afb6e8364) and Ink Mainnet L2 predeploys (17 contracts at 0x4200... addresses).",
+      "chain": "Ethereum",
+      "fetched_at": "2026-10-06T00:00:00Z"
+    },
+    {
+      "url": "https://l2beat.com/layer2s/projects/ink",
+      "shows": "Full permissions and smart contract map for Ink: SuperchainProxyAdminOwner 0x5a0Aae59D09fccBdDb6C6CcEB07B7279367C3d2A (2/2 multisig of OpFoundationUpgradeSafe 5/7 + Optimism Security Council 10/13), ETHLockbox 0xbd4AbB321138e8Eddc399cE64E66451294325a14, DisputeGameFactory 0x10d7B35078d3baabB96Dd45a9143B94be65b12CD, SuperFaultDisputeGame 0x19AF533Cc2A2A55786DCB8672aA5717e64213208, Sequencer/batcher EOA 0x6db6161fC5662450E801398Bad62dD9921216B98, Optimism Guardian Multisig 0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2, BatchInbox 0x005969bf0EcbF6eDB6C47E5e94693b1C3651Be97. Stage 1 Optimistic Rollup. Recent upgrade 2026-09-24 to op-contracts/v8.0.0-rc.3.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-10-06T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D3: No Ink-specific audit PDFs found; protocol.audit_links is empty and no audit page discovered from docs or L2Beat for this specific deployment",
+    "D4: GitHub deployment artifacts (broadcast JSONs, hardhat-deploy files) not fetched due to fetch-call limit; https://github.com/ethereum-optimism/superchain-registry/blob/main/superchain/configs/mainnet/ink.toml referenced by L2Beat but not fetched this run",
+    "D6: OptimismMintableERC20Factory child token enumeration not performed (requires on-chain read calls); DisputeGameFactory child game enumeration deferred to control slice",
+    "D1-offchain: Etherscan searchHandler direct fetch not attempted due to fetch-call budget; block-explorer coverage supplemented via L2Beat which aggregates Etherscan links"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/inkonchain"
+    ],
+    "docs_url": "https://docs.inkonchain.com",
+    "audits": [],
+    "deployed_contracts_doc": "https://docs.inkonchain.com/useful-information/contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x88FF1e5b602916615391F55854588EFcBB7663f0",
+        "role": "pool (L1StandardBridge — main ERC20 deposit escrow)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5d66C1782664115999C47c9fA5cd031f495D3e4F",
+        "role": "vault (OptimismPortal2 — ETH deposit entry point and withdrawal finalization)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xbd4AbB321138e8Eddc399cE64E66451294325a14",
+        "role": "vault (ETHLockbox — ETH escrow for canonical bridge)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xd56045E68956FCe2576E680c95a4750cf8241f79",
+        "role": "proxy_admin (ProxyAdmin — admin for all Ink L1 proxy contracts)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5a0Aae59D09fccBdDb6C6CcEB07B7279367C3d2A",
+        "role": "governor (SuperchainProxyAdminOwner — 2/2 multisig owning ProxyAdmin; members are OpFoundationUpgradeSafe and Optimism Security Council)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x847B5c174615B1B7fDF770882256e2D3E95b9D92",
+        "role": "multisig (OpFoundationUpgradeSafe — 5/7 threshold; member of SuperchainProxyAdminOwner; owns SystemConfig)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc2819DC788505Aac350142A7A707BF9D03E3Bd03",
+        "role": "multisig (Optimism Security Council — 10/13 threshold; member of SuperchainProxyAdminOwner and Optimism Guardian Multisig)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x09f7150D8c019BeF34450d6920f6B3608ceFdAf2",
+        "role": "guardian (Optimism Guardian Multisig — 1/1 threshold; can pause SuperchainConfig; member is Security Council)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA8447329e52F64AED2bFc9E7a2506F7D369f483a",
+        "role": "other (SaferSafes — Gnosis Safe module combining LivenessModule and TimelockGuard on OpFoundationUpgradeSafe)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x62C0a111929fA32ceC2F76aDba54C16aFb6E8364",
+        "role": "other (SystemConfig — sequencer address, gas limit, batcher config; owner is OpFoundationUpgradeSafe)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x10d7B35078d3baabB96Dd45a9143B94be65b12CD",
+        "role": "factory (DisputeGameFactory — creates dispute game instances for state root challenges)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xEe018bAf058227872540AC60eFbd38b023d9dAe2",
+        "role": "other (AnchorStateRegistry — stores latest confirmed state root for dispute games)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x69d3Cf86B2Bf1a9e99875B7e2D9B6a84426c171f",
+        "role": "other (L1CrossDomainMessenger — sends/receives messages between L1 and Ink L2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x661235a238B11191211fa95D4Dd9E423d521E0Be",
+        "role": "other (L1ERC721Bridge — bridges ERC-721 tokens from Ethereum to Ink)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA8B389A82e088b164cD03230e900980CcED34d29",
+        "role": "factory (OptimismMintableERC20Factory L1 — deploys bridged ERC20 representations)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9b7c9bbd6d540a8a4dedd935819fc4408ba71153",
+        "role": "other (AddressManager — legacy address registry)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xde744491bcf6b2dd2f32146364ea1487d75e2509",
+        "role": "other (AnchorStateRegistry proxy — older address listed in official docs)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x95703e0982140D16f8ebA6d158FccEde42f04a4C",
+        "role": "other (SuperchainConfig — global Superchain pause and config; guardian is Optimism Guardian Multisig)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x57b4C29DAee99a28E6E86778b499361294c134eA",
+        "role": "other (DelayedWETH — holds bonded ETH for dispute games)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x543bA4AADBAb8f9025686Bd03993043599c6fB04",
+        "role": "proxy_admin (SuperchainProxyAdmin — admin for SuperchainConfig proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6db6161fC5662450E801398Bad62dD9921216B98",
+        "role": "other (Sequencer/batcher EOA — submits L2 transaction batches to L1)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2fA150379bF32b6d79Eeb4ff9bD280E76049a87c",
+        "role": "guardian (Optimism deputy pauser EOA — can call pause() on SuperchainConfig via DeputyPauseModule)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3832bfbeF03173E4C49a00ec0DD178817A02D177",
+        "role": "other (Proposer EOA — proposes state roots to DisputeGameFactory)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x005969bf0EcbF6eDB6C47E5e94693b1C3651Be97",
+        "role": "other (BatchInbox — Ethereum address where L2 transaction batches are submitted)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x19AF533Cc2A2A55786DCB8672aA5717e64213208",
+        "role": "other (SuperFaultDisputeGame implementation — permissionless dispute game logic post-Upgrade20)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5C3eb47cB0174aea522a2a9Ae79487139A53D691",
+        "role": "other (SuperPermissionedDisputeGame implementation — permissioned fallback dispute game post-Upgrade20)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x4200000000000000000000000000000000000010",
+        "role": "other (L2StandardBridge — L2 entry point for ERC20 withdraw/deposit)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x4200000000000000000000000000000000000007",
+        "role": "other (L2CrossDomainMessenger — sends/receives cross-domain messages on L2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x4200000000000000000000000000000000000016",
+        "role": "other (L2ToL1MessagePasser — low-level L2→L1 message and withdrawal initiation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x4200000000000000000000000000000000000018",
+        "role": "proxy_admin (L2ProxyAdmin — admin for all L2 predeploy proxies; owner is SuperchainProxyAdminOwner_L2Alias)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x6B1BAE59D09fCcbdDB6C6cceb07B7279367C4E3b",
+        "role": "governor (SuperchainProxyAdminOwner_L2Alias — L2 alias of the L1 SuperchainProxyAdminOwner; can upgrade all L2 predeploys via L2ProxyAdmin)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x4200000000000000000000000000000000000014",
+        "role": "other (L2ERC721Bridge — L2 entry point for ERC721 withdraw/deposit)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x4200000000000000000000000000000000000012",
+        "role": "factory (OptimismMintableERC20Factory L2 — deploys bridged ERC20 representations on Ink)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x4200000000000000000000000000000000000011",
+        "role": "other (SequencerFeeVault — collects sequencer fees, withdrawable to L1 fee collector)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Ink Bridge is the canonical OP Stack bridge connecting Ethereum mainnet to Ink, an Optimistic Rollup L2 built by Kraken (Payward Inc.) on the OP Stack and part of the Optimism Superchain. Users deposit ETH or ERC20/ERC721 tokens by calling L1StandardBridge or OptimismPortal2 on Ethereum, receiving equivalent representations on Ink L2 with sub-second block times; withdrawals follow the standard 7-day optimistic challenge window. The bridge's security is governed by the SuperchainProxyAdminOwner (a 2-of-2 multisig requiring both the OP Foundation 5/7 Safe and the Optimism Security Council 10/13 Safe), with no upgrade time delay, and dispute resolution is handled by the permissionless SuperFaultDisputeGame system (Upgrade 20, September 2026). Ink reached Stage 1 in January 2025, meaning users can exit even if the Security Council disappears, though instant upgrades by the combined governance body remain a trust assumption."
+  }
+}
