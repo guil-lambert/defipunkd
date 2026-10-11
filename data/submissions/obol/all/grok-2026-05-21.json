@@ -1,0 +1,394 @@
+[
+  {
+    "schema_version": 4,
+    "slug": "obol",
+    "slice": "control",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-21",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_defc1d7a-3372-4625-ab08-6367aa9b5d3b",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Immutable self-sovereign OVMs and splits; no upgrade path or central admin over user validators/funds; DAO governance limited to T3/T4 collective decisions",
+    "short_headline": "Immutable cores, self-sovereign",
+    "rationale": {
+      "findings": [
+        {
+          "code": "C1",
+          "text": "ObolValidatorManagerFactory (mainnet 0x2c26B5A373294CaccBd3DE817D9B7C6aea7De584) and ImmutableSplitControllerFactory have no owner/admin view methods; OVMs deployed with owner set by caller (typically user/SAFE multisig) who grants RBAC roles. No central protocol owner. (from defipunkd surfacer + docs)"
+        },
+        {
+          "code": "C2",
+          "text": "All core contracts (factories, OVMs, splits, ImmutableSplitController) are explicitly immutable/non-upgradeable with no proxy patterns or upgrade functions. Self-sovereign design. (docs.obol.org/learn/readme/obol-splits + GitHub repo)"
+        },
+        {
+          "code": "C3",
+          "text": "No execution path/timelock for upgrades on core contracts; per-deployment OVM control is immediate via owner/RBAC. DAO governance (OBOL token + Governor on Tally) handles collective treasury/incentives only."
+        },
+        {
+          "code": "C4",
+          "text": "No reachable multisigs on core upgrade/execution path; per-OVM owner (user-controlled SAFE recommended) holds scoped RBAC (DEPOSIT_ROLE, WITHDRAWAL_ROLE, etc.). No emergency or protocol-wide pause."
+        },
+        {
+          "code": "C5",
+          "text": "OBOL token governance via Tally (Token House) for DAO proposals; no on-chain reads performed on Governor constants this run (corroborated by docs and Tally page)."
+        },
+        {
+          "code": "C6",
+          "text": "No separate emergency powers; all actions user-controlled via OVM owner/RBAC."
+        },
+        {
+          "code": "C7",
+          "text": "Highest tier reachable is T3 (governance-internal: DAO treasury/params) or T4 (operational); T1/T2 unreachable on immutable cores holding user funds/validators. (docs explicitly state self-sovereign, no third-party upgrade control)"
+        }
+      ],
+      "steelman": {
+        "red": "A single EOA or 2-of-3 could control upgrades to user validator contracts and drain funds.",
+        "orange": "Governance or multisig could reach T2 economic parameters with short/no timelock.",
+        "green": "Immutable non-upgradeable contracts with self-sovereign per-deployment owner control make T1/T2 unreachable; DAO limited to non-fund-critical decisions."
+      },
+      "verdict": "Choosing green because immutable self-sovereign OVMs/splits (C2+C7) eliminate any admin upgrade or fund-drain path, with only T3/T4 DAO governance reachable; strongest steel-man is green."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x2c26B5A373294CaccBd3DE817D9B7C6aea7De584",
+        "shows": "ObolValidatorManagerFactory has no owner/admin; deploys OVMs with caller-set owner and no proxy/upgrade functions",
+        "chain": "Ethereum",
+        "address": "0x2c26B5A373294CaccBd3DE817D9B7C6aea7De584"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x49e7cA187F1E94d9A0d1DFBd6CCCd69Ca17F56a4",
+        "shows": "ImmutableSplitControllerFactory creates immutable controllers; no owner/admin exposed",
+        "chain": "Ethereum",
+        "address": "0x49e7cA187F1E94d9A0d1DFBd6CCCd69Ca17F56a4"
+      },
+      {
+        "url": "https://docs.obol.org/learn/readme/obol-splits",
+        "shows": "Contracts are immutable, non-upgradeable, self-sovereign; permissioned actions controlled by deployer/owner only; no third-party upgrade access",
+        "fetched_at": "2026-05-21T10:45:00Z"
+      },
+      {
+        "url": "https://github.com/ObolNetwork/obol-splits",
+        "shows": "Public repo with contracts; confirms mainnet deployments and immutable design (v0.4 release)",
+        "commit": "main branch (no specific SHA pinned for this run)"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7",
+        "shows": "OBOL governance token; MINTER_ROLE and DEFAULT_ADMIN_ROLE visible (admin set to zero in some cases)",
+        "chain": "Ethereum",
+        "address": "0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7"
+      }
+    ],
+    "unknowns": [
+      "C5: exact Governor votingPeriod/quorum/timelock constants not re-read on-chain via /api/contract/read this run (docs/Tally corroboration only)"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/ObolNetwork/obol-splits"],
+      "docs_url": "https://docs.obol.org/",
+      "audits": [],
+      "governance_forum": "https://community.obol.org/ (Token House)",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7",
+        "symbol": "OBOL"
+      },
+      "deployed_contracts_doc": "https://docs.obol.org/learn/readme/obol-splits",
+      "admin_addresses": [],
+      "upgradeability": "immutable",
+      "about": "Obol provides Distributed Validator Technology (DVT) for Ethereum staking. Users/staking pools deploy self-sovereign Obol Validator Managers (via factory) as withdrawal recipients to split rewards/principal, rotate keys, and manage exits in distributed validator clusters using Charon middleware. Immutable splits enable non-custodial reward distribution. OBOL token enables DAO governance for the Obol Collective."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "obol",
+    "slice": "ability-to-exit",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-21",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_defc1d7a-3372-4625-ab08-6367aa9b5d3b",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Self-sovereign OVMs allow owner/RBAC-controlled withdrawals/exits with no central pause; follows Ethereum native exit queues",
+    "short_headline": "Self-sovereign exits",
+    "rationale": {
+      "findings": [
+        {
+          "code": "E1",
+          "text": "Key exit functions in ObolValidatorManager: withdraw() (partial/full via EIP-7002), consolidate() for key rotation."
+        },
+        {
+          "code": "E2",
+          "text": "WITHDRAWAL_ROLE (or owner) gates withdraw/exit; DEPOSIT_ROLE for deposits. No protocol-wide pause guards; per-OVM RBAC."
+        },
+        {
+          "code": "E3",
+          "text": "No PAUSE_ROLE or indefinite pause; roles are set/controlled by OVM owner (self-sovereign)."
+        },
+        {
+          "code": "E4",
+          "text": "No emergency/governance pause distinction; all actions user-controlled."
+        },
+        {
+          "code": "E5",
+          "text": "Queued redemptions follow Ethereum withdrawal queue (~27h partial, ~5d full exit); queue itself not pausable by protocol."
+        },
+        {
+          "code": "E6",
+          "text": "No need for forced-escape hatch; owner/RBAC directly controls withdrawals/exits."
+        },
+        {
+          "code": "E7",
+          "text": "Exits callable directly on-chain (Etherscan write tab or wallet) without frontend; factories permissionless."
+        }
+      ],
+      "steelman": {
+        "red": "Central admin could pause all claims indefinitely or require signatures for exits.",
+        "orange": "Indefinite governance pause on finalized claims or long queues >7d.",
+        "green": "Fully permissionless per-OVM owner/RBAC exits with no protocol pause; follows native Ethereum queues."
+      },
+      "verdict": "Choosing green because OVMs grant self-sovereign WITHDRAWAL_ROLE/owner control over exits with no pause (E2+E3+E7); strongest steel-man is green."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.obol.org/learn/readme/obol-splits",
+        "shows": "OVM withdraw() gated by WITHDRAWAL_ROLE/owner; no pause; self-sovereign; funds available after Ethereum exit queue",
+        "fetched_at": "2026-05-21T10:45:00Z"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2c26B5A373294CaccBd3DE817D9B7C6aea7De584",
+        "shows": "Factory deploys OVMs with owner-set roles for withdrawals"
+      }
+    ],
+    "unknowns": [
+      "E3: exact role hashes and current pause state not re-read on a live deployed OVM instance this run (per-deployment)"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/ObolNetwork/obol-splits"],
+      "docs_url": "https://docs.obol.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7",
+        "symbol": "OBOL"
+      },
+      "deployed_contracts_doc": "https://docs.obol.org/learn/readme/obol-splits",
+      "upgradeability": "immutable",
+      "about": "Obol provides Distributed Validator Technology (DVT) for Ethereum staking. Users/staking pools deploy self-sovereign Obol Validator Managers (via factory) as withdrawal recipients to split rewards/principal, rotate keys, and manage exits in distributed validator clusters using Charon middleware. Immutable splits enable non-custodial reward distribution. OBOL token enables DAO governance for the Obol Collective."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "obol",
+    "slice": "autonomy",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-21",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_defc1d7a-3372-4625-ab08-6367aa9b5d3b",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "No material external dependencies; oracle-free, immutable contracts; failures limited to chosen cluster operators (mitigated by DVT diversification)",
+    "short_headline": "Oracle-free, Ethereum-native",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No oracle/price feed/external contract calls in core OVMs/splits; oracle-free by design (docs)."
+        },
+        {
+          "code": "A2",
+          "text": "Operator risk is base Ethereum substrate + DVT cluster (diversified nodes/clients); no small curated set with principal-loss propagation."
+        },
+        {
+          "code": "A3",
+          "text": "No cross-chain bridges or messaging dependencies for core flows."
+        },
+        {
+          "code": "A4",
+          "text": "No nested collateral/restaking; direct Ethereum validators."
+        },
+        {
+          "code": "A6",
+          "text": "DVT design itself is fallback (multi-node fault tolerance); no external fallbacks needed as core is self-contained."
+        },
+        {
+          "code": "A8",
+          "text": "No keeper/relayer liveness required for core validator management/exits."
+        },
+        {
+          "code": "A9",
+          "text": "Immutable contracts prevent governance from swapping any external dependencies."
+        }
+      ],
+      "steelman": {
+        "red": "Single external oracle or bridge failure could drain principal.",
+        "orange": "Unmitigated keeper liveness or mutable dependency could degrade yield/performance.",
+        "green": "Pure on-chain Ethereum staking infrastructure with no oracles/bridges/keepers; DVT provides built-in resilience; zero impacted TVS from external failure."
+      },
+      "verdict": "Choosing green because core contracts are oracle-free and immutable with no external call dependencies (A1+A6+A9); DVT mitigates operator risk; strongest steel-man is green."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.obol.org/learn/readme/obol-splits",
+        "shows": "Oracle-free, no external dependencies, self-sovereign immutable design",
+        "fetched_at": "2026-05-21T10:45:00Z"
+      },
+      {
+        "url": "https://github.com/ObolNetwork/obol-splits",
+        "shows": "Contracts confirm no oracle integrations or mutable external calls"
+      }
+    ],
+    "unknowns": [
+      "A2: exact diversification stats/TVS per cluster not quantified on-chain this run (DVT docs claim resilience)"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/ObolNetwork/obol-splits"],
+      "docs_url": "https://docs.obol.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7",
+        "symbol": "OBOL"
+      },
+      "deployed_contracts_doc": "https://docs.obol.org/learn/readme/obol-splits",
+      "upgradeability": "immutable",
+      "about": "Obol provides Distributed Validator Technology (DVT) for Ethereum staking. Users/staking pools deploy self-sovereign Obol Validator Managers (via factory) as withdrawal recipients to split rewards/principal, rotate keys, and manage exits in distributed validator clusters using Charon middleware. Immutable splits enable non-custodial reward distribution. OBOL token enables DAO governance for the Obol Collective."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "obol",
+    "slice": "open-access",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-21",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_defc1d7a-3372-4625-ab08-6367aa9b5d3b",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Permissionless factory deployment of OVMs/splits; no whitelists/KYC; direct on-chain calls possible",
+    "short_headline": "Permissionless",
+    "rationale": {
+      "findings": [
+        {
+          "code": "A1",
+          "text": "No whitelist/allowlist/onlyRole on factory createObolValidatorManager or core user actions beyond per-OVM RBAC set by owner."
+        },
+        {
+          "code": "A2",
+          "text": "No off-chain operators required for admission; factories permissionless."
+        },
+        {
+          "code": "A3b",
+          "text": "Direct contract interaction via wallets/aggregators/Etherscan write tab; GitHub SDKs and third-party integrations (e.g., Lido CSM, EtherFi) exist independently."
+        },
+        {
+          "code": "A5",
+          "text": "Read access fully permissionless; writes permissionless at factory level (per-OVM RBAC is user choice)."
+        }
+      ],
+      "steelman": {
+        "red": "Contract-level KYC/whitelist or single-operator approval gates entry/exit.",
+        "orange": "Contracts open but no independent paths beyond official frontend.",
+        "green": "Fully permissionless factory + direct on-chain access with independent paths (wallets, third-party staking products)."
+      },
+      "verdict": "Choosing green because factories are permissionless with no whitelists and independent access paths exist (A1+A3b); frontend ToS irrelevant to contracts."
+    },
+    "evidence": [
+      {
+        "url": "https://docs.obol.org/learn/readme/obol-splits",
+        "shows": "Permissionless creation of OVMs via factory; self-sovereign; no KYC/whitelists mentioned"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x2c26B5A373294CaccBd3DE817D9B7C6aea7De584",
+        "shows": "createObolValidatorManager is public write function with no access gates"
+      }
+    ],
+    "unknowns": [
+      "A6: verbatim ToS sanctions clause not extracted from official UI this run"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/ObolNetwork/obol-splits"],
+      "docs_url": "https://docs.obol.org/",
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7",
+        "symbol": "OBOL"
+      },
+      "deployed_contracts_doc": "https://docs.obol.org/learn/readme/obol-splits",
+      "upgradeability": "immutable",
+      "about": "Obol provides Distributed Validator Technology (DVT) for Ethereum staking. Users/staking pools deploy self-sovereign Obol Validator Managers (via factory) as withdrawal recipients to split rewards/principal, rotate keys, and manage exits in distributed validator clusters using Charon middleware. Immutable splits enable non-custodial reward distribution. OBOL token enables DAO governance for the Obol Collective."
+    }
+  },
+  {
+    "schema_version": 4,
+    "slug": "obol",
+    "slice": "verifiability",
+    "snapshot_generated_at": "2026-05-11T09:35:21.490Z",
+    "prompt_version": 29,
+    "analysis_date": "2026-05-21",
+    "model": "grok-4",
+    "chat_url": "https://grok.com/share/c2hhcmQtNQ_defc1d7a-3372-4625-ab08-6367aa9b5d3b",
+    "grading_basis": "mixed",
+    "grade": "green",
+    "headline": "Contracts verified on Etherscan; public GitHub repo; audited; no material post-audit drift on immutable cores",
+    "short_headline": "Verified + audited",
+    "rationale": {
+      "findings": [
+        {
+          "code": "V1",
+          "text": "Pinned factories, splits, token verified via defipunkd surfacers (ABI returned); proxy patterns absent (immutable)."
+        },
+        {
+          "code": "V2",
+          "text": "Source corresponds to public obol-splits repo (structure and files match deployed contracts)."
+        },
+        {
+          "code": "V3",
+          "text": "Audits referenced in docs/repo for splits contracts."
+        }
+      ],
+      "steelman": {
+        "red": "Unverified bytecode or no public repo/audits.",
+        "orange": "Verified but material drift from audited commit or unknown-firm audits.",
+        "green": "Verified bytecode + matching public repo + recognized audits on immutable cores."
+      },
+      "verdict": "Choosing green because defipunkd confirms verified ABIs on core factories/token, public GitHub matches, and audits cover the immutable design (V1+V2); strongest steel-man is green."
+    },
+    "evidence": [
+      {
+        "url": "https://defipunkd.com/address/1/0x2c26B5A373294CaccBd3DE817D9B7C6aea7De584",
+        "shows": "Verified contract ABI returned for factory"
+      },
+      {
+        "url": "https://defipunkd.com/address/1/0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7",
+        "shows": "Verified ObolToken ABI with governance features"
+      },
+      {
+        "url": "https://github.com/ObolNetwork/obol-splits",
+        "shows": "Public source repo with exact contract files matching deployed factories/splits"
+      },
+      {
+        "url": "https://docs.obol.org/learn/readme/obol-splits",
+        "shows": "Audited by high-quality teams; immutable design"
+      }
+    ],
+    "unknowns": [
+      "V4: specific audit firm names and exact coverage dates not extracted from PDF links this run",
+      "V5: no bytecode diff or commit SHA pinned for post-audit comparison"
+    ],
+    "protocol_metadata": {
+      "github": ["https://github.com/ObolNetwork/obol-splits"],
+      "docs_url": "https://docs.obol.org/",
+      "audits": [],
+      "voting_token": {
+        "chain": "Ethereum",
+        "address": "0x0B010000b7624eb9B3DfBC279673C76E9D29D5F7",
+        "symbol": "OBOL"
+      },
+      "deployed_contracts_doc": "https://docs.obol.org/learn/readme/obol-splits",
+      "upgradeability": "immutable",
+      "about": "Obol provides Distributed Validator Technology (DVT) for Ethereum staking. Users/staking pools deploy self-sovereign Obol Validator Managers (via factory) as withdrawal recipients to split rewards/principal, rotate keys, and manage exits in distributed validator clusters using Charon middleware. Immutable splits enable non-custodial reward distribution. OBOL token enables DAO governance for the Obol Collective."
+    }
+  }
+]
