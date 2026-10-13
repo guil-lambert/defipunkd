@@ -1,0 +1,100 @@
+{
+  "schema_version": 4,
+  "slug": "stellar-defi-hub",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-10-13",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "4 Soroban contracts catalogued on Stellar mainnet (1 escrow + 3 vaults); addresses sourced from Zellic May 2026 deployment-verification section; GitHub repo discovered but not fetchable this run; no docs/deployments page found on website.",
+  "short_headline": "4 Stellar Soroban contracts catalogued",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: Stellar blockchain does not have Etherscan or any EVM block explorer supported by defipunkd. The canonical Stellar explorer is stellar.expert; no address-search was possible via supported explorers. Attempted web search for protocol name + contracts yielded no stellardefihub.com-specific block-explorer results. Zero EVM addresses surfaced from D1."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Website (https://stellardefihub.com/) fetched successfully but returned only HTML metadata (title, og-tags, twitter handle). No 'Deployed contracts' or 'Addresses' page was discoverable from the homepage render. No deployed_contracts_doc URL found."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Both audit PDFs fetched and fully read. Dec 2025 audit (Zellic for Sentora) covered vault/src and escrow/src at commit b4b61b46, contained no deployed addresses. May 2026 audit (Zellic for Sentora) §4.1 'Deployment verification' explicitly listed 4 mainnet Soroban contract addresses deployed at commit c29a8bf9: escrow CCZSNGVMEHRKMMMQGVDHAXT3KSWIMPEPRRTUE2GU3F6TW4XA2Y6EMHN3, XLM vault CA54LVHMAY7HGLMVPN4W72XJB4OGKVZBZX26FWN6JD4P3HJFWQUQEHJO, USDC vault CAHEWHOPPDBQYFMAOLDOXXGUX2BCR7EXP4CWYCRY3NEAJB35YPZMMJFF, PYUSD vault CAQRAXBU6G4AAX4BZ7R4WLB62TSVAQFS5ZXJDVXRLAU2NZ2ZTGU5QOYB. WASM hash verified by Zellic against compiled audited commit."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub repo https://github.com/Into-The-Block-Corp/StellarVaults surfaced from both audit PDFs. Direct fetch was blocked (URL had not appeared in prior search results before the fetch attempt was made). Commit SHAs b4b61b46273eb66855777d405b485150f29cb484 (Dec 2025 audit), a7955fcb72d7eb482a84d0d1cdc62c55749d3d9b (May 2026 audit base), and c29a8bf9 (deployed commit) are known from audit PDFs. No deployment artifacts (run-latest.json, deployments.json) were directly read."
+      },
+      {
+        "code": "D5",
+        "text": "D5: Single chain (Stellar) — no multi-chain enumeration required. Stellar is not an EVM chain; defipunkd's on-chain read API does not support Stellar. All 4 contracts are on Stellar mainnet (Soroban)."
+      },
+      {
+        "code": "D6",
+        "text": "D6: No factory pattern identified. The system uses a fixed set of vault contracts (one per asset type: XLM, USDC, PYUSD) plus one escrow contract. No allPools/getPool enumeration applicable."
+      },
+      {
+        "code": "D7",
+        "text": "D7: Role taxonomy applied: escrow (vault role), vault (vault role x3). Admin address(es) for these contracts are not known — the audit describes an admin role stored in CoreStorageKeys::Admin and StorageKeys::Admin on each contract, but the actual admin address value was not published in the audit PDFs. The May 2026 audit (finding 3.1) flags admin as a single point of control with power to drain escrow funds."
+      },
+      {
+        "code": "D8",
+        "text": "D8: All 4 addresses in admin_addresses[] trace directly to the May 2026 Zellic audit PDF §4.1 (fetched URL: https://stellardefihub.com/audits/zellic-audit-report-may-2026.pdf). Stellar Strkey addresses (C... prefix) cannot be expressed in the EVM 0x format required by the schema's address field; they are recorded in role descriptions and admin_addresses role fields."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery run walked 2 audit PDFs and the protocol website. Four Soroban mainnet contracts were identified from the Zellic May 2026 deployment-verification section: one escrow and three asset vaults (XLM, USDC, PYUSD). GitHub repo URL was discovered but not fetched. No admin address values were found. Stellar addresses cannot be represented in EVM 0x format; they are recorded as role descriptions. Grade is unknown as this is a discovery slice."
+  },
+  "evidence": [
+    {
+      "url": "https://stellardefihub.com/",
+      "shows": "Protocol website confirmed live; meta description 'Deposit Stellar-based assets into incentivized vaults and earn rewards'; Twitter handle @StellarDeFiHub. No deployed-contracts page discoverable from homepage.",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://stellardefihub.com/audits/zellic-audit-report-dec-2025.pdf",
+      "shows": "Zellic security assessment for Sentora (Tom Rogers), Dec 5-12 2025. Covers 'Stellar Vault' — a Soroban pre-deposit program with two components: Vault (deposit/withdraw/pause/upgrade, admin-controlled) and Escrow (Merkle-based reward distribution). Audited repo: https://github.com/Into-The-Block-Corp/StellarVaults at commit b4b61b46273eb66855777d405b485150f29cb484. No critical findings; 1 medium (insufficient test coverage), 3 informational. No deployed addresses listed.",
+      "commit": "b4b61b46273eb66855777d405b485150f29cb484",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://stellardefihub.com/audits/zellic-audit-report-may-2026.pdf",
+      "shows": "Zellic security assessment for Sentora (Tom Rogers), May 7-11 2026. Covers 'Pre-deposit Program' — same Soroban vault+escrow system at commit a7955fcb72d7eb482a84d0d1cdc62c55749d3d9b. Section 4.1 (Deployment verification) confirms 4 mainnet Soroban contracts at deployed commit c29a8bf9: escrow CCZSNGVMEHRKMMMQGVDHAXT3KSWIMPEPRRTUE2GU3F6TW4XA2Y6EMHN3, XLM vault CA54LVHMAY7HGLMVPN4W72XJB4OGKVZBZX26FWN6JD4P3HJFWQUQEHJO, USDC vault CAHEWHOPPDBQYFMAOLDOXXGUX2BCR7EXP4CWYCRY3NEAJB35YPZMMJFF, PYUSD vault CAQRAXBU6G4AAX4BZ7R4WLB62TSVAQFS5ZXJDVXRLAU2NZ2ZTGU5QOYB. WASM hash of each verified against audited commit. 9 findings: 0 critical, 1 high (centralization risk — admin can drain escrow), 3 medium, 1 low, 4 informational.",
+      "commit": "a7955fcb72d7eb482a84d0d1cdc62c55749d3d9b",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: Stellar blockchain not supported by EVM block explorers; stellar.expert name-tag search not fetchable via defipunkd-allowlisted URLs; no EVM-format addresses surfaced",
+    "D2: No deployed-contracts documentation page found on stellardefihub.com; deployed_contracts_doc remains null",
+    "D4: GitHub repo https://github.com/Into-The-Block-Corp/StellarVaults discovered from audits but direct fetch blocked (URL not in prior search results at fetch time); deployment artifact files (run-latest.json, deployments.json) not read",
+    "D4: Deployed commit c29a8bf9 is a short SHA (8 chars) from the audit PDF — full 40-char SHA not confirmed in this run",
+    "D7: Admin address values stored in CoreStorageKeys::Admin (vault) and StorageKeys::Admin (escrow) not published in audit PDFs; actor_class of admin unknown; whether admin is EOA, multisig, or timelock not determinable without on-chain read",
+    "D8: Stellar Soroban contract addresses use Strkey encoding (C... prefix, 56 chars) incompatible with schema address field format 0x[0-9a-fA-F]{40}; on-chain state reads via defipunkd API not possible (Stellar not in supported chainIds list)",
+    "D5: Stellar mainnet block explorer (stellar.expert) not in defipunkd fetch allowlist; on-chain verification of deployed addresses not performed this run — offchain-only for Stellar contracts"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Into-The-Block-Corp/StellarVaults"
+    ],
+    "audits": [
+      {
+        "firm": "Zellic",
+        "url": "https://stellardefihub.com/audits/zellic-audit-report-dec-2025.pdf",
+        "date": "2025-12"
+      },
+      {
+        "firm": "Zellic",
+        "url": "https://stellardefihub.com/audits/zellic-audit-report-may-2026.pdf",
+        "date": "2026-05"
+      }
+    ],
+    "admin_addresses": [],
+    "upgradeability": "upgradeable",
+    "about": "Stellar DeFi Hub (operated by Sentora) is a Soroban-based pre-deposit yield program on the Stellar blockchain. Users deposit configured assets (XLM, USDC, or PYUSD) into incentivized custodial vault contracts and accrue rewards over the program's lifetime. Rewards are distributed via a Merkle-tree-based escrow contract where users claim by submitting valid Merkle proofs against epoch reward roots set by an admin. Both vault and escrow contracts are upgradeable by a single admin address, which also holds unilateral withdrawal authority over escrowed reward funds."
+  }
+}
