@@ -1,0 +1,237 @@
+{
+  "schema_version": 4,
+  "slug": "sonic-gateway",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-10-13",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "19 contracts catalogued across Ethereum (primary scope) and Sonic (L2); 3 audit reports located; GitHub repo pinned at commit 558465d.",
+  "short_headline": "19 contracts across Ethereum + Sonic",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Block-explorer name-tag search: No direct Etherscan name-tag search was performed (allowlist blocked defipunkd API; Etherscan search not directly fetched). Addresses were discovered via official docs (D2) and audit (D3); direct on-chain reads via defipunkd API were rejected by the allowlist. Recorded as mixed grading basis."
+      },
+      {
+        "code": "D2",
+        "text": "Official deployed contracts doc fetched at https://docs.soniclabs.com/sonic/build-on-sonic/contract-addresses — lists 10 Ethereum Gateway contracts (MPTProofVerifier, StateOracle, ValidatorsRegistry, TokenPairs proxy+impl, TokenDeposit proxy+impl, DirectExitAdministrator, UpdateManager proxy+impl) and 9 Sonic-side contracts. All addresses recorded in admin_addresses."
+      },
+      {
+        "code": "D3",
+        "text": "OpenZeppelin audit fetched at https://www.openzeppelin.com/news/sonic-gateway-audit — scope: Fantom-foundation/Bridge repo at commit 558465d, covering ActivityMonitor, Bridge, DirectExitAdministrator, ExitAdministrator, MPTProofVerifier, MessageBus, MintedERC20, SFCUpdateVerifier, StateOracle, TokenDeposit, TokenPairs, UpdateManager, ValidatorsRegistry. Privileged roles: multisig holds DEFAULT_ADMIN_ROLE on ExitAdministrator/TokenPairs/UpdateManager; UpdateManager holds admin on ActivityMonitor, StateOracle, ValidatorsRegistry. Quantstamp and Certora reports linked from audits page but not directly fetched this run."
+      },
+      {
+        "code": "D4",
+        "text": "GitHub: Fantom-foundation/Bridge repo identified from OZ audit at commit 558465d. No deployment artifacts (broadcast JSON, hardhat-deploy JSON) fetched this run — allowlist only permits pre-built surfacer URLs and URLs from prior fetches. GitHub repo URL recorded; commit SHA pinned from audit."
+      },
+      {
+        "code": "D5",
+        "text": "Multi-chain: protocol.chains = Ethereum only (primary scope). Sonic-side contracts (Bridge, StateOracle, TokenPairs, UpdateManager, MPTProofVerifier, ValidatorsRegistry, MessageBus) surfaced from D2 docs but are out-of-scope for this Ethereum-only run; listed with chain=Sonic in admin_addresses for completeness."
+      },
+      {
+        "code": "D6",
+        "text": "Factory pattern: TokenPairs contract acts as a registry mapping original to minted tokens (register function). No factory enumeration read performed — defipunkd API was allowlist-rejected. Recorded in unknowns."
+      },
+      {
+        "code": "D7",
+        "text": "Role taxonomy applied: TokenDeposit (proxy) = vault role; StateOracle = oracle role; UpdateManager = admin role (also controls ValidatorsRegistry/ActivityMonitor/StateOracle); DirectExitAdministrator = guardian role (emergency exit); TokenPairs = other (token registry); MPTProofVerifier = other (proof library); ValidatorsRegistry = other (IBC relay set)."
+      },
+      {
+        "code": "D8",
+        "text": "Ratchet integrity: all admin_addresses entries trace to fetched docs URL (evidence index 2) and/or OZ audit (evidence index 3). Multisig addresses holding DEFAULT_ADMIN_ROLE were referenced in audit prose but specific 0x addresses were not disclosed in the audit report or docs — recorded as unknowns D8 entries."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery run walked three corpora (official docs, OZ audit, Sonic audits page) and catalogued 19 deployed contracts (10 Ethereum-side, 9 Sonic-side). Multisig addresses holding administrative roles were referenced by the OZ audit but not disclosed as 0x addresses in any fetched source; on-chain state reads via defipunkd API were blocked by allowlist. Grade is unknown pending on-chain reads and multisig address discovery."
+  },
+  "evidence": [
+    {
+      "url": "https://gateway.soniclabs.com/ethereum/sonic/s",
+      "shows": "Capability probe: website fetched (SPA shell only — meta tags returned, no contract addresses in page body). Confirms website is live.",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://docs.soniclabs.com/sonic/build-on-sonic/contract-addresses",
+      "shows": "Official deployed contracts page listing all Ethereum Gateway addresses: MPTProofVerifier 0x921B147a90Ef738BBb7c2c89D88ea9d8Af3e9306, StateOracle 0xB7e8CC3F5FeA12443136f0cc13D81F109B2dEd7f, ValidatorsRegistry 0x72965045A6691E5A74299D1e878f303264D4D910, TokenPairs proxy 0xf2b1510c2709072C88C5b14db90Ec3b6297193e4 / impl 0x0c40Ae1c82401EA741953D3f026ADc07BE9e7943, TokenDeposit proxy 0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20 / impl 0x4cbd824685F1E21B119F230B54d65C5a7D2a5330, DirectExitAdministrator 0x7390251Bf35AA7eA7C196fc4750bd5d6c5918329, UpdateManager proxy 0xB0bECf0fBfE431D42bA0FbD8dFBFbB0DCFd62Da4 / impl 0x13bd43A6BE5795D4A4E3Efc4baC21Cd36Ae9e68A. Also lists Sonic-side contracts.",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://www.openzeppelin.com/news/sonic-gateway-audit",
+      "shows": "OpenZeppelin audit of Fantom-foundation/Bridge repo at commit 558465d (2024-09-24 to 2024-10-21). Scope includes all core gateway contracts. Privileged roles: multisig holds DEFAULT_ADMIN_ROLE on ExitAdministrator, TokenPairs, UpdateManager; UpdateManager holds admin on ActivityMonitor, StateOracle, ValidatorsRegistry. 1 high severity (resolved), 3 medium, 8 low findings.",
+      "commit": "558465d",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://docs.soniclabs.com/technology/audits",
+      "shows": "Audits page listing three Gateway audits: OpenZeppelin (https://blog.openzeppelin.com/sonic-gateway-audit), Quantstamp (https://certificate.quantstamp.com/full/sonic-gateway/fbb78575-2a22-4f4b-813f-340eb6296185/index.html), Certora (https://www.certora.com/reports/sonic-bridge). Also lists security contact: bugs@soniclabs.com.",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://docs.soniclabs.com/sonic/build-on-sonic/programmatic-gateway",
+      "shows": "Programmatic gateway docs confirm Ethereum TOKEN_DEPOSIT=0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20, TOKEN_PAIRS=0xf2b1510c2709072C88C5b14db90Ec3b6297193e4, STATE_ORACLE=0xB7e8CC3F5FeA12443136f0cc13D81F109B2dEd7f. Cross-checks D2 addresses.",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: Etherscan name-tag search not directly fetched — defipunkd API allowlist rejected; Etherscan search page not in allowlist. On-chain reads for all Ethereum contracts deferred to next run.",
+    "D6: TokenPairs token registry enumeration (originalToMinted mapping) not read — defipunkd API allowlist rejected for newly discovered addresses.",
+    "D8: Multisig 0x addresses holding DEFAULT_ADMIN_ROLE on ExitAdministrator, TokenPairs, UpdateManager, and admin on TokenDeposit/Bridge are not disclosed in audit report or docs — must be discovered via on-chain owner()/getRoleMember() reads in next run.",
+    "D8: ActivityMonitor contract address not listed in official docs or audit scope table — may be a deployment detail not yet published.",
+    "D3: Quantstamp and Certora audit PDFs not fetched this run (URLs discovered from audits page but not fetched due to tool call budget). Quantstamp URL: https://certificate.quantstamp.com/full/sonic-gateway/fbb78575-2a22-4f4b-813f-340eb6296185/index.html. Certora URL: https://www.certora.com/reports/sonic-bridge."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Fantom-foundation/Bridge"
+    ],
+    "docs_url": "https://docs.soniclabs.com",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://www.openzeppelin.com/news/sonic-gateway-audit",
+        "date": "2024-12-13"
+      },
+      {
+        "firm": "Quantstamp",
+        "url": "https://certificate.quantstamp.com/full/sonic-gateway/fbb78575-2a22-4f4b-813f-340eb6296185/index.html",
+        "date": "2024-12"
+      },
+      {
+        "firm": "Certora",
+        "url": "https://www.certora.com/reports/sonic-bridge",
+        "date": "2024-12"
+      }
+    ],
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/sonic",
+    "security_contact": "bugs@soniclabs.com",
+    "deployed_contracts_doc": "https://docs.soniclabs.com/sonic/build-on-sonic/contract-addresses",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x921B147a90Ef738BBb7c2c89D88ea9d8Af3e9306",
+        "role": "other (MPTProofVerifier — proof verification library)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xB7e8CC3F5FeA12443136f0cc13D81F109B2dEd7f",
+        "role": "oracle (StateOracle — Merkle root relay, admin=UpdateManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x72965045A6691E5A74299D1e878f303264D4D910",
+        "role": "other (ValidatorsRegistry proxy — IBC relay validator set, admin=UpdateManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xf2b1510c2709072C88C5b14db90Ec3b6297193e4",
+        "role": "other (TokenPairs proxy — ERC-20 token registry, admin=multisig)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0c40Ae1c82401EA741953D3f026ADc07BE9e7943",
+        "role": "other (TokenPairs implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20",
+        "role": "vault (TokenDeposit proxy — primary ERC-20 token custodian on Ethereum)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4cbd824685F1E21B119F230B54d65C5a7D2a5330",
+        "role": "vault (TokenDeposit implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7390251Bf35AA7eA7C196fc4750bd5d6c5918329",
+        "role": "guardian (DirectExitAdministrator — emergency withdrawal, DEFAULT_ADMIN_ROLE=multisig)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xB0bECf0fBfE431D42bA0FbD8dFBFbB0DCFd62Da4",
+        "role": "admin (UpdateManager proxy — central parameter/contract updater, roles held by multisig)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x13bd43A6BE5795D4A4E3Efc4baC21Cd36Ae9e68A",
+        "role": "admin (UpdateManager implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0xD2f1e904dAf7446686F8057b7dfeb068c75D29A9",
+        "role": "other (MPTProofVerifier — Sonic-side proof verification)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x836664B0c0CB29B7877bCcF94159CC996528F2C3",
+        "role": "oracle (StateOracle — Sonic-side Merkle root relay)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x12727D4169a42A9b5E3ECB11A6d2c95553d3f447",
+        "role": "other (ValidatorsRegistry — Sonic-side IBC relay validator set)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0xB5B371B75f9850dDD6CCB6C436DB54972a925308",
+        "role": "other (MessageBus — IBC relay voting bus)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x134E4c207aD5A13549DE1eBF8D43c1f49b00ba94",
+        "role": "other (TokenPairs proxy — Sonic-side token registry)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0xE34e6851a4a3763e1d27aa7ac5980d2D33C2d315",
+        "role": "other (TokenPairs implementation — Sonic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x9Ef7629F9B930168b76283AdD7120777b3c895b3",
+        "role": "vault (Bridge proxy — Sonic-side token minting/burning contract)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x0B3fe0c10C050270a9bc34271987989B6CF2107C",
+        "role": "vault (Bridge implementation — Sonic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x1D3c99DA3CEF5C26f02a86dC7D685efa40176bb7",
+        "role": "admin (UpdateManager proxy — Sonic-side)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x1071405A4736535C545580064039A235827ee6D4",
+        "role": "admin (UpdateManager implementation — Sonic)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Sonic Gateway is the canonical bridge between Ethereum and the Sonic L1 blockchain, enabling users to deposit ERC-20 tokens (USDC, EURC, WETH, S/FTM) into the TokenDeposit contract on Ethereum, which are then claimable as IOU tokens on Sonic. Bridging the reverse direction involves burning IOU tokens on Sonic, after which users submit Merkle proofs to the Ethereum TokenDeposit to unlock the original assets. Security relies on an off-chain IBC relay network of validators that update Merkle roots on each chain's StateOracle, combined with a fail-safe mechanism that automatically unlocks user funds if the bridge stops transmitting heartbeats for 14 days."
+  }
+}
