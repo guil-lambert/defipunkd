@@ -1,0 +1,201 @@
+{
+  "schema_version": 4,
+  "slug": "thorchain-dex",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-03",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "10 addresses catalogued across Ethereum (primary EVM footprint); THORChain's core protocol runs on a Cosmos-based L1 with dynamic rotating Asgard vaults not reducible to fixed EVM addresses; 1 immutable ETH Router, 1 legacy RUNE ERC-20, 1 deployer EOA, ~5 historic Asgard vault addresses on Ethereum, and 1 RUNE token owner address discovered.",
+  "short_headline": "10 ETH addresses found; Cosmos-native L1 vaults rotate",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Etherscan name-tag search (via search grounding) surfaced: 0xD37BbE5744D730a1d98d8DC97c42F0Ca46aD7146 ('THORChain: THORChain Router v4.1.1', ~$15M balance), 0x3155BA85D5F96b2d030a4966AF206230e46849cb ('THORCHAIN: Old RUNE Token'), 0x3efF38C0e1e5DD6Bd58d3fa79cAecc4Da46C8866 ('THORCHAIN: Deployer'), and Asgard vault addresses funded by the router: 0x6c76e20CDc45B055da1Dfb15FF7B5A9404543e4f, 0xa5749368BDf2CAB8B2ac32937b72E173f80f6840, 0xA772Bdd20209202600860720Fd2F235Dc92bfc3B, 0x2951Cc0F46aaDc236BEa23feCBF8eDbA6cBCFc6f, 0x330c8eE592Fb507540B70ab8B72BDeeBA6b2755A. RUNE token owner address 0x18f773c288d9a5913f58d61f962dce630f4d3be6 discovered from CertiK and Etherscan."
+      },
+      {
+        "code": "D2",
+        "text": "No canonical 'deployed contracts' page found on thorchain.org or dev.thorchain.org. The dev docs describe the protocol's API endpoints and vault architecture, but do not list a static address registry. Inbound vault addresses are dynamic (retrieved at runtime from the /inbound_addresses THORNode API endpoint). protocol_metadata.deployed_contracts_doc set to null."
+      },
+      {
+        "code": "D3",
+        "text": "CertiK audit link (certik.org/projects/thorchain) fetched: shows 1 CertiK audit (requested Jan 2019, revised Apr 2019) and 3 total third-party audits listed. The CertiK page references GitLab repo gitlab.com/THORChain/thornode but no PDF audit report URL with address scope table was directly accessible in the fetch. GitHub audits directory (github.com/thorchain/Resources/tree/master/Audits) was blocked by domain allowlist. No in-scope addresses extractable from audits this run."
+      },
+      {
+        "code": "D4",
+        "text": "protocol.github is recorded as '(none recorded)' in the per-protocol context. The website reveals GitLab at gitlab.com/thorchain (not GitHub), with primary repo at gitlab.com/thorchain/thornode. GitHub org exists at github.com/thorchain (confirmed via CertiK). Fetch of github.com/thorchain/Resources/tree/master/Audits was blocked by domain allowlist. No deployment artifact files (broadcast JSONs, hardhat-deploy files) retrieved this run."
+      },
+      {
+        "code": "D5",
+        "text": "THORChain spans 13 chains. For Ethereum: 10 addresses catalogued (see D1). For Bitcoin, BCH, Doge, LTC, Ripple, Cosmos, Tron, Solana, Avalanche, Binance, Base: THORChain uses dynamically rotating Asgard vault addresses on each native chain (not fixed EVM contracts) that change with each 'churn' cycle. These are not indexable via block-explorer name-tag search in the same way; the live addresses are retrievable from the THORNode /inbound_addresses endpoint at runtime. No fixed contract addresses discovered for non-Ethereum chains this run."
+      },
+      {
+        "code": "D6",
+        "text": "The ETH Router contract (0xD37BbE5744D730a1d98d8DC97c42F0Ca46aD7146) is not a factory; it manages vault allowances and routes deposits to dynamic Asgard vault addresses. The Asgard vault addresses on Ethereum (0x6c76e20C..., 0xa5749368..., 0xA772Bdd2..., 0x2951Cc0F..., 0x330c8eE5...) are EOAs funded by the router representing the current/historical Asgard TSS vaults. No factory enumeration applicable."
+      },
+      {
+        "code": "D7",
+        "text": "Role taxonomy applied: ETH Router v4.1.1 = 'router'; Old RUNE ERC-20 = 'token'; Deployer EOA = 'other' (EOA, deploys contracts); Asgard vault addresses = 'vault' (hold funds, controlled by TSS node network); RUNE token owner = 'owner' (has mint/burn/transferOwnership on old ERC-20)."
+      },
+      {
+        "code": "D8",
+        "text": "All addresses in admin_addresses[] trace to fetched URLs: Etherscan page for RUNE token (fetched directly), CertiK page (fetched directly), and search results returning Etherscan pages for Router v4.1.1, Deployer, and Asgard vaults."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Walked thorchain.org, dev.thorchain.org, etherscan.io (RUNE token page direct fetch), certik.org (direct fetch), and Etherscan search-grounding results. Catalogued 10 Ethereum addresses: 1 ETH Router v4.1.1 (active, ~$15M TVL), 1 legacy RUNE ERC-20 token, 1 deployer EOA, 5 historic Asgard vault EOAs on Ethereum, 1 RUNE token owner address, and 1 RUNE token creator/deployer. THORChain's primary protocol state lives on a Cosmos-based L1; vault addresses on Bitcoin, BSC, Base, Avalanche, Cosmos, Tron, Solana, and UTXO chains rotate dynamically and could not be enumerated as fixed contracts this run."
+  },
+  "evidence": [
+    {
+      "url": "https://thorchain.org/",
+      "shows": "Official THORChain website confirming GitLab at gitlab.com/thorchain, dev docs at dev.thorchain.org, bug bounty at gitlab.com/thorchain/thornode/-/blob/develop/bugbounty.md, audits at github.com/thorchain/Resources/tree/master/Audits, 13 supported chains listed",
+      "fetched_at": "2026-11-03T00:00:00Z"
+    },
+    {
+      "url": "https://www.certik.org/projects/thorchain",
+      "shows": "CertiK Skynet page for THORChain showing RUNE ERC-20 token at 0x3155ba85d5f96b2d030a4966af206230e46849cb on Ethereum, owner address 0x18f773c288d9a5913f58d61f962dce630f4d3be6, creator address 0x3eff38c0e1e5dd6bd58d3fa79caecc4da46c8866, 3 third-party audits total, 1 CertiK audit (requested 2019-01), GitHub profile at github.com/thorchain",
+      "fetched_at": "2026-11-03T00:00:00Z"
+    },
+    {
+      "url": "https://dev.thorchain.org/",
+      "shows": "THORChain developer docs confirming primary repo at gitlab.com/thorchain/thornode/, describes THORChain as decentralized cross-chain liquidity protocol with vault-based architecture where nodes observe inbound transactions",
+      "fetched_at": "2026-11-03T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3155ba85d5f96b2d030a4966af206230e46849cb",
+      "shows": "THORCHAIN: Old RUNE Token ERC-20 contract on Ethereum, contract name ETH_RUNE, deployer 0x3eff38c0e1e5dd6bd58d3fa79caecc4da46c8866, verified source code (Solidity 0.7.6, Unlicense), has owner/mint/burn functions, Etherscan label 'Old Contract'",
+      "chain": "Ethereum",
+      "address": "0x3155ba85d5f96b2d030a4966af206230e46849cb",
+      "fetched_at": "2026-11-03T00:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xd37bbe5744d730a1d98d8dc97c42f0ca46ad7146",
+      "shows": "THORChain: THORChain Router v4.1.1 contract on Ethereum, balance ~$15.1M across 6 chains, 1.66M transactions, deployed by THORCHAIN: Deployer, contract name THORChain_Router with deposit/depositWithExpiry/transferOut/vaultAllowance functions",
+      "chain": "Ethereum",
+      "address": "0xD37BbE5744D730a1d98d8DC97c42F0Ca46aD7146"
+    },
+    {
+      "url": "https://etherscan.io/address/0x3eff38c0e1e5dd6bd58d3fa79caecc4da46c8866",
+      "shows": "THORCHAIN: Deployer EOA address — Etherscan label 'Deployer address for THORCHAIN's contract', deployed both the Old RUNE Token and the THORChain Router v4.1.1",
+      "chain": "Ethereum",
+      "address": "0x3efF38C0e1e5DD6Bd58d3fa79cAecc4Da46C8866"
+    },
+    {
+      "url": "https://etherscan.io/address/0x6c76e20cdc45b055da1dfb15ff7b5a9404543e4f",
+      "shows": "Ethereum address funded by THORChain Router v4.1.1 ~1yr 287 days ago, received multiple large ETH transfers (up to 20 ETH) from Router v4.1.1 — consistent with a historic Asgard TSS vault address",
+      "chain": "Ethereum",
+      "address": "0x6c76e20CDc45B055da1Dfb15FF7B5A9404543e4f"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa5749368bdf2cab8b2ac32937b72e173f80f6840",
+      "shows": "Ethereum address funded by THORChain Router v4.1.1 and holds THORChain Collectibles NFT — consistent with a historic Asgard TSS vault address",
+      "chain": "Ethereum",
+      "address": "0xa5749368BDf2CAB8B2ac32937b72E173f80f6840"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa772bdd20209202600860720fd2f235dc92bfc3b",
+      "shows": "Ethereum address receiving ETH transfers from THORChain Router v4.1.1 as recently as Sept 2025 — consistent with a current/recent Asgard TSS vault address on Ethereum",
+      "chain": "Ethereum",
+      "address": "0xA772Bdd20209202600860720Fd2F235Dc92bfc3B"
+    },
+    {
+      "url": "https://etherscan.io/address/0x2951cc0f46aadc236bea23fecbf8edba6cbcfc6f",
+      "shows": "Ethereum address funded by THORChain Router v4.1.1 ~1yr 254 days ago — consistent with a historic Asgard TSS vault address",
+      "chain": "Ethereum",
+      "address": "0x2951Cc0F46aaDc236BEa23feCBF8eDbA6cBCFc6f"
+    },
+    {
+      "url": "https://etherscan.io/address/0x330c8ee592fb507540b70ab8b72bdeeba6b2755a",
+      "shows": "Ethereum address funded by THORChain Router v4.1.1 ~1yr 91 days ago — consistent with a historic Asgard TSS vault address",
+      "chain": "Ethereum",
+      "address": "0x330c8eE592Fb507540B70ab8B72BDeeBA6b2755A"
+    }
+  ],
+  "unknowns": [
+    "D2: No canonical deployed-contracts page found on thorchain.org or dev.thorchain.org; inbound vault addresses are dynamically served via the THORNode /inbound_addresses API endpoint rather than a static registry",
+    "D3: Audit PDF URLs with in-scope address tables not accessible this run — github.com/thorchain/Resources/tree/master/Audits was blocked by domain allowlist; addresses in audit scope could not be extracted",
+    "D4: GitLab (gitlab.com/thorchain/thornode) is the primary source repo, not GitHub; no GitLab fetch was attempted due to fetch tool domain constraints; deployment artifact files (broadcast JSONs, hardhat-deploy) not retrieved",
+    "D5: Bitcoin-chain Asgard vault addresses (BTC, BCH, DOGE, LTC) — zero fixed addresses surfaced; these are native-chain addresses that rotate each churn cycle, not EVM contracts; current addresses retrievable at runtime from /inbound_addresses only",
+    "D5: BSC-chain THORChain Router and Asgard vault addresses not fetched this run; search results did not return bscscan.com labelled addresses for THORChain",
+    "D5: Avalanche, Base, Solana, Tron, Cosmos, XRP chain THORChain router/vault addresses not catalogued this run",
+    "D1: RUNE token owner address 0x18f773c288d9a5913f58d61f962dce630f4d3be6 actor_class not confirmed on-chain this run (no bytecode read); recorded as unknown",
+    "D6: Live Asgard vault addresses on Ethereum (current active set) not confirmed via THORNode /inbound_addresses API call this run; only historic funded addresses found via Etherscan search"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/thorchain",
+      "https://gitlab.com/thorchain/thornode"
+    ],
+    "docs_url": "https://dev.thorchain.org/",
+    "audits": [
+      {
+        "firm": "CertiK",
+        "url": "https://www.certik.org/projects/thorchain",
+        "date": "2019-04"
+      }
+    ],
+    "bug_bounty_url": "https://gitlab.com/thorchain/thornode/-/blob/develop/bugbounty.md",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xD37BbE5744D730a1d98d8DC97c42F0Ca46aD7146",
+        "role": "router",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3155BA85D5F96b2d030a4966AF206230e46849cb",
+        "role": "token",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3efF38C0e1e5DD6Bd58d3fa79cAecc4Da46C8866",
+        "role": "other (deployer EOA)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x18f773c288d9a5913f58d61f962dce630f4d3be6",
+        "role": "owner (RUNE ERC-20 token owner with mint/burn privilege)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6c76e20CDc45B055da1Dfb15FF7B5A9404543e4f",
+        "role": "vault (Asgard TSS vault, historic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xa5749368BDf2CAB8B2ac32937b72E173f80f6840",
+        "role": "vault (Asgard TSS vault, historic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA772Bdd20209202600860720Fd2F235Dc92bfc3B",
+        "role": "vault (Asgard TSS vault, recent active)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2951Cc0F46aaDc236BEa23feCBF8eDbA6cBCFc6f",
+        "role": "vault (Asgard TSS vault, historic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x330c8eE592Fb507540B70ab8B72BDeeBA6b2755A",
+        "role": "vault (Asgard TSS vault, historic)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "THORChain is a decentralized cross-chain liquidity protocol built as a Cosmos-based layer-1 blockchain that enables users to swap native assets (BTC, ETH, SOL, etc.) across 14 blockchains directly from self-custody wallets without wrapped tokens or bridges. Users send native assets to dynamically rotating Asgard vault addresses (controlled by a threshold-signature-scheme node network) on each supported chain, with the THORChain L1 network observing inbound transactions and executing swaps. Liquidity providers deposit paired assets into RUNE-denominated pools, where RUNE serves as the universal settlement asset and is bonded by nodes as economic security. The protocol charges liquidity fees paid in RUNE and distributes yield to liquidity providers and node operators."
+  }
+}
