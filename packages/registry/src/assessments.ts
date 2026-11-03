@@ -53,6 +53,7 @@ export type LoadedAssessment = {
   models_with_chat_url: number;
   model_sources: Array<{ model: string; chat_url: string | null }>;
   consensus_sources: Array<{ model: string; chat_url: string | null; weight: number }>;
+  primary_analysis_date?: string;
   merged_at?: string;
   human_signoff?: HumanSignoff | null;
   protocol_metadata?: ProtocolMetadata;
@@ -73,6 +74,7 @@ type RawAssessment = {
 };
 
 type RawSubmission = {
+  analysis_date?: string;
   headline: string;
   rationale: Rationale;
 };
@@ -207,6 +209,7 @@ export function loadAssessments(dataDir: string): Map<string, Map<SliceId, Loade
         models_with_chat_url: modelsWithChatUrl.size,
         model_sources: modelSources,
         consensus_sources: consensusSources,
+        primary_analysis_date: sub.analysis_date && Number.isFinite(Date.parse(sub.analysis_date)) ? sub.analysis_date.slice(0, 10) : undefined,
         merged_at: raw.merged_at,
         human_signoff: raw.human_signoff ?? null,
         protocol_metadata: raw.protocol_metadata,

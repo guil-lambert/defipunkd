@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { PROMPT_VERSION, SLICE_IDS } from "@defipunkd/prompts";
@@ -55,7 +55,7 @@ async function main(): Promise<number> {
     const entriesBySlice = loadSubmissionEntriesBySlice(submissionsDir, slug);
     for (const sliceId of SLICE_IDS) {
       const entries = entriesBySlice.get(sliceId) ?? [];
-      if (entries.length === 0) continue;
+      if (entries.length === 0 && !existsSync(join(assessmentsDir, slug, `${sliceId}.json`))) continue;
 
       const result = computeQuorum(entries, {
         currentPromptVersion: PROMPT_VERSION,
@@ -67,6 +67,7 @@ async function main(): Promise<number> {
       const prev = readAssessment(assessmentPath);
 
       if (result.kind === "insufficient") {
+        if (prev) rmSync(assessmentPath);
         changes.push({
           slug,
           slice: sliceId,
@@ -77,6 +78,7 @@ async function main(): Promise<number> {
       }
 
       if (result.kind === "disagreement") {
+        if (prev) rmSync(assessmentPath);
         changes.push({
           slug,
           slice: sliceId,

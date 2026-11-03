@@ -52,7 +52,7 @@ export type QuorumContext = {
 };
 
 
-function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): ScoredSubmission {
+function scoreOne(s: Submission, sourcePath: string): ScoredSubmission {
   let weight = 1.0;
   if (!isPublicChatShareUrl(s.chat_url ?? null)) weight *= 0.05;
 
@@ -66,14 +66,8 @@ function scoreOne(s: Submission, sourcePath: string, ctx: QuorumContext): Scored
     weight += 0.15;
   }
 
-  // Prompt-version drift decays weight multiplicatively (~10%/version) rather
-  // than by a flat absolute subtraction. Proportional decay keeps a strong,
-  // well-evidenced older submission proportionally strong instead of erasing
-  // its evidence bonuses outright, and never drives weight negative.
-  const versionDelta = ctx.currentPromptVersion - s.prompt_version;
-  if (versionDelta > 0) weight *= 0.9 ** versionDelta;
-
-  if (s.snapshot_generated_at !== ctx.currentSnapshotGeneratedAt) weight -= 0.1;
+  // Prompt revisions and registry snapshots are provenance, not evidence expiry.
+  // Substantive contract/rubric changes require a new review, not blanket decay.
 
   if (/\(autorun\)/i.test(s.model)) weight += 0.2;
 
@@ -113,7 +107,7 @@ export function computeQuorum(
     return { kind: "insufficient", count: entries.length };
   }
 
-  const scored = entries.map((e) => scoreOne(e.submission, e.sourcePath, ctx));
+  const scored = entries.map((e) => scoreOne(e.submission, e.sourcePath));
   const totalWeight = scored.reduce((acc, s) => acc + s.weight, 0);
 
   const byGrade = new Map<Submission["grade"], ScoredSubmission[]>();

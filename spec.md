@@ -305,7 +305,7 @@ packages/
 
 **Submission contract**: `data/schema/slice-assessment.v2.json`. Required fields: `grade` (green / orange / red / unknown), `headline`, `short_headline`, `rationale.{findings, steelman, verdict}`, `evidence[]`, `unknowns[]`, `protocol_metadata`. Conditional rule: `grade=unknown` ⇒ `unknowns[]` non-empty AND `steelman` is null; otherwise `evidence[]` non-empty AND `steelman` is `{red, orange, green}`.
 
-**Quorum**: `QUORUM_MIN = 3` independent models per (slug, slice). Submissions are weighted by public chat URL presence, count of block-explorer evidence, and `fetched_at` freshness. Consensus tags are `strong` (2+ grades match) / `weak` (split with majority) / `disagreement`. Logic in `packages/validator/src/quorum.ts`.
+**Quorum**: Submissions are weighted by public chat URL presence, explorer evidence, evidence timestamp presence, model reliability, and grading basis. Strong consensus requires ≥60% of weight and ≥3 agreeing submissions; weak requires ≥50% and ≥2. Weight does not decay with prompt revisions, snapshot changes, or elapsed time. The primary analysis date is displayed separately from merge time; material contract or rubric changes require targeted reassessment. Recalculation removes saved assessments that no longer reach consensus. Logic in `packages/validator/src/quorum.ts`.
 
 ## Refresh cadence
 

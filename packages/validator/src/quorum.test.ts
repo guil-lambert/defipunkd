@@ -161,7 +161,7 @@ describe("computeQuorum", () => {
     }
   });
 
-  it("penalizes older prompt_version", () => {
+  it("keeps equally evidenced submissions equal across prompt versions", () => {
     const r = computeQuorum(
       [
         withPath(mkSub({ model: "old", prompt_version: 1 }), "a.json"),
@@ -172,7 +172,27 @@ describe("computeQuorum", () => {
     if (r.kind === "assessment") {
       const old = r.assessment.merged_from.find((m) => m.model === "old")!;
       const nw = r.assessment.merged_from.find((m) => m.model === "new")!;
-      expect(old.weight).toBeLessThan(nw.weight);
+      expect(old.weight).toBe(nw.weight);
+    }
+  });
+
+  it("does not change weights or consensus when the prompt, snapshot, and clock advance", () => {
+    const entries = [
+      withPath(mkSub({ prompt_version: 12 }), "a.json"),
+      withPath(mkSub({ prompt_version: 12 }), "b.json"),
+      withPath(mkSub({ prompt_version: 12 }), "c.json"),
+    ];
+    const before = computeQuorum(entries, { ...ctx, currentPromptVersion: 12 });
+    const after = computeQuorum(entries, {
+      currentPromptVersion: 29,
+      currentSnapshotGeneratedAt: "2026-11-03T00:00:00Z",
+      now: "2026-11-03T00:00:00Z",
+    });
+    expect(before.kind).toBe("assessment");
+    expect(after.kind).toBe("assessment");
+    if (before.kind === "assessment" && after.kind === "assessment") {
+      expect(after.assessment).toEqual({ ...before.assessment, merged_at: "2026-11-03T00:00:00Z" });
+      expect(after.assessment.merged_from.reduce((sum, source) => sum + source.weight, 0)).toBeGreaterThan(1.5);
     }
   });
 

@@ -10,6 +10,7 @@ export type SliceAssessment = {
   grade: GradeColor;
   headline: string;
   short_headline?: string;
+  primary_analysis_date?: string;
   rationale: string;
   structured?: Rationale;
   strength?: "strong" | "weak";
@@ -37,13 +38,14 @@ export function isUncertain(s: Pick<SliceAssessment, "partial" | "tentative">): 
   return !!s.partial || !!s.tentative;
 }
 
-function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url" | "model_sources" | "tentative" | "tentative_reasons"> {
+function overrideFromAssessment(a: LoadedAssessment): Pick<SliceAssessment, "primary_analysis_date" | "grade" | "headline" | "short_headline" | "rationale" | "structured" | "strength" | "models" | "models_with_chat_url" | "model_sources" | "tentative" | "tentative_reasons"> {
   const grade: GradeColor = a.grade === "unknown" ? "gray" : a.grade;
   const confidence = assessConfidence(a.consensus_sources, a.strength);
   return {
     grade,
     headline: a.headline,
     short_headline: a.short_headline,
+    primary_analysis_date: a.primary_analysis_date,
     rationale: a.rationale.verdict,
     structured: a.rationale,
     strength: a.strength,
