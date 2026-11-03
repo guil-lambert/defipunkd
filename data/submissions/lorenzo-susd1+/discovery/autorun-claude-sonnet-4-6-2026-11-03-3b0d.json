@@ -1,0 +1,135 @@
+I'll start with Step 0 capability probes and then systematically work through the discovery checklist.Good. I found important signals. The X post surfaced a vaultId address `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` (chainId=1 = Ethereum), Coinbase listed sUSD1+ BNB address `0x4F2760B32720F013E900DC92F65480137391199b`, and a Cantina audit with GitHub `https://github.com/Lorenzo-Protocol/OTF-Contract`. Let me now fetch the docs, the GitHub repo, and the Cantina audit page.Excellent. Very rich audit data. Now let me fetch the GitHub repo to find deployment artifacts and the BNBScan page for the sUSD1+ token address found on Coinbase.The GitHub URL appeared in the Cantina report but was blocked; same for BNBScan. Let me search for the GitHub repo and the BNBScan page directly.Excellent finding! The Lorenzo blog post at `https://lorenzo-protocol.ghost.io/debrief-susd1-otfs-outperformance-against-record-breaking-liquidations/` explicitly confirms `vaultId=0x4F2760B32720F013E900DC92F65480137391199b&chainId=56` (BNB Chain) as the sUSD1+ vault address. And from the X post, `vaultId=0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972&chainId=1` for Ethereum. Now let me do the defipunkd read-API calls on those addresses.The defipunkd API URL is blocked because it wasn't in the pre-built surfacer list (those are only granted for pinned addresses). I now have enough data from the fetches performed. Let me compile the evidence ledger and produce the JSON.
+
+**Evidence Ledger Check:**
+
+1. `https://lorenzo-protocol.xyz/home` — fetched, confirms: sUSD1+ product, $80.79M issued, 7.22% APY, Lorenzo Protocol, Institutional-grade on-chain asset management. ✅
+2. `https://cantina.xyz/portfolio/03b32a22-1186-4466-8a37-45ca860f0afe` — fetched, confirms: Cantina audit of Lorenzo OTF Contract, June 28–July 2, 2025; GitHub repo `https://github.com/Lorenzo-Protocol/OTF-Contract`; commit SHAs `2ebe3449807f28a82c95a57699673827526005ff` and `aa08aa62ae17133447376f005027ea50f0b278eb`; key contracts: sUSD1PlusVault, USD1PlusVault, Vault.sol, SimpleVault.sol, CeDeFiManager.sol. ✅
+3. Search result from `https://x.com/LorenzoProtocol/status/1973276726974386672` — address `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` on chainId=1 (Ethereum). ✅ (snippet evidence only — record as D8 snippet-only until on-chain verified)
+4. Search result from `https://www.coinbase.com/en-sg/price/staked-usd1` — address `0x4F2760B32720F013E900DC92F65480137391199b` on BNB Smart Chain. ✅
+5. Search result from `https://lorenzo-protocol.ghost.io/debrief-susd1-otfs-outperformance-against-record-breaking-liquidations/` — confirms `0x4F2760B32720F013E900DC92F65480137391199b` on chainId=56 as sUSD1+ vault. ✅
+6. `https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed` — confirms mainnet launch on BNB Chain. ✅
+
+The X post (`https://x.com/LorenzoProtocol/status/1973276726974386672`) was returned as a search snippet — I did not fetch its full body as a separate page load in this run — so per D8 rules, the Ethereum address `0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972` is a snippet-only sighting and goes in unknowns[] with D8 code. The BNB address `0x4F2760B32720F013E900DC92F65480137391199b` was corroborated by two independent search snippets (Coinbase and the Lorenzo ghost.io blog), both with full addresses — I'll record it in admin_addresses with those two citations but note on-chain confirmation is pending.
+
+```json
+{
+  "schema_version": 4,
+  "slug": "lorenzo-susd1+",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-03",
+  "model": "claude-opus-4-5",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "4 contracts named in audit scope (sUSD1PlusVault, USD1PlusVault, Vault.sol, CeDeFiManager.sol); 1 BNB Chain token address confirmed by 2 independent sources; 1 Ethereum vault address is snippet-only; no on-chain reads completed due to absent address_book and fetch-allowlist restrictions.",
+  "short_headline": "4 contracts scoped; on-chain reads pending",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: Block-explorer name-tag search blocked (bscscan.com and etherscan.io URLs not in prior fetch results and direct fetch returned allowlist error). BNB Chain address 0x4F2760B32720F013E900DC92F65480137391199b corroborated via Coinbase price page snippet and Lorenzo ghost.io blog snippet. Ethereum vault 0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 surfaced as snippet only from X post; not confirmed via block explorer fetch."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Lorenzo docs site (docs.lorenzo-protocol.xyz) returned fetch-allowlist error — URL was not in prior search results. Protocol website (lorenzo-protocol.xyz/home) was successfully fetched but contains no deployed addresses page; it links to docs and GitHub. No canonical 'Deployed contracts' page was found this run."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Cantina audit of Lorenzo OTF Contract (June 28–July 2 2025) fetched in full. Scope includes contracts: sUSD1PlusVault.sol, USD1PlusVault.sol, Vault.sol, SimpleVault.sol, CeDeFiManager.sol. No in-scope deployment addresses provided in audit report. Fix commits: 2ebe3449807f28a82c95a57699673827526005ff and aa08aa62ae17133447376f005027ea50f0b278eb in repo github.com/Lorenzo-Protocol/OTF-Contract."
+      },
+      {
+        "code": "D4",
+        "text": "D4: GitHub repo https://github.com/Lorenzo-Protocol/OTF-Contract identified from Cantina audit. Direct fetch of github.com URL returned allowlist error (URL had not appeared in prior search results as a top-level fetchable link). Repo also found at https://github.com/Lorenzo-Protocol/lorenzo (older BTC layer repo, unrelated to sUSD1+). No deployment artifacts (run-latest.json, deployments.json) retrieved this run."
+      },
+      {
+        "code": "D5",
+        "text": "D5: BNB Chain (chainId=56): address 0x4F2760B32720F013E900DC92F65480137391199b confirmed as sUSD1+ token/vault by Coinbase price page and Lorenzo ghost.io blog. Ethereum (chainId=1): address 0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 found as snippet-only from X post — classified D8 until fetched."
+      },
+      {
+        "code": "D6",
+        "text": "D6: No factory contract identified this run. CeDeFiManager.sol contains a createVault function per the audit, but no factory address was discovered. Skipped pending address discovery."
+      },
+      {
+        "code": "D7",
+        "text": "D7: Role taxonomy applied: 0x4F2760B32720F013E900DC92F65480137391199b classified as vault/token (sUSD1PlusVault) on BNB Chain. CeDeFiManager.sol identified as admin/factory role from audit but no deployed address found. actor_class=unknown for BNB vault pending on-chain read."
+      },
+      {
+        "code": "D8",
+        "text": "D8: 0x4F2760B32720F013E900DC92F65480137391199b on BNB Chain recorded in admin_addresses — backed by two independent search-snippet sources (Coinbase, Lorenzo ghost.io). 0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 on Ethereum is single-snippet sighting (X post) — placed in unknowns only."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Walked protocol website (fetched), Cantina audit report (fetched), and search snippets from Coinbase, Lorenzo blog, and X. Catalogued 1 BNB Chain vault address with dual-source corroboration and named 4 contracts from audit scope. On-chain reads blocked by fetch-allowlist (no addresses were pre-pinned). Ethereum vault address is snippet-only. grade=unknown pending on-chain confirmation."
+  },
+  "evidence": [
+    {
+      "url": "https://lorenzo-protocol.xyz/home",
+      "shows": "Lorenzo Protocol homepage confirms sUSD1+ product with $80.79M issued and 7.22% APY; describes sUSD1+ as a yield-bearing token driven by quantitative strategies on BNB Chain and Ethereum; lists docs, audits, GitHub links in footer.",
+      "fetched_at": "2026-11-03T00:00:00Z"
+    },
+    {
+      "url": "https://cantina.xyz/portfolio/03b32a22-1186-4466-8a37-45ca860f0afe",
+      "shows": "Cantina audit of Lorenzo OTF Contract (28 June–2 July 2025). In-scope contracts: sUSD1PlusVault.sol, USD1PlusVault.sol, Vault.sol, SimpleVault.sol, CeDeFiManager.sol. Fix commits 2ebe3449807f28a82c95a57699673827526005ff and aa08aa62ae17133447376f005027ea50f0b278eb in github.com/Lorenzo-Protocol/OTF-Contract. 4 High, 4 Medium, 5 Low findings.",
+      "fetched_at": "2026-11-03T00:00:00Z",
+      "commit": "2ebe3449807f28a82c95a57699673827526005ff"
+    },
+    {
+      "url": "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed",
+      "shows": "Lorenzo Protocol mainnet launch announcement: USD1+ OTF live on BNB mainnet; users deposit USD1/USDT/USDC and receive sUSD1+ non-rebasing yield-accruing token; redemptions settled in USD1.",
+      "chain": "Binance"
+    },
+    {
+      "url": "https://www.coinbase.com/en-sg/price/staked-usd1",
+      "shows": "Coinbase price page for Lorenzo staked USD1+ lists BNB Smart Chain address 0x4F2760B32720F013E900DC92F65480137391199b for sUSD1+ token; circulating supply ~83 million.",
+      "chain": "Binance",
+      "address": "0x4F2760B32720F013E900DC92F65480137391199b"
+    },
+    {
+      "url": "https://lorenzo-protocol.ghost.io/debrief-susd1-otfs-outperformance-against-record-breaking-liquidations/",
+      "shows": "Lorenzo blog post links to app.lorenzo-protocol.xyz/otf/vault?vaultId=0x4F2760B32720F013E900DC92F65480137391199b&chainId=56, confirming this is the sUSD1+ vault on BNB Chain (chainId=56).",
+      "chain": "Binance",
+      "address": "0x4F2760B32720F013E900DC92F65480137391199b"
+    }
+  ],
+  "unknowns": [
+    "D1: bscscan.com and etherscan.io direct fetches blocked by allowlist; no block-explorer name-tag data retrieved for either chain this run",
+    "D2: docs.lorenzo-protocol.xyz fetch failed (URL not in prior search results); no canonical deployed-contracts page found; deployed_contracts_doc remains null",
+    "D4: github.com/Lorenzo-Protocol/OTF-Contract direct fetch blocked; no deployment artifacts (broadcast JSON, deployments.json, addresses.json) retrieved this run",
+    "D5: Ethereum vault address 0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 (chainId=1) is snippet-only from single X post — not confirmed by block-explorer fetch or second independent source",
+    "D6: CeDeFiManager.sol createVault factory function identified in audit but no deployed factory address discovered; factory children not enumerable",
+    "D8: Ethereum address 0x8f18f2c97d2f5ec0e1d5b91c1d2ce245a9151972 snippet-only sighting (X post search result); not added to admin_addresses pending full fetch confirmation",
+    "D8: Proxy-admin / timelock / multisig owner of sUSD1PlusVault not discovered this run; owner() and getOwners() reads blocked due to absent pre-pinned address_book",
+    "D8: CeDeFiManager deployed address unknown; manager role (setUnitNav, setManager, setSigner) holders unidentified"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Lorenzo-Protocol/OTF-Contract"
+    ],
+    "docs_url": null,
+    "audits": [
+      {
+        "firm": "Cantina",
+        "url": "https://cantina.xyz/portfolio/03b32a22-1186-4466-8a37-45ca860f0afe",
+        "date": "2025-07"
+      }
+    ],
+    "governance_forum": null,
+    "voting_token": null,
+    "bug_bounty_url": null,
+    "security_contact": null,
+    "deployed_contracts_doc": null,
+    "admin_addresses": [
+      {
+        "chain": "Binance",
+        "address": "0x4F2760B32720F013E900DC92F65480137391199b",
+        "role": "vault (sUSD1PlusVault token/fund shares)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Lorenzo Protocol is an institutional-grade on-chain asset management platform that issues On-Chain Traded Funds (OTFs). Users deposit stablecoins (USD1, USDT, USDC) and receive sUSD1+, a non-rebasing yield-accruing token representing shares in the fund. The sUSD1+ OTF aggregates yield from Real-World Assets (RWA), CeFi quantitative delta-neutral trading strategies, and DeFi protocols, with all positions settled in World Liberty Financial's USD1 stablecoin. The product is live on BNB Chain with a bridge to Ethereum, managed by a Financial Abstraction Layer and CeDeFiManager contract that controls NAV updates and portfolio rebalancing."
+  }
+}
+```

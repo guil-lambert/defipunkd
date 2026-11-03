@@ -1,0 +1,242 @@
+{
+  "schema_version": 4,
+  "slug": "sonic-gateway",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-03",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "19 contracts catalogued across Ethereum and Sonic chains; core Ethereum-side bridge contracts identified with UUPS proxy upgradeability and multisig admin roles; GitHub repo and OpenZeppelin audit surfaced.",
+  "short_headline": "19 contracts across Ethereum + Sonic",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Etherscan name-tag search: 'Sonic Labs: Sonic Gateway' tag confirmed on 0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20 (TokenDeposit proxy, Ethereum) holding ~$62M in assets. SonicScan confirms 0x9Ef7629F9B930168b76283AdD7120777b3c895b3 as 'Sonic Labs: Sonic Gateway' Bridge contract (Sonic side). No additional Ethereum explorer tags found beyond the primary contracts."
+      },
+      {
+        "code": "D2",
+        "text": "Official deployments doc found at https://docs.soniclabs.com/sonic/build-on-sonic/contract-addresses. Lists 10 Ethereum-side contracts and 8 Sonic-side contracts with proxies and implementations. All addresses recorded in admin_addresses."
+      },
+      {
+        "code": "D3",
+        "text": "OpenZeppelin audit at https://www.openzeppelin.com/news/sonic-gateway-audit (Dec 13, 2024) covers Fantom-foundation/Bridge repo at commit 558465d. In-scope contracts: Bridge.sol, TokenDeposit.sol, TokenPairs.sol, StateOracle.sol, UpdateManager.sol, ValidatorsRegistry.sol, ActivityMonitor.sol, DirectExitAdministrator.sol, ExitAdministrator.sol, MPTProofVerifier.sol, MessageBus.sol, MintedERC20.sol, SFCUpdateVerifier.sol. No addresses listed directly in the audit (pre-deployment audit). Admin roles confirmed: multisig holds DEFAULT_ADMIN_ROLE on UpdateManager, ExitAdministrator, TokenPairs, Bridge, TokenDeposit."
+      },
+      {
+        "code": "D4",
+        "text": "GitHub repo https://github.com/Fantom-foundation/Bridge identified from OpenZeppelin audit scope. Commit SHA 558465d confirmed in audit. Direct fetch of repo failed (GitHub returned error), so no deployment artifacts (broadcast JSON, deployments JSON) could be inspected this run. Programmatic Gateway docs page also references this repo indirectly."
+      },
+      {
+        "code": "D5",
+        "text": "Protocol.chains lists Ethereum only, but Sonic side contracts are also part of the bridge system. Sonic-side contracts enumerated from docs: Bridge proxy (0x9Ef7629F...), UpdateManager proxy (0x1D3c99DA...), TokenPairs proxy (0x134E4c20...), StateOracle (0x836664B0...), MPTProofVerifier (0xD2f1e904...), ValidatorsRegistry (0x12727D41...), MessageBus (0xB5B371B7...), plus implementation addresses. Recorded in admin_addresses with chain=Sonic. Note: Sonic chain is not in DeFiLlama's listed chains for this slug; these are recorded as observed from docs."
+      },
+      {
+        "code": "D6",
+        "text": "TokenPairs contract (0xf2b1510c...) on Ethereum functions as a token registry (originalToMinted mapping), not a factory spawning child contracts. No factory-discovered children to enumerate; no cap notice needed."
+      },
+      {
+        "code": "D7",
+        "text": "Role taxonomy applied. UpdateManager is the central admin hub. Multisig holds DEFAULT_ADMIN_ROLE across ExitAdministrator, TokenPairs, UpdateManager, Bridge, and TokenDeposit per audit. UpdateManager holds admin role over StateOracle, ActivityMonitor, ValidatorsRegistry. Multisig actor_class=unknown (threshold/signers not discovered this run; no Safe owners API URL surfaced). DirectExitAdministrator holds IMPLEMENTATION_ROLE on ExitAdministrator, enabling withdrawals if bridge is 'dead'."
+      },
+      {
+        "code": "D8",
+        "text": "All addresses in admin_addresses trace to fetched URL https://docs.soniclabs.com/sonic/build-on-sonic/contract-addresses (D2) and/or https://etherscan.io/address/0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20 (D1). Current live implementation of TokenDeposit (0xAdE2eF0101278fe11490F2EE2aaD7915a094ADe9) sourced from Etherscan proxy upgrade history — differs from docs-listed implementation (0x4cbd824685F1E21B119F230B54d65C5a7D2a5330), which is now inactive."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery run: walked Sonic Labs official docs (deployed contracts page), Etherscan name-tag search, SonicScan name-tag search, and OpenZeppelin audit page. Surfaced 19 contracts (10 Ethereum-side, 8 Sonic-side from docs, plus the live current implementation on Ethereum discovered via Etherscan proxy history). No multisig addresses or signer identities found — these are required for the next assessment run's control slice."
+  },
+  "evidence": [
+    {
+      "url": "https://docs.soniclabs.com/sonic/build-on-sonic/contract-addresses",
+      "shows": "Official Sonic Labs deployed contracts page listing all Gateway Infrastructure addresses on both Ethereum and Sonic mainnet, including proxies and implementations.",
+      "chain": "Ethereum",
+      "fetched_at": "2026-11-03T12:00:00Z"
+    },
+    {
+      "url": "https://www.openzeppelin.com/news/sonic-gateway-audit",
+      "shows": "OpenZeppelin security audit of Fantom-foundation/Bridge at commit 558465d (Dec 13, 2024). Confirms multisig holds DEFAULT_ADMIN_ROLE on UpdateManager, ExitAdministrator, TokenPairs, Bridge, TokenDeposit. Lists all in-scope contracts including Bridge.sol, TokenDeposit.sol, StateOracle.sol, UpdateManager.sol, ValidatorsRegistry.sol, DirectExitAdministrator.sol, MPTProofVerifier.sol, MessageBus.sol.",
+      "commit": "558465d",
+      "fetched_at": "2026-11-03T12:00:00Z"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20",
+      "shows": "Etherscan page for TokenDeposit proxy (labeled 'Sonic Labs: Sonic Gateway'). Confirmed UUPS ERC1967 proxy, current implementation 0xAdE2eF0101278fe11490F2EE2aaD7915a094ADe9 (upgraded 2025-04-17), ~$62M in bridged assets. Contract creator 0x80957D62C7Cc252E5dd2f8691a9afB3087f88Fa1.",
+      "chain": "Ethereum",
+      "address": "0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20",
+      "fetched_at": "2026-11-03T12:00:00Z"
+    },
+    {
+      "url": "https://docs.soniclabs.com/sonic/build-on-sonic/programmatic-gateway",
+      "shows": "Programmatic Gateway docs listing Ethereum contracts: TOKEN_DEPOSIT=0xa1E2481a..., TOKEN_PAIRS=0xf2b1510c..., STATE_ORACLE=0xB7e8CC3F...; Sonic contracts: BRIDGE=0x9Ef7629F..., TOKEN_PAIRS=0x134E4c20..., STATE_ORACLE=0x836664B0...",
+      "fetched_at": "2026-11-03T12:00:00Z"
+    },
+    {
+      "url": "https://sonicscan.org/address/0x9Ef7629F9B930168b76283AdD7120777b3c895b3",
+      "shows": "SonicScan page for Bridge contract on Sonic labeled 'Sonic Labs: Sonic Gateway'. UUPS proxy, Bridge Implementation 0x0B3fe0c10C050270a9bc34271987989B6CF2107C (current per docs).",
+      "chain": "Sonic",
+      "address": "0x9Ef7629F9B930168b76283AdD7120777b3c895b3"
+    }
+  ],
+  "unknowns": [
+    "D1: Etherscan name-tag search for 'Sonic Gateway' beyond the primary TokenDeposit contract not performed (e.g., UpdateManager, StateOracle, ValidatorsRegistry Ethereum addresses) — no name-tag page fetched for those addresses; addresses sourced from D2 docs instead.",
+    "D3: Audit predates mainnet deployment; no in-scope address table in the audit report (addresses were not yet assigned at audit time). Role: audit-era contracts confirmed by docs cross-reference.",
+    "D4: GitHub fetch of https://github.com/Fantom-foundation/Bridge failed; no deployment artifacts (broadcast JSON, deployments JSON, README tables) inspected this run. Commit SHA 558465d sourced from audit page only.",
+    "D7: Multisig addresses holding DEFAULT_ADMIN_ROLE on UpdateManager, ExitAdministrator, TokenPairs, Bridge, TokenDeposit not discovered — no Safe owners API URL was found for these. Actor_class=unknown for all admin entries. Downstream control slice must resolve via defipunkd Safe API reads.",
+    "D7: ExitAdministrator/ActivityMonitor contract addresses on Ethereum not listed in the current docs page; may be internal to UpdateManager or omitted. These were in-scope at audit time but no Ethereum address is published.",
+    "D5: Sonic chain not in protocol.chains per slug; Sonic-side contracts recorded from docs but on-chain reads for Sonic addresses not performed (chainId not supported by defipunkd API in this run)."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/Fantom-foundation/Bridge"
+    ],
+    "docs_url": "https://docs.soniclabs.com/sonic/sonic-gateway",
+    "audits": [
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://www.openzeppelin.com/news/sonic-gateway-audit",
+        "date": "2024-12"
+      }
+    ],
+    "deployed_contracts_doc": "https://docs.soniclabs.com/sonic/build-on-sonic/contract-addresses",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20",
+        "role": "vault (TokenDeposit proxy — locks/releases ERC-20 tokens on Ethereum side)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xAdE2eF0101278fe11490F2EE2aaD7915a094ADe9",
+        "role": "other (TokenDeposit current implementation, active since 2025-04-17)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4cbd824685F1E21B119F230B54d65C5a7D2a5330",
+        "role": "other (TokenDeposit implementation — inactive, superseded)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xB7e8CC3F5FeA12443136f0cc13D81F109B2dEd7f",
+        "role": "oracle (StateOracle — stores Merkle roots from Sonic IBC relay)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x921B147a90Ef738BBb7c2c89D88ea9d8Af3e9306",
+        "role": "other (MPTProofVerifier — verifies Merkle Patricia Trie proofs)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x72965045A6691E5A74299D1e878f303264D4D910",
+        "role": "other (ValidatorsRegistry proxy — tracks IBC relay validator set)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0c40Ae1c82401EA741953D3f026ADc07BE9e7943",
+        "role": "other (ValidatorsRegistry implementation — audit-era; may be superseded)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xf2b1510c2709072C88C5b14db90Ec3b6297193e4",
+        "role": "other (TokenPairs proxy — maps Ethereum ERC-20 to Sonic IOU tokens)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0c40Ae1c82401EA741953D3f026ADc07BE9e7943",
+        "role": "other (TokenPairs implementation, per docs — same address as ValidatorsRegistry impl listed in older doc; may be separate, verify on-chain)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7390251Bf35AA7eA7C196fc4750bd5d6c5918329",
+        "role": "admin (DirectExitAdministrator — holds IMPLEMENTATION_ROLE enabling emergency withdrawal of all locked tokens if bridge is 'dead')",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xB0bECf0fBfE431D42bA0FbD8dFBFbB0DCFd62Da4",
+        "role": "admin (UpdateManager proxy — central admin hub; controls StateOracle, ValidatorsRegistry, ActivityMonitor updates)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x13bd43A6BE5795D4A4E3Efc4baC21Cd36Ae9e68A",
+        "role": "other (UpdateManager implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x9Ef7629F9B930168b76283AdD7120777b3c895b3",
+        "role": "vault (Bridge proxy — mints/burns IOU tokens on Sonic side)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x0B3fe0c10C050270a9bc34271987989B6CF2107C",
+        "role": "other (Bridge implementation — current per docs)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x1D3c99DA3CEF5C26f02a86dC7D685efa40176bb7",
+        "role": "admin (UpdateManager proxy on Sonic — mirrors Ethereum UpdateManager role)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x1071405A4736535C545580064039A235827ee6D4",
+        "role": "other (UpdateManager implementation on Sonic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x134E4c207aD5A13549DE1eBF8D43c1f49b00ba94",
+        "role": "other (TokenPairs proxy on Sonic — DEFAULT_ADMIN_ROLE and REGISTER_ROLE held by multisig per audit)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0xE34e6851a4a3763e1d27aa7ac5980d2D33C2d315",
+        "role": "other (TokenPairs implementation on Sonic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x836664B0c0CB29B7877bCcF94159CC996528F2C3",
+        "role": "oracle (StateOracle on Sonic — stores Ethereum Merkle roots from IBC relay)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0xD2f1e904dAf7446686F8057b7dfeb068c75D29A9",
+        "role": "other (MPTProofVerifier on Sonic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x12727D4169a42A9b5E3ECB11A6d2c95553d3f447",
+        "role": "other (ValidatorsRegistry proxy on Sonic)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0xB5B371B75f9850dDD6CCB6C436DB54972a925308",
+        "role": "other (MessageBus on Sonic — used by validators for IBC relay voting)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Sonic Gateway is a canonical bridge enabling users to transfer approved ERC-20 tokens (USDC, WETH, EURC, USDT, FTM/S, and others) between Ethereum mainnet and the Sonic EVM chain. Users lock tokens in the Ethereum-side TokenDeposit contract and claim IOU tokens on Sonic by submitting a Merkle proof of their deposit, verified against a Merkle root maintained by an off-chain IBC relay network of validators. Withdrawals work in reverse: users burn IOU tokens on Sonic and redeem the underlying tokens on Ethereum after proof verification. The system uses UUPS upgradeable proxies throughout, with a multisig holding the DEFAULT_ADMIN_ROLE across core contracts and an UpdateManager contract coordinating parameter and validator-set updates on both chains."
+  }
+}
