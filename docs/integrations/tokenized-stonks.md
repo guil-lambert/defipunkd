@@ -17,3 +17,15 @@ Example assets come from the issuer-scoped volume-ranked selection, not a comple
 ## Attribution and scope
 
 [Terms](https://tokenizedstonks.io/terms) permit reuse of their compilation and analysis with visible adjacent `Source: tokenizedstonks.io` attribution. The section carries this credit and source links. Partner/provider data retain their own terms. This integration saves only catalog summaries and examples; it discards market prices, liquidity, volume, histories and underlying partner observations. It does not change risk scores, confidence or quorum evidence.
+
+## Asset comparisons
+
+`/assets` lists the crawlable site's covered-market subset (not its entire interactive catalog). The initial local comparison is Apple, at `/assets/aapl-us0378331005-xnas`; other assets link to their source catalog pages. Add reviewed catalog IDs to `COMPARISON_ASSET_IDS` to expand local comparisons.
+
+Run `pnpm --filter @defipunkd/enrichment run refresh-asset-catalog`. This fetches the documented `/assets` HTML directory and one `/assets/{id}` page per selected comparison, sequentially with a one-second delay. The asset JSON endpoints returned 503s during implementation, so this uses the source's explicitly crawlable pages. Cheerio extracts catalog facts only: asset identity/type, source timestamp, issuer label, symbol, network, contract/explorer URL and representation form. It checks canonical asset identity, expected table headers, published row counts, unique entries and safe URLs. Any network/parse/validation error leaves `data/enrichment/asset-catalog.json` intact. The initial snapshot was parsed from successfully retrieved public pages; a later live refresh returned HTTP 503 and preserved it.
+
+The existing Wednesday workflow refreshes both issuer summaries and the asset catalog in a data PR. Source attribution/logo, retrieval date, source snapshot date and the two-week stale advisory appear on the new pages. Market prices/volume/liquidity are not copied.
+
+Issuer labels have an explicit product mapping to registry protocols. No fuzzy name matching, family-wide grade inheritance or category heuristics are used. Separate issuer labels (including Robinhood and Robinhood EU) remain separate rows even where they link to shared protocol context. The five cells show only stored assessments and preserve their confidence treatment; submitted reviews without consensus show `Review pending`, absent reviews show `Not assessed`, and an assessed unknown remains unknown. Expanded criteria show the protocol-level scope, rationale and dated submissions with evidence links. No token- or chain-specific grade is inferred. Token forms are preserved, including wrappers, derivatives and off-chain products.
+
+At launch, none of the four mapped protocols has a completed risk-slice assessment. Robinhood has three pending reviews. The comparison intentionally exposes that coverage gap; adding actual security grades requires the usual evidence/quorum process.

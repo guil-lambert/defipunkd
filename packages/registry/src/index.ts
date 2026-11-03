@@ -281,3 +281,4 @@ export function getProtocolMetadata(slug: string): ProtocolMetadata | undefined 
 }
 
 export { TOKENIZED_STONKS_URL, TOKENIZED_ISSUERS, TokenizedAssetsSchema, normalizeTokenizedIssuer, getTokenizedAssets, tokenizedIssuerUrl, tokenizedAssetUrl, type TokenizedAssets } from "./tokenized-assets";
+export { AssetCatalogSchema, AssetComparisonSchema, CatalogAssetSchema, ASSET_ISSUER_PROTOCOLS, COMPARISON_ASSET_IDS, assetSourceUrl, getAssetCatalog, type AssetCatalog, type AssetComparison } from "./asset-catalog";

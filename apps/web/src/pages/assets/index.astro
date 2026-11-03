@@ -1,0 +1,55 @@
+---
+import Base from "../../layouts/Base.astro";
+import AssetCatalogSource from "../../components/AssetCatalogSource.astro";
+import { getAssetCatalog, assetSourceUrl } from "@defipunkd/registry";
+const catalog = getAssetCatalog();
+const comparisons = new Set(catalog?.comparisons.map((c) => c.asset_id));
+const assets = [...(catalog?.assets ?? [])].sort((a, b) => Number(comparisons.has(b.id)) - Number(comparisons.has(a.id)) || a.symbol.localeCompare(b.symbol));
+---
+<Base title="Assets — DeFiPunk'd" description="Compare tokenized stocks and ETFs across five security criteria, with issuer context and token deployment details.">
+  <main class="asset-page">
+    <nav aria-label="Breadcrumb"><a href="/">← Protocols</a> / Assets</nav>
+    <header><p class="eyebrow">Tokenized stocks &amp; ETFs</p><h1>Same asset. Different dependencies.</h1>
+      <p>Explore tokenized representations and compare their issuer protocols across control, ability to exit, autonomy, open access and verifiability.</p>
+    </header>
+    {catalog ? <>
+      <AssetCatalogSource fetchedAt={catalog.fetched_at} />
+      <p class="note">{catalog.assets.length} assets in the source’s covered-market subset; coverage is partial. {comparisons.size} local comparison available. Other assets link to the source catalog.</p>
+      <div class="filters"><label for="asset-search">Find an asset<input id="asset-search" type="search" placeholder="Symbol or company name" /></label><label class="check"><input id="comparisons-only" type="checkbox" /> Local comparisons only</label></div>
+      <p id="asset-count" role="status">{assets.length} assets</p>
+      <ul class="asset-list">
+        {assets.map((a) => <li data-asset-search={`${a.symbol} ${a.name}`.toLowerCase()} data-local={comparisons.has(a.id) ? "yes" : "no"}>
+          <a href={comparisons.has(a.id) ? `/assets/${a.id}` : assetSourceUrl(a.id)} target={comparisons.has(a.id) ? undefined : "_blank"} rel={comparisons.has(a.id) ? undefined : "noopener noreferrer"}>
+            <strong>{a.symbol}</strong><span>{a.name}<small>{a.kind === "etf" ? "ETF" : a.kind}</small></span><span class="destination">{comparisons.has(a.id) ? "Compare security →" : "Source catalog ↗"}</span>
+          </a>
+        </li>)}
+      </ul>
+      <p id="asset-empty" hidden>No matching assets. Try a different symbol or clear the filter.</p>
+    </> : <p>Asset catalog unavailable. <a href="https://tokenizedstonks.io/assets">Browse Tokenized Stonks ↗</a></p>}
+  </main>
+</Base>
+<script>
+  const input = document.querySelector<HTMLInputElement>("#asset-search");
+  const only = document.querySelector<HTMLInputElement>("#comparisons-only");
+  const rows = [...document.querySelectorAll<HTMLElement>("[data-asset-search]")];
+  function filter() {
+    const q = input?.value.trim().toLowerCase() ?? "";
+    let count = 0;
+    for (const row of rows) { row.hidden = !row.dataset.assetSearch?.includes(q) || (!!only?.checked && row.dataset.local !== "yes"); if (!row.hidden) count++; }
+    const status = document.querySelector("#asset-count"); if (status) status.textContent = `${count} asset${count === 1 ? "" : "s"}`;
+    const empty = document.querySelector<HTMLElement>("#asset-empty"); if (empty) empty.hidden = count !== 0;
+  }
+  input?.addEventListener("input", filter); only?.addEventListener("change", filter);
+</script>
+<style>
+.asset-page { max-width: 1100px; margin: auto; padding: 2rem 1.25rem; }
+nav, .eyebrow, .note, #asset-count { font-size: .8rem; color: var(--text-muted); }
+header { margin: 2.5rem 0 1.5rem; } header p { max-width: 75ch; line-height: 1.6; }
+.eyebrow { text-transform: uppercase; letter-spacing: .08em; } h1 { margin: .5rem 0 1rem; }
+.filters { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem 2rem; margin-top: 2rem; }
+label { font-size: .85rem; } input[type=search] { display: block; margin-top: .5rem; width: min(28rem, 85vw); background: var(--surface); border: 1px solid var(--surface-raised); color: var(--text); padding: .75rem; font: inherit; }
+.check { padding-bottom: .75rem; } .asset-list { list-style: none; padding: 0; }
+.asset-list li { border-top: 1px solid var(--surface-raised); } .asset-list a { display: grid; grid-template-columns: 6rem 1fr auto; gap: 1rem; align-items: center; padding: .85rem .5rem; text-decoration: none; }
+.asset-list a:hover { background: var(--surface); } strong { font-family: var(--font-mono); } small { display: block; color: var(--text-muted); margin-top: .25rem; } .destination { font-size: .8rem; }
+@media(max-width: 600px) { .asset-list a { grid-template-columns: 5rem 1fr; } .destination { grid-column: 2; } h1 { font-size: 1.65rem; } }
+</style>
