@@ -89,8 +89,9 @@ const anyProtocolGithubProv = poolMeta.find(({ p }) => p._provenance.github && p
 const githubProvTag: ProvenanceTag | "defi@home" | null = anyMetaGithub ? "defi@home" : (anyProtocolGithubProv ?? null);
 
 // Audits: union of structured audits (metadata) + enrichment audits + raw
-// audit_links across every family member, deduped by URL.
-type StructuredAudit = { firm: string | null; url: string; date: string | null; from?: string };
+// audit_links across every family member. Entries without report URLs keep
+// their firm/date/protocol identity instead of collapsing into one entry.
+type StructuredAudit = { firm: string | null; url: string | null; date: string | null; from?: string };
 const structuredCollected: StructuredAudit[] = [];
 const rawCollected: { url: string; from: string }[] = [];
 let anyMetaAudits = false;
@@ -103,13 +104,13 @@ for (const { p, m, e } of poolMeta) {
   const useMetaAudits = m?.audits && m.audits.length > 0 && p._provenance.audit_links !== "curated";
   if (useMetaAudits) {
     anyMetaAudits = true;
-    for (const a of m!.audits!) structuredCollected.push({ firm: a.firm ?? null, url: a.url, date: a.date ?? null, from: p.slug });
+    for (const a of m!.audits!) structuredCollected.push({ firm: a.firm ?? null, url: a.url?.trim() || null, date: a.date ?? null, from: p.slug });
   } else if (e.audits && e.audits.audits.length > 0) {
-    for (const a of e.audits.audits) structuredCollected.push({ firm: a.firm, url: a.url, date: a.date, from: p.slug });
+    for (const a of e.audits.audits) structuredCollected.push({ firm: a.firm, url: a.url?.trim() || null, date: a.date, from: p.slug });
   }
   for (const u of p.audit_links ?? []) rawCollected.push({ url: u, from: p.slug });
 }
-const structuredAudits = structuredCollected.length > 0 ? uniqueBy(structuredCollected, (a) => a.url) : null;
+const structuredAudits = structuredCollected.length > 0 ? uniqueBy(structuredCollected, (a) => a.url ? `url:${a.url}` : `metadata:${JSON.stringify([a.firm, a.date, a.from])}`) : null;
 const rawAuditLinks = uniqueBy(rawCollected, (r) => r.url);
 const auditsProvTag = anyMetaAudits ? "defi@home" : auditsProvFromChain;
 
@@ -252,7 +253,11 @@ const provenanceSources = Array.from(new Set([
               <ul class="bare audits">
                 {structuredAudits.map((a) => (
                   <li>
-                    <a href={a.url} class="link" rel="noreferrer" target="_blank"><SourceLogo href={a.url} />{a.firm ?? auditorDomain(a.url) ?? a.url}</a>
+                    {a.url ? (
+                      <a href={a.url} class="link" rel="noreferrer" target="_blank"><SourceLogo href={a.url} />{a.firm ?? auditorDomain(a.url) ?? a.url}</a>
+                    ) : (
+                      <span>{a.firm ?? "Audit"}<span class="muted"> — report URL unavailable</span></span>
+                    )}
                     {a.date && <span class="muted"> {EM_DASH} {a.date}</span>}
                     {family.length > 0 && a.from && a.from !== protocol.slug && <span class="muted"> {EM_DASH} {a.from}</span>}
                   </li>
