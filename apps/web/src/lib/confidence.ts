@@ -30,6 +30,7 @@ export function isThinkingModel(model: string): boolean {
   const m = model.toLowerCase();
   if (/thinking|reason/.test(m)) return true;
   if (/claude-opus/.test(m)) return true;
+  if (/claude-sonnet-5-5/.test(m)) return true;
   if (/^o\d/.test(m)) return true;
   if (/gemini-(?:3|[4-9])(?:\.\d+)?-pro/.test(m)) return true;
   return false;

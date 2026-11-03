@@ -12,13 +12,13 @@ on:
       model:
         description: "Anthropic model ID"
         required: false
-        default: "claude-sonnet-4-6"
+        default: "claude-sonnet-5-5"
       slice:
         description: "Slice to run (leave empty for all slices)"
         required: false
         default: "discovery"
       max_cost:
-        description: "Hard USD ceiling — stops between calls once estimated spend reaches this"
+        description: "USD stop threshold checked between calls; final call can exceed it"
         required: false
         default: "5"
 
@@ -49,12 +49,14 @@ jobs:
 
       - name: Generate submissions
         env:
+          GH_TOKEN: ${{ github.token }}
           TARGET_COUNT: ${{ inputs.target_count || '50' }}
-          MODEL: ${{ inputs.model || 'claude-sonnet-4-6' }}
+          MODEL: ${{ inputs.model || 'claude-sonnet-5-5' }}
           SLICE: ${{ inputs.slice || 'discovery' }}
           MAX_COST: ${{ inputs.max_cost || '5' }}
         run: |
           pnpm --filter @defipunkd/validator exec tsx src/cli/autorun-generate.ts \
+            --exclude-open-prs \
             --count "$TARGET_COUNT" \
             --model "$MODEL" \
             --slice "$SLICE" \
@@ -72,7 +74,7 @@ jobs:
           body: |
             Scheduled third-voice submissions generated via the Anthropic API.
 
-            Model: `${{ inputs.model || 'claude-sonnet-4-6' }}`
+            Model: `${{ inputs.model || 'claude-sonnet-5-5' }}`
             Target count: `${{ inputs.target_count || '50' }}`
             Slice filter: `${{ inputs.slice || 'discovery' }}`
             Max cost: `$${{ inputs.max_cost || '5' }}`

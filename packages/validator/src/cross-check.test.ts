@@ -182,7 +182,7 @@ describe("crossCheck", () => {
   });
 
   it("does not warn for thinking-capable models", () => {
-    for (const model of ["claude-opus-4-7", "claude-sonnet-4-6", "gpt-5.5-thinking", "gemini-3-pro", "o3-mini"]) {
+    for (const model of ["claude-opus-4-7", "claude-sonnet-5-5 (autorun)", "claude-sonnet-4-6", "gpt-5.5-thinking", "gemini-3-pro", "o3-mini"]) {
       const issues = crossCheck(sub({ model }), ctx());
       expect(issues.some((i) => i.field === "model")).toBe(false);
     }
