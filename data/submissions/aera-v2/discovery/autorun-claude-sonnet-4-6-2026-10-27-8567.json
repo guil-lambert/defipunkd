@@ -1,0 +1,138 @@
+{
+  "schema_version": 4,
+  "slug": "aera-v2",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-10-27",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "Architecture and contract taxonomy catalogued from docs/website; zero full addresses discovered — all vault addresses from app dashboard are truncated and ineligible for admin_addresses per D8 integrity rules.",
+  "short_headline": "Contract types found; no full addresses",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: Block-explorer name-tag search not executed — search quota exhausted before Etherscan/Arbiscan/Basescan/Polygonscan queries could be issued. Vault addresses visible in app.aera.finance search snippet are truncated (e.g., '0x3d6e...1d6b') and do not meet the 40-hex-char requirement for admin_addresses. Recorded in unknowns."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Fetched docs.aera.finance (overview). V2 docs are archived under /v2-archive/. No standalone 'Deployed Contracts' page found for V2 — docs describe contract types (AeraV2Factory, AeraVaultV2, AeraVaultAssetRegistry, AeraVaultHooks, AeraVaultModulesFactory) but list no addresses. deployed_contracts_doc set to null."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Audit link https://github.com/aera-finance/aera-contracts-public/blob/main/v2/audits/spearbit/2023-09-22.pdf fetched — GitHub rendered the HTML wrapper but not the PDF binary. No contract addresses extracted. Immunefi page confirms this is the sole listed audit for V2 (Spearbit, 2023-09-22). Website footer also links a second audit PDF at cdn.prod.website-files.com (Aera-Spearbit-Security-Review-Aug2023.pdf) which could not be fetched."
+      },
+      {
+        "code": "D4",
+        "text": "D4: Fetched GitHub root (aera-finance/aera-contracts-public). Repo contains v1/, v2/, v3/ directories. v2/ subdirectory not walked (fetch quota exhausted). No deployment artifacts (run-latest.json, deployments.json, addresses.json) confirmed from the root-level fetch. Recorded in unknowns."
+      },
+      {
+        "code": "D5",
+        "text": "D5: Protocol operates on Ethereum, Base, Polygon, Arbitrum per pinned inputs, confirmed by Immunefi bug bounty scope (also includes Optimism). App dashboard search result shows vaults on all four chains with Polygon address '0x08c4...cf6a' and Arbitrum addresses '0xd958...c687', '0x977a...eccc', '0x87e1...92c9', '0x2b04...10be' — all truncated. Zero full cross-chain addresses discoverable this run."
+      },
+      {
+        "code": "D6",
+        "text": "D6: AeraV2Factory.create() is the factory entry point (documented in docs.aera.finance/v2-archive/contracts/aerav2factory). Factory address unknown — cannot enumerate children without the factory address. App dashboard shows 40+ individual vault instances across chains. Recorded factory enumeration as blocked by missing factory address."
+      },
+      {
+        "code": "D7",
+        "text": "D7: Role taxonomy established from docs: (1) AeraV2Factory — factory, actor_class unknown; (2) AeraVaultV2 — vault (per-deployment), actor_class unknown; (3) AeraVaultAssetRegistry — other (per-deployment), actor_class unknown; (4) AeraVaultHooks — other (per-deployment), actor_class unknown; (5) AeraVaultModulesFactory — factory, actor_class unknown. Vault owner (client treasury) = owner role, actor_class unknown per deployment. Guardian = guardian role (EOA or contract per deployment). No addresses eligible for admin_addresses[] under D8 rules."
+      },
+      {
+        "code": "D8",
+        "text": "D8: All candidate addresses (from app.aera.finance search snippet) are 8-char truncations and cannot be verified as full addresses. No addresses placed in admin_addresses[]. All truncated candidates recorded in unknowns with D8 prefix."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery is blocked at the address level: the website and docs confirm V2 architecture (AeraV2Factory, AeraVaultV2, AeraVaultAssetRegistry, AeraVaultHooks, AeraVaultModulesFactory) and the Immunefi bug bounty confirms multi-chain deployment, but zero full 40-character contract addresses were recovered from any fetched source. The app dashboard exposes truncated addresses only. D1 (explorer name-tag), D3 (audit PDF scope table), and D4 (GitHub deployment artifacts) all failed to yield full addresses due to tool constraints. grade=unknown until a subsequent run can execute D1 explorer searches and walk the v2/ GitHub directory."
+  },
+  "evidence": [
+    {
+      "url": "https://www.aera.finance",
+      "shows": "Official website confirms Aera V2 is built by Gauntlet/Auditless, audited by Spearbit and OpenZeppelin, non-custodial vault platform. App launches at app.gauntlet.xyz/vaults. Security contact info@aera.finance disclosed in GitHub README.",
+      "fetched_at": "2026-10-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/aera-finance/aera-contracts-public",
+      "shows": "Canonical public repo for Aera contracts containing v1/, v2/, v3/ directories. Repo id 615375834. Security disclosure email info@aera.finance listed in README.",
+      "fetched_at": "2026-10-27T00:00:00Z"
+    },
+    {
+      "url": "https://github.com/aera-finance/aera-contracts-public/blob/main/v2/audits/spearbit/2023-09-22.pdf",
+      "shows": "Spearbit audit report for Aera V2, dated 2023-09-22, 380KB. PDF binary not rendered by fetch; no addresses extracted. Confirms audit exists at this path.",
+      "fetched_at": "2026-10-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.aera.finance",
+      "shows": "Docs site overview: V2 is now archived under /v2-archive/. Current product is V3. Site confirms V2 and V3 both support treasury management use case.",
+      "fetched_at": "2026-10-27T00:00:00Z"
+    },
+    {
+      "url": "https://docs.aera.finance/v2-archive/how-aera-v2-works",
+      "shows": "V2 architecture: three core contracts per deployment — AeraVaultV2 (IVault), AeraVaultAssetRegistry (IAssetRegistry), AeraVaultHooks (IHooks). Owner role controls vault, asset registry, and hooks. Guardian role submits operations. AeraV2Factory.create() is onlyOwner.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.aera.finance/v2-archive/contracts/aerav2factory",
+      "shows": "AeraV2Factory.create() deploys vault, assetRegistry, and hooks atomically. Function is restricted to onlyOwner. Returns addresses of deployedVault, deployedAssetRegistry, deployedHooks."
+    },
+    {
+      "url": "https://docs.aera.finance/v2-archive/contracts/aeravaultmodulesfactory",
+      "shows": "AeraVaultModulesFactory deploys AeraVaultAssetRegistry and AeraVaultHooks. Has deployAssetRegistry() and deployHooks() functions restricted to onlyOwnerOrV2Factory."
+    },
+    {
+      "url": "https://docs.aera.finance/v2-archive/contracts/aeravaulthooks",
+      "shows": "AeraVaultHooks inherits IHooks, Sweepable, ERC165. Stores vault address, minDailyValue, targetSighashAllowlist. Has decommission() restricted to onlyVault."
+    },
+    {
+      "url": "https://immunefi.com/bug-bounty/aera/information/",
+      "shows": "Aera bug bounty on Immunefi. Chains in scope: Ethereum, Arbitrum, Base, Polygon, Optimism. Audit listed: Spearbit 2023-09-22. Rewards paid in USDC on Ethereum."
+    },
+    {
+      "url": "https://app.aera.finance/",
+      "shows": "Live app dashboard shows 40+ vaults across Ethereum, Base, Arbitrum, Polygon with names and truncated addresses (8-char prefix only, e.g., 'Compound Reserves 0x3d6e...1d6b' $30.1M ETH, 'Uniswap Incentives 0x7c84...47e4' $26.1M ETH). Addresses are truncated and ineligible for admin_addresses per D8 rules."
+    },
+    {
+      "url": "https://docs.aera.finance/v2-archive/contracts/security",
+      "shows": "V2 security notes: guardian submission relies on off-chain algorithm; malicious guardian could sandwich transactions up to slippage bound; hooks module limits slippage."
+    }
+  ],
+  "unknowns": [
+    "D1: Etherscan name-tag search for 'Aera' not executed — search quota exhausted; factory and vault addresses on Ethereum not recovered",
+    "D1: Arbiscan name-tag search for 'Aera' not executed — search quota exhausted; Arbitrum contract addresses not recovered",
+    "D1: Basescan name-tag search for 'Aera' not executed — search quota exhausted; Base contract addresses not recovered",
+    "D1: Polygonscan name-tag search for 'Aera' not executed — search quota exhausted; Polygon contract addresses not recovered",
+    "D3: Spearbit audit PDF (2023-09-22.pdf) binary not rendered — in-scope address table not extracted; addresses labeled audit-era not recoverable this run",
+    "D3: Second audit PDF linked from website footer (Aera-Spearbit-Security-Review-Aug2023.pdf) not fetched — OpenZeppelin audit referenced on website not confirmed or linked",
+    "D4: GitHub v2/ directory not walked — deployment broadcast files, hardhat-deploy artifacts, or addresses.json not checked; run-latest.json per chainId not examined",
+    "D6: AeraV2Factory address unknown — factory child enumeration (deployed vaults) cannot proceed without factory address on any chain",
+    "D8: Truncated vault addresses from app.aera.finance ineligible: Compound Reserves 0x3d6e...1d6b (ETH), Uniswap Incentives 0x7c84...47e4 (ETH), Compound Vendor Payments 0x8624...73ba (ETH), Swell rswETH Rewards 0xd065...6f5a (ETH), Puffer pufETH Rewards 0x6c25...a0b8 (ETH), Morpho Association POL Base 0xcd97...1de4 (Base), and 30+ others — all 8-char truncations, not verifiable",
+    "D5: Optimism chain — Immunefi lists Optimism in bug bounty scope but protocol.chains does not include it; Optimism deployments not confirmed or denied"
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/aera-finance/aera-contracts-public"
+    ],
+    "docs_url": "https://docs.aera.finance",
+    "audits": [
+      {
+        "firm": "Spearbit",
+        "url": "https://github.com/aera-finance/aera-contracts-public/blob/main/v2/audits/spearbit/2023-09-22.pdf",
+        "date": "2023-09-22"
+      },
+      {
+        "firm": "Spearbit",
+        "url": "https://cdn.prod.website-files.com/62cd150e5e9efc960319c44d/652fe9fa1c0d6f6c0e0876d6_Aera-Spearbit-Security-Review-Aug2023.pdf",
+        "date": "2023-08"
+      }
+    ],
+    "bug_bounty_url": "https://immunefi.com/bug-bounty/aera/information/",
+    "security_contact": "info@aera.finance",
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "Aera V2 is a non-custodial onchain treasury management protocol that allows DAOs and protocol treasuries to deposit assets into vaults and delegate execution to designated guardians. Guardians automate strategies (yield, liquidity, rebalancing) subject to onchain constraints enforced via a hooks module and a target/sighash allowlist. Each vault deployment consists of three contracts — AeraVaultV2, AeraVaultAssetRegistry, and AeraVaultHooks — all owned by the client treasury's multisig or governance contract, with the vault owner retaining sole deposit/withdrawal authority. V2 is now archived in favour of V3, but remains operational with active TVL across Ethereum, Base, Arbitrum, and Polygon."
+  }
+}
