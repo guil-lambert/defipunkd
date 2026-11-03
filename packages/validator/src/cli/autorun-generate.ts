@@ -6,24 +6,26 @@ import { buildPromptParts, SLICE_IDS, type SliceId } from "@defipunkd/prompts";
 import { getProtocolMetadata } from "@defipunkd/registry";
 import { findRepoRoot, loadSnapshot } from "../repo";
 import { loadSubmissionEntriesBySlice } from "../submission-files";
+import { DEFAULT_AUTORUN_MODEL, estimateCost, loadPendingAutorunPairs, excludePendingPairs } from "../autorun";
 import { postProcess } from "./autorun-postprocess";
 
 type QueueEntry = { slug: string; slice: SliceId };
 
-type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean; maxCost: number | null; maxFetches: number; maxSearches: number; force: boolean };
+type Args = { count: number; model: string; slice: SliceId | null; slug: string | null; postprocess: boolean; maxCost: number | null; maxFetches: number; maxSearches: number; force: boolean; excludeOpenPrs: boolean };
 
 function parseArgs(argv: string[]): Args {
   // max-fetches default 8 (down from 12): Haiku 4.5's 200k context window is
   // tight once you add the ~16k system prompt and accumulated tool results.
   // Each web_fetch can return 5-20k tokens; 8 is a safe ceiling that still
   // allows reasonable depth. Bump via --max-fetches if Sonnet/Opus.
-  const out: Args = { count: 10, model: "claude-sonnet-4-6", slice: null, slug: null, postprocess: false, maxCost: null, maxFetches: 8, maxSearches: 3, force: false };
+  const out: Args = { count: 10, model: DEFAULT_AUTORUN_MODEL, slice: null, slug: null, postprocess: false, maxCost: null, maxFetches: 8, maxSearches: 3, force: false, excludeOpenPrs: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count") out.count = parseInt(argv[++i] ?? "10", 10);
     else if (argv[i] === "--model") out.model = argv[++i] ?? out.model;
     else if (argv[i] === "--slice") out.slice = (argv[++i] ?? null) as SliceId | null;
     else if (argv[i] === "--slug") out.slug = argv[++i] ?? null;
     else if (argv[i] === "--postprocess") out.postprocess = true;
+    else if (argv[i] === "--exclude-open-prs") out.excludeOpenPrs = true;
     else if (argv[i] === "--force") out.force = true;
     else if (argv[i] === "--max-cost") out.maxCost = parseFloat(argv[++i] ?? "");
     else if (argv[i] === "--max-fetches") out.maxFetches = parseInt(argv[++i] ?? "8", 10);
@@ -40,6 +42,9 @@ async function main(): Promise<number> {
   }
 
   const args = parseArgs(process.argv.slice(2));
+  // Validate pricing before making any paid requests, even without a budget.
+  estimateCost(args.model, { inputTokens: 0, outputTokens: 0, cacheCreateTokens: 0, cacheReadTokens: 0, webSearches: 0 });
+  if (args.maxCost !== null && (!Number.isFinite(args.maxCost) || args.maxCost < 0)) throw new Error("Invalid --max-cost");
   const root = findRepoRoot();
   const snapshot = loadSnapshot(root);
   const submissionsDir = join(root, "data", "submissions");
@@ -53,7 +58,10 @@ async function main(): Promise<number> {
     force = false;
   }
 
-  const queue = buildQueue(snapshot, submissionsDir, args.slice, args.slug, force).slice(0, args.count);
+  const pending = args.excludeOpenPrs
+    ? await loadPendingAutorunPairs(process.env.GITHUB_REPOSITORY ?? "", process.env.GH_TOKEN ?? "")
+    : new Map<string, string[]>();
+  const queue = excludePendingPairs(buildQueue(snapshot, submissionsDir, args.slice, args.slug, force), pending).slice(0, args.count);
   if (queue.length === 0) {
     console.log("queue empty — nothing to do");
     return 0;
@@ -152,26 +160,6 @@ async function main(): Promise<number> {
         ],
       });
 
-      const text = resp.content
-        .filter((c: { type: string }) => c.type === "text")
-        .map((c) => (c as { type: "text"; text: string }).text)
-        .join("");
-
-      if (text.length === 0) {
-        console.error(`[${slug}/${slice}] empty response; skipping`);
-        continue;
-      }
-
-      const stopReason = (resp as { stop_reason?: string }).stop_reason;
-      if (stopReason && stopReason !== "end_turn") {
-        console.warn(`[${slug}/${slice}] stop_reason=${stopReason} — saving raw output anyway`);
-      }
-
-      const filename = buildFilename(args.model, analysisDate, slug, slice);
-      const outDir = join(submissionsDir, slug, slice);
-      mkdirSync(outDir, { recursive: true });
-      writeFileSync(resolve(outDir, filename), text);
-
       const usage = (resp as unknown as {
         usage?: {
           input_tokens?: number;
@@ -198,6 +186,27 @@ async function main(): Promise<number> {
         cacheReadTokens: cacheRead,
         webSearches: searches,
       });
+
+      const text = resp.content
+        .filter((c: { type: string }) => c.type === "text")
+        .map((c) => (c as { type: "text"; text: string }).text)
+        .join("");
+
+      if (text.length === 0) {
+        console.error(`[${slug}/${slice}] empty response; skipping`);
+        continue;
+      }
+
+      const stopReason = (resp as { stop_reason?: string }).stop_reason;
+      if (stopReason && stopReason !== "end_turn") {
+        console.warn(`[${slug}/${slice}] stop_reason=${stopReason} — saving raw output anyway`);
+      }
+
+      const filename = buildFilename(args.model, analysisDate, slug, slice);
+      const outDir = join(submissionsDir, slug, slice);
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(resolve(outDir, filename), text);
+
       console.log(
         `[${slug}/${slice}] wrote ${filename} (${text.length} bytes) — ` +
           `in=${inTok} out=${outTok} cache_w=${cacheCreate} cache_r=${cacheRead} ` +
@@ -223,33 +232,6 @@ async function main(): Promise<number> {
     postProcess();
   }
   return 0;
-}
-
-// Per-million-token rates (USD). Pricing is best-effort and may drift; treat
-// the printed cost as an estimate, not a bill. Web search is $10 per 1k calls.
-const PRICING: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
-  "claude-sonnet-4-6": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
-  "claude-opus-4-8": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
-  "claude-opus-4-7": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
-  "claude-opus-4-6": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
-  "claude-opus-4-5": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
-  "claude-haiku-4-5": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
-};
-
-function estimateCost(
-  model: string,
-  u: { inputTokens: number; outputTokens: number; cacheCreateTokens: number; cacheReadTokens: number; webSearches: number },
-): number {
-  const key = Object.keys(PRICING).find((k) => model.startsWith(k));
-  if (!key) return 0;
-  const p = PRICING[key]!;
-  return (
-    (u.inputTokens * p.input) / 1_000_000 +
-    (u.outputTokens * p.output) / 1_000_000 +
-    (u.cacheCreateTokens * p.cacheWrite) / 1_000_000 +
-    (u.cacheReadTokens * p.cacheRead) / 1_000_000 +
-    (u.webSearches * 10) / 1000
-  );
 }
 
 function buildQueue(snapshot: ReturnType<typeof loadSnapshot>, submissionsDir: string, sliceFilter: SliceId | null, slugFilter: string | null, force = false): QueueEntry[] {

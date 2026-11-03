@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assessConfidence, isHallucinationProneModel, type ConsensusSource } from "./confidence";
+import { assessConfidence, isHallucinationProneModel, isThinkingModel, type ConsensusSource } from "./confidence";
 
 const careful: ConsensusSource = { model: "claude-opus-4-7", chat_url: "https://claude.ai/share/x", weight: 1.5 };
 const carefulNoUrl: ConsensusSource = { model: "claude-opus-4-7", chat_url: null, weight: 0.075 };
@@ -62,4 +62,8 @@ describe("assessConfidence", () => {
     expect(assessConfidence([], "strong").tentative).toBe(false);
     expect(assessConfidence([], "weak").tentative).toBe(true);
   });
+});
+
+it("recognizes Sonnet 5.5 adaptive thinking", () => {
+  expect(isThinkingModel("claude-sonnet-5-5 (autorun)")).toBe(true);
 });

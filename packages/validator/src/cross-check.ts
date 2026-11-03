@@ -84,6 +84,7 @@ export function isThinkingModel(model: string): boolean {
   if (/thinking|reason/.test(m)) return true;
   // Claude: Opus runs extended thinking by default; Sonnet/Haiku do not.
   if (/claude-opus/.test(m)) return true;
+  if (/claude-sonnet-5-5/.test(m)) return true;
   // OpenAI o-series (o1, o3, o4, …) are reasoning models.
   if (/^o\d/.test(m)) return true;
   // Gemini: Pro tier (3+) ships with built-in deep thinking; -flash is
