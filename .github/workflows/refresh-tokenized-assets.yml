@@ -1,0 +1,39 @@
+name: Refresh tokenized asset coverage
+
+on:
+  schedule:
+    - cron: "0 8 * * WED"
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-tokenized-assets
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @defipunkd/enrichment run refresh-tokenized-assets
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(data): refresh tokenized asset coverage"
+          title: "chore(data): refresh tokenized asset coverage"
+          body: |
+            Refresh cached issuer coverage, networks and example assets.
+            Source: https://tokenizedstonks.io (attribution licence).
+            Invalid or unavailable upstream responses fail the refresh and preserve the saved snapshots.
+          branch: data/tokenized-assets
+          add-paths: data/enrichment/**/tokenized-assets.json
+          delete-branch: true
