@@ -1,5 +1,5 @@
 <script lang="ts">
-  type Deployment = { slug: string; name: string };
+  type Deployment = { slug: string; name: string; hasTokenizedAssets?: boolean };
   type Section = { id: string; label: string };
 
   let { deployments, sharedSections }: { deployments: Deployment[]; sharedSections: Section[] } = $props();
@@ -40,6 +40,7 @@
         activeSlug,
         `${activeSlug}-risk-analysis`,
         ...SLICES.map((s) => `${activeSlug}-${s.id}`),
+        `${activeSlug}-tokenized-assets`,
         `${activeSlug}-stage`,
         `${activeSlug}-tvl-surface`,
         ...sharedSections.map((s) => s.id),
@@ -104,6 +105,9 @@
       {#each SLICES as s}
         <a href={`#${activeSlug}-${s.id}`} class="indent-3" class:active={activeAnchor === `${activeSlug}-${s.id}`}>{s.label}</a>
       {/each}
+      {#if deployments.find((d) => d.slug === activeSlug)?.hasTokenizedAssets}
+        <a href={`#${activeSlug}-tokenized-assets`} class="indent-2" class:active={activeAnchor === `${activeSlug}-tokenized-assets`}>Assets &amp; availability</a>
+      {/if}
       <a href={`#${activeSlug}-stage`} class="indent-2" class:active={activeAnchor === `${activeSlug}-stage`}>Stage</a>
       <a href={`#${activeSlug}-tvl-surface`} class="indent-2" class:active={activeAnchor === `${activeSlug}-tvl-surface`}>Contract surface</a>
     {/if}

@@ -9,10 +9,11 @@ import RiskAnalysis from "./RiskAnalysis.astro";
 import StagePreview from "./StagePreview.astro";
 import HallmarksTimeline from "./HallmarksTimeline.astro";
 import TvlSurface from "./TvlSurface.astro";
+import TokenizedAssets from "./TokenizedAssets.astro";
 import ProtocolReferences from "./ProtocolReferences.astro";
 import DataQualityBanner from "./DataQualityBanner.astro";
 import DeploymentTabs from "./DeploymentTabs.svelte";
-import { getEnrichment } from "@defipunkd/registry";
+import { getEnrichment, getTokenizedAssets } from "@defipunkd/registry";
 import { deriveTier, type TierInput } from "../lib/tier";
 import { assessProtocol, cexAssessment } from "../lib/rationale";
 import { pizzaGradesFor, type PizzaGrades, type PizzaSliceId } from "../lib/pizza";
@@ -79,7 +80,7 @@ const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
 ---
 <FamilySideNav
   client:load
-  deployments={sortedChildren.map((c) => ({ slug: c.slug, name: c.name }))}
+  deployments={sortedChildren.map((c) => ({ slug: c.slug, name: c.name, hasTokenizedAssets: !!getTokenizedAssets(c.slug) }))}
   sharedSections={sharedSections}
 />
 <main class="detail" id="top">
@@ -167,6 +168,7 @@ const aggregateTvl = sortedChildren.reduce<number | null>((acc, c) => {
         <DataQualityBanner protocol={child} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} />
         <ProtocolSummary protocol={child} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} idPrefix={child.slug} />
         <RiskAnalysis protocol={child} snapshotGeneratedAt={snapshotGeneratedAt} assessments={allAssessments.get(child.slug)} submissions={allSubmissions.get(child.slug)} children={[]} idPrefix={child.slug} />
+        <TokenizedAssets slug={child.slug} idPrefix={child.slug} />
         <StagePreview protocol={child} idPrefix={child.slug} />
         <TvlSurface enrichment={getEnrichment(child.slug)} submissions={allSubmissions.get(child.slug)} idPrefix={child.slug} />
       </div>

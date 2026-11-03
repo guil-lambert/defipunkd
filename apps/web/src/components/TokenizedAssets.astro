@@ -1,0 +1,73 @@
+---
+import { getTokenizedAssets, tokenizedIssuerUrl, tokenizedAssetUrl, TOKENIZED_STONKS_URL } from "@defipunkd/registry";
+interface Props { slug: string; idPrefix?: string }
+const { slug, idPrefix = "" } = Astro.props;
+const data = getTokenizedAssets(slug);
+const id = idPrefix ? `${idPrefix}-tokenized-assets` : "tokenized-assets";
+const date = (value: string) => new Date(value).toISOString().slice(0, 10);
+const stale = data ? data.issuers.some((i) => Date.now() - Date.parse(i.as_of) > 14 * 86400_000) : false;
+const count = (value: number | null) => value === null ? "Unavailable" : value.toLocaleString("en-US");
+---
+{data && (
+  <section id={id} class="tokenized-assets" aria-labelledby={`${id}-title`}>
+    <header>
+      <h2 id={`${id}-title`}>Assets &amp; availability</h2>
+      <p class="source">Source: <a href={TOKENIZED_STONKS_URL} target="_blank" rel="noopener noreferrer">tokenizedstonks.io</a></p>
+    </header>
+    <p class="scope">Tokenized stocks, ETFs and indexes covered by Tokenized Stonks. Coverage may be partial; trading access depends on the issuer and jurisdiction.</p>
+    {stale && <p class="stale">Saved coverage is over two weeks old. Check the source for current availability.</p>}
+    {data.issuers.map((issuer) => (
+      <div class="issuer">
+        <div class="issuer-heading">
+          <h3><a href={tokenizedIssuerUrl(issuer.id)} target="_blank" rel="noopener noreferrer">{issuer.name} ↗</a></h3>
+          <span class="as-of">Source snapshot <time datetime={issuer.as_of}>{date(issuer.as_of)}</time></span>
+        </div>
+        <dl>
+          <div><dt>Covered underlying assets</dt><dd>{count(issuer.asset_count)}</dd></div>
+          <div><dt>Token representations</dt><dd>{count(issuer.representation_count)}</dd></div>
+          <div class="networks"><dt>Networks</dt><dd>{issuer.networks.length ? issuer.networks.map((n) => n.name).join(" · ") : "None reported"}</dd></div>
+        </dl>
+        {issuer.examples.length > 0 && (
+          <>
+            <h4>Example underlying assets</h4>
+            <ul class="examples">
+              {issuer.examples.map((asset) => (
+                <li><a href={tokenizedAssetUrl(asset.id)} target="_blank" rel="noopener noreferrer"><span class="symbol">{asset.symbol}</span><span>{asset.name}</span><span class="kind">{asset.asset_type === "etf" ? "ETF" : asset.asset_type}</span></a></li>
+              ))}
+            </ul>
+            <p class="sample-note">Examples from the source’s volume-ranked selection. Asset links compare representations across issuers.</p>
+          </>
+        )}
+        <a class="browse" href={tokenizedIssuerUrl(issuer.id)} target="_blank" rel="noopener noreferrer">View issuer coverage &amp; trading venues ↗</a>
+      </div>
+    ))}
+    <p class="footnote">One underlying asset may have multiple token representations across networks. Retrieved <time datetime={data.fetched_at}>{date(data.fetched_at)}</time>.</p>
+  </section>
+)}
+<style>
+  .tokenized-assets { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--surface-raised); scroll-margin-top: 4rem; }
+  header, .issuer-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
+  h2 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+  h3 { margin: 0; font-size: 0.95rem; font-weight: 600; }
+  h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; font-weight: 600; }
+  a { color: var(--accent-link); text-underline-offset: 3px; }
+  .source, .as-of, .sample-note, .footnote { color: var(--text-muted); font-size: 0.75rem; }
+  .source { margin: 0; }
+  .scope { color: var(--text-muted); font-size: 0.85rem; max-width: 75ch; line-height: 1.5; }
+  .stale { font-size: 0.85rem; color: var(--text); }
+  .issuer { padding: 1rem 0; }
+  .issuer + .issuer { border-top: 1px solid var(--surface-raised); }
+  dl { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin: 1rem 0; font-size: 0.85rem; }
+  dt { color: var(--text-muted); font-size: 0.75rem; margin-bottom: 0.25rem; }
+  dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .networks { flex: 1 1 18rem; line-height: 1.5; }
+  .examples { list-style: none; padding: 0; margin: 0; }
+  .examples li + li { border-top: 1px solid var(--surface-raised); }
+  .examples a { display: grid; grid-template-columns: 5rem minmax(0, 1fr) auto; gap: 0.75rem; padding: 0.5rem 0; font-size: 0.85rem; text-decoration: none; }
+  .examples a:hover { text-decoration: underline; }
+  .symbol { font-weight: 600; overflow-wrap: anywhere; }
+  .kind { color: var(--text-muted); font-size: 0.75rem; }
+  .browse { font-size: 0.85rem; }
+  .footnote { margin-bottom: 0; line-height: 1.5; }
+  @media (max-width: 480px) { .examples a { grid-template-columns: 4rem minmax(0, 1fr); } .kind { grid-column: 2; } }
+</style>
