@@ -1,4 +1,5 @@
 ---
+import ProtocolLogo from "../../components/ProtocolLogo.astro";
 import Base from "../../layouts/Base.astro";
 import AssetCatalogSource from "../../components/AssetCatalogSource.astro";
 import { getAssetCatalog, assetSourceUrl, ASSET_ISSUER_PROTOCOLS, getAssessments, getSubmissions, getProtocol } from "@defipunkd/registry";
@@ -28,20 +29,24 @@ const reviewed = rows.filter((r) => r.criteria.some((c) => c.assessment)).length
     <header><p class="eyebrow">{asset.kind} · {asset.symbol}</p><h1>{asset.name}</h1><p>{comparison.representations.length} representations · {issuers.length} issuer labels · {reviewed} with completed protocol assessments</p></header>
     <AssetCatalogSource fetchedAt={catalog.fetched_at} asOf={comparison.as_of} href={assetSourceUrl(asset.id)} />
     <section aria-labelledby="comparison-title">
-      <h2 id="comparison-title">Five security criteria</h2>
-      <p class="scope">Protocol-level context. These assessments describe the mapped issuer protocol, not the individual token or network. Wrappers, derivatives and custodial products can add different dependencies. Token deployments have not been individually assessed here.</p>
-      {reviewed === 0 && <p class="coverage">No mapped issuer has reached assessment consensus yet. “Review pending” means submissions exist; “Not assessed” means no review is available. Open a cell to inspect the evidence or contribution path.</p>}
+      <h2 id="comparison-title">Issuer security matrix</h2>
+      <p class="scope">Five criteria, using issuer protocol reviews. Select a cell for evidence. Token-specific deployments remain unassessed.</p>
+      <ul class="coverage-legend" aria-label="Consensus symbols">
+        <li><span>●</span> Strong consensus</li><li><span>◐</span> Weak consensus</li><li><span>◔</span> Review pending</li><li><span>·</span> Not assessed</li>
+      </ul>
       <div class="table-scroll" tabindex="0" role="region" aria-label="Issuer security comparison; scroll horizontally on smaller screens">
-        <table><caption>Issuer protocol assessments for {asset.symbol}. Select a criterion for review details.</caption><thead><tr><th scope="col">Issuer / representations</th>{ASSET_CRITERIA.map((c) => <th scope="col">{c.label}</th>)}</tr></thead>
-          <tbody>{rows.map((row) => <tr><th scope="row"><a href={`#${row.id}`}>{row.issuer}</a><small>{[...new Set(row.tokens.map((t) => t.symbol))].join(" · ")} · {row.tokens.length} representations</small></th>
-            {row.criteria.map((c) => <td><a class:list={["grade", `grade-${c.grade}`, { tentative: c.tentative }]} href={`#${row.id}-${c.id}`}>{c.status}{c.tentative && <small>Tentative</small>}</a></td>)}
+        <table><thead><tr><th scope="col">Issuer</th><th scope="col" class="count">Tokens</th>{ASSET_CRITERIA.map((c) => <th scope="col" class="criterion-label">{c.label}</th>)}</tr></thead>
+          <tbody>{rows.map((row) => <tr><th scope="row"><a class="issuer-link" href={`#${row.id}`} title={[...new Set(row.tokens.map((t) => t.symbol))].join(" · ")}><ProtocolLogo src={row.protocol?.logo ?? null} name={row.issuer} size={16} /><span>{row.issuer}</span></a></th><td class="count"><a href={`#${row.id}`} aria-label={`${row.issuer}: ${row.tokens.length} token representations`}>{row.tokens.length}</a></td>
+            {row.criteria.map((c) => <td><a class:list={["matrix-cell", `grade-${c.grade}`, { tentative: c.tentative }]} href={`#${row.id}-${c.id}`} aria-label={`${row.issuer}: ${c.label} — ${c.status}${c.tentative ? "; tentative consensus" : ""}`} title={`${c.label}: ${c.status}${c.assessment ? ` · ${c.assessment.strength} consensus` : ""}${c.tentative ? " · tentative" : ""}`}><span aria-hidden="true">{c.assessment ? (c.assessment.strength === "strong" ? "●" : "◐") : c.submissions.length ? "◔" : "·"}</span></a></td>)}
           </tr>)}</tbody>
         </table>
       </div>
-      <p class="note">Grades reflect DeFiPunk’d’s rubric and confidence checks. Unknown and missing evidence are not green grades. <a href="/methodology#defi-at-home">How assessments work →</a></p>
+      <p class="note">{reviewed === 0 ? "No completed issuer assessments yet. Pending reviews are available below." : "Cell color shows the assessed grade; a dashed border marks tentative confidence."} <a href="/methodology#defi-at-home">Assessment methodology →</a></p>
     </section>
     <section aria-labelledby="details-title"><h2 id="details-title">Representations &amp; review evidence</h2>
-      {rows.map((row) => <article id={row.id}>
+      {rows.map((row) => <details id={row.id} class="issuer-review">
+        <summary class="issuer-summary"><span><ProtocolLogo src={row.protocol?.logo ?? null} name={row.issuer} size={16} />{row.issuer}</span><span class="representation-count">{row.tokens.length} representations</span></summary>
+        <div class="issuer-body">
         <header class="issuer-heading"><h3>{row.issuer}</h3>{row.protocolUrl ? <a href={row.protocolUrl}>Protocol context: {row.protocol!.name} →</a> : <span>No protocol mapping verified</span>}</header>
         <details class="tokens"><summary>{row.tokens.length} token representations — networks, contracts &amp; forms</summary>
           <ul>{row.tokens.map((t) => <li><div><strong>{t.symbol}</strong> · {t.network}<small>{t.form}</small></div><div class="contract">{t.contract ? (t.explorer_url ? <a href={t.explorer_url} target="_blank" rel="noopener noreferrer">{t.contract} ↗</a> : t.contract) : "No on-chain contract listed"}</div></li>)}</ul>
@@ -56,7 +61,8 @@ const reviewed = rows.filter((r) => r.criteria.some((c) => c.assessment)).length
             {row.protocolUrl ? <p><a href={row.protocolUrl}>Read the protocol review or contribute evidence →</a></p> : <p><a href="/contribute">Contribute a protocol mapping and assessment →</a></p>}
           </div>
         </details>)}</div>
-      </article>)}
+        </div>
+      </details>)}
     </section>
     <p><a href={assetSourceUrl(asset.id)} target="_blank" rel="noopener noreferrer">Prices, liquidity &amp; trading venues at Tokenized Stonks ↗</a></p>
   </main>
@@ -65,7 +71,11 @@ const reviewed = rows.filter((r) => r.criteria.some((c) => c.assessment)).length
   function revealCriterion() {
     const id = location.hash.slice(1);
     const detail = document.getElementById(id);
-    if (detail instanceof HTMLDetailsElement) { detail.open = true; detail.scrollIntoView({ block: "start" }); }
+    if (detail instanceof HTMLDetailsElement) {
+      let ancestor: HTMLElement | null = detail;
+      while (ancestor) { if (ancestor instanceof HTMLDetailsElement) ancestor.open = true; ancestor = ancestor.parentElement; }
+      detail.scrollIntoView({ block: "start" });
+    }
   }
   window.addEventListener("hashchange", revealCriterion);
   revealCriterion();
@@ -74,16 +84,23 @@ const reviewed = rows.filter((r) => r.criteria.some((c) => c.assessment)).length
 .asset-page { max-width: 1200px; margin: auto; padding: 2rem 1.25rem; }
 nav, .eyebrow, .note { color: var(--text-muted); font-size: .8rem; line-height: 1.6; }
 header { margin: 2rem 0 1rem; } header p { color: var(--text-muted); } .eyebrow { text-transform: uppercase; letter-spacing: .08em; }
-h1 { margin: .5rem 0; } h2 { font-size: 1.2rem; margin: 2rem 0 .75rem; } h3 { font-size: 1.05rem; margin: 0; }
-.scope, .coverage { max-width: 85ch; font-size: .9rem; line-height: 1.6; } .coverage { padding: .75rem; border: 1px solid var(--surface-raised); }
-.table-scroll { overflow-x: auto; } table { width: 100%; border-collapse: collapse; font-size: .85rem; } caption { text-align: left; color: var(--text-muted); font-size: .8rem; padding: .5rem 0; }
-th, td { padding: 1rem .75rem; text-align: left; border-bottom: 1px solid var(--surface-raised); } thead th { color: var(--text-muted); font-weight: 500; } tbody th { min-width: 14rem; font-weight: 500; }
+h1 { margin: .5rem 0; } h2 { font-size: 1.45rem; margin: 2rem 0 .75rem; } h3 { font-size: 1.05rem; margin: 0; }
+.scope { color: oklch(0.7 0.015 235); font-size: .85rem; line-height: 1.5; margin: .5rem 0; }
+.coverage-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; list-style: none; padding: 0; margin: 1rem 0 .25rem; font-size: .8rem; color: oklch(0.78 0.015 235); }
+.coverage-legend li { display: inline-flex; align-items: center; gap: .4rem; } .coverage-legend span { font-size: 1rem; color: var(--text); width: 1em; text-align: center; }
+.table-scroll { overflow-x: auto; } table { width: 100%; border-spacing: 6px 4px; table-layout: fixed; font-size: .85rem; }
+th, td { padding: 0; text-align: left; font-weight: 400; } thead th { color: oklch(0.7 0.015 235); font-size: .75rem; text-transform: lowercase; letter-spacing: .02em; padding-bottom: .35rem; border-bottom: 1px solid var(--surface-raised); }
+th:first-child { width: 12rem; } .count { width: 2.5rem; text-align: center; color: var(--text-muted); font-size: .75rem; } .count a { color: inherit; text-decoration: none; } .criterion-label { text-align: center; }
+.issuer-link { display: flex; align-items: center; gap: .4rem; color: var(--text); text-decoration: none; min-width: 0; } .issuer-link span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .issuer-link:hover { text-decoration: underline; }
+.matrix-cell { display: flex; align-items: center; justify-content: center; height: 24px; border: 1px solid oklch(0.25 0.01 235); border-radius: 3px; background: oklch(0.18 0.005 235); font-size: 1rem; line-height: 1; text-decoration: none; }
+.matrix-cell:hover, .matrix-cell:focus-visible { background: oklch(0.24 0.01 235); border-color: oklch(0.4 0.015 235); } .matrix-cell.tentative { border-style: dashed; text-decoration: none; }
 small { display: block; color: var(--text-muted); font-size: .75rem; font-weight: 400; margin-top: .3rem; }
 .grade { font-size: .8rem; text-decoration: none; white-space: nowrap; } a.grade { display: block; padding: .4rem 0; } a.grade:hover { text-decoration: underline; }
 .grade-green { color: var(--grade-green); } .grade-orange { color: var(--grade-orange); } .grade-red { color: var(--grade-red); } .grade-gray { color: var(--text-muted); } .tentative { text-decoration: underline dashed; text-underline-offset: 4px; }
-article { border-top: 1px solid var(--surface-raised); padding: 1rem 0 2rem; scroll-margin-top: 1rem; }
+.issuer-review { border-top: 1px solid var(--surface-raised); scroll-margin-top: 1rem; }
+.issuer-summary { padding: .7rem 0; } .issuer-summary > span:first-child { display: inline-flex; align-items: center; gap: .4rem; } .representation-count { float: right; color: var(--text-muted); font-size: .75rem; } .issuer-body { padding: .75rem 0 1rem; }
 .issuer-heading { display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; flex-wrap: wrap; margin: 0 0 1rem; } .issuer-heading a, .issuer-heading span { font-size: .8rem; } .issuer-heading span { color: var(--text-muted); }
 summary { cursor: pointer; font-size: .85rem; padding: .75rem 0; } .tokens { margin-bottom: 1rem; } .tokens ul { list-style: none; padding: 0; } .tokens li { display: grid; grid-template-columns: minmax(12rem, 1fr) 2fr; gap: 1rem; padding: .75rem; border-top: 1px solid var(--surface-raised); font-size: .85rem; } .contract { font: .75rem var(--font-mono); overflow-wrap: anywhere; }
 .criterion { border-top: 1px solid var(--surface-raised); scroll-margin-top: 1rem; } .criterion > summary > .grade { float: right; } .review-body { padding: 0 1rem 1rem; font-size: .9rem; line-height: 1.6; max-width: 90ch; } .submission { border-top: 1px solid var(--surface-raised); } .review-body a { overflow-wrap: anywhere; }
-@media(max-width: 600px) { .tokens li { grid-template-columns: 1fr; gap: .5rem; } .asset-page { padding: 1.25rem 1rem; } }
+@media(max-width: 600px) { table { min-width: 620px; } th:first-child { width: 9rem; } .tokens li { grid-template-columns: 1fr; gap: .5rem; } .asset-page { padding: 1.25rem 1rem; } }
 </style>
