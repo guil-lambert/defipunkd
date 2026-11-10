@@ -1,0 +1,623 @@
+{
+  "schema_version": 4,
+  "slug": "sushiswap-v3",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-10",
+  "model": "claude-sonnet-5-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "~123 contracts catalogued across 29 chains: 29 factories, 29 position managers, 2 Ethereum periphery, 1 deployer/owner-caller EOA, 25 Ethereum pool children. No governance/timelock addresses found.",
+  "short_headline": "~123 contracts across 29 chains",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Only the Ethereum factory name-tag page on etherscan.io was fetched. It carries the public tag 'SushiSwap V3: Factory' with labels SushiSwap / DEX / Factory Contract. Per-chain explorer name-tag searches were not performed for the other chains (see unknowns)."
+      },
+      {
+        "code": "D2",
+        "text": "The official docs page https://docs.sushi.com/contracts/clamm was fetched. It lists Factory, Position Manager, Tick Lens, Quoter and Init Code Hash per network. 29 mainnet factories and 29 position managers were recorded, plus Ethereum Tick Lens and Quoter."
+      },
+      {
+        "code": "D3",
+        "text": "No audit PDFs were reachable. The v3-core repo root lists an 'audits' folder, but fetching the folder URL was denied by the tool ('You don't have permission to access this domain'). No audit-scope addresses were extracted."
+      },
+      {
+        "code": "D4",
+        "text": "The sushiswap/v3-core repo root was fetched. It shows 'deploy' and 'deployments' folders, but both folder URLs returned a permission error, so no deployment artifact JSON was read and no commit SHA was pinned."
+      },
+      {
+        "code": "D5",
+        "text": "Docs give factory addresses for 29 mainnet networks. Protocol chains with no docs entry: Arbitrum Nova, Moonbeam, Moonriver, ThunderCore (see unknowns). Docs also list networks outside the pinned chain list (Boba, Haqq), which were still recorded."
+      },
+      {
+        "code": "D6",
+        "text": "The Ethereum factory page shows 25 recent internal 'Contract Creation' transactions from the factory (pool deployments). All 25 are recorded as pool children, below the 50 cap. The full pool list was not enumerated, and getPool/allPools reads were not possible because the read API refused the unpinned URL."
+      },
+      {
+        "code": "D7",
+        "text": "Roles use the controlled vocabulary: factory, pool, other (position manager / tick lens / quoter / deployer). Actor class is 'unknown' for all addresses because no bytecode or owner() read was performed. The Ethereum factory ABI exposes owner() and setOwner(), but the current owner was not read."
+      },
+      {
+        "code": "D8",
+        "text": "Every address in admin_addresses traces to a fetched URL (docs.sushi.com/contracts/clamm or the etherscan.io factory page). Snippet-only sightings are in unknowns."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery slice: walked docs.sushi.com clAMM deployments, the Ethereum factory Etherscan page and the sushiswap/v3-core repo root; catalogued ~123 addresses across 29 chains. Audit and deployment-artifact corpora were not reachable."
+  },
+  "evidence": [
+    {
+      "url": "https://sushi.com/",
+      "shows": "Capability probe: the protocol website fetched OK (web_fetch). It is the Sushi swap app (30+ chains); it does not list contract addresses.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.sushi.com/contracts/clamm",
+      "shows": "Official SushiSwap V3 (clAMM) deployments doc. Per-network Factory, Position Manager, Tick Lens, Quoter addresses and init code hashes (Ethereum factory 0xbaceb8ec6b9355dfc0269c18bac9d6e2bdc29c4f, Base/Filecoin/Core/Linea/Haqq factory 0xc35dadb65012ec5796536bd9864ed8773abc74c4, etc.)."
+    },
+    {
+      "url": "https://etherscan.io/address/0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F",
+      "shows": "Ethereum factory page: public tag 'SushiSwap V3: Factory', verified UniswapV3Factory source (solc 0.7.6). ContractCreator is 0xf87BC5535602077d340806D71f805EA9907a843D, which also sent the 'Set Owner' tx (2024-09-02) and 'Enable Fee Amount' tx to the factory. ABI includes owner()/setOwner()/enableFeeAmount(). Also lists 25 recent internal contract creations (pools).",
+      "chain": "Ethereum",
+      "address": "0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F"
+    },
+    {
+      "url": "https://github.com/sushiswap/v3-core",
+      "shows": "Canonical source repo for SushiSwap V3 core ('core smart contracts for the SushiSwap V3 Protocol'). Root contains audits/, contracts/, deploy/, deployments/ folders and bug-bounty.md. README is the Uniswap V3 README (fork)."
+    },
+    {
+      "url": "https://github.com/sushiswap/v3-core/blob/master/bug-bounty.md",
+      "shows": "Bug bounty file in the repo is the Uniswap V3 bug bounty text (disclosure to security@uniswap.org). It is inherited fork documentation, not a Sushi-specific program, so it was not recorded as Sushi's bug_bounty_url or security_contact."
+    }
+  ],
+  "unknowns": [
+    "D1: Per-chain explorer name-tag searches (basescan, arbiscan, optimistic.etherscan, polygonscan, bscscan, snowtrace, scrollscan, lineascan, blastscan, katanascan etc.) were not fetched in this run because the fetch budget was exhausted. Only etherscan.io was fetched; two other explorer pages (basescan factory, katanascan factory) appeared in search snippets only.",
+    "D1: The etherscan searchHandler name-tag search URL was not fetched. The factory page was reached via a search-result URL.",
+    "D2: docs lists Tick Lens and Quoter for 28 other networks, and the Init Code Hash per network. Only the Ethereum Tick Lens and Quoter were recorded as addresses. The rest remain readable at https://docs.sushi.com/contracts/clamm. Testnets (Tatara, Bokuto, Sepolia) were deliberately not recorded. The Stellar deployment (factory CD3KRKGDRVWPXVB3VXLUMQKMX6XZ6Q2H334IVZD4XXNAMKSRVQL5GLYF, non-EVM) is not representable in the address field.",
+    "D2: The docs also have separate SushiSwap V4 and Launchpad pages (https://docs.sushi.com/contracts/v4, https://docs.sushi.com/contracts/launchpad) that were not fetched; they are outside the V3 slug but may hold governance/admin addresses.",
+    "D3: Audit PDFs: the v3-core audits folder (https://github.com/sushiswap/v3-core/tree/master/audits) returned a permission error. No audit report was opened; protocol.audit_links was empty.",
+    "D4: Fetch of the v3-core deployments and deploy folders returned a permission error. No hardhat-deploy JSONs read, no commit SHA pinned. The sushiswap/v3-periphery repo was not located or fetched.",
+    "D5: chain Arbitrum Nova: zero addresses surfaced from fetched sources. A DefiLlama adapter search snippet shows a factory 0xaa26771d497814e81d305c511efbb3ced90bf5bd for Arbitrum Nova. It was not fetched, so it was not recorded as an address. Note this address equals the docs' Gnosis Tick Lens, so it needs verification.",
+    "D5: chain Moonbeam: zero addresses surfaced from docs.sushi.com/contracts/clamm, etherscan factory page, or v3-core repo root.",
+    "D5: chain Moonriver: zero addresses surfaced from docs.sushi.com/contracts/clamm, etherscan factory page, or v3-core repo root.",
+    "D5: chain ThunderCore: zero addresses surfaced from the fetched sources (DefiLlama adapter snippet shows ThunderCore subgraph commented out due to an index error).",
+    "D6: Pool enumeration beyond the 25 most recent Ethereum internal creations was not done. Reading getPool/allPools via https://defipunkd.com/api/contract/read was rejected by the fetch allowlist for the Ethereum factory (not pinned in address_book). Factory pool counts on other chains were not read.",
+    "D7: owner() of every factory was not read. The current owner of the Ethereum factory is unknown: the 'Set Owner' tx (block 20664124) was sent by 0xf87BC5535602077d340806D71f805EA9907a843D, and the new owner address was not decoded. Actor classes are 'unknown' throughout; no Safe or timelock was identified.",
+    "D8: Snippet-only sightings not recorded in admin_addresses: Ethereum USDC/WETH pool 0x35644fb61afbc458bf92b15add6abc1996be5014 (etherscan search result 'SushiSwap v3: USDC/WETH Pool'); Katana factory deployer 'Yearn: Deployer' and fee-amount enabler 0x72C89e04...AF666CFa6 (truncated, from katanascan search snippet).",
+    "D8: Probe note: pre-built surfacer URLs were not provided (address_book null). An attempted https://defipunkd.com/api/contract/read URL for the Ethereum factory owner was rejected ('Only URLs that have appeared in user messages or prior search/fetch results can be fetched'). The web_fetch tool was otherwise functional for sushi.com, docs.sushi.com, etherscan.io and github.com (root, blob); github tree/ folder URLs were denied.",
+    "D3-offchain: no on-chain-equivalent audit scope table was available; audit-era addresses not captured.",
+    "D2: governance_forum, voting_token, bug_bounty_url (Sushi-specific), security_contact (Sushi-specific) were not verified in fetched sources (docs.sushi.com/dao/governance and /security were linked in the docs nav but not fetched)."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/sushiswap/v3-core"
+    ],
+    "docs_url": "https://docs.sushi.com",
+    "audits": [],
+    "deployed_contracts_doc": "https://docs.sushi.com/contracts/clamm",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xbaceb8ec6b9355dfc0269c18bac9d6e2bdc29c4f",
+        "role": "factory (SushiSwap V3 Factory; has owner()/setOwner())",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0x9c6522117e2ed1fe5bdb72bb0ed5e3f2bde7dbe0",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "RSK",
+        "address": "0x46b3fdf7b5cde91ac049936bf0bdb12c5d22202e",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0x126555dd55a39328f69400d6ae4f782bd4c34abb",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "xDai",
+        "address": "0xf78031cbca409f2fb6876bdfdbc1b2df24cf9bef",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fuse",
+        "address": "0x1b9d177ccdea3c79b6c8f40761fc8dc9d0500eaa",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0x917933899c6a5f8e37f31e19f92cdbff7e8ff0e2",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x46b3fdf7b5cde91ac049936bf0bdb12c5d22202e",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Bittorrent",
+        "address": "0xbbde1d67297329148fe1ed5e6b00114842728e65",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fantom",
+        "address": "0x7770978eed668a3ba661d51a773d3a992fc9ddcb",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Boba Network",
+        "address": "0x0be808376ecb75a5cf9bb6d237d16cd37893d904",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Filecoin",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Metis",
+        "address": "0x145d82bca93cca2ae057d1c6f26245d1b9522e6f",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon zkEVM",
+        "address": "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "CORE",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Kava",
+        "address": "0x1e9b24073183d5c6b7ae5fb4b8f0b1dd83fdc77a",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Robinhood Chain",
+        "address": "0xe51960f1b45f1c9fb6d166e6a884f866fc70433b",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arc",
+        "address": "0x7282249282902e1f99c2CB0A04230091bd30FE3A",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "ZetaChain",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Haqq",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x1af415a1eba07a4986a52b6f2e7de7003d82231e",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Hemi",
+        "address": "0xcdbcd51a5e8728e0af4895ce5771b7d17ff71959",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Avalanche",
+        "address": "0x3e603c14af37ebdad31709c4f848fc6ad5bec715",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Linea",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Blast",
+        "address": "0x7680d4b43f3d1d54d6cfeeb2169463bfa7a6cf0d",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x46b3fdf7b5cde91ac049936bf0bdb12c5d22202e",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Katana",
+        "address": "0x203e8740894c8955cb8950759876d7e7e45e04c1",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Europa",
+        "address": "0x51d15889b66a2c919dbbd624d53b47a9e8fec4bb",
+        "role": "factory",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2214a42d8e2a1d20635c2cb0664422c528b6a432",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0x1af415a1eba07a4986a52b6f2e7de7003d82231e",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "RSK",
+        "address": "0x0389879e0156033202c44bf784ac18fc02edee4f",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xf70c086618dcf2b1a461311275e00d6b722ef914",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "xDai",
+        "address": "0xab235da7f52d35fb4551afba11bfb56e18774a65",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fuse",
+        "address": "0x93395129bd3fcf49d95730d3c2737c17990ff328",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0xb7402ee99f0a008e461098ac3a27f4957df89a40",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0x0389879e0156033202c44bf784ac18fc02edee4f",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Bittorrent",
+        "address": "0x57bffa72db682f7eb6c132dae03ff36bbeb0c459",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fantom",
+        "address": "0x10c19390e1ac2fd6d0c3643a2320b0aba38e5baa",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Boba Network",
+        "address": "0x1b9d177ccdea3c79b6c8f40761fc8dc9d0500eaa",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Filecoin",
+        "address": "0xf4d73326c13a4fc5fd7a064217e12780e9bd62c3",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Metis",
+        "address": "0x630be2985674d31920babb4f96657960f131e7b1",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon zkEVM",
+        "address": "0xf4d73326c13a4fc5fd7a064217e12780e9bd62c3",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "CORE",
+        "address": "0xf4d73326c13a4fc5fd7a064217e12780e9bd62c3",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Kava",
+        "address": "0xbf3b71decbcefabb3210b9d8f18ec22e0556f5f0",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Robinhood Chain",
+        "address": "0x51d0e5188afe12d502e29d982d20c190e7816107",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arc",
+        "address": "0x287c6A19395800cD53B16368df2121F1f336A7f3",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "ZetaChain",
+        "address": "0xcdbcd51a5e8728e0af4895ce5771b7d17ff71959",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0x80c7dd17b01855a6d2347444a0fcc36136a314de",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Haqq",
+        "address": "0x80c7dd17b01855a6d2347444a0fcc36136a314de",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0xf0cbce1942a68beb3d1b73f0dd86c8dcc363ef49",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Hemi",
+        "address": "0xe43ca1dee3f0fc1e2df73a0745674545f11a59f5",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Avalanche",
+        "address": "0x18350b048ab366ed601ffdbc669110ecb36016f3",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Linea",
+        "address": "0x80c7dd17b01855a6d2347444a0fcc36136a314de",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Blast",
+        "address": "0x51edb3e5bce8618b77b60215f84ad3db14709051",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x0389879e0156033202c44bf784ac18fc02edee4f",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Katana",
+        "address": "0x2659c6085d26144117d904c46b48b6d180393d27",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Europa",
+        "address": "0xa4d2268f145cd5c835115441b877295c46f25b9b",
+        "role": "other (position manager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xfb70ad5a200d784e7901230e6875d91d5fa6b68c",
+        "role": "other (tick lens)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x64e8802fe490fa7cc61d3463958199161bb608a7",
+        "role": "other (quoter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xf87BC5535602077d340806D71f805EA9907a843D",
+        "role": "other (factory ContractCreator and sender of setOwner/enableFeeAmount txs; current owner not read)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3862323846a54d9f2be27390baf2a057839406a0",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc3b634ce3f884cd632dd102f4d1d9b69b64238fc",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x374ed9e3a5990b0ade9463a26a691ba8b392be9f",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x12d3cdcf684e1dd6de0cb23f9d0e437445ce004b",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6f07366209c83279b08abbea284556c6818dab47",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xadc8924d9c4f1bb0c81f61611becddabf7694f6c",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xcaf08a84a8052538bbff79eb9319cd2648977cb2",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xd3f9f124c1945b8a1b931090bcdeb0ea24e46196",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc572811ec891045033797e4eb6e387a9b6b05164",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xa530651a65ab3b52420cb89448989121bfb1b518",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x05a07488e890c6f90e5befb8deb6271fbeb0e39c",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7c21ab51798cc6e561377c6d31d9b82372677bc7",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8158bf808c7340f4a1c350e16b8834ab58a83802",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6c5149299a95d3bba4d042975d96bcbdfe44aed7",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x43211c382584a0f32e618bc983e992a1f96f3b31",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xeaef5ec61b71335e19182e757dee8248bd1aa23e",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xdc0546f74a3233c6b0b7c9ff8d83b11ecd2d2ead",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xebac113f4a3ae65cb1abede5a29a7bed1987a313",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xd59a1fdc9adce77dcaaa7cbc6e72d014b9a1f10d",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9471279b71e5efa6ae3737a8e34e7c091c87df38",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xcd6d122384a8692c3bc7bef7be55204a40a7f2e1",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xccc7f8b82aebec31a2c4e4ee9bc7b75411d2ded0",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xd482b64902d999ae0e926dc1663f2f007c6f2e2e",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x60b652b08e306cf88cc85df6ae01a01b738009a0",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x5aa4b06f0839ec56fd4b5f06751561434408fde3",
+        "role": "pool (from factory 0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "SushiSwap V3 is a concentrated-liquidity AMM (clAMM) on many EVM chains. Per-chain factory contracts deploy a separate pool for each token pair and fee tier, and users swap tokens or add liquidity through position-manager contracts. The core code is a Uniswap V3 fork (the Ethereum factory is verified as UniswapV3Factory source)."
+  }
+}

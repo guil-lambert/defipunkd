@@ -1,0 +1,411 @@
+{
+  "schema_version": 4,
+  "slug": "kinetiq-kmhype",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-10",
+  "model": "claude-sonnet-5-5 (autorun)",
+  "chat_url": null,
+  "grade": "unknown",
+  "headline": "43 contracts catalogued on HyperEVM from Kinetiq's official docs: 14 kmHYPE, 9 kHYPE, 16 institutional-deployment, 4 proxy/deployer.",
+  "short_headline": "43 contracts on HyperEVM",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Only one chain is pinned (Hyperliquid L1, i.e. HyperEVM). The hyperevmscan.io page for 0x360C140E5344A1A0593D44B4ea6Fc7C3DAf0C473 carries the public name tag 'Kinetiq: kmHYPE Token' and shows it as a TransparentUpgradeableProxy. Its creator is tagged 'Kinetiq: Deployer' (0xb05cb1a8188110ac2cB062996526b43179162509). A generic explorer name-tag search was not run, and the explorer pages for the other docs-listed addresses were not fetched."
+      },
+      {
+        "code": "D2",
+        "text": "The canonical deployments page is https://kinetiq.xyz/docs/contracts-and-audits (last updated 2026-04-28). It lists 14 kmHYPE contracts, 9 kHYPE addresses and 4 institutional deployments (flowHYPE, HiHYPE, asxnHYPE, hylqHYPE) with 4 addresses each. All were recorded."
+      },
+      {
+        "code": "D3",
+        "text": "The audit index at audits.kinetiq.xyz is a Google Drive folder shell with no readable body. The docs page lists 8 audits (Spearbit, Zenith, Pashov, Code4rena) with Drive PDF links, including kmhype-november-2025-spearbit and kmhype-november-2025-zenith. The PDFs were not opened, so no audit-era address tables were extracted."
+      },
+      {
+        "code": "D4",
+        "text": "github.com/kinetiq-research is a verified org (kinetiq.xyz) with only 3 public repos: hl-rs, f1rewall and pendle-balance-fetcher-rs. None is a contracts repo, so no deployment artifacts exist there. The hyperevmscan source tree shows a private-looking src/EXLST.sol, which is not on GitHub."
+      },
+      {
+        "code": "D5",
+        "text": "Single chain (HyperEVM, chainId 999). No other chain was pinned and the docs list no other chain for kmHYPE. defipunkd's read API does not list chainId 999 as supported."
+      },
+      {
+        "code": "D6",
+        "text": "No factory contract is explicitly labelled in the docs. ExchangeManager and ExchangeRouter are the only candidate registries, and their enumeration views were not read (API does not support chainId 999). No children were recorded."
+      },
+      {
+        "code": "D7",
+        "text": "Roles use the controlled vocabulary with tentative classifications. All actor_class values are 'unknown' except the deployer, which sends transactions directly and so is recorded as 'eoa' (derived)."
+      },
+      {
+        "code": "D8",
+        "text": "Every admin_addresses entry traces to a fetched URL: the docs deployments page, or the hyperevmscan pages for the kmHYPE proxy and the ProxyAdmin. Addresses seen only in search snippets are in unknowns[] and not in admin_addresses."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery slice, so grade is unknown by design. Walked the official docs deployments page, the kmHYPE token and ProxyAdmin explorer pages, and the GitHub org, and catalogued 43 HyperEVM addresses. The audit PDFs were not opened, and no on-chain reads were possible through the defipunkd API."
+  },
+  "evidence": [
+    {
+      "url": "https://markets.xyz",
+      "shows": "Capability probe of protocol.website: fetch succeeded. Markets.xyz by Kinetiq is a perpetuals trading front-end 'Powered by Hyperliquid'. The footer links to GitHub (github.com/kinetiq-research), Docs and a security policy (.well-known/security.txt). It contains no contract addresses."
+    },
+    {
+      "url": "https://audits.kinetiq.xyz/",
+      "shows": "Fetch succeeded but returned only a Google Drive shell titled 'Kinetiq Audits - Google Drive', with no file listing or audit content."
+    },
+    {
+      "url": "https://kinetiq.xyz/docs/contracts-and-audits",
+      "shows": "Official deployments doc (Last updated April 28, 2026). It lists addresses for kHYPE, Markets by Kinetiq (kmHYPE) and four institutional deployments, and the 8-row audit table with Drive PDF links. The kHYPE PauserRegistry row has a link address (0x752E76ea71960Da08644614E626c9F9Ff5a50547) different from the text address (0xac03CABA51e17c86c921E1f6CBFBdC91F8BB2E6b). The kHYPE OracleAdapter and DefaultOracle rows share one address, 0xefbcCc6E33DA1C1ef638cBc0F044968D0f590fED. The footer links the bug bounty (cantina.xyz) and GitHub."
+    },
+    {
+      "url": "https://hyperevmscan.io/address/0x360C140E5344A1A0593D44B4ea6Fc7C3DAf0C473",
+      "shows": "Public name tag 'Kinetiq: kmHYPE Token'. It is a verified TransparentUpgradeableProxy (EIP-1967). Implementation is 0x773fa4dc90750e78989122Cb83695b7F98fC20a4 (source src/EXLST.sol). Constructor args show an initial logic address of 0x53094818c0E3959D9599fd97Ba184c5bC05c4F90 and initialOwner 0xb05cb1a8188110ac2cB062996526b43179162509 (the deployer), and an upgrade to the current implementation on 2025-12-08. The deployer is tagged 'Kinetiq: Deployer'. The proxy deployed a ProxyAdmin at 0xBae0583Dc6bfFaD32DCC0C724A0C56Ac32C908A1.",
+      "chain": "HyperEVM",
+      "address": "0x360C140E5344A1A0593D44B4ea6Fc7C3DAf0C473"
+    },
+    {
+      "url": "https://hyperevmscan.io/address/0xBae0583Dc6bfFaD32DCC0C724A0C56Ac32C908A1",
+      "shows": "Verified OpenZeppelin ProxyAdmin (Ownable) created by the kmHYPE proxy. The deployer ran upgradeAndCall, then Transfer Ownership, on 2025-12-08. The new owner is not shown on the page, so the current owner is unread.",
+      "chain": "HyperEVM",
+      "address": "0xBae0583Dc6bfFaD32DCC0C724A0C56Ac32C908A1"
+    },
+    {
+      "url": "https://kinetiq.xyz/docs/kmhype",
+      "shows": "kmHYPE is a reward-accruing LST for HYPE staked to support Markets via HIP-3 builder-deployed perps. Withdrawals are direct (about 8.5-day period, 0.10% fee, queued if underlying HYPE is below a 500,000 HYPE minimum) or via an instant swap on supported markets. Confirms the kmHYPE token address."
+    },
+    {
+      "url": "https://github.com/kinetiq-research",
+      "shows": "Verified GitHub org with 3 public repos (hl-rs, f1rewall, pendle-balance-fetcher-rs). No smart-contract or deployment-artifact repo is public."
+    }
+  ],
+  "unknowns": [
+    "D1: No explorer name-tag search URL (hyperevmscan.io/searchHandler?term=...) was fetched. Only the kmHYPE proxy page and the ProxyAdmin page were fetched. Name tags for the other ~40 docs-listed addresses are unverified.",
+    "D2: The kHYPE PauserRegistry row on the docs page is internally inconsistent. The link points to 0x752E76ea71960Da08644614E626c9F9Ff5a50547 and the text shows 0xac03CABA51e17c86c921E1f6CBFBdC91F8BB2E6b. Both are recorded. Which is authoritative is unresolved.",
+    "D2: The same docs page lists identical addresses for kHYPE OracleAdapter and DefaultOracle (0xefbcCc6E33DA1C1ef638cBc0F044968D0f590fED). This may be a docs error. A search result returned an apparently older or cached version of the page that gave OracleAdapter 0x26fE3019B55F65f454c6b5f8BAEeA1Ed405544c9 and additional kHYPE contracts. These addresses were not in any fetched body, so they are not in admin_addresses[]: InstantUnstakePool 0x665b67793594fc5C251a3C95cbEb4B6245Cd2123, ValidatorSanityChecker 0x7cD9806E5c86B8E3600eC1AEbe47f5dB15412054, FacetRegistry 0x4841eCC9Ffb18aEA197E4d1dd1633cEA5e834225, RewardShareTracker 0xE5FbA07C7b3CfbC29633f3D3Ab38b36007F35983. Re-verify them against the live docs.",
+    "D3: The audit PDFs (Drive links from the docs page; kmhype-november-2025-spearbit and kmhype-november-2025-zenith are most relevant) were not opened. The fetch budget was exhausted, and audits.kinetiq.xyz returned only a Drive shell. No audit scope address tables were extracted.",
+    "D4: No public contracts repo or deployment artifacts were found (the org has only 3 non-contract repos). The hyperevmscan source tree indicates a src/EXLST.sol implementation that is not on GitHub.",
+    "D5: chain Hyperliquid L1/HyperEVM: addresses surfaced from the docs and explorer pages. The defipunkd read API does not support chainId 999 (HyperEVM) in the stated list, so no /api/contract/read or /api/safe/owners calls were possible and no owners, admins or Safe membership were read.",
+    "D5: The pinned chain is 'Hyperliquid L1'. HyperEVM-only contracts were found. Any HyperCore-side (L1) accounts or HIP-3 deployer addresses for Markets were not surfaced from the sources tried.",
+    "D6: ExchangeManager (0x4ef8bBaceE867eFd6Faa684B30ecD12DF74C4A48) and ExchangeRouter may enumerate or route markets, but no factory enumeration view was read. No children recorded.",
+    "D7: The current owner of the kmHYPE ProxyAdmin (0xBae0583Dc6bfFaD32DCC0C724A0C56Ac32C908A1) is unread. Ownership was transferred from the deployer on 2025-12-08, but the new owner is not shown on the fetched page. Whether it is an EOA, multisig or timelock is unknown.",
+    "D7: Admin/owner/guardian/role-holder addresses of the kmHYPE StakingManager, ValidatorManager, OracleManager, PauserRegistry, GlobalConfig and Operator were not read. No multisig or timelock address was surfaced.",
+    "D8: The security_contact URL (https://kinetiq.xyz/.well-known/security.txt, linked as 'Policies' in the footer) was not fetched, so security_contact is left null. The governance forum was not found, and no voting token was identified.",
+    "D8: The bug bounty URL (https://cantina.xyz/bounties/a98129d7-dd15-4c16-b2cb-d8cc42f87de4) appears only as a footer link on the fetched docs page. It was not fetched itself."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/kinetiq-research"
+    ],
+    "docs_url": "https://kinetiq.xyz/docs",
+    "audits": [
+      {
+        "firm": "Spearbit",
+        "url": "https://drive.google.com/file/d/1LSZWM2sheoh1qeBqjkwkkl_1wO8gtI6H/view",
+        "date": "2026-01-15"
+      },
+      {
+        "firm": "Spearbit",
+        "url": "https://drive.google.com/file/d/1uffwIAjfRDdCLCTpN66h1zK_Qji41Fr-/view",
+        "date": "2025-11-27"
+      },
+      {
+        "firm": "Zenith",
+        "url": "https://drive.google.com/file/d/1pMti8B4qM15-v61AyGe-hEdi8zcXR6at/view",
+        "date": "2025-11-24"
+      },
+      {
+        "firm": "Pashov Audit Group",
+        "url": "https://drive.google.com/file/d/1ada6eazjmtatQIt38_QrZ3Nks7pYTly1/view",
+        "date": "2025-11-23"
+      },
+      {
+        "firm": "Spearbit",
+        "url": "https://drive.google.com/file/d/121JxhR9TpWGEoa1-GGm9fNbl3ByjOOhe/view",
+        "date": "2025-06-24"
+      },
+      {
+        "firm": "Code4rena",
+        "url": "https://drive.google.com/file/d/1C5F5k-xo7OtDpMnkHikcCpf3YoRcpFcW/view",
+        "date": "2025-04-16"
+      },
+      {
+        "firm": "Zenith",
+        "url": "https://drive.google.com/file/d/1S5Xm1rinC7kOt826eXhwrVbX7WtdwsWr/view",
+        "date": "2025-03-17"
+      },
+      {
+        "firm": "Pashov Audit Group",
+        "url": "https://drive.google.com/file/d/1k9jA3JJ_e85AtI-EJRBdo-cq4JOvBok3/view",
+        "date": "2025-03-06"
+      }
+    ],
+    "bug_bounty_url": "https://cantina.xyz/bounties/a98129d7-dd15-4c16-b2cb-d8cc42f87de4",
+    "deployed_contracts_doc": "https://kinetiq.xyz/docs/contracts-and-audits",
+    "admin_addresses": [
+      {
+        "chain": "HyperEVM",
+        "address": "0x360C140E5344A1A0593D44B4ea6Fc7C3DAf0C473",
+        "role": "token (kmHYPE, TransparentUpgradeableProxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x773fa4dc90750e78989122Cb83695b7F98fC20a4",
+        "role": "other (kmHYPE token current implementation, EXLST)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x53094818c0E3959D9599fd97Ba184c5bC05c4F90",
+        "role": "other (kmHYPE token initial implementation, superseded)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xBae0583Dc6bfFaD32DCC0C724A0C56Ac32C908A1",
+        "role": "proxy_admin (kmHYPE token ProxyAdmin; owner unread, transferred from deployer 2025-12-08)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xb05cb1a8188110ac2cB062996526b43179162509",
+        "role": "other (Kinetiq: Deployer; kmHYPE proxy initialOwner at creation)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x6AB31532382Ba5cD5E8b5D343Cf5995906bb8DD8",
+        "role": "router (kmHYPE ExchangeRouter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x4ef8bBaceE867eFd6Faa684B30ecD12DF74C4A48",
+        "role": "other (kmHYPE ExchangeManager; possible factory/registry)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x71F0019cC7fa79E4f42587FB7b9a817D8d2429EC",
+        "role": "vault (kmHYPE StakingManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x5901e744759561C63309865Ef8822aBb041655E2",
+        "role": "other (kmHYPE StakingAccountant)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x3899b60878c742a18A46A31Ad208bddfA19Fd266",
+        "role": "other (kmHYPE ValidatorManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x673C57b16F3855CB08030290654bb5E26Ac8E273",
+        "role": "oracle (kmHYPE OracleManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x9c2Fc9AE6261d08EA8f1dBe53F58C99F7eF9FCA2",
+        "role": "oracle (kmHYPE DefaultOracle)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xD477333725258d5174e91c959c2f5A71Ed681a30",
+        "role": "oracle (kmHYPE OracleAdapter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xcE8018B29C36423F6A512b384B56B25e069Da79e",
+        "role": "guardian (kmHYPE PauserRegistry, tentative)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x32C00306e872cC216cF144C2D8c7aFb3Cd4BB0F8",
+        "role": "other (kmHYPE GlobalConfig)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x22850d7cFbA41aE241BE61FC56295Db0C159a4ec",
+        "role": "other (kmHYPE BlockedWithdrawalQueue)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x74323CD0Db2FD826CadCc90153995F1E2b1d0801",
+        "role": "token (kmHYPE GhostLST token)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x4459872f33d7e3b61238a6edc7611463c25D82Fa",
+        "role": "other (kmHYPE Operator)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xfD739d4e423301CE9385c1fb8850539D657C296D",
+        "role": "token (kHYPE)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x393D0B87Ed38fc779FD9611144aE649BA6082109",
+        "role": "vault (kHYPE StakingManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x752E76ea71960Da08644614E626c9F9Ff5a50547",
+        "role": "guardian (kHYPE PauserRegistry per docs link; conflicts with docs text address)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xac03CABA51e17c86c921E1f6CBFBdC91F8BB2E6b",
+        "role": "guardian (kHYPE PauserRegistry per docs text; conflicts with docs link address)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x4b797A93DfC3D18Cf98B7322a2b142FA8007508f",
+        "role": "other (kHYPE ValidatorManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x9209648Ec9D448EF57116B73A2f081835643dc7A",
+        "role": "other (kHYPE StakingAccountant)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x192826e470bd65FDC2CB472eDd834D096233049b",
+        "role": "oracle (kHYPE OracleManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xefbcCc6E33DA1C1ef638cBc0F044968D0f590fED",
+        "role": "oracle (kHYPE DefaultOracle; docs also list as OracleAdapter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x23A4604cDFe8e9e2e9Cf7C10D7492B0F3f4B4038",
+        "role": "other (kHYPE Operator)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x86d96fF0E78Dba9570b00f75807ce21213a19f3d",
+        "role": "token (flowHYPE, Flowdesk institutional)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xfdd35c5179E8594E237031dd945E0584Af29572b",
+        "role": "vault (flowHYPE StakingManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x968c6AB57CDe284eABA42D811b633BF27BdACC03",
+        "role": "other (flowHYPE StakingAccountant)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x992d51A0d910985946A71F1eb5a4831736Db80f5",
+        "role": "other (flowHYPE Operator)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x4f322145aBedb2b39f69e7d4531AB4B2e6483154",
+        "role": "token (HiHYPE, Hyperion institutional)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xaD492f9CADcccE9c3c213edd8aE55c152cD3A3ad",
+        "role": "vault (HiHYPE StakingManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x62E6fa898761dE2345aB3d507b72c422a2829733",
+        "role": "other (HiHYPE StakingAccountant)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x0A3600f3F36bbBF306ce7e9fD93aF7e845908Cf1",
+        "role": "other (HiHYPE Operator)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x8599F2eFA5064C666B920E71381b5aaBc7Bb27F6",
+        "role": "token (asxnHYPE, ASXN institutional)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x0c5d890Cf52973aE4A7b10fA7EE18e146d13D87B",
+        "role": "vault (asxnHYPE StakingManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x2312Dd3349De01C2370b5BFFe3Ce5B4f69eAb797",
+        "role": "other (asxnHYPE StakingAccountant)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x3eAC994c86DA01538ad5dE1d0fb7BE6CC550b06c",
+        "role": "other (asxnHYPE Operator)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x498edC41Fa92530920a95483dea7a6CCe91F1C5c",
+        "role": "token (hylqHYPE, HYLQ institutional)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x09B4cdA849037D1717e91D201EE416bf1c113895",
+        "role": "vault (hylqHYPE StakingManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0x5D544F496FC2E7189375e749E4813dA82a91Cb9e",
+        "role": "other (hylqHYPE StakingAccountant)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HyperEVM",
+        "address": "0xb73E42C4Ad32eD15BED4cba22Ba380449a4f60d5",
+        "role": "other (hylqHYPE Operator)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Kinetiq's kmHYPE is a reward-accruing liquid staking token: users stake HYPE on HyperEVM to receive kmHYPE, which backs HIP-3 builder-deployed perpetual markets (Markets by Kinetiq). The token's value against HYPE rises as deployer revenue accrues. Users can redeem directly through the contract (about an 8.5-day withdrawal period, queued when underlying HYPE is below a minimum) or swap kmHYPE instantly on supported markets."
+  }
+}

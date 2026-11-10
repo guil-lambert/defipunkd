@@ -1,0 +1,113 @@
+{
+  "schema_version": 4,
+  "slug": "starknet-btc-staking",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-10",
+  "model": "claude-sonnet-5-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "off-chain-only",
+  "grade": "unknown",
+  "headline": "12 Starknet mainnet contracts catalogued from the official docs: 6 core staking contracts, 5 stakable tokens, 1 L1 reward-supplier address; no multisig or admin addresses found.",
+  "short_headline": "12 contracts, no admin addresses found",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Not performed. No Starknet explorer (Starkscan, Voyager) page was fetched, and DeFiPunkd's read API does not list Starknet among its supported chainIds. A search result showed a Starkscan address book, but it was only a snippet, so nothing from it was used."
+      },
+      {
+        "code": "D2",
+        "text": "Starknet's 'Chain information' docs page has an 'Important addresses > Staking' section. For mainnet it lists the staking contract, L1 and L2 reward suppliers, mint manager, minting curve, attestation contract and the stakable tokens (STRK, WBTC, SolvBTC, tBTC, LBTC). It also lists Sepolia equivalents. This page is the deployed-contracts doc."
+      },
+      {
+        "code": "D3",
+        "text": "No audit links were pinned. No audit report was fetched or discovered in the pages walked."
+      },
+      {
+        "code": "D4",
+        "text": "The staking docs link the GitHub repo starkware-libs/starknet-staking, and the docs name a deployed tag. The fetched spec.md page returned only GitHub chrome, with no deployment addresses. The tag tree and raw file fetches were denied, and no commit SHA was pinned. No deployment artifacts were read."
+      },
+      {
+        "code": "D5",
+        "text": "Single-chain protocol (Starknet). One logical surface sits on Ethereum L1: the L1 reward supplier and the mint manager. Both are recorded with chain Ethereum, as listed in the same docs page."
+      },
+      {
+        "code": "D6",
+        "text": "Not performed. The staking docs say each validator gets one delegation pool contract per token, deployed by set_open_for_delegation. The staking contract's pool/validator enumeration could not be read, because the fetch budget ran out and Starknet is unsupported by the read API. No pool children were recorded."
+      },
+      {
+        "code": "D7",
+        "text": "Roles were assigned tentatively from the docs' component descriptions. All entries have actor_class 'unknown' because no bytecode or owner was read. No owner, admin, governor, guardian, multisig or timelock address was surfaced."
+      },
+      {
+        "code": "D8",
+        "text": "Every admin_addresses entry traces to the fetched chain-info docs page. Addresses seen only in search snippets (for example the Starkscan address book and Bramble PR text) were not added."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Walked the website guide, Starknet chain-info docs, staking protocol docs and the spec.md GitHub page. Catalogued 12 mainnet addresses with sources, but no governance or admin addresses, and no on-chain reads."
+  },
+  "evidence": [
+    {
+      "url": "https://www.starknet.io/staking/bitcoin-staking-user-guide-for-starknet/",
+      "shows": "Protocol website. Describes BTC staking on Starknet as delegation to validators or via liquid staking tokens (Endur, Earn portal). Supported BTC wrappers are WBTC, LBTC, SolvBTC and tBTC. It links to the Starknet staking docs and the governance and community forum pages. It lists no contract addresses.",
+      "chain": "Starknet"
+    },
+    {
+      "url": "https://docs.starknet.io/learn/cheatsheets/chain-info",
+      "shows": "Mainnet staking section ('Important addresses > Staking') lists the Staking contract 0x00ca1702…84a7, L1 Reward supplier 0xCa1406D5…9Ff5, L2 Reward supplier 0x00903555…a112, Mint manager 0xCa14076A…B88B and Minting curve 0x00ca1705…6984. It also lists the Attestation contract 0x10398fe6…a99 and the stakable tokens STRK, WBTC, SolvBTC, tBTC and LBTC with their Starknet addresses. Sepolia equivalents are listed separately.",
+      "chain": "Starknet"
+    },
+    {
+      "url": "https://docs.starknet.io/learn/protocol/staking",
+      "shows": "Staking protocol docs. BTC staking started Q3 2025, with wrappers listed by the staking contract's get_active_tokens. Components are Staking, Delegation pooling, Reward Supplier, Minting Curve and Attestation. One delegation pool contract is deployed per validator per token via set_open_for_delegation. BTC weight alpha is 0.25 and the withdrawal lockup is 7 days. Links to the GitHub repo and the SNIP 28 and SNIP 31 forum posts. States the architecture allows targeted upgrades with access control, without naming who holds it.",
+      "chain": "Starknet"
+    },
+    {
+      "url": "https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md",
+      "shows": "The canonical starknet-staking repo (starkware-libs) has docs/spec.md (3044 lines). The fetched body was GitHub page chrome only, so it confirms the repo and file exist and nothing more. No commit SHA was obtained.",
+      "chain": "Starknet"
+    }
+  ],
+  "unknowns": [
+    "D1: explorer name-tag searches (Starkscan / Voyager) not performed, because the fetch budget was exhausted. Starknet is not in the DeFiPunkd read-API chainId list. Zero explorer pages were fetched.",
+    "D1-offchain: on-chain reads (owner, governance roles, upgrade authority, get_active_tokens) were not performed this run. Only off-chain docs were fetched.",
+    "D3: no audit_links pinned, and no audit report was found in the pages fetched. Audit status is unknown.",
+    "D4: GitHub deployment artifacts and commit SHA not obtained. The tag tree (staking/contracts-v1.0.1-dev.510) and raw spec.md fetches were denied, and the spec.md page body held no content.",
+    "D5: chain Starknet: addresses came only from the docs page. The mainnet L1 reward supplier and mint manager on Ethereum were not verified on Etherscan.",
+    "D6: delegation pools and validators not enumerated. The staking contract could not be read, since Starknet is unsupported by the read API and no fetches remained. The per-validator, per-token pool list is unbounded, so it needs dedicated ingestion.",
+    "D7: no owner, admin, governor, security council, multisig, timelock or proxy-admin addresses were found for the staking, reward-supplier, minting-curve, attestation or mint-manager contracts. Who holds upgrade and parameter-setting authority is unknown. The control slice must read these on-chain.",
+    "D8: the Sepolia testnet addresses on the chain-info page (staking 0x03745ab0…09f1, etc.) were deliberately not added to admin_addresses. They are out of scope for mainnet.",
+    "D8: search snippets named a Bramble PR (#845) and issue (#750) stating addresses were verified against mainnet on 2026-11-04. They were not fetched and added nothing beyond the docs addresses.",
+    "D8: the other Starknet infrastructure addresses on chain-info (L1 Core contract, SHARP verifier, StarkGate bridge contracts, vSTRK, ETH) are not BTC-staking-specific. They were not catalogued.",
+    "D2: upgradeability could not be determined from the docs. Exact proxy/upgrade authority is not stated, so protocol_metadata.upgradeability is 'unknown'.",
+    "D2: no bug bounty page or security contact was located in the pages fetched."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/starkware-libs/starknet-staking"
+    ],
+    "docs_url": "https://docs.starknet.io/learn/protocol/staking",
+    "audits": [],
+    "governance_forum": "https://community.starknet.io/",
+    "deployed_contracts_doc": "https://docs.starknet.io/learn/cheatsheets/chain-info",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xCa1406D57eD09947E68DE121316C87113fBE9ff5",
+        "role": "other (L1 reward supplier)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCa14076A3cec95448BaD179cc19B351A4204B88B",
+        "role": "other (L1 mint manager)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Starknet's native staking protocol lets holders of approved tokenized BTC (WBTC, tBTC, SolvBTC, LBTC) lock them and earn STRK rewards, by delegating to validators through per-validator, per-token delegation pool contracts. BTC counts towards validator staking power with a 0.25 weight. Rewards come from a minting curve and a reward supplier, and validators must attest to blocks each epoch. Unstaking is subject to a 7-day lockup. Liquid-staking wrappers such as Endur are available on top of the protocol."
+  }
+}
