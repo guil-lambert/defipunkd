@@ -1,0 +1,95 @@
+{
+  "schema_version": 4,
+  "slug": "sunswap-v1",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-10-13",
+  "model": "claude-sonnet-4-6 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "2 core contracts catalogued on Tron (factory + exchange template); TRON base58 addresses not convertible to EVM hex format required by schema — on-chain reads via DeFiPunkd API impossible (TRON unsupported chain).",
+  "short_headline": "2 contracts on Tron; DeFiPunkd API unsupported",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "D1: TronScan is the canonical block explorer for TRON. TronScan page for factory TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF surfaced in search snippet from github.com/qyvlik/tron-justswap; TronScan direct fetch not attempted due to tool call budget constraints. TRON is not listed in DeFiPunkd's supported chainIds (1,10,56,130,137,324,8453,42161,43114,59144,81457,534352,11155111), so no DeFiPunkd surfacer URLs exist."
+      },
+      {
+        "code": "D2",
+        "text": "D2: Official deployed-contracts doc found at sunswap.com/docs/justswap-interfaces_en.pdf (fetched). Lists factory contract TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF and example exchange contract TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE (USDT/TRX pair)."
+      },
+      {
+        "code": "D3",
+        "text": "D3: Audit PDF at sunswap.com/docs/audit-report_en.pdf fetched (SlowMist, Aug 25 2020). Audit scope: JustswapExchange.sol and JustswapFactory.sol. No deployed contract addresses included in the audit PDF — only source code file SHA-1 hashes listed. Audit result: Passed with 1 low-risk finding and 1 enhancement suggestion."
+      },
+      {
+        "code": "D4",
+        "text": "D4: protocol.github is null/none recorded. No GitHub repo provided. Third-party repo github.com/qyvlik/tron-justswap surfaced in search and confirms factory address TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF via TronScan link, but this is not an official protocol repo. No official Foundry/hardhat deployment artifacts found."
+      },
+      {
+        "code": "D5",
+        "text": "D5: Single chain only (TRON). No multi-chain enumeration needed."
+      },
+      {
+        "code": "D6",
+        "text": "D6: Factory TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF creates per-token exchange contracts. DeFiPunkd API does not support TRON chainId; cannot call getExchange/allPairs enumeration view via /api/contract/read. Children pools cannot be enumerated this run. Thousands of exchange contracts expected (permissionless factory pattern)."
+      },
+      {
+        "code": "D7",
+        "text": "D7: factory role assigned to TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF; pool role assigned to TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE (USDT/TRX example exchange). No owner/admin/timelock/multisig addresses found in audit or official docs — the JustswapFactory.initializeFactory() is public with no access control per audit finding, suggesting no privileged admin."
+      },
+      {
+        "code": "D8",
+        "text": "D8: Both TRON base58 addresses (TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF, TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE) trace to fetched URL sunswap.com/docs/justswap-interfaces_en.pdf. Schema requires address as 0x-prefixed EVM hex; TRON base58 addresses cannot satisfy this constraint and are omitted from admin_addresses[].address field. Recorded in unknowns with D8 prefix."
+      }
+    ],
+    "steelman": null,
+    "verdict": "grade=unknown because: (1) TRON is not a supported chain on DeFiPunkd's read API (no valid chainId), making on-chain state reads impossible this run; (2) TRON addresses are in base58 format incompatible with the schema's 0x-hex address field requirement; (3) no official GitHub repo is pinned, and the protocol.github field is null. Two core contract addresses have been discovered from official docs and confirmed by the audit, but cannot be expressed in the required format or verified on-chain via the DeFiPunkd toolchain."
+  },
+  "evidence": [
+    {
+      "url": "https://sunswap.com/#/home",
+      "shows": "SunSwap is a TRON-based decentralized trading protocol for automated liquidity provision supporting TRC20 token exchange; website is a JavaScript SPA with minimal static content",
+      "chain": "Tron",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://sunswap.com/docs/audit-report_en.pdf",
+      "shows": "SlowMist security audit (Aug 25 2020, audit number 0X002008250002) of JustSwap (now SUNSwap V1) covering JustswapExchange.sol and JustswapFactory.sol on TRON; result: Passed; 1 low-risk finding (removeLiquidity design defect) and 1 enhancement suggestion (redundant code). No deployed contract addresses listed in the report.",
+      "chain": "Tron",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "url": "https://sunswap.com/docs/justswap-interfaces_en.pdf",
+      "shows": "Official JustSwap API documentation (v1.0.0 by Just team) listing: factory contract address TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF (creates trading pairs, manages pair list) and example exchange contract TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE (USDT/TRX exchange). Also documents backend API endpoint https://api.justswap.io/v2/allpairs.",
+      "chain": "Tron",
+      "fetched_at": "2026-10-13T00:00:00Z"
+    }
+  ],
+  "unknowns": [
+    "D1: TronScan block explorer (tronscan.org) not directly fetched this run — TRON is not supported by DeFiPunkd API (chainId absent from supported list). On-chain name-tag search for 'SUNSwap' or 'JustSwap' on TronScan not completed. Next run should fetch https://tronscan.org/#/contract/TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF/code directly.",
+    "D2: deployed_contracts_doc (sunswap.com/docs/justswap-interfaces_en.pdf) lists only 2 addresses; a more comprehensive current deployments page (e.g. on docs.sun.io or sunswap.com) may exist but was not found this run.",
+    "D4: No official GitHub repository pinned for SUNSwap V1. The sunswap.com and sun.io ecosystems may have a GitHub org; none found this run.",
+    "D6: Factory TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF likely has thousands of child exchange contracts (one per TRC20 token). Enumeration via DeFiPunkd API impossible (TRON unsupported). Cap notice: full child enumeration deferred to dedicated TRON ingestion pipeline.",
+    "D7: No admin/owner/multisig/timelock addresses found in audit or official docs. The audit notes JustswapFactory.initializeFactory() is public with no caller restriction, suggesting the factory may be ownerless after initialization. Actor class of factory deployer unknown.",
+    "D8: TRON base58 addresses TXk8rQSAvPvBBNtqSoY6nCfsXWCSSpTVQF (factory) and TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE (USDT/TRX exchange) cannot be expressed as 0x EVM hex required by admin_addresses[].address schema field — addresses recorded in evidence[] only.",
+    "D8-offchain: On-chain fetch of TRON contracts via DeFiPunkd /api/contract/read impossible (TRON chainId not supported); grading_basis set to mixed (off-chain docs + audit fetched; on-chain reads failed)."
+  ],
+  "protocol_metadata": {
+    "docs_url": "https://sunswap.com/docs/justswap-interfaces_en.pdf",
+    "audits": [
+      {
+        "firm": "SlowMist",
+        "url": "https://sunswap.com/docs/audit-report_en.pdf",
+        "date": "2020-08-25"
+      }
+    ],
+    "deployed_contracts_doc": "https://sunswap.com/docs/justswap-interfaces_en.pdf",
+    "admin_addresses": [],
+    "upgradeability": "unknown",
+    "about": "SUNSwap V1 (originally launched as JustSwap) is an automated market maker (AMM) DEX protocol on the TRON blockchain that enables permissionless exchange between TRC20 tokens using TRX as the intermediary asset. Users can swap TRC20 tokens against TRX liquidity pools, add liquidity to earn a 0.3% fee on each swap, or perform token-to-token swaps routed through TRX. The protocol uses a factory-and-exchange architecture: a single JustswapFactory contract deploys one JustswapExchange contract per TRC20 token, each holding a TRX/token liquidity pool. The protocol was rebranded from JustSwap to SUNSwap in late 2020 under the SUN.io DeFi ecosystem."
+  }
+}
