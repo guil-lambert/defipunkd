@@ -1,0 +1,225 @@
+{
+  "schema_version": 4,
+  "slug": "flux-finance",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-17",
+  "model": "claude-sonnet-5-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "17 Ethereum contracts catalogued: 5 fTokens, Comptroller (+impl), oracle, lens, Governor Bravo (+impl), Timelock, governance token, and deployer.",
+  "short_headline": "17 contracts on Ethereum",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Etherscan name-tag pages for Comptroller, Timelock and Governance (all tagged 'Flux Finance: ...') and the fOUSG token were reached via direct fetch or search grounding. The Comptroller page also shows a 'Flux Finance: Deployer' tag. The searchHandler URL was not fetched; I ran out of fetch calls."
+      },
+      {
+        "code": "D2",
+        "text": "The canonical deployments page is https://docs.fluxfinance.com/addresses. It lists 10 Ethereum mainnet addresses: fUSDC, fDAI, fUSDT, fFRAX, fOUSG, OUSG Oracle, Comptroller, Lens, Governance and Timelock."
+      },
+      {
+        "code": "D3",
+        "text": "No audit_links were pinned. The docs Trust & Security page links one Flux-specific audit, Code4rena January 2023 (https://code4rena.com/reports/2023-01-ondo/). I did not open the report, so no scope addresses were extracted."
+      },
+      {
+        "code": "D4",
+        "text": "The GitHub repo flux-finance/contracts is a Compound V2 fork with Hardhat/Foundry deploy scripts under deploy/ and scripts/. The README has no deployed-address table. I did not walk deploy/lending, and no commit SHA was pinned."
+      },
+      {
+        "code": "D5",
+        "text": "Ethereum is the only chain in protocol.chains, and the docs list only Ethereum Mainnet. No other chains were found."
+      },
+      {
+        "code": "D6",
+        "text": "Flux is a Compound V2 fork with no factory. Markets are enumerated by Comptroller.getAllMarkets, which I could not read because the fetch budget ran out and no surfacer was pinned. The README also mentions an fLUSD market that is not in the docs address table."
+      },
+      {
+        "code": "D7",
+        "text": "Roles were assigned from docs and Etherscan labels. Actor classes are 'unknown' for most entries because no bytecode or Safe reads were performed. Governance is classified as governance and Timelock as timelock based on their Etherscan labels and source."
+      },
+      {
+        "code": "D8",
+        "text": "Every address in admin_addresses traces to a fetched or search-grounded page listed in evidence. Snippet-only sightings are in unknowns."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery only: walked the website, docs addresses page, docs governance/security pages, GitHub README and Etherscan pages for Comptroller, Timelock, Governance and fOUSG, and catalogued 17 Ethereum addresses. Grade is unknown by design."
+  },
+  "evidence": [
+    {
+      "url": "https://fluxfinance.com",
+      "shows": "Website probe succeeded. It links the docs (docs.fluxfinance.com), forum (forum.fluxfinance.com), the Immunefi bounty and Tally governance for Ondo DAO. It says Flux is a Compound v2 fork whose only collateral is OUSG.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.fluxfinance.com/addresses",
+      "shows": "Canonical Ethereum Mainnet address table: fUSDC 0x465a5a63..., fDAI 0xe2bA8693..., fUSDT 0x81994b96..., fFRAX 0x1C9A2d6b..., fOUSG 0x1dD7950c..., OUSG Oracle 0x0502c5ae..., Comptroller 0x95Af143a..., Lens 0xcA83471C..., Governance 0x336505EC... (DAO contract), Timelock 0x2c5898da... (DAO vote delays).",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://github.com/flux-finance/contracts",
+      "shows": "Compound V2 fork repo (BSD-3-Clause). fTokens are upgradeable via a CErc20DelegatorKYC proxy plus delegate implementation, with KYC/sanctions checks on cToken functions. It describes OndoPriceOracle/V2, lists fLUSD among the fTokens, and has deploy/ and scripts/ dirs. It contains no address table.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://etherscan.io/address/0x95Af143a021DF745bc78e845b54591C53a8B3A51",
+      "shows": "Etherscan tags this address 'Flux Finance: Comptroller'. It is a verified Unitroller proxy whose implementation link points to 0xdc7b90593CafE7a919D22B903fEd21BF27da9719. The creator is tagged 'Flux Finance: Deployer' at 0x690043fb6826f9d9381c56f43971f4f044bce3aa. The proxy ABI exposes admin/pendingAdmin and implementation setters; admin() was not read.",
+      "chain": "Ethereum",
+      "address": "0x95Af143a021DF745bc78e845b54591C53a8B3A51"
+    },
+    {
+      "url": "https://etherscan.io/address/0x2c5898da4DF1d45EAb2B7B192a361C3b9EB18d9c",
+      "shows": "Search-grounded Etherscan page tagged 'Flux Finance: Timelock'. Verified source contracts/lending/compound/governance/Timelock.sol, Solidity 0.5.17. It shows 1 transaction and holds ONDO tokens.",
+      "chain": "Ethereum",
+      "address": "0x2c5898da4DF1d45EAb2B7B192a361C3b9EB18d9c"
+    },
+    {
+      "url": "https://etherscan.io/address/0x336505EC1BcC1A020EeDe459f57581725D23465A",
+      "shows": "Search-grounded Etherscan page tagged 'Flux Finance: Governance'. It is a GovernorBravoDelegator proxy. Constructor args (decoded): timelock 0x2c5898da4DF1d45EAb2B7B192a361C3b9EB18d9c, comp_ (governance token) 0xfAbA6f8e4a5E8Ab82F62fe7C39859FA577269BE3, admin 0x2c5898da... (timelock), implementation 0x8886344A1b9B840Bed590F2Ef7379DD37e169c8e, votingPeriod 21600, votingDelay 1, proposalThreshold 1e26.",
+      "chain": "Ethereum",
+      "address": "0x336505EC1BcC1A020EeDe459f57581725D23465A"
+    },
+    {
+      "url": "https://etherscan.io/address/0x1dD7950c266fB1be96180a8FDb0591F70200E018",
+      "shows": "Search-grounded Etherscan page tagged 'Flux Finance: fOUSG Token'. Its contract name is CErc20DelegatorKYC, a delegator proxy with an admin-updatable implementation. The creator is tagged 'Flux Finance: Deployer'.",
+      "chain": "Ethereum",
+      "address": "0x1dD7950c266fB1be96180a8FDb0591F70200E018"
+    },
+    {
+      "url": "https://docs.fluxfinance.com/governance",
+      "shows": "Flux is governed by Ondo DAO (ONDO holders) through a Compound Governor Bravo fork, with Tally for voting. Parameters: 100,000,000 ONDO proposal threshold, 3-day voting, 1,000,000 ONDO quorum, 1-day timelock. The DAO may also elect committees or multisigs for certain parameter updates or pausing. The forum is forum.fluxfinance.com.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.fluxfinance.com/trust-and-security",
+      "shows": "Lists the Code4rena January 2023 audit (https://code4rena.com/reports/2023-01-ondo/) and the Immunefi bug bounty (up to $550k, https://immunefi.com/bounty/fluxfinance/).",
+      "chain": "Ethereum"
+    }
+  ],
+  "unknowns": [
+    "D1: etherscan.io/searchHandler?term=Flux Finance was not fetched. Name-tag discovery relied on fetched/search-grounded pages for known addresses, so other tagged addresses (e.g. other 'Flux Finance:' labels) may be missed.",
+    "D2-offchain: the defipunkd surfacer URL https://defipunkd.com/address/1/0x95Af143a021DF745bc78e845b54591C53a8B3A51 was rejected by the fetch allowlist because no address was pinned. No /api/contract/read or /api/safe/owners reads were possible, so admin()/owner() values and the Safe or EOA status of the Comptroller admin are unread.",
+    "D3: the Code4rena 2023-01 report (https://code4rena.com/reports/2023-01-ondo/) was linked in docs but not opened, so its in-scope address table was not extracted. No Trail of Bits, OpenZeppelin or Certora report for Flux itself was checked; docs attribute those to Compound.",
+    "D4: the flux-finance/contracts deploy/lending and scripts/ directories were not walked and no commit SHA was pinned. No broadcast or deployments JSON was checked.",
+    "D5: chain Ethereum: only the docs address table, GitHub README and Etherscan pages were tried. No other chains were found on the docs page.",
+    "D6: Comptroller.getAllMarkets was not read, so the full market list is unverified. fLUSD is mentioned in the GitHub README but is not in the docs address table. Individual fToken implementation (delegate) addresses were not read except as noted below.",
+    "D8: 0xba9b10f90b0ef26711373a0d8b6e7741866a7ef2 appears as one of 9 in-scope assets on a third-party mirror of the Immunefi Flux bounty (search snippet only, bountyhunt.xyz). It was not fetched or verified, so it is not in admin_addresses.",
+    "D8: fOUSG implementation 0x159d359b55a6d0cbe9b306862d13515fa1992d0a appeared only in a search snippet of the Etherscan fOUSG page. It was not fetched in full, so it is not in admin_addresses.",
+    "D8: the Timelock creator (shown truncated as 0x1bd19c16...3f47AB6e3) and the sender of the 2023 ETH transfer (0x5a977e56...B0dA18Bb5) are truncated in the snippet, so full addresses are unknown.",
+    "D7: actor_class for the Comptroller admin, fToken admins, OUSG oracle owner, Lens and deployer was not determined (no bytecode or Safe reads). Whether any multisig or committee holds pause or parameter powers (docs mention that possibility) is not verified.",
+    "D3: security_contact (SECURITY.md or security@) was not found in the pages walked. The Immunefi page itself was not fetched."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/flux-finance/contracts"
+    ],
+    "docs_url": "https://docs.fluxfinance.com",
+    "audits": [
+      {
+        "firm": "Code4rena",
+        "url": "https://code4rena.com/reports/2023-01-ondo/",
+        "date": "2023-01"
+      }
+    ],
+    "governance_forum": "https://forum.fluxfinance.com",
+    "voting_token": {
+      "chain": "Ethereum",
+      "address": "0xfAbA6f8e4a5E8Ab82F62fe7C39859FA577269BE3",
+      "symbol": "ONDO"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/fluxfinance/",
+    "deployed_contracts_doc": "https://docs.fluxfinance.com/addresses",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0x95Af143a021DF745bc78e845b54591C53a8B3A51",
+        "role": "other (Comptroller / Unitroller proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xdc7b90593CafE7a919D22B903fEd21BF27da9719",
+        "role": "other (Comptroller implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x336505EC1BcC1A020EeDe459f57581725D23465A",
+        "role": "governor (GovernorBravoDelegator proxy, Ondo DAO)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8886344A1b9B840Bed590F2Ef7379DD37e169c8e",
+        "role": "governor (GovernorBravo implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2c5898da4DF1d45EAb2B7B192a361C3b9EB18d9c",
+        "role": "timelock (DAO vote delay; admin of Governor per constructor args)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xfAbA6f8e4a5E8Ab82F62fe7C39859FA577269BE3",
+        "role": "token (governance token passed as comp_ to Governor; symbol ONDO per docs, derived)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x690043fb6826f9d9381c56f43971f4f044bce3aa",
+        "role": "other (Etherscan tag 'Flux Finance: Deployer')",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x465a5a630482f3abD6d3b84B39B29b07214d19e5",
+        "role": "token (fUSDC, cToken delegator proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xe2bA8693cE7474900A045757fe0efCa900F6530b",
+        "role": "token (fDAI, cToken delegator proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x81994b9607e06ab3d5cF3AffF9a67374f05F27d7",
+        "role": "token (fUSDT, cToken delegator proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1C9A2d6b33B4826757273D47ebEe0e2DddcD978B",
+        "role": "token (fFRAX, cToken delegator proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1dD7950c266fB1be96180a8FDb0591F70200E018",
+        "role": "token (fOUSG, CErc20DelegatorKYC proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0502c5ae08E7CD64fe1AEDA7D6e229413eCC6abe",
+        "role": "oracle (OUSG price oracle, rwaPrice)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xcA83471CE9B0E7E6f628FA2A95Ae97198780acf8",
+        "role": "other (Lens)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Flux Finance is a Compound V2 fork where users lend stablecoins (USDC, DAI, USDT, FRAX) and receive interest-bearing fTokens. Borrowers can post OUSG, a tokenized US Treasury product from Ondo Finance, as collateral. fTokens carry KYC and sanctions checks on certain functions. The protocol is governed by Ondo DAO through a Governor Bravo fork and a timelock."
+  }
+}
