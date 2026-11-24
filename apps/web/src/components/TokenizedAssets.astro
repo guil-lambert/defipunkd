@@ -1,12 +1,12 @@
 ---
 import SourceLogo from "./SourceLogo.astro";
 import { getTokenizedAssets, tokenizedIssuerUrl, tokenizedAssetUrl, TOKENIZED_STONKS_URL } from "@defipunkd/registry";
-interface Props { slug: string; idPrefix?: string }
-const { slug, idPrefix = "" } = Astro.props;
+interface Props { slug: string; snapshotGeneratedAt: string; idPrefix?: string }
+const { slug, snapshotGeneratedAt, idPrefix = "" } = Astro.props;
 const data = getTokenizedAssets(slug);
 const id = idPrefix ? `${idPrefix}-tokenized-assets` : "tokenized-assets";
 const date = (value: string) => new Date(value).toISOString().slice(0, 10);
-const stale = data ? data.issuers.some((i) => Date.now() - Date.parse(i.as_of) > 14 * 86400_000) : false;
+const stale = data ? data.issuers.some((i) => Date.parse(snapshotGeneratedAt) - Date.parse(i.as_of) > 14 * 86400_000) : false;
 const count = (value: number | null) => value === null ? "Unavailable" : value.toLocaleString("en-US");
 ---
 {data && (

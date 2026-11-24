@@ -12,17 +12,18 @@ export default defineConfig({
   output: "server",
   adapter: vercel({
     isr: {
-      // Re-fetch from origin after this many seconds. Master-file updates
-      // thus become visible within the window even without a redeploy.
-      // Short enough to pick up fresh assessments quickly; long enough
-      // that a popular page isn't re-rendered on every request.
-      expiration: 60,
+      // No expiration: pages are cached for the life of the deployment.
+      // Data files are bundled into the function via includeFiles, so
+      // content can only change on redeploy; time-based revalidation just
+      // burned ISR write units.
       // /api/* are dynamic JSON endpoints with query-param-keyed responses,
       // not page renders. ISR's path-keyed cache + crash-prone wrapper
       // (it returns FUNCTION_INVOCATION_FAILED on routes that do their own
       // streaming/JSON output) does not fit this access pattern. Each route
       // sets its own Cache-Control: see apps/web/src/lib/onchain/error.ts.
-      exclude: [/^\/api\//],
+      // /address/* is an unbounded URL space of live on-chain reads; it sets
+      // its own CDN Cache-Control instead of filling the ISR cache.
+      exclude: [/^\/api\//, /^\/address\//],
     },
     // Data files live outside apps/web and are read at runtime by
     // @defipunkd/registry via process.cwd() traversal. Bundle them with
