@@ -1,0 +1,691 @@
+{
+  "schema_version": 4,
+  "slug": "sushiswap",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-24",
+  "model": "claude-sonnet-5-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "off-chain-only",
+  "grade": "unknown",
+  "headline": "About 100 contracts catalogued from docs.sushi.com, GitHub and explorer snippets: V2/V3 AMM, RedSnwapper, SushiXSwapV2, 2 Ethereum multisigs. No on-chain reads were run.",
+  "short_headline": "~100 contracts across ~30 chains",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Direct etherscan.io fetch was rejected by the fetch allowlist. Search-grounded explorer pages returned tagged addresses: 'SushiSwap: Treasury Multisig' (0xe94B5E…F4f3) and 'SushiSwap: Operation Multisig' (0x19B3Eb…19e7) on Ethereum, 'SushiSwap: SushiV2 Factory' on Arbitrum (0xc35DAD…74C4), and a 'Sushi: Router v2' on Base (0x6bded4…7891)."
+      },
+      {
+        "code": "D2",
+        "text": "Canonical deployment tables were fetched at docs.sushi.com/contracts/cpamm (V2 factory, router, init code hash, ~34 networks), /contracts/clamm (V3 factory, position manager, tick lens, quoter, ~31 networks incl. Stellar) and /contracts/red-snwapper (RedSnwapper, ~48 networks). The V4 page (docs.sushi.com/contracts/v4) is linked in the docs nav but could not be fetched."
+      },
+      {
+        "code": "D3",
+        "text": "The single audit link (PeckShield SushiSwap v1.0 PDF) could not be opened: the fetch budget was exhausted and the one attempt returned an error. No audit-scope addresses were extracted."
+      },
+      {
+        "code": "D4",
+        "text": "protocol.github was empty. The sushiswap/sushixswap-v2 README (fetched, branch master, no SHA pinned) has a deployments table listing SushiXSwapV2, StargateAdapter and SquidAdapter across ~16 networks. A third-party fork README (blaize-tech) surfaced via search lists legacy Ethereum SushiToken, MasterChef, SushiBar, SushiMaker, V2 factory and router."
+      },
+      {
+        "code": "D5",
+        "text": "Per-chain V2 factory, router, V3 factory and position manager addresses were recorded for the chains in protocol.chains that the docs list. Each chain is a separate entry. Chains with no docs address are listed in unknowns."
+      },
+      {
+        "code": "D6",
+        "text": "No factory children were enumerated. Read-API calls were not attempted because no surfacers were pinned and the fetch budget ran out. V2/V3 factories were recorded for later runs."
+      },
+      {
+        "code": "D7",
+        "text": "Roles use the controlled vocabulary (factory, router, token, multisig, other). actor_class is 'unknown' wherever bytecode was not read."
+      },
+      {
+        "code": "D8",
+        "text": "Every admin_addresses entry traces to a fetched docs/GitHub page or a search-returned explorer page body listed in evidence[]. Snippet-only sightings are not included."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery slice, so grade is unknown. Walked docs.sushi.com deployment tables (V2, V3, RedSnwapper), the SushiXSwapV2 GitHub README and search-grounded explorer tags, and catalogued about 100 addresses. No on-chain reads were done, no audit PDF was opened and no timelock or governor was found."
+  },
+  "evidence": [
+    {
+      "url": "https://sushi.com/",
+      "shows": "Website probe succeeded (body returned). It shows a swap UI with nav entries Trade, Perps, Launchpad, Explore, Positions, Stake, and describes support for over 30 chains plus an aggregator.",
+      "chain": "multi"
+    },
+    {
+      "url": "https://docs.sushi.com/contracts/cpamm",
+      "shows": "Canonical SushiSwap V2 (cpAMM) Factory, Router and Init Code Hash tables per network. Examples: Ethereum factory 0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac, router 0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f; Arbitrum/Polygon/BSC/Gnosis/Fantom/Celo/Avalanche factory 0xc35dadb65012ec5796536bd9864ed8773abc74c4; Base factory 0x71524b4f93c58fcbf659783284e38825f0622859.",
+      "chain": "multi"
+    },
+    {
+      "url": "https://docs.sushi.com/contracts/clamm",
+      "shows": "Canonical SushiSwap V3 (clAMM) Factory, Position Manager, Tick Lens, Quoter and init code hash tables per network. Examples: Ethereum V3 factory 0xbaceb8ec6b9355dfc0269c18bac9d6e2bdc29c4f, position manager 0x2214a42d8e2a1d20635c2cb0664422c528b6a432, tick lens 0xfb70ad5a200d784e7901230e6875d91d5fa6b68c, quoter 0x64e8802fe490fa7cc61d3463958199161bb608a7.",
+      "chain": "multi"
+    },
+    {
+      "url": "https://docs.sushi.com/contracts/red-snwapper",
+      "shows": "RedSnwapper is described as a facade for the RouteProcessor execution router contracts. Deployment table: 0xac4c6e212a361c968f1725b4d055b47e63f80b75 on most networks (Ethereum, Polygon, Arbitrum, Base, etc.), with different addresses on zkSync Era, Robinhood Chain and Arc.",
+      "chain": "multi"
+    },
+    {
+      "url": "https://docs.sushi.com/dao/governance",
+      "shows": "Governance model: Snapshot votes (binding only if posted by the CORE team, quorum 5M SUSHIPOWAH), a Treasury Council Multisig (4 of 6 signatures) for devfund use, an Operations Multisig (at least 3 signatures) for core-team changes, and a link to forum.sushi.com. No on-chain governor or timelock is described.",
+      "chain": "multi"
+    },
+    {
+      "url": "https://github.com/sushiswap/sushixswap-v2",
+      "shows": "SushiXSwapV2 repo README (fetched from branch master; no SHA pinned) with a deployments table. SushiXSwapV2 is 0x804b526e5bf4349819fe2db65349d0825870f8ee on Ethereum/BSC/Avalanche/Polygon/Arbitrum/Optimism/Base; Kava uses 0xD5607d184b1D6ecbA94A07c217497FE9346010D9; StargateAdapter and SquidAdapter addresses per chain.",
+      "chain": "multi"
+    },
+    {
+      "url": "https://basescan.org/address/0x6bded42c6da8fbf0d2ba55b2fa120c5e0c8d7891",
+      "shows": "Search-returned explorer page tagged 'Sushi: Router v2' (UniswapV2Router02). Constructor args: factory 0x71524B4f93c58fcbF659783284E38825f0622859, WETH 0x4200000000000000000000000000000000000006.",
+      "chain": "Base",
+      "address": "0x6bded42c6da8fbf0d2ba55b2fa120c5e0c8d7891"
+    },
+    {
+      "url": "https://arbiscan.io/address/0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+      "shows": "Search-returned explorer page titled 'SushiSwap: SushiV2 Factory' on Arbitrum.",
+      "chain": "Arbitrum",
+      "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4"
+    },
+    {
+      "url": "https://etherscan.io/address/0xe94b5eec1fa96ceecbd33ef5baa8d00e4493f4f3",
+      "shows": "Search-returned explorer page tagged 'SushiSwap: Treasury Multisig'. The transfer table shows ETH transfers to and from 'SushiSwap: Operation Multisig'.",
+      "chain": "Ethereum",
+      "address": "0xe94b5eec1fa96ceecbd33ef5baa8d00e4493f4f3"
+    },
+    {
+      "url": "https://etherscan.io/address/0x19b3eb3af5d93b77a5619b047de0eed7115a19e7",
+      "shows": "Search-returned explorer page tagged 'SushiSwap: Operation Multisig', showing 'Exec Transaction' activity. The page is also shown as a proxy contract.",
+      "chain": "Ethereum",
+      "address": "0x19b3eb3af5d93b77a5619b047de0eed7115a19e7"
+    },
+    {
+      "url": "https://blockscan.com/Address/0x19b3eb3af5d93b77a5619b047de0eed7115a19e7",
+      "shows": "Search-returned blockscan page tagged 'SushiSwap: Operation Multisig', labelled 'Smart Account by Safe' / Safe Multisig (derived: Safe-type multisig).",
+      "chain": "Ethereum",
+      "address": "0x19b3eb3af5d93b77a5619b047de0eed7115a19e7"
+    },
+    {
+      "url": "https://github.com/blaize-tech/blaizeswap-contracts",
+      "shows": "Third-party fork README (Sushiswap contracts) listing legacy Ethereum addresses: SushiToken 0x6b3595068778dd592e39a122f4f5a5cf09c90fe2, MasterChef 0xc2edad668740f1aa35e4d8f227fb8e17dca888cd, SushiBar 0x8798249c2e607446efb7ad49ec89dd1865ff4272, SushiMaker 0x6684977bBED67e101BB80Fc07fCcfba655c0a64F. These are unverified legacy addresses and need re-verification.",
+      "chain": "Ethereum"
+    },
+    {
+      "url": "https://docs.sushi.com/security",
+      "shows": "Security page (search-returned body) lists a bug bounty on Immunefi and the contact security@sushi.com.",
+      "chain": "multi"
+    },
+    {
+      "url": "https://github.com/sushiswap/bentobox/blob/master/bugbounty.md",
+      "shows": "States that SushiSwap hosts a bug bounty on Immunefi at https://immunefi.com/bounty/sushiswap, and that vulnerability reports must go through Immunefi.",
+      "chain": "multi"
+    }
+  ],
+  "unknowns": [
+    "D1: Direct etherscan.io fetch of the V2 factory page was rejected by the allowlist ('Only URLs that have appeared in user messages or prior search/fetch results can be fetched'). Per-chain explorer name-tag searches were not run for every chain; only two web searches were available for D1.",
+    "D1: No block-explorer name-tag search was run for Optimism, Polygon, BSC, Avalanche, Scroll, Linea, Katana, Blast or the other chains. Only the Arbitrum factory, Base router and the two Ethereum multisigs surfaced via search.",
+    "D2: docs.sushi.com/contracts/v4 (SushiSwap V4), /contracts/launchpad and /contracts/blade deployment pages were not fetched because the fetch budget was exhausted. V4, Launchpad and Blade addresses are uncatalogued. The V3 docs also list a Stellar deployment (Soroban contract IDs) that is not recorded in admin_addresses because the schema expects 0x addresses.",
+    "D2: RouteProcessor (the execution router behind RedSnwapper), the 'Aggregator' docs and the Perps product addresses were not located.",
+    "D3: The PeckShield SushiSwap v1.0 PDF (https://github.com/peckshield/publications/blob/master/audit_reports/PeckShield-Audit-Report-SushiSwap-v1.0.pdf) was attempted once and failed. The fetch budget was exhausted, so no audit-scope addresses or audit date were extracted. protocol_metadata.audits is left empty.",
+    "D3: The docs security page's audit list is not rendered in the search snippet. Other audits (e.g. for V3, RouteProcessor, SushiXSwap) are not enumerated.",
+    "D4: No commit SHA was pinned for the sushixswap-v2 README, so evidence[].commit is omitted. protocol.github is empty. The sushi-labs/sushi monorepo (linked from docs nav) and the sushiswap/sushiswap-v3 / v2-core repos were not walked for deployment artifacts (Foundry broadcast, deployments/*.json).",
+    "D5: chain Telos: zero addresses surfaced from docs cpamm/clamm/red-snwapper pages and the sushixswap-v2 README.",
+    "D5: chain Palm: zero addresses surfaced from the sources tried.",
+    "D5: chain Moonriver: zero addresses surfaced from the sources tried.",
+    "D5: chain Harmony: zero addresses surfaced from the sources tried.",
+    "D5: chain Heco: zero addresses surfaced from the sources tried.",
+    "D5: chain OKExChain: zero addresses surfaced from the sources tried.",
+    "D5: chain Arbitrum Nova: zero addresses surfaced from the sources tried.",
+    "D5: chain Blast: zero addresses surfaced from the sources tried.",
+    "D5: chain Moonbeam: only a SushiXSwapV2 (0x804b526e5bF4349819fe2Db65349d0825870F8Ee) and SquidAdapter listing in the sushixswap-v2 README; no V2/V3 AMM addresses were found.",
+    "D5: For chains where the docs list V2/V3 addresses (e.g. Fuse, Sonic, BitTorrent, Filecoin, Metis, Polygon zkEVM, CORE, Kava, ZetaChain, HAQQ, Hemi, Arc, Rootstock, Robinhood Chain, Tatara/Bokuto, Skale Europa, Sepolia), only V2 factories were recorded in admin_addresses. V2 routers, V3 factories, position managers, tick lenses, quoters and RedSnwapper for those chains are on the cited docs pages but were not copied individually. Many chains reuse the same RedSnwapper address, which is not duplicated per chain. Testnets (Tatara, Bokuto, Sepolia) were excluded.",
+    "D6: Factory children (V2 pairs via allPairs/getPair, V3 pools via getPool) were not enumerated. Sushi V2/V3 have thousands of pools and need dedicated ingestion (50-child cap per factory); no /api/contract/read call was made.",
+    "D7: actor_class is 'unknown' for all contracts whose bytecode was not read. The Ethereum Operation Multisig is derived as Safe from the blockscan label only; the Treasury Multisig's Safe status, threshold and owners were not read (/api/safe/owners not called).",
+    "D8: Admin or owner addresses of the factories (feeTo/feeToSetter, V3 factory owner), MasterChef owner, SushiMaker owner and any proxy admins were not read, so no owner/timelock addresses beyond the two tagged multisigs are catalogued. The Treasury Council Multisig and Operations Multisig described in the governance doc are not verified to equal the two Ethereum-tagged multisigs.",
+    "D8: SUSHI voting token (voting_token) address not verified from an official source this run; only a third-party fork README lists an address, so voting_token is left null.",
+    "D1-offchain: On-chain verification of the discovered addresses (bytecode, Safe owners, proxy status) was not performed; the read API was not used because no surfacers were pinned and the fetch budget was exhausted. The two etherscan.io fetch attempts for the V2 factory failed on the allowlist."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/sushiswap/sushixswap-v2",
+      "https://github.com/sushi-labs/sushi"
+    ],
+    "docs_url": "https://docs.sushi.com",
+    "audits": [],
+    "governance_forum": "https://forum.sushi.com",
+    "bug_bounty_url": "https://immunefi.com/bounty/sushiswap",
+    "security_contact": "security@sushi.com",
+    "deployed_contracts_doc": "https://docs.sushi.com/contracts/cpamm",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xe94B5EEC1fA96CEecbD33EF5Baa8d00E4493F4f3",
+        "role": "multisig (treasury; etherscan tag 'SushiSwap: Treasury Multisig')",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x19B3Eb3Af5D93b77a5619b047De0EED7115A19e7",
+        "role": "multisig (operations; etherscan tag 'SushiSwap: Operation Multisig', Safe per blockscan label)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f",
+        "role": "router (SushiSwap V2 Router02)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xbaceb8ec6b9355dfc0269c18bac9d6e2bdc29c4f",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x2214a42d8e2a1d20635c2cb0664422c528b6a432",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xfb70ad5a200d784e7901230e6875d91d5fa6b68c",
+        "role": "other (V3 TickLens)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x64e8802fe490fa7cc61d3463958199161bb608a7",
+        "role": "other (V3 Quoter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xac4c6e212a361c968f1725b4d055b47e63f80b75",
+        "role": "router (RedSnwapper facade for RouteProcessor)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x804b526e5bf4349819fe2db65349d0825870f8ee",
+        "role": "router (SushiXSwapV2 cross-chain)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xD408a20f1213286fB3158a2bfBf5bFfAca8bF269",
+        "role": "other (SushiXSwapV2 StargateAdapter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xFF51a7C624Eb866917102707F3dA8bFb99Db8692",
+        "role": "other (SushiXSwapV2 SquidAdapter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+        "role": "token (SUSHI; from third-party fork README, needs re-verification)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc2edad668740f1aa35e4d8f227fb8e17dca888cd",
+        "role": "other (MasterChef, legacy; from third-party fork README, needs re-verification)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8798249c2e607446efb7ad49ec89dd1865ff4272",
+        "role": "other (SushiBar/xSUSHI, legacy; from third-party fork README, needs re-verification)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6684977bBED67e101BB80Fc07fCcfba655c0a64F",
+        "role": "other (SushiMaker, legacy; from third-party fork README, needs re-verification)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0xfbc12984689e5f15626bad03ad60160fe98b303c",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0x2abf469074dc0b54d793850807e6eb5faf2625b1",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0x9c6522117e2ed1fe5bdb72bb0ed5e3f2bde7dbe0",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0x1af415a1eba07a4986a52b6f2e7de7003d82231e",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Optimism",
+        "address": "0xac4c6e212a361c968f1725b4d055b47e63f80b75",
+        "role": "router (RedSnwapper)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0x126555dd55a39328f69400d6ae4f782bd4c34abb",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xf70c086618dcf2b1a461311275e00d6b722ef914",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Binance",
+        "address": "0xac4c6e212a361c968f1725b4d055b47e63f80b75",
+        "role": "router (RedSnwapper)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "xDai",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2, Gnosis)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "xDai",
+        "address": "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
+        "role": "router (SushiSwap V2, Gnosis)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "xDai",
+        "address": "0xf78031cbca409f2fb6876bdfdbc1b2df24cf9bef",
+        "role": "factory (SushiSwap V3, Gnosis)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "xDai",
+        "address": "0xab235da7f52d35fb4551afba11bfb56e18774a65",
+        "role": "other (V3 NonfungiblePositionManager, Gnosis)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0x917933899c6a5f8e37f31e19f92cdbff7e8ff0e2",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0xb7402ee99f0a008e461098ac3a27f4957df89a40",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0xac4c6e212a361c968f1725b4d055b47e63f80b75",
+        "role": "router (RedSnwapper)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon",
+        "address": "0x804b526e5bf4349819fe2db65349d0825870f8ee",
+        "role": "router (SushiXSwapV2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2; etherscan-family tag 'SushiSwap: SushiV2 Factory')",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x1af415a1eba07a4986a52b6f2e7de7003d82231e",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0xf0cbce1942a68beb3d1b73f0dd86c8dcc363ef49",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0xac4c6e212a361c968f1725b4d055b47e63f80b75",
+        "role": "router (RedSnwapper)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arbitrum",
+        "address": "0x804b526e5bf4349819fe2db65349d0825870f8ee",
+        "role": "router (SushiXSwapV2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0x71524b4f93c58fcbf659783284e38825f0622859",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0x6bded42c6da8fbf0d2ba55b2fa120c5e0c8d7891",
+        "role": "router (SushiSwap V2 Router02; basescan tag 'Sushi: Router v2')",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0x80c7dd17b01855a6d2347444a0fcc36136a314de",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0xac4c6e212a361c968f1725b4d055b47e63f80b75",
+        "role": "router (RedSnwapper)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Base",
+        "address": "0x804b526e5bf4349819fe2db65349d0825870f8ee",
+        "role": "router (SushiXSwapV2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Avalanche",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Avalanche",
+        "address": "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Avalanche",
+        "address": "0x3e603c14af37ebdad31709c4f848fc6ad5bec715",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Avalanche",
+        "address": "0x18350b048ab366ed601ffdbc669110ecb36016f3",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fantom",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fantom",
+        "address": "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fantom",
+        "address": "0x7770978eed668a3ba661d51a773d3a992fc9ddcb",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fantom",
+        "address": "0x10c19390e1ac2fd6d0c3643a2320b0aba38e5baa",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Celo",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Celo",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Linea",
+        "address": "0xfbc12984689e5f15626bad03ad60160fe98b303c",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Linea",
+        "address": "0x2abf469074dc0b54d793850807e6eb5faf2625b1",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Linea",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Linea",
+        "address": "0x80c7dd17b01855a6d2347444a0fcc36136a314de",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x9b3336186a38e1b6c21955d112dbb0343ee061ee",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x46b3fdf7b5cde91ac049936bf0bdb12c5d22202e",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x0389879e0156033202c44bf784ac18fc02edee4f",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Katana",
+        "address": "0x72d111b4d6f31b38919ae39779f570b747d6acd9",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Katana",
+        "address": "0x69cc349932ae18ed406eeb917d79b9b3033fb68e",
+        "role": "router (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Katana",
+        "address": "0x203e8740894c8955cb8950759876d7e7e45e04c1",
+        "role": "factory (SushiSwap V3)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Katana",
+        "address": "0x2659c6085d26144117d904c46b48b6d180393d27",
+        "role": "other (V3 NonfungiblePositionManager)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Boba",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Boba_Bnb",
+        "address": "0xc35dadb65012ec5796536bd9864ed8773abc74c4",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Fuse",
+        "address": "0x43ea90e2b786728520e4f930d2a71a477bf2737c",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Sonic",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Bittorrent",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Filecoin",
+        "address": "0x9b3336186a38e1b6c21955d112dbb0343ee061ee",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Metis",
+        "address": "0x580ed43f3bba06555785c81c2957efcca71f7483",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Polygon zkEVM",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "CORE",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Kava",
+        "address": "0xd408a20f1213286fb3158a2bfbf5bffaca8bf269",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "ZetaChain",
+        "address": "0x33d91116e0370970444b0281ab117e161febfcdd",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "HAQQ",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Hemi",
+        "address": "0x9b3336186a38e1b6c21955d112dbb0343ee061ee",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Arc",
+        "address": "0x0e867974275Cd31C25015C2753C9d75F9f355379",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "RSK",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "ThunderCore",
+        "address": "0xb45e53277a7e0f1d35f2a77160e91e25507f1763",
+        "role": "factory (SushiSwap V2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Europa",
+        "address": "0x1aaf6eb4f85f8775400c1b10e6bbbd98b2ff8483",
+        "role": "factory (SushiSwap V2, Skale Europa Hub)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "SushiSwap is a multi-chain decentralized exchange where users swap tokens and provide liquidity to constant-product (V2) and concentrated-liquidity (V3) pools; the docs also list a V4 AMM, a Launchpad and a Blade product. A RedSnwapper facade over RouteProcessor execution routers handles aggregator-style single and multi-token swaps, and SushiXSwapV2 adds cross-chain swaps via message-passing adapters. Governance is described as Snapshot voting weighted by SUSHIPOWAH, with Treasury Council and Operations multisigs handling treasury and protocol operations."
+  }
+}
