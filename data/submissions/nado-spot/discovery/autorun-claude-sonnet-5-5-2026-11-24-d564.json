@@ -1,0 +1,172 @@
+{
+  "schema_version": 4,
+  "slug": "nado-spot",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-24",
+  "model": "claude-sonnet-5-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "off-chain-only",
+  "grade": "unknown",
+  "headline": "10 Nado mainnet contracts catalogued on Ink from the official docs (1 deployer EOA, 9 protocol contracts); no multisig/owner address surfaced.",
+  "short_headline": "10 contracts on Ink; owner multisig not found",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "The Ink Blockscout page for the Endpoint was fetched, but it returned only page metadata with no tag or label content. Name-tag search on the explorer was not usable, and the address list comes from the official docs instead."
+      },
+      {
+        "code": "D2",
+        "text": "docs.nado.xyz/more/contracts lists 10 Ink mainnet addresses (Deployer, Quote, Querier, Clearinghouse, Endpoint, OffchainExchange, SpotEngine, PerpEngine, Verifier, WithdrawPool) and 10 Ink Sepolia testnet addresses. The docs name the Quote token as USDT0, say the Deployer is an EOA, and say ContractOwner is owned by a multisig. The multisig's address is not listed."
+      },
+      {
+        "code": "D3",
+        "text": "No audit links were pinned for this protocol. None were found in the fetched docs index (llms.txt) or the contracts page, so no audit-scope addresses were extracted."
+      },
+      {
+        "code": "D4",
+        "text": "The public GitHub repo nadohq/nado-contracts (core/ Hardhat project) was fetched at the repo root only. No deployment-artifact files (deployments/*.json, broadcast, addresses index) were opened, and no commit SHA was pinned."
+      },
+      {
+        "code": "D5",
+        "text": "Ink is the only chain in protocol.chains. All catalogued addresses are Ink mainnet, from the docs. Ink Sepolia testnet addresses were deliberately left out of admin_addresses."
+      },
+      {
+        "code": "D6",
+        "text": "No factory contract surfaced in the docs. Nado uses a fixed set of engines (SpotEngine, PerpEngine) rather than per-pool factories, so no children were enumerated."
+      },
+      {
+        "code": "D7",
+        "text": "Roles were assigned from the docs' own descriptions. Clearinghouse is tagged vault because the docs say it holds the insurance fund. Endpoint is tagged router because the docs call it the gateway that dispatches to the engines. WithdrawPool is tagged vault because the docs call it a token reserve. actor_class is unknown for all contracts because no bytecode was read."
+      },
+      {
+        "code": "D8",
+        "text": "Every address in admin_addresses[] traces to the fetched docs page https://docs.nado.xyz/more/contracts. Nothing is included on the basis of snippets alone."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery slice, so grade is unknown. Walked the Nado docs contracts page, docs index, GitHub repo root and one Ink explorer page. Catalogued 10 Ink mainnet addresses. The ContractOwner multisig, proxy admin and NLP token/vault addresses were not found."
+  },
+  "evidence": [
+    {
+      "url": "https://app.nado.xyz?join=sP6or8A",
+      "shows": "The website fetch succeeded but returned only meta tags. It describes Nado as an orderbook on Ink L2 offering spot and perps with a unified cross-margin system. No addresses on the page.",
+      "chain": "Ink",
+      "fetched_at": "2026-11-24T12:00:00Z"
+    },
+    {
+      "url": "https://docs.nado.xyz/more/contracts",
+      "shows": "The official Contracts page lists the 10 Ink mainnet addresses with names and role descriptions. It links the GitHub repo nadohq/nado-contracts and explorer.inkonchain.com. It states the Deployer is an EOA with a narrow onlyDeployer role on ContractOwner, and that full admin authority belongs to the multisig that owns ContractOwner. It also lists Ink Sepolia testnet addresses.",
+      "chain": "Ink",
+      "fetched_at": "2026-11-24T12:00:00Z"
+    },
+    {
+      "url": "https://docs.nado.xyz/llms.txt",
+      "shows": "The docs index. It gives the canonical docs site, a Contracts page, a Gateway 'Contracts' query that returns the endpoint address, and an Insurance query. It has no audit page or security/bug-bounty page.",
+      "fetched_at": "2026-11-24T12:00:00Z"
+    },
+    {
+      "url": "https://github.com/nadohq/nado-contracts",
+      "shows": "A public repo with README and a core/ directory (EVM core contracts, Hardhat-style yarn compile). The fetch was of the repo root only, and no SHA was pinned.",
+      "fetched_at": "2026-11-24T12:00:00Z"
+    },
+    {
+      "url": "https://explorer.inkonchain.com/address/0x05ec92D78ED421f3D3Ada77FFdE167106565974E",
+      "shows": "The Ink Blockscout page for the Endpoint address exists, but the fetch returned only page metadata. No contract name, proxy, or label data was readable.",
+      "chain": "Ink",
+      "address": "0x05ec92D78ED421f3D3Ada77FFdE167106565974E",
+      "fetched_at": "2026-11-24T12:00:00Z"
+    },
+    {
+      "url": "https://defillama.com/protocol/nado",
+      "shows": "DeFiLlama (read via search result) describes Nado as a spot and perps DEX with an off-chain sequencer and on-chain settlement on Ink, with NLP vault liquidity. It lists Ink as the only chain."
+    }
+  ],
+  "unknowns": [
+    "D1-offchain: Ink Blockscout fetch for the Endpoint address returned only page metadata, and no name-tag search results were obtainable. The explorer's own tags and labels are unverified.",
+    "D1: No Ink name-tag search was available; etherscan-family explorers do not cover Ink. Only the Blockscout address page was tried.",
+    "D2: The multisig that owns ContractOwner is described in the docs but its address is not listed. The ContractOwner contract address itself is also not listed. Both are needed by the control slice.",
+    "D2: The NLP (Nado Liquidity Provider) token or vault contract addresses, the insurance fund address, and any proxy admin addresses are not listed on the contracts page.",
+    "D2: The USDT0 quote token address is listed as 'Quote'. Addresses of other collateral tokens (e.g. WETH, xStocks wrapped tokens) were not enumerated.",
+    "D3: No audit links were pinned and none were found in the fetched docs. Audit status is unknown.",
+    "D4: The GitHub repo was fetched at the root only. core/ deployment artifacts (deployments/ JSON, hardhat tasks, VERIFICATION.md) were not walked and no commit SHA was pinned.",
+    "D5: chain Ink: the docs list 10 mainnet addresses; explorer name-tag corroboration failed (see D1-offchain). No other chains are in scope.",
+    "D6: No factory contract identified. Any per-market contracts beyond SpotEngine/PerpEngine were not found.",
+    "D8: The defipunkd read-API surfacer URLs were not usable this run because no addresses were pinned. Ink chainId and proxy/implementation structure were not read via /api/contract/read, so upgradeability is unverified.",
+    "D8: Security contact, bug bounty URL and governance forum were not found in the fetched pages."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/nadohq/nado-contracts"
+    ],
+    "docs_url": "https://docs.nado.xyz",
+    "audits": [],
+    "deployed_contracts_doc": "https://docs.nado.xyz/more/contracts",
+    "admin_addresses": [
+      {
+        "chain": "Ink",
+        "address": "0xC1cC56caB60e832665E6c3780BfEBe3C1C971603",
+        "role": "admin (Deployer EOA; onlyDeployer role on ContractOwner)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x0200C29006150606B650577BBE7B6248F58470c1",
+        "role": "token (Quote / USDT0 collateral)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x68798229F88251b31D534733D6C4098318c9dff8",
+        "role": "other (Querier, read-only aggregator)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0xD218103918C19D0A10cf35300E4CfAfbD444c5fE",
+        "role": "vault (Clearinghouse; accounting, insurance fund)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x05ec92D78ED421f3D3Ada77FFdE167106565974E",
+        "role": "router (Endpoint; sequencer gateway, receives deposits)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x8373C3Aa04153aBc0cfD28901c3c971a946994ab",
+        "role": "other (OffchainExchange; order settlement)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0xFcD94770B95fd9Cc67143132BB172EB17A0907fE",
+        "role": "other (SpotEngine)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0xF8599D58d1137fC56EcDd9C16ee139C8BDf96da1",
+        "role": "other (PerpEngine)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x9aCdC66459A323Fbb6eB77C5AA96a30234feCf17",
+        "role": "other (Verifier; EIP-712 signature verifier)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ink",
+        "address": "0x09fb495AA7859635f755E827d64c4C9A2e5b9651",
+        "role": "vault (WithdrawPool; fast-withdraw reserve)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "unknown",
+    "about": "Nado is an orderbook exchange on the Ink L2 for spot and perpetual futures. It uses an off-chain sequencer to match orders and on-chain contracts for settlement and custody. Users deposit USDT0 and other ERC-20 collateral into cross-margined subaccounts. Liquidity is provided in part by the NLP (Nado Liquidity Provider) vault."
+  }
+}

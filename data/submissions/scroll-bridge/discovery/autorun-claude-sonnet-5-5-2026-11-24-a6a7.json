@@ -1,0 +1,637 @@
+{
+  "schema_version": 4,
+  "slug": "scroll-bridge",
+  "slice": "discovery",
+  "snapshot_generated_at": "2026-09-28T12:50:39.847Z",
+  "prompt_version": 29,
+  "analysis_date": "2026-11-24",
+  "model": "claude-sonnet-5-5 (autorun)",
+  "chat_url": null,
+  "grading_basis": "mixed",
+  "grade": "unknown",
+  "headline": "82 contracts catalogued for Scroll's canonical bridge: 45 on Ethereum L1, 37 on the Scroll L2 counterpart; 31 are governance/admin and 51 are protocol contracts.",
+  "short_headline": "82 contracts across Ethereum + Scroll",
+  "rationale": {
+    "findings": [
+      {
+        "code": "D1",
+        "text": "Capability probe: web_fetch of protocol.website (https://portal.scroll.io/bridge) returned only page meta tags, with no addresses. No surfacer URLs were pinned. A web_fetch of one etherscan.io address page (the ScrollChain proxy) succeeded and carries the public name tag 'Scroll: L1 Scroll Chain Proxy'. The etherscan searchHandler name-tag search was not run, so the D1 explorer-by-name search is only partly covered. Explorer-tagged names also appeared in a web_search for other Scroll contracts, but those results were snippet-only and were not used as evidence."
+      },
+      {
+        "code": "D2",
+        "text": "The official docs page 'Scroll Contracts' lists Ethereum and Scroll L2 addresses for the rollup, gateway router, messenger, ETH/WETH/ERC20/ERC721/ERC1155 gateways, message queues and L2 predeploys. The docs 'Scroll Upgrades' page lists the L1/L2 Scroll multisig and timelock addresses. Both pages were fetched."
+      },
+      {
+        "code": "D3",
+        "text": "The docs 'Audits & Bug Bounty' page was fetched. It links OpenZeppelin, Zellic and Trail of Bits reports in the scroll-tech/scroll-audits repo. The PDFs were not opened (tool-call budget), so no audit-era addresses were extracted."
+      },
+      {
+        "code": "D4",
+        "text": "No GitHub deployment artifacts were walked, because the fetch budget was exhausted. The repos were only identified from links on fetched docs and aggregator pages."
+      },
+      {
+        "code": "D5",
+        "text": "Only Ethereum is pinned in protocol.chains. The docs and the L2BEAT/ETHBEAT page also list Scroll L2 counterpart contracts (chainId 534352). These are recorded as separate admin_addresses entries with chain 'Scroll' because the bridge control and fund path spans both chains."
+      },
+      {
+        "code": "D6",
+        "text": "The only factory surfaced is ScrollStandardERC20Factory on Scroll (0x66e5312EDeEAef6e80759A0F789e7914Fb401484). Its children were not enumerated, because the read-API surfacer is not allowlisted for non-pinned addresses."
+      },
+      {
+        "code": "D7",
+        "text": "Roles use the controlled vocabulary. Actor classes were taken from the L2BEAT/ETHBEAT descriptions (multisig thresholds, timelock delays, EOA labels). Bytecode was not read for most entries, so those classes are tentative. Only the ScrollChain proxy was read on etherscan: it is a TransparentUpgradeableProxy (EIP-1967) with implementation 0x0a20703878E68E587c59204cc0EA86098B8c3bA7."
+      },
+      {
+        "code": "D8",
+        "text": "Every admin_addresses entry traces to a fetched URL: the docs contracts page, the docs upgrades page, the L2BEAT/ETHBEAT page, or the etherscan ScrollChain proxy page. The L2BEAT/ETHBEAT page is a third-party aggregator and is not a primary source class. Addresses seen only in search snippets were excluded."
+      },
+      {
+        "code": "D-conflict",
+        "text": "Source discrepancies for downstream slices. (1) The docs upgrades page says upgrades execute after a two-week timelock and lists L1 Timelock 0x1A658B88fD0a3c82fa1a0609fCDbD32e7dd4aB9C. The ETHBEAT page does not list that address and says core contracts are upgradable with no delay by the ProxyAdmin, controlled via ScrollOwner and a 3-of-4 ScrollAdminMultisig. It also says the 9-of-12 Security Council was removed on 2026-06-01. (2) The docs label 0xE2b4795039517653c5Ae8C2A9BFdd783b48f447A as the L2 ERC20 Standard Gateway; ETHBEAT labels the same address 'L2GatewayRouter'."
+      }
+    ],
+    "steelman": null,
+    "verdict": "Discovery slice: the docs contracts page, the docs upgrades page, the L2BEAT/ETHBEAT page and one etherscan page were walked, and 82 addresses were catalogued; grade is always unknown for discovery."
+  },
+  "evidence": [
+    {
+      "url": "https://portal.scroll.io/bridge",
+      "shows": "Website probe: the fetch returned only meta tags (title 'Scroll - Bridge'), no contract addresses."
+    },
+    {
+      "url": "https://docs.scroll.io/en/developers/scroll-contracts/",
+      "shows": "Official deployments doc. Lists L1 Rollup (ScrollChain) 0xa13BAF47339d63B743e7Da8741db5456DAc1E556, L1/L2 Gateway Routers, L1/L2 Messengers, ETH/WETH/ERC20 Standard/Custom/ERC721/ERC1155 gateways on both chains, L1 Message Queue v1 and V2, and L2 predeploys 0x5300…0000/02/03/04/05."
+    },
+    {
+      "url": "https://docs.scroll.io/en/technology/overview/scroll-upgrades/",
+      "shows": "Lists L1 Scroll Multisig 0xEfc9D1096fb65c832207E5e7F13C2D1102244dbe, L1 Timelock 0x1A658B88fD0a3c82fa1a0609fCDbD32e7dd4aB9C, L2 Scroll Multisig (same address on Scroll) and L2 Timelock 0xf6069DB81239E5194bb53f83aF564d282357bc99. Says upgrades execute after a two-week timelock."
+    },
+    {
+      "url": "https://docs.scroll.io/en/technology/security/audits-and-bug-bounty",
+      "shows": "Lists audit reports (OpenZeppelin, Zellic, Trail of Bits, KALOS) hosted in github.com/scroll-tech/scroll-audits. Also lists the Immunefi and Remedy bug bounties and security@scroll.io for out-of-scope reports."
+    },
+    {
+      "url": "https://docs.scroll.io/en/developers",
+      "shows": "Docs home / developer FAQ: Scroll mainnet chain ID 534352, Ethereum chain ID 1, Scrollscan explorer; docs source repo github.com/scroll-tech/scroll-documentation."
+    },
+    {
+      "url": "https://l2beat.com/layer2s/projects/scroll",
+      "shows": "Fetch returned the ETHBEAT (formerly L2BEAT) Scroll page (canonical https://ethbeat.org/layer2s/projects/scroll). Third-party aggregator. It lists Ethereum and Scroll contracts with Etherscan/Scrollscan links: ScrollOwner, ProxyAdmins, four timelocks, ScrollAdminMultisig 0xcca5…F761 (3/4), Scroll Multisig 1/2/3, Security Council Safes, gateways, escrows (Dai, wstETH, pufETH), verifiers, PauseController, SystemConfig, AgoraGovernor, SCR token and the L2 contracts. Also says the Security Council was removed on 2026-06-01 and that core contracts are upgradable by ProxyAdmin via ScrollOwner. Derived classifications (actor classes) come from this page."
+    },
+    {
+      "url": "https://etherscan.io/address/0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+      "shows": "Etherscan public name tag 'Scroll: L1 Scroll Chain Proxy'. Contract is a verified TransparentUpgradeableProxy (EIP-1967) with implementation 0x0a20703878E68E587c59204cc0EA86098B8c3bA7. Recent txs show 'Scroll: Batch Committer' 0x054a47B9E2a22aF6c0CE55020238C8FEcd7d334B (Commit Batches) and 'Scroll: Batch Finalizer' 0x6F9D816c4ec365Fe8Fc6898c785Be0E2D51bEC2c (Finalize Bundle). Creator is 'Scroll: Deployer' 0x0a47cec6657570831ae93db36367656e5597c310.",
+      "chain": "Ethereum",
+      "address": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556"
+    }
+  ],
+  "unknowns": [
+    "D1: etherscan.io/searchHandler?term=Scroll name-tag search was not fetched; only one etherscan address page was fetched. Etherscan tags for other addresses are therefore unverified here.",
+    "D1: Scrollscan (scrollseacan.com/scrollscan.com) pages were not fetched, so Scroll L2 addresses are cited only from docs / ETHBEAT pages and not confirmed on-chain.",
+    "D3: Audit PDFs in github.com/scroll-tech/scroll-audits were not opened (fetch budget exhausted); no audit-era address tables were extracted.",
+    "D4: GitHub deployment artifacts (scroll-tech/scroll-contracts deployment files / broadcast folders) were not walked; no commit SHA pinned. protocol.github was empty in the pinned context.",
+    "D5: chain Ethereum: the pinned chain list has only Ethereum. L2 (Scroll) addresses were recorded from docs / ETHBEAT only, not from scrollscan.com.",
+    "D6: ScrollStandardERC20Factory (Scroll, 0x66e5312EDeEAef6e80759A0F789e7914Fb401484) children not enumerated; the defipunkd read API was not tried because no surfacers were pinned and generated URLs for non-pinned addresses are rejected by the allowlist (D6-api).",
+    "D7: actor_class for most multisig/timelock/ProxyAdmin entries is taken from the ETHBEAT aggregator and not verified via /api/safe/owners or bytecode reads. Multisig thresholds and timelock delays quoted there (e.g. 3/4, 2/4, 0s/1d/3d) are unverified in this run.",
+    "D7: the 0x8460aCc9A42D2CF07015a3e838df2E3aB37d30ae and 0xEbbeeAA424AE904508465a41c927Be594C43Dc68 signers of the ScrollAdminMultisig were not classified (EOA vs Safe) and are not in admin_addresses.",
+    "D8: Safe-owner Safes 0x8edC4EADEE120d4C51923c515e7C3241c815C2BC, 0x9479ABfebefEea3c846163012a472b44F305b3d7, 0xC3eA7C657884BB380B66D79C36aDCb5658b01896, 0x69C2eD64171bF5737c2B78bdF722e68a032B2825 and 0x11cd09a0c5B1dc674615783b0772a9bFD53e3A8F (Security Council member Safes per ETHBEAT) were not added to admin_addresses; the Security Council was reported removed on 2026-06-01. Control slice should re-check.",
+    "D8: addresses 0xe7a5DC313dF87A33eDF17E6E17D505b71E3dB854 and 0x8FA3b4570B4C96f8036C13b64971BA65867eEB48 appeared only in a search snippet for the L1 Enforced Tx Gateway proxy and were not fetched; excluded.",
+    "D8: implementation addresses for the gateway/messenger/queue proxies (listed on the ETHBEAT page) were not enumerated individually; downstream slices should resolve them via the contract ABI/read API.",
+    "D-conflict: docs say upgrades are behind a two-week timelock (L1 Timelock 0x1A658B88fD0a3c82fa1a0609fCDbD32e7dd4aB9C); ETHBEAT says upgrades via TimelockSCEmergency have no delay. Not resolved in discovery."
+  ],
+  "protocol_metadata": {
+    "github": [
+      "https://github.com/scroll-tech/scroll-documentation",
+      "https://github.com/scroll-tech/scroll-audits",
+      "https://github.com/scroll-tech/scroll-contracts"
+    ],
+    "docs_url": "https://docs.scroll.io",
+    "audits": [
+      {
+        "firm": "Zellic",
+        "url": "https://github.com/scroll-tech/scroll-audits/blob/main/Bridge%20and%20rollup%20contract/Scroll%20-%2005.26.23%20Zellic%20Audit%20Report.pdf",
+        "date": "2023-05"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://github.com/scroll-tech/scroll-audits/blob/main/Bridge%20and%20rollup%20contract/202307%20Scroll%20Layer%201%20Audit%20Report.pdf",
+        "date": "2023-07"
+      },
+      {
+        "firm": "OpenZeppelin",
+        "url": "https://github.com/scroll-tech/scroll-audits/blob/main/Bridge%20and%20rollup%20contract/202309%20ScrollOwner%20and%20Rate%20Limiter%20Audit.pdf",
+        "date": "2023-09"
+      },
+      {
+        "firm": "Trail of Bits",
+        "url": "https://github.com/scroll-tech/scroll-audits/blob/main/Euclid%20Upgrade/2025-04-scroll-euclid-phase1-securityreview.pdf",
+        "date": "2025-04"
+      }
+    ],
+    "governance_forum": "https://forum.scroll.io",
+    "voting_token": {
+      "chain": "Scroll",
+      "address": "0xd29687c813D741E2F938F4aC377128810E217b1b",
+      "symbol": "SCR"
+    },
+    "bug_bounty_url": "https://immunefi.com/bounty/scroll/",
+    "security_contact": "security@scroll.io",
+    "deployed_contracts_doc": "https://docs.scroll.io/en/developers/scroll-contracts/",
+    "admin_addresses": [
+      {
+        "chain": "Ethereum",
+        "address": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+        "role": "other (ScrollChain rollup proxy; TransparentUpgradeableProxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0a20703878E68E587c59204cc0EA86098B8c3bA7",
+        "role": "other (ScrollChain implementation)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xF8B1378579659D8F7EE5f3C929c2f3E332E41Fd6",
+        "role": "router (L1GatewayRouter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6774Bcbd5ceCeF1336b5300fb5186a12DDD8b367",
+        "role": "other (L1ScrollMessenger proxy; holds ETH escrow)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7F2b8C31F88B6006c382775eea88297Ec1e3E905",
+        "role": "other (L1ETHGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x7AC440cAe8EB6328de4fA621163a792c1EA9D4fE",
+        "role": "other (L1WETHGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xD8A791fE2bE73eb6E6cF1eb0cb3F36adC9B3F8f9",
+        "role": "vault (L1StandardERC20Gateway escrow)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb2b10a289A229415a124EFDeF310C10cb004B6ff",
+        "role": "vault (L1CustomERC20Gateway escrow)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6260aF48e8948617b8FA17F4e5CEa2d21D21554B",
+        "role": "other (L1ERC721Gateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb94f7F6ABcb811c5Ac709dE14E37590fcCd975B6",
+        "role": "other (L1ERC1155Gateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+        "role": "other (L1MessageQueue v1 with gas oracle; deprecated from Euclid)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
+        "role": "other (L1MessageQueueV2 proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x72CAcBcfDe2d1e19122F8A36a4d6676cd39d7A5d",
+        "role": "other (EnforcedTxGateway proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x8432728A257646449245558B8b7Dbe51A16c7a4D",
+        "role": "other (SystemConfig proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb8f7eA9998530833Cbb7E0EF4f0D945957229D8b",
+        "role": "guardian (PauseController proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x4CEA3E866e7c57fD75CB0CA3E9F5f1151D4Ead3F",
+        "role": "other (MultipleVersionRollupVerifier)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xb15417122fB6E853d84e498517268d33d7301e74",
+        "role": "other (ZkEvmVerifierPostFeynman, current verifier v10 per ETHBEAT)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xc084a6De8b0F2742396572d6f110eC87ca9329bA",
+        "role": "other (ZkEvmVerifierPostEuclid-2)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x798576400F7D662961BA15C6b3F3d813447a26a6",
+        "role": "owner (ScrollOwner; owner of core contracts)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xEB803eb3F501998126bf37bB823646Ed3D59d072",
+        "role": "proxy_admin (main L1 ProxyAdmin; owner ScrollOwner)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xCC2C53556Bc75217cf698721b29071d6f12628A9",
+        "role": "proxy_admin (admin of wstETH escrow)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x9eBf2f33526CD571f8b2ad312492cb650870CFd6",
+        "role": "proxy_admin (admin of pufETH escrow)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0CD4c0F24a0A9f3E2Fe80ed385D8AD5a2FfECA44",
+        "role": "timelock (TimelockSCEmergency, 0s per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0e58939204eEDa84F796FBc86840A50af10eC4F4",
+        "role": "timelock (TimelockFast, 1d per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x3f9041350B661c74C6CbE440c8Bd6BC4C168a9fd",
+        "role": "timelock (TimelockSCSlow, 3d per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x826714adD4dDA2b8750794A467C892c0Cd49216b",
+        "role": "timelock (TimelockEmergency, 0s per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1A658B88fD0a3c82fa1a0609fCDbD32e7dd4aB9C",
+        "role": "timelock (L1 Timelock per docs upgrades page; not in ETHBEAT list)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xcca54B0916Cee2186b47E9709BEdcb7041A8F761",
+        "role": "multisig (ScrollAdminMultisig, 3/4 per ETHBEAT)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xbdA143d49da40C2cDA27c40edfBbe8A0D4AE0cBc",
+        "role": "multisig (Scroll Multisig 2, 2/4 per ETHBEAT; proposer of TimelockEmergency)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xEfc9D1096fb65c832207E5e7F13C2D1102244dbe",
+        "role": "multisig (L1 Scroll Multisig per docs / Scroll Multisig 3 per ETHBEAT, 2/4)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1FF1fc1BB4d1f081f6E0a7E7E3240F3ECC5B236f",
+        "role": "multisig (Scroll Multisig 1, 1/4 per ETHBEAT; timelock executor)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x1a37bF1Ccbf570C92FE2239FefaaAF861c2924DD",
+        "role": "multisig (former Security Council Safe, 9/12 per ETHBEAT; roles reported transferred 2026-06-01)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x40bD67b02EBf1CFB4AdA7F60CabAc94d6aafc6eE",
+        "role": "multisig (Security Council Minority, 3/12 per ETHBEAT)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x67260A8B73C5B77B55c1805218A42A7A6F98F515",
+        "role": "vault (DaiEscrow proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6625C6332c9F91F2D27c304E729B86db87A3f504",
+        "role": "vault (wstETH escrow, Lido)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xA033Ff09f2da45f0e9ae495f525363722Df42b2a",
+        "role": "vault (pufETH escrow)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xf1AF3b23DE0A5Ca3CAb7261cb0061C0D779A5c7B",
+        "role": "vault (L1USDCGateway escrow, older instance)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xbc4b3d9A89F187dBaA0D2E60985Ea1FFFa5247d2",
+        "role": "vault (L1USDCGateway, second instance)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0c5cc5155b346453154059aD9d2Ff695dB92f774",
+        "role": "other (EOA 1; multisig signer / timelock executor per ETHBEAT)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0xFcf1f182FC79047d99e5db0d7113c0EfE2EC9402",
+        "role": "other (EOA 4; multisig signer / timelock executor per ETHBEAT)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6aE9233a6a66B5E4bEFB7f3d6bBAd07873b1664b",
+        "role": "other (EOA 2; signer on ScrollAdminMultisig and Multisig 3 per ETHBEAT)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x716f84f747e2B75aBB917ff0bCb0a71C41AA8831",
+        "role": "other (EOA 3; signer on ScrollAdminMultisig and Multisig 3 per ETHBEAT)",
+        "actor_class": "eoa"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x054a47B9E2a22aF6c0CE55020238C8FEcd7d334B",
+        "role": "other (Scroll: Batch Committer; calls commitBatches)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x6F9D816c4ec365Fe8Fc6898c785Be0E2D51bEC2c",
+        "role": "other (Scroll: Batch Finalizer; calls finalizeBundle)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Ethereum",
+        "address": "0x0a47cec6657570831ae93db36367656e5597c310",
+        "role": "other (Scroll: Deployer; ScrollChain proxy creator)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x13D24a7Ff6F5ec5ff0e9C40Fc3B8C9c01c65437B",
+        "role": "owner (L2 ScrollOwner)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x781e90f1c8Fc4611c9b7497C3B47F99Ef6969CbC",
+        "role": "other (L2ScrollMessenger proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x4C0926FF5252A435FD19e10ED15e5a249Ba19d79",
+        "role": "router (L2GatewayRouter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xE2b4795039517653c5Ae8C2A9BFdd783b48f447A",
+        "role": "other (L2 ERC20 Standard Gateway per docs; ETHBEAT labels it L2GatewayRouter)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x6EA73e05AdC79974B931123675ea8F78FfdacDF0",
+        "role": "other (L2ETHGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x7003E7B7186f0E6601203b99F7B8DECBfA391cf9",
+        "role": "other (L2WETHGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x64CCBE37c9A82D85A1F2E74649b7A42923067988",
+        "role": "other (L2CustomERC20Gateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x7bC08E1c04fb41d75F1410363F0c5746Eae80582",
+        "role": "other (L2ERC721Gateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x62597Cc19703aF10B58feF87B0d5D29eFE263bcc",
+        "role": "other (L2ERC1155Gateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x33B60d5Dd260d453cAC3782b0bDC01ce84672142",
+        "role": "other (L2USDCGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x8aE8f22226B9d789A36AC81474e633f8bE2856c9",
+        "role": "other (L2LidoGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xaC78dff3A87b5b534e366A93E785a0ce8fA6Cc62",
+        "role": "other (L2DaiGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xAf9a61Aa21aB4a2fdbc88e81363D2e3D359749dd",
+        "role": "guardian (L2PauseController proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xA76acF000C890b0DD7AEEf57627d9899F955d026",
+        "role": "proxy_admin (L2 ProxyAdmin for gateways/messenger)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x82e58e20Da6ecF4B07649C9B2237FAf27f02bC81",
+        "role": "proxy_admin (L2 ProxyAdmin instance)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xde4972789EA56c4e7ac7Ba655EaFe73a30155F1e",
+        "role": "proxy_admin (L2 ProxyAdmin; admin of SCR token)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x8e34D07Eb348716a1f0a48A507A9de8a3A6DcE45",
+        "role": "proxy_admin (L2 ProxyAdmin for L2LidoGateway)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x66e5312EDeEAef6e80759A0F789e7914Fb401484",
+        "role": "factory (ScrollStandardERC20Factory)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x1f807E2E8ab2e61230a0A9C271F90242831278b4",
+        "role": "timelock (TimelockSCEmergencyScroll, 0s per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x2b14d0E4b042d11C7e3Fc653132a2c82EFa7d376",
+        "role": "timelock (L2 TimelockFast, 1d per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x79D83D1518e2eAA64cdc0631df01b06e2762CC14",
+        "role": "timelock (L2 TimelockSCSlow, 3d per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xA77D19C1F2B06C9aeA9bE88C17B771a33892734f",
+        "role": "timelock (L2 TimelockEmergency, 0s per ETHBEAT)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xf6069DB81239E5194bb53f83aF564d282357bc99",
+        "role": "timelock (L2 Timelock per docs upgrades page)",
+        "actor_class": "timelock"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x2f3F2054776bd3C2fc30d750734A8F539Bb214f0",
+        "role": "governor (AgoraGovernor; on-chain vote reported as temperature check only)",
+        "actor_class": "governance"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xcca54B0916Cee2186b47E9709BEdcb7041A8F761",
+        "role": "multisig (L2 ScrollAdminMultisig, 3/4 per ETHBEAT)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xbdA143d49da40C2cDA27c40edfBbe8A0D4AE0cBc",
+        "role": "multisig (L2 Scroll Multisig 2, 2/4 per ETHBEAT)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xEfc9D1096fb65c832207E5e7F13C2D1102244dbe",
+        "role": "multisig (L2 Scroll Multisig per docs / Multisig 3 per ETHBEAT, 2/4)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x1FF1fc1BB4d1f081f6E0a7E7E3240F3ECC5B236f",
+        "role": "multisig (L2 Scroll Multisig 1, 1/4 per ETHBEAT)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x1a37bF1Ccbf570C92FE2239FefaaAF861c2924DD",
+        "role": "multisig (L2 former Security Council SafeL2, 9/12 per ETHBEAT)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x2B2A8546Df3B23535fffd75B4e312f3C5c7B4351",
+        "role": "multisig (GnosisSafeL2, 2/4; may propose AgoraGovernor proposals per ETHBEAT)",
+        "actor_class": "multisig"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0xd29687c813D741E2F938F4aC377128810E217b1b",
+        "role": "token (SCR token proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4",
+        "role": "token (Scroll USDC proxy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x5300000000000000000000000000000000000000",
+        "role": "other (L2MessageQueue predeploy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x5300000000000000000000000000000000000002",
+        "role": "oracle (L1GasPriceOracle predeploy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x5300000000000000000000000000000000000003",
+        "role": "other (Whitelist predeploy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x5300000000000000000000000000000000000004",
+        "role": "token (WETH L2 predeploy)",
+        "actor_class": "unknown"
+      },
+      {
+        "chain": "Scroll",
+        "address": "0x5300000000000000000000000000000000000005",
+        "role": "treasury (Transaction Fee Vault predeploy)",
+        "actor_class": "unknown"
+      }
+    ],
+    "upgradeability": "upgradeable",
+    "about": "Scroll Bridge is the canonical bridge between Ethereum and the Scroll zkEVM rollup. Users deposit ETH, ERC20, ERC721 and ERC1155 assets through L1 gateways and the L1ScrollMessenger, which relay messages to Scroll and hold the escrowed funds on Ethereum. Withdrawals are initiated on Scroll and finalized on Ethereum once the ScrollChain contract has verified a zero-knowledge validity proof for the batch containing them."
+  }
+}
